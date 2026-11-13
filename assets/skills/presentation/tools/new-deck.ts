@@ -1,8 +1,6 @@
 #!/usr/bin/env bun
-// presentation skill — scaffold a new deck folder.
-//
-// Usage:
-//   bun new-deck.ts <deck-dir> [--template <name>] [--title "Deck title"] [--showcase]
+// Scaffold a new deck folder.
+// Usage: pal cli skill run presentation new-deck <deck-dir> [--template <name>] [--title <title>] [--showcase]
 
 import { constants as fsConst } from "node:fs";
 import { access, copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
@@ -13,6 +11,7 @@ import { listTemplates } from "./lib/registry";
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConst.F_OK);
+
     return true;
   } catch {
     return false;
@@ -26,15 +25,18 @@ function parseNewDeckArgs(argv: string[]) {
     );
     process.exit(1);
   }
+
   const target = resolve(argv[0]);
   let templateName: string | undefined;
   let title = "New deck";
   let showcase = false;
+
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === "--template") templateName = argv[++i];
     else if (argv[i] === "--title") title = argv[++i];
     else if (argv[i] === "--showcase") showcase = true;
   }
+
   return { target, templateName, title, showcase };
 }
 
@@ -52,14 +54,17 @@ async function chooseTemplate(
     if (all.length === 1) templateName = all[0].name;
     else {
       console.error("multiple templates registered, specify --template <name>:");
+
       for (const t of all) console.error(`  - ${t.name}  (${t.meta.primary})`);
       process.exit(1);
     }
   }
+
   if (!all.find((t) => t.name === templateName)) {
     console.error(`template "${templateName}" not registered`);
     process.exit(1);
   }
+
   return templateName;
 }
 
@@ -83,22 +88,20 @@ lang: en
 `;
   await writeFile(join(target, "slides.config.yml"), cfg, "utf8");
 
-  // Author surface = slides/ folder of small files (one slide per file). At build time they're
-  // concatenated in filename order. One file per slide means a malformed edit only takes down
-  // its own slide, and parallel writes don't conflict.
+  // One file per slide: a malformed edit breaks only its own slide, and parallel writes
+  // never conflict.
   const sourceSlidesDir = join(showcase ? SKILL_DEMO : SKILL_TEMPLATE, "slides");
   const slidesDir = join(target, "slides");
   await mkdir(slidesDir, { recursive: true });
   const sourceFiles = (await readdir(sourceSlidesDir))
     .filter((f) => f.endsWith(".md"))
     .sort();
+
   for (const f of sourceFiles) {
     await copyFile(join(sourceSlidesDir, f), join(slidesDir, f));
   }
 
-  // Build output lands in this deck-dir by default — flat (slug.html, slug.md)
-  // when --out defaults to the deck-dir, or under slug/ when --out is explicit.
-  // Pre-ignore both shapes.
+  // Ignore both build layouts: flat slug.html and slug.md, and the slug/ folder.
   const slug =
     basename(target)
       .replace(/[^a-zA-Z0-9._-]+/g, "-")

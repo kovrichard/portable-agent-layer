@@ -19,8 +19,10 @@ function oneLine(text: string | null): string {
 function printTurns(turns: EvidenceTurn[], json: boolean): undefined {
   if (json) {
     console.log(JSON.stringify(turns, null, 2));
+
     return;
   }
+
   for (const turn of turns) console.log(`${turn.ts}  ${turn.id}  ${oneLine(turn.text)}`);
   console.log(`${turns.length} turns`);
 }
@@ -45,15 +47,18 @@ function printUnforgotten(id: string): undefined {
 
 function printExclusions(): undefined {
   const excluded = exclusions();
+
   for (const { id, since } of excluded) {
     const row = contentFor(id);
     console.log(`${since}  ${id}  ${oneLine(textOf(row))}`);
   }
+
   console.log(`${excluded.length} forgotten`);
 }
 
 const textOf = (row: ReturnType<typeof contentFor>): string | null => {
   const text = row?.prompt ?? row?.reply;
+
   return typeof text === "string" ? text : null;
 };
 

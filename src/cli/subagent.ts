@@ -3,7 +3,11 @@
  * merged definition split per platform on install.
  */
 
-import { installPersonalSubagent, listPersonalSubagents, log } from "../targets/lib";
+import { log } from "../targets/log";
+import {
+  installPersonalSubagent,
+  listPersonalSubagents,
+} from "../targets/personal-subagents";
 import { group, leaf } from "../tools/lib/command";
 import {
   formatSubagentReport,
@@ -19,12 +23,14 @@ function list(): number {
   } else {
     for (const n of names) console.log(n);
   }
+
   return 0;
 }
 
 function doctor(name: string): number {
   const report = lintSubagent(resolveSubagentFile(name));
   console.log(formatSubagentReport(report));
+
   return report.errors > 0 ? 1 : 0;
 }
 
@@ -39,9 +45,11 @@ function link(name: string): number {
     } else {
       log.success(`Installed '${name}' into: ${installed.join(", ")}`);
     }
+
     return 0;
   } catch (e) {
     log.error(e instanceof Error ? e.message : String(e));
+
     return 1;
   }
 }

@@ -11,7 +11,6 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
@@ -22,22 +21,16 @@ import {
   type AgentName,
   INFERENCE_PRIORITY,
 } from "../hooks/lib/agent-registry";
-import {
-  appendImportLog,
-  mergeArchive,
-  readManifest,
-  summarize,
-} from "../hooks/lib/import-merge";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
-import { logDebug } from "../hooks/lib/log";
-import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
-import { palHome, palPkg, paths, platform, toPath } from "../hooks/lib/paths";
-import { log, narrateSteps } from "../targets/lib";
+import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
+import { log, narrateSteps } from "../targets/log";
 import { helpText, runCommand } from "../tools/lib/command";
 import { type DoctorResult, detectAgents } from "./doctor/agents";
 import { runDoctor } from "./doctor/run";
+import { exportState, importState } from "./export-import";
 import type { InstallPlan } from "./install-flow";
 import { findSessionAgent, NO_SESSION_AGENT_MESSAGE } from "./session-agent";
+import { summarizeLatestSession } from "./session-summary";
 import { cliTree, type DebugState } from "./tree";
 
 const allArgs = process.argv.slice(2);
@@ -87,53 +80,17 @@ async function session(sessionArgs: string[]) {
 
   // Session summary (Claude only)
   if (agent !== "claude") process.exit(exitCode);
+
   try {
     const projectsDir = resolve(homedir(), ".claude", "projects");
     if (!existsSync(projectsDir)) process.exit(exitCode);
-    summarizeSession(latestTranscript(projectsDir));
+    summarizeLatestSession(projectsDir);
   } catch {
     // Silently ignore summary errors
   }
 
   await showUpdateNotices();
   process.exit(exitCode);
-}
-
-function latestTranscript(projectsDir: string): string {
-  let latestFile = "";
-  let latestMtime = 0;
-  for (const project of readdirSync(projectsDir, { withFileTypes: true })) {
-    if (!project.isDirectory()) continue;
-    const dir = resolve(projectsDir, project.name);
-    for (const file of readdirSync(dir).filter((f) => f.endsWith(".jsonl"))) {
-      const filepath = resolve(dir, file);
-      const { mtimeMs } = statSync(filepath);
-      if (mtimeMs > latestMtime) {
-        latestMtime = mtimeMs;
-        latestFile = filepath;
-      }
-    }
-  }
-  return latestFile;
-}
-
-function sessionIdOf(line: string): string | undefined {
-  try {
-    return JSON.parse(line).sessionId;
-  } catch {
-    return undefined;
-  }
-}
-
-function summarizeSession(transcript: string): void {
-  if (!transcript) return;
-  const lastLine = readFileSync(transcript, "utf-8").trim().split("\n").pop();
-  const sessionId = lastLine ? sessionIdOf(lastLine) : undefined;
-  if (!sessionId) return;
-  const summaryScript = resolve(palPkg(), "src", "tools", "session-summary.ts");
-  spawnSync("bun", ["run", summaryScript, "--", "--session", sessionId], {
-    stdio: "inherit",
-  });
 }
 
 async function showUpdateNotices(): Promise<void> {
@@ -154,9 +111,11 @@ async function showUpdateNotices(): Promise<void> {
 
 async function doctor(args: string[]): Promise<never> {
   const exitCode = runDoctor(args);
+
   if (args.includes("--probe-inference") || args.includes("--probe")) {
     await probeInference();
   }
+
   process.exit(exitCode);
 }
 
@@ -178,11 +137,13 @@ function targetsWhere(selected: (agent: AgentName) => boolean): Targets {
 
 function namedTargets(args: string[]): AgentName[] {
   if (args.includes("--all")) return AGENT_NAMES;
+
   return AGENT_NAMES.filter((agent) => args.includes(`--${agent}`));
 }
 
 function parseTargets(args: string[]): Targets {
   const named = namedTargets(args);
+
   return named.length === 0
     ? targetsWhere(() => true)
     : targetsWhere((a) => named.includes(a));
@@ -201,14 +162,17 @@ function resolveTargets(args: string[], health?: DoctorResult): Targets {
       );
       process.exit(1);
     }
+
     return requested;
   }
 
   const targets = targetsWhere((agent) => h[agent].available);
+
   for (const agent of AGENT_NAMES) {
     if (!targets[agent])
       log.info(`Skipping ${AGENT_REGISTRY[agent].label} (not installed)`);
   }
+
   return targets;
 }
 
@@ -229,19 +193,23 @@ async function probeInference(): Promise<void> {
   const dim = "\x1b[90m";
   const reset = "\x1b[0m";
   const savedAgent = process.env.PAL_AGENT;
+
   try {
     for (const agent of INFERENCE_PRIORITY) {
       process.env.PAL_AGENT = agent;
       const preview = previewInferenceRoute();
       const tag = `${agent.padEnd(10)} → ${preview.route.padEnd(15)}`;
+
       if (preview.route === "none") {
         console.log(`  ${dim}-${reset} ${tag} ${dim}(skip: ${preview.reason})${reset}`);
         continue;
       }
+
       if (preview.route === "disabled") {
         console.log(`  ${yellow}⚠${reset} ${tag} ${dim}${preview.reason}${reset}`);
         continue;
       }
+
       const start = Date.now();
       const r = await inference({
         user: "Reply with exactly: OK",
@@ -250,6 +218,7 @@ async function probeInference(): Promise<void> {
         timeout: 60_000,
       });
       const elapsedMs = Date.now() - start;
+
       if (r.success) {
         const bytes = r.output?.length ?? 0;
         console.log(
@@ -275,7 +244,7 @@ async function probeInference(): Promise<void> {
  * leave every writer of memory/state with nowhere to write.
  */
 async function createPalHome(): Promise<void> {
-  const { scaffoldTelos } = await import("../targets/lib");
+  const { scaffoldTelos } = await import("../targets/scaffold");
   const home = palHome();
   mkdirSync(resolve(home, "telos"), { recursive: true });
   mkdirSync(resolve(home, "memory", "state"), { recursive: true });
@@ -337,6 +306,7 @@ async function install(
 ): Promise<number> {
   const { runInstall } = await import("./install-flow");
   const updatedFrom = process.env.PAL_UPDATED_FROM;
+
   return runInstall({
     ...plan,
     kind: updatedFrom ? "update" : plan.kind,
@@ -362,215 +332,6 @@ async function uninstall(args: string[]) {
   );
 }
 
-async function exportState(args: string[]) {
-  const { collectExportFiles, exportZip, timestamp } = await import(
-    "../hooks/lib/export"
-  );
-
-  const dryRun = args.includes("--dry-run");
-  const pathArg = args.find((a) => !a.startsWith("-"));
-  const resolvedArg = pathArg ? toPath(pathArg) : null;
-  const argIsDir =
-    resolvedArg !== null &&
-    existsSync(resolvedArg) &&
-    statSync(resolvedArg).isDirectory();
-  const outputPath = argIsDir
-    ? resolve(resolvedArg, `pal-export-${timestamp()}.zip`)
-    : (resolvedArg ?? resolve(palHome(), `pal-export-${timestamp()}.zip`));
-
-  logDebug("export", `start dryRun=${dryRun} outputPath=${outputPath}`);
-  if (dryRun) {
-    const files = collectExportFiles();
-    logDebug("export", `dry-run collected ${files.length} files`);
-    if (files.length === 0) {
-      console.log("Nothing to export.");
-    } else {
-      console.log(`Would export ${files.length} files → ${outputPath}\n`);
-      for (const f of files) console.log(`  ${f}`);
-    }
-  } else {
-    const count = exportZip(outputPath);
-    logDebug("export", `done count=${count} path=${outputPath}`);
-    if (count === 0) {
-      console.log("Nothing to export.");
-    } else {
-      console.log(`Exported ${count} files → ${outputPath}`);
-    }
-  }
-}
-
-function findLatestArchiveIn(dirs: string[]): string | null {
-  const candidates: string[] = [];
-  for (const dir of dirs) {
-    try {
-      candidates.push(
-        ...readdirSync(dir)
-          .filter(
-            (f) =>
-              (f.startsWith("pal-export-") || f.startsWith("pal-backup-")) &&
-              f.endsWith(".zip")
-          )
-          .map((f) => resolve(dir, f))
-      );
-    } catch {
-      /* empty */
-    }
-  }
-  if (candidates.length === 0) return null;
-  return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
-}
-
-type AdmZipClass = new (path: string) => { getEntries(): unknown[] };
-
-/** An explicit file is taken as given; a folder or no argument picks the newest archive and asks first. */
-async function chooseImportArchive(
-  pathArg: string | undefined,
-  home: string,
-  AdmZip: AdmZipClass
-): Promise<string> {
-  const resolvedArg = pathArg ? toPath(pathArg) : null;
-  const argIsDir =
-    resolvedArg !== null &&
-    existsSync(resolvedArg) &&
-    statSync(resolvedArg).isDirectory();
-
-  if (resolvedArg && !argIsDir) {
-    logDebug("import", `using provided path=${resolvedArg}`);
-    return resolvedArg;
-  }
-  const searchDirs = argIsDir ? [resolvedArg] : [home, resolve(home, "backups")];
-  logDebug("import", `searching dirs=${searchDirs.join(",")}`);
-  const latest = findLatestArchiveIn(searchDirs);
-  if (!latest) {
-    logDebug("import", "no export/backup files found");
-    log.error("No export or backup files found. Provide a path: pal cli import <path>");
-    process.exit(1);
-  }
-  logDebug("import", `auto-selected latest=${latest}`);
-  console.log(`Found: ${latest}`);
-  const zip = new AdmZip(latest);
-  console.log(
-    `Contains ${zip.getEntries().length} files, created ${statSync(latest).mtime.toISOString().slice(0, 16).replace("T", " ")}`
-  );
-  if (!(await confirmImport())) {
-    console.log("Cancelled.");
-    process.exit(0);
-  }
-  return latest;
-}
-
-async function confirmImport(): Promise<boolean> {
-  const { createInterface } = await import("node:readline");
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  const answer = await new Promise<string>((res) =>
-    rl.question("Import this file? [y/N] ", (a) => {
-      rl.close();
-      res(a);
-    })
-  );
-  return answer.trim().toLowerCase() === "y";
-}
-
-async function importState(args: string[]) {
-  const AdmZip = (await import("adm-zip")).default;
-
-  const home = palHome();
-  const dryRun = args.includes("--dry-run");
-  const overwrite = args.includes("--overwrite");
-  const pathArg = args.find((a) => !a.startsWith("-"));
-  logDebug("import", `start dryRun=${dryRun} pathArg=${pathArg ?? "(auto)"}`);
-
-  const zipPath = await chooseImportArchive(pathArg, home, AdmZip);
-  const zip = new AdmZip(zipPath);
-  const entries = zip.getEntries();
-
-  if (entries.length === 0) {
-    console.log("Archive is empty.");
-    process.exit(0);
-  }
-
-  logDebug(
-    "import",
-    `zip=${zipPath} entries=${entries.length} dryRun=${dryRun} overwrite=${overwrite}`
-  );
-  if (dryRun) {
-    console.log(
-      `Would ${overwrite ? "overwrite with" : "merge"} ${entries.length} files → ${home}\n`
-    );
-    for (const e of entries) console.log(`  ${e.entryName}`);
-    return;
-  }
-
-  if (overwrite) {
-    zip.extractAllTo(home, true);
-    logDebug("import", `done overwrote=${entries.length} to=${home}`);
-    console.log(`Imported ${entries.length} files → ${home} (overwrite)`);
-    appendImportLog(home, {
-      ts: new Date().toISOString(),
-      archive: zipPath,
-      mode: "overwrite",
-      created: 0,
-      merged: 0,
-      identical: 0,
-      conflicts: 0,
-      skipped: 0,
-      linesAdded: 0,
-      quarantineDir: null,
-    });
-    log.info("Run 'pal cli install' to re-register hooks.");
-    return;
-  }
-
-  ensureRegistered(home);
-  const quarantineDir = resolve(
-    home,
-    "backups",
-    `import-conflicts-${new Date()
-      .toISOString()
-      .replace(/[-:T.]/g, "")
-      .slice(0, 14)}`
-  );
-  const result = mergeArchive(
-    entries.map((e) => ({ path: e.entryName, data: () => e.getData() })),
-    home,
-    quarantineDir
-  );
-  const source = readManifest(
-    entries.map((e) => ({ path: e.entryName, data: () => e.getData() }))
-  );
-  if (source) {
-    writeRegistryEntry({ id: source.machineId, label: source.label, os: source.os });
-    console.log(`Source machine: ${source.label} (${source.machineId})`);
-  }
-
-  appendImportLog(home, {
-    ts: new Date().toISOString(),
-    archive: zipPath,
-    mode: "merge",
-    created: result.created.length,
-    merged: result.merged.length,
-    identical: result.identical.length,
-    conflicts: result.conflicts.length,
-    skipped: result.skipped.length,
-    linesAdded: result.linesAdded,
-    quarantineDir: result.quarantineDir,
-    sourceMachineId: source?.machineId ?? null,
-  });
-
-  logDebug("import", `done merge ${summarize(result)} to=${home}`);
-  console.log(`Imported → ${home}: ${summarize(result)}`);
-  if (result.conflicts.length > 0) {
-    log.warn(
-      `${result.conflicts.length} file(s) diverged — local kept, incoming saved to ${result.quarantineDir}`
-    );
-    for (const c of result.conflicts) console.log(`  ${c}`);
-  }
-  log.info("Run 'pal cli install' to re-register hooks.");
-}
-
 async function update(flags: { canary?: boolean; stable?: boolean }) {
   const {
     checkForUpdate,
@@ -588,16 +349,19 @@ async function update(flags: { canary?: boolean; stable?: boolean }) {
     runUpdate,
   } = await import("./update-flow");
   const { createStyle } = await import("./ui/style");
+
   if (isRepoMode() && flags.canary) {
     log.error(CANARY_NEEDS_PACKAGE);
     process.exit(1);
   }
+
   const from = isRepoMode() ? "stable" : updateChannel();
   const to = requestedChannel(flags, from);
   if (!to) {
     log.error(ONE_CHANNEL);
     process.exit(1);
   }
+
   if (to !== from) setUpdateChannel(to);
   const style = createStyle();
   process.exit(
@@ -607,6 +371,7 @@ async function update(flags: { canary?: boolean; stable?: boolean }) {
         switched: (checked) => channelSwitchLine(style, from, to, checked),
         reinstall: (env) => {
           clearUpdateCache();
+
           return reinstallInFreshProcess(process.argv[1], env);
         },
       },
@@ -621,6 +386,7 @@ function cliDebug(state: DebugState) {
   // Must match log.ts's logFile() — reporting a different path sends anyone
   // debugging a hook to an empty file.
   const logFile = resolve(paths.debug(), "debug.log");
+
   if (state === "on") {
     mkdirSync(stateDir, { recursive: true });
     writeFileSync(flagFile, "");
@@ -642,6 +408,7 @@ function packageVersion(): string {
     ) as {
       version: string;
     };
+
     return pkgJson.version;
   } catch (e) {
     throw new Error(`Failed to read package.json: ${e}`);
@@ -671,6 +438,7 @@ async function status() {
   const count = (dir: string, ext?: string) => {
     try {
       const files = readdirSync(dir);
+
       return ext ? files.filter((f) => f.endsWith(ext)).length : files.length;
     } catch {
       return 0;
@@ -686,6 +454,7 @@ async function status() {
   log.info(`Agents:   ${count(agentsDir, ".md")} installed`);
 
   const settingsPath = resolve(platform.claudeDir(), "settings.json");
+
   try {
     const settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
     const hookCount = Object.values(settings.hooks || {}).flat().length;
@@ -693,5 +462,6 @@ async function status() {
   } catch {
     log.info(`Hooks:    not configured`);
   }
+
   console.log("");
 }

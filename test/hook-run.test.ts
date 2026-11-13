@@ -23,6 +23,7 @@ beforeEach(() => {
 function hookRuns(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
     .filter(Boolean)
@@ -118,6 +119,7 @@ describe("recording a run on exit", () => {
     recordHookRunOnExit("/x/SkillGuard.ts", (listener) => listeners.push(listener));
 
     expect(hookRuns()).toEqual([]);
+
     for (const listener of listeners) listener(3);
     expect(hookRuns()).toEqual([
       expect.objectContaining({ hook: "SkillGuard", exitCode: 3 }),

@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { canInfer, hasApiKey, inference } from "../src/hooks/lib/inference";
 import {
   buildClaudeArgs,
   buildCodexArgs,
   buildCopilotArgs,
   buildCursorArgs,
   buildOpencodeArgs,
-  canInfer,
-  hasApiKey,
-  inference,
+} from "../src/hooks/lib/inference-agents";
+import {
   injectJsonSchemaInstruction,
   parseJsonFromOutput,
   schemaInstruction,
-} from "../src/hooks/lib/inference";
+} from "../src/hooks/lib/inference-prompt";
 import { logPromptSnapshot } from "../src/hooks/lib/log";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
@@ -172,6 +172,7 @@ describe("logPromptSnapshot", () => {
     writeFileSync(resolve(stateDir, "debug-enabled"), "");
     const palHomeSaved = process.env.PAL_HOME;
     process.env.PAL_HOME = tmpHome;
+
     try {
       logPromptSnapshot("hello world", null);
       const out = readFileSync(resolve(tmpHome, "debug", "last-prompt.md"), "utf-8");
@@ -187,6 +188,7 @@ describe("logPromptSnapshot", () => {
     const tmpHome = freshTestDir(import.meta.file);
     const palHomeSaved = process.env.PAL_HOME;
     process.env.PAL_HOME = tmpHome;
+
     try {
       logPromptSnapshot("should not appear", null);
       const exists = Bun.file(resolve(tmpHome, "debug", "last-prompt.md")).size;

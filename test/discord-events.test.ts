@@ -17,6 +17,7 @@ function nags(): Record<string, unknown>[] {
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -30,6 +31,7 @@ async function events(...args: string[]): Promise<number> {
     spyOn(console, "error").mockImplementation(() => {}),
     spyOn(process.stderr, "write").mockImplementation(() => true),
   ];
+
   try {
     return await runCommand(eventsCommand, args, ["pal", "cli", "events"]);
   } finally {

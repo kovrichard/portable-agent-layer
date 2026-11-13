@@ -32,6 +32,7 @@ function loadApiKey(): string {
     console.error("and add it to ~/.pal/.env as PAL_GEMINI_API_KEY=...");
     process.exit(1);
   }
+
   return key;
 }
 

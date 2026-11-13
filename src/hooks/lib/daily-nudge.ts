@@ -70,6 +70,7 @@ export function pendingToday(
   now: Date = new Date()
 ): string {
   if (!reminder) return "";
+
   return readShownOn()[key] === localDay(now) ? "" : reminder;
 }
 
@@ -78,6 +79,7 @@ export function acknowledgeMentioned(reply: string, now: Date = new Date()): voi
   if (!mentioned.length) return;
   const today = localDay(now);
   const shownOn = readShownOn();
+
   for (const nudge of mentioned) shownOn[nudge.key] = today;
   writeFileSync(shownPath(), JSON.stringify(shownOn), "utf-8");
 }
@@ -92,6 +94,7 @@ export function dueNudgeSections(now: Date = new Date()): string[] {
 export function dueNudgeReminder(now: Date = new Date()): string | null {
   const sections = dueNudgeSections(now);
   if (!sections.length) return null;
+
   return [
     "Tell the user in one line at the end of this reply that the following is due, naming its command. This comes back every turn until a reply does.",
     ...sections,

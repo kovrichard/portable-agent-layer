@@ -17,6 +17,7 @@ beforeEach(() => {
 function writeTopic(name: string, body: string): string {
   const path = resolve(HOME, "telos", name);
   writeFileSync(path, body);
+
   return path;
 }
 
@@ -65,6 +66,7 @@ describe("the shipped scaffolds", () => {
     const templates = readdirSync(dir).filter((f) => f.endsWith(".md"));
 
     expect(templates.length).toBe(9);
+
     for (const file of templates) {
       expect({ file, answered: hasRealContent(resolve(dir, file)) }).toEqual({
         file,

@@ -47,6 +47,7 @@ function many(n: number, approved: number, shape: Shape): TurnEvent[] {
 function split(events: TurnEvent[], shape: string): Split {
   const found = splits(events).find((s) => s.shape === shape);
   if (!found) throw new Error(`no split for ${shape}`);
+
   return found;
 }
 

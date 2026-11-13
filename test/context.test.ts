@@ -16,6 +16,7 @@ describe("context builders", () => {
   test("buildSystemReminder returns string", () => {
     const result = buildSystemReminder();
     expect(typeof result).toBe("string");
+
     if (result) {
       expect(result).toContain("<system-reminder>");
       expect(result).toContain("</system-reminder>");

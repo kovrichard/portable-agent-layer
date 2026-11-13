@@ -25,10 +25,12 @@ const PROMPT_FIELDS = [
 function cacheHitRate(calls: LoggedEvent[]): number | null {
   let read = 0;
   let prompt = 0;
+
   for (const call of calls) {
     for (const field of PROMPT_FIELDS) prompt += numberOf(call[field]) ?? 0;
     read += numberOf(call.cacheRead) ?? 0;
   }
+
   return prompt === 0 ? null : read / prompt;
 }
 
@@ -49,6 +51,7 @@ export function efficiency(events: LoggedEvent[]): Efficiency | null {
   const closed = ofType(events, "commitment").filter(
     (e) => since(e) && e.outcome === "kept"
   ).length;
+
   return {
     since: dayOf(first),
     perCommit: perUnit(spent, unpriced, commits),

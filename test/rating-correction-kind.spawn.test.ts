@@ -29,6 +29,7 @@ function childEnv(home: string): Record<string, string | undefined> {
     PAL_AGENT: "claude",
     PATH: `${home}${delimiter}${process.env.PATH ?? ""}`,
   };
+
   for (const key of [
     "PAL_INFERENCE_DISABLED",
     "PAL_ANTHROPIC_API_KEY",
@@ -38,11 +39,13 @@ function childEnv(home: string): Record<string, string | undefined> {
     SPAWN_GUARD_ENV.DEPTH,
   ])
     delete env[key];
+
   return env;
 }
 
 function storedTurns(home: string) {
   const dir = resolve(home, "memory", "adaptation");
+
   return readdirSync(dir)
     .filter((file) => file.startsWith("turns-"))
     .flatMap((file) => readFileSync(resolve(dir, file), "utf-8").trim().split("\n"))

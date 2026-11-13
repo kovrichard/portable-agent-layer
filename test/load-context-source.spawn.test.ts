@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { contextForSource } from "../src/hooks/lib/session-context";
+import { contextForSource, reminderTarget } from "../src/hooks/lib/session-context";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -53,6 +53,17 @@ describe("which session starts get context", () => {
     ["cursor", undefined, "full"],
   ] as const)("%s, %s gets %s", (agent, source, expected) => {
     expect(contextForSource(agent, source)).toBe(expected);
+  });
+
+  test.each([
+    ["copilot", "copilot"],
+    ["cursor", "cursor"],
+    ["codex", "codex"],
+    ["claude", "claude"],
+    ["opencode", "claude"],
+    ["antigravity", "claude"],
+  ] as const)("%s gets the %s reminder shape", (agent, expected) => {
+    expect(reminderTarget(agent)).toBe(expected);
   });
 
   test.each(["claude", "codex"])(

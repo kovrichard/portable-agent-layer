@@ -72,7 +72,9 @@ function approvals(events: TurnEvent[]): Approvals {
 
 function tally(values: string[]): Record<string, number> {
   const counts: Record<string, number> = {};
+
   for (const v of values) counts[v] = (counts[v] ?? 0) + 1;
+
   return counts;
 }
 
@@ -100,6 +102,7 @@ function stats(replies: ReplyUnderMood[]): ReplyStats {
 function repliesUnderMood(events: TurnEvent[]): ReplyUnderMood[] {
   const lastMood = new Map<string, string | undefined>();
   const replies: ReplyUnderMood[] = [];
+
   for (const e of events) {
     const mood = lastMood.get(e.session);
     if (e.reply && mood !== undefined)
@@ -112,31 +115,38 @@ function repliesUnderMood(events: TurnEvent[]): ReplyUnderMood[] {
       });
     lastMood.set(e.session, e.mood);
   }
+
   return replies;
 }
 
 function reactionName(e: TurnEvent): string {
   if (e.reaction === "approved" && !approvalIsKnown(e)) return "approved or go-ahead";
+
   return e.reaction ?? "";
 }
 
 /** A turn carries the reply that answered the turn before it, so a filed reply shows up there. */
 function byAgent(events: TurnEvent[]): Record<string, AgentCounts> {
   const agents: Record<string, AgentCounts> = {};
+
   for (const e of events) {
     const agent = e.runtime ?? "unknown";
     const counts = agents[agent] ?? { turns: 0, replies: 0, hints: 0 };
     agents[agent] = counts;
     counts.turns++;
+
     if (e.reply) counts.replies++;
+
     if (e.hinted) counts.hints++;
   }
+
   return agents;
 }
 
 export function summarize(events: TurnEvent[]): InteractionSummary {
   const replies = repliesUnderMood(events);
   const hinted = events.filter((e) => e.hinted);
+
   return {
     turns: events.length,
     sessions: new Set(events.map((e) => e.session)).size,
@@ -160,6 +170,7 @@ export function summarize(events: TurnEvent[]): InteractionSummary {
 
 function approvalsByChannel(events: TurnEvent[]): Record<string, Approvals> {
   const channels = Map.groupBy(events, (e) => e.channel ?? "unknown");
+
   return Object.fromEntries(
     [...channels]
       .map(([channel, turns]) => [channel, approvals(turns)] as const)
@@ -173,12 +184,14 @@ function pct(n: number): string {
 
 function counts(record: Record<string, number>): string {
   const entries = Object.entries(record).sort(([, a], [, b]) => b - a);
+
   return entries.length ? entries.map(([k, n]) => `${k} ${n}`).join(" · ") : "none";
 }
 
 function shares(record: Record<string, number>): string {
   const total = Object.values(record).reduce((a, b) => a + b, 0);
   const entries = Object.entries(record).sort(([, a], [, b]) => b - a);
+
   return total ? entries.map(([k, n]) => `${k} ${pct(n / total)}`).join(" · ") : "none";
 }
 
@@ -194,8 +207,10 @@ function labelLine(label: string, s: ReplyStats, usual: ReplyStats): string {
     `approved ${pct(s.approvedShare)} (usual ${pct(usual.approvedShare)})`,
     `corrected ${pct(s.correctedShare)} (usual ${pct(usual.correctedShare)})`,
   ];
+
   if (s.followed.checked)
     parts.push(`followed ${s.followed.followed} of ${s.followed.checked}`);
+
   return parts.join(" · ");
 }
 
@@ -206,6 +221,7 @@ export function claimCheckLines(records: ClaimRecord[]): string[] {
   const unbacked = records.filter((r) => r.verdict === "unbacked");
   const unknown = records.filter((r) => r.verdict === "unknown").length;
   const sentBack = records.filter((r) => r.blocked).length;
+
   return [
     "",
     `Result and status claims: ${plural(records.length, "reply", "replies")} · ${unbacked.length} with no command behind it · ${sentBack} sent back · ${unknown} unreadable`,
@@ -225,10 +241,13 @@ function approvedOf(s: Side): string {
 
 function splitLine(split: Split): string {
   const head = `  ${split.shape}:`;
+
   if (!hasEnoughReplies(split))
     return `${head} too few replies (${split.has.replies} against ${split.lacks.replies})`;
+
   if (!isEvidence(split))
     return `${head} no real difference (${approvedOf(split.has)} against ${approvedOf(split.lacks)})`;
+
   return `${head} approved ${approvedOf(split.has)} · ${split.opposite}: ${approvedOf(split.lacks)}`;
 }
 
@@ -242,6 +261,7 @@ function approvalLines(title: string, a: Approvals): string[] {
 
 function allApprovalLines(summary: InteractionSummary): string[] {
   if (summary.approvals.reacted === 0) return [];
+
   return [
     ...approvalLines("What gets approved", summary.approvals),
     ...Object.entries(summary.approvalsByChannel).flatMap(([channel, a]) =>
@@ -264,6 +284,7 @@ function agentLines(agents: Record<string, AgentCounts>): string[] {
 
 export function reportLines(summary: InteractionSummary, days: number): string[] {
   const period = days === 1 ? "day" : plural(days, "day");
+
   if (summary.turns === 0) return [`No measured turns in the last ${period}.`];
   const lines = [
     `Interaction report, last ${period}`,
@@ -278,15 +299,18 @@ export function reportLines(summary: InteractionSummary, days: number): string[]
     ...LABELS.map((label) => labelLine(label, summary.byLabel[label], summary.usual)),
     ...allApprovalLines(summary),
   ];
+
   if (summary.unlogged)
     lines.push(
       "",
       `${summary.unlogged} older turns were logged before moods were, and are left out of the comparison.`
     );
+
   if (summary.readBeforeGoAhead)
     lines.push(
       "",
       `${summary.readBeforeGoAhead} older replies were read before go-ahead was split from approval, and are left out of the approval figures.`
     );
+
   return lines;
 }

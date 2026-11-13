@@ -95,6 +95,7 @@ describe("extractFallbackName", () => {
 
   test("Title Cases output", () => {
     const name = extractFallbackName("deploy REDIS cluster CONFIG");
+
     for (const word of name.split(" ")) {
       expect(word[0]).toBe(word[0].toUpperCase());
       expect(word.slice(1)).toBe(word.slice(1).toLowerCase());

@@ -17,6 +17,7 @@ beforeEach(() => {
 function hookRuns(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
     .filter(Boolean)
@@ -29,6 +30,7 @@ function runHook(file: string, stdin: string, env: Record<string, string> = {}):
     stdin: new TextEncoder().encode(stdin),
     env: { ...process.env, PAL_HOME: home, PAL_AGENT: "claude", ...env },
   });
+
   return result.exitCode;
 }
 

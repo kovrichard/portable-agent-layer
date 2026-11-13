@@ -7,16 +7,13 @@
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
-import {
-  log,
-  readJson,
-  removeAgentsFromCopilot,
-  removePalContextFiles,
-  removePalDocs,
-  removeSkills,
-  vscodeSettingsFile,
-  writeJson,
-} from "../lib";
+import { removePalContextFiles } from "../context-files";
+import { readJson, writeJson } from "../json-file";
+import { log } from "../log";
+import { removePalDocs } from "../pal-docs";
+import { removeAgentsFromCopilot } from "../shipped-agents";
+import { removeSkills } from "../skills";
+import { vscodeSettingsFile } from "../vscode-settings";
 
 const COPILOT_DIR = platform.copilotDir();
 const HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-hooks.json");
@@ -25,8 +22,10 @@ const VSCODE_HOOKS_FILE = resolve(COPILOT_DIR, "hooks", "pal-vscode-hooks.json")
 function removeHooksFile(path: string, label: string): void {
   if (!existsSync(path)) {
     log.info(`No ${label} found, nothing to do`);
+
     return;
   }
+
   copyFileSync(path, `${path}.bak.${Date.now()}`);
   unlinkSync(path);
   log.success(`Removed ${label}`);
@@ -65,11 +64,13 @@ if (vsSettingsPath && existsSync(vsSettingsPath)) {
   if (typeof locs === "object" && locs !== null) {
     const obj = locs as Record<string, unknown>;
     delete obj["~/.copilot/instructions"];
+
     if (Object.keys(obj).length === 0) {
       delete settings["chat.instructionsFilesLocations"];
     } else {
       settings["chat.instructionsFilesLocations"] = obj;
     }
+
     writeJson(vsSettingsPath, settings);
     log.success("Removed ~/.copilot/instructions from VS Code settings");
   }

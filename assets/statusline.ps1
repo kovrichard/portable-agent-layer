@@ -203,7 +203,8 @@ if (Test-Path $factoryTasks) {
       $gate = $events | Where-Object { $_.event -eq "gate" } | Select-Object -Last 1
       $latest = $events | Select-Object -Last 1
       $line = "[factory] $name"
-      $line += if ($run) { " - $($run.role) $(& $minsSince $run.ts)m" } else { " - starting" }
+      $progress = if ($run -and $null -ne $run.step -and $null -ne $run.planned) { "$($run.step)/$($run.planned) " } else { "" }
+      $line += if ($run) { " - $progress$($run.role) $(& $minsSince $run.ts)m" } else { " - starting" }
       if ($gate) { $line += if ($gate.result -eq "pass") { " - gate ok" } else { " - gate FAIL" } }
       if ($t.pr -match '/pull/(\d+)') { $line += " - PR #$($Matches[1])" }
       if ($latest -and (& $minsSince $latest.ts) -ge 35) { $line += " - no activity $(& $minsSince $latest.ts)m" }

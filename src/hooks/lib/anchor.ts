@@ -36,9 +36,6 @@ export function encodeAnchor(
   const proj = resolveProjectFromCwd(absPath, projects);
   if (!proj) return absPath;
 
-  // The same effective path the resolver matched on, not the record's own field:
-  // a bound project's path lives in bindings, so anchoring off proj.path directly
-  // would measure the relative segment against the wrong root.
   const root = projectPathOnThisMachine(proj);
   if (!root) return absPath;
 
@@ -46,6 +43,7 @@ export function encodeAnchor(
   if (rel.startsWith("..")) return absPath;
 
   const relPosix = rel.split(sep).join("/");
+
   return relPosix ? `{proj:${proj.name}}/${relPosix}` : `{proj:${proj.name}}`;
 }
 
@@ -75,6 +73,7 @@ export function resolveAnchor(
   const root = projectPathOnThisMachine(proj);
   if (!root) return { state: "unresolvable", slug };
   const path = rel ? resolve(root, `.${rel}`) : root;
+
   return { state: "anchored", path };
 }
 
@@ -86,5 +85,6 @@ export function anchorMatchesCwd(
 ): boolean {
   const resolved = resolveAnchor(value, projects);
   if (resolved.state === "unresolvable") return false;
+
   return resolve(resolved.path) === resolve(cwd);
 }

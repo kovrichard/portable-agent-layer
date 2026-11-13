@@ -1,17 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { lintSkill } from "../src/tools/lib/skill-doctor";
 import {
   collectSkillFiles,
   findAbsolutePaths,
   leadTriggers,
-  lintSkill,
   metadataField,
   parseSkill,
   quoteList,
   stripCode,
   topLevelField,
-} from "../src/tools/lib/skill-doctor";
+} from "../src/tools/lib/skill-parse";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -22,12 +22,15 @@ let counter = 0;
 function skillDir(files: Record<string, string>): string {
   counter += 1;
   const dir = resolve(ROOT, `case-${counter}`);
+
   for (const [rel, content] of Object.entries(files)) {
     const target = resolve(dir, rel);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, content);
   }
+
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -309,6 +312,7 @@ function lintOf(fm: string, body = "\n# Body\n", folder = "s") {
   const dir = resolve(ROOT, `lint-${counter}`, folder);
   mkdirSync(dir, { recursive: true });
   writeFileSync(resolve(dir, "SKILL.md"), `---\n${fm}\n---${body}`);
+
   return lintSkill(dir);
 }
 
@@ -476,6 +480,7 @@ describe("absolute-path reporting truncates", () => {
     mkdirSync(dir, { recursive: true });
     const lines = Array.from({ length: hits }, (_, i) => `/home/user${i}/x`).join("\n");
     writeFileSync(resolve(dir, "SKILL.md"), `---\nname: s\n---\n${lines}\n`);
+
     return lintSkill(dir);
   }
 
@@ -508,13 +513,16 @@ describe("reference depth", () => {
   function refReport(files: Record<string, string>) {
     counter += 1;
     const dir = resolve(ROOT, `ref-${counter}`, "s");
+
     for (const [rel, content] of Object.entries(files)) {
       const target = resolve(dir, rel);
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, content);
     }
+
     const found = lintSkill(dir).findings.filter((f) => f.check === "references.depth");
     expect(found.length).toBe(1);
+
     return found[0].level;
   }
 
@@ -607,6 +615,7 @@ describe("author voice is detected with either apostrophe", () => {
     for (const phrase of ["I'm here", "I’m here", "I'll go", "I’ll go", "my workflow"]) {
       expect(levelOf(lintOf("name: s", `\n${phrase}\n`), "body.pov")).toBe("warn");
     }
+
     expect(levelOf(lintOf("name: s", "\nRead the input.\n"), "body.pov")).toBe("pass");
   });
 

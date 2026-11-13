@@ -1,13 +1,7 @@
 #!/usr/bin/env bun
 
-// presentation skill — set up a brand template.
-// Interactive Q&A by default; flag-driven for non-interactive use (Claude / scripts).
-//
-// Usage:
-//   bun setup-template.ts                                    # interactive
-//   bun setup-template.ts --name <slug> --logo <path> --primary "#0E1335" [--accent "#..."] \
-//     [--footer "..."] [--logo-placement footer] [--fonts system] [--aspect 16:9] \
-//     [--showcase] [--yes]
+// Set up a brand template, by questions or, for scripts and agents, by the flags in SKILL.md.
+// Usage: pal cli skill run presentation setup-template [--name <slug> --logo <path> --primary <hex> ...]
 
 import { spawn } from "node:child_process";
 import { constants as fsConst } from "node:fs";
@@ -34,63 +28,49 @@ type Args = Partial<{
   yes: boolean;
 }>;
 
+type ValueArg = Exclude<keyof Args, "showcase" | "yes">;
+
+const VALUE_FLAGS: Record<string, ValueArg> = {
+  "--name": "name",
+  "--path": "path",
+  "--logo": "logo",
+  "--primary": "primary",
+  "--accent": "accent",
+  "--footer": "footer",
+  "--logo-placement": "logoPlacement",
+  "--fonts": "fonts",
+  "--aspect": "aspect",
+};
+
+const SWITCH_FLAGS: Record<string, "showcase" | "yes"> = {
+  "--showcase": "showcase",
+  "--yes": "yes",
+  "-y": "yes",
+};
+
 function parseArgs(argv: string[]): Args {
-  const a: Args = {};
+  const a: Record<string, string | boolean | undefined> = {};
+
   for (let i = 0; i < argv.length; i++) {
     const cur = argv[i];
-    const next = argv[i + 1];
-    switch (cur) {
-      case "--name":
-        a.name = next;
-        i++;
-        break;
-      case "--path":
-        a.path = next;
-        i++;
-        break;
-      case "--logo":
-        a.logo = next;
-        i++;
-        break;
-      case "--primary":
-        a.primary = next;
-        i++;
-        break;
-      case "--accent":
-        a.accent = next;
-        i++;
-        break;
-      case "--footer":
-        a.footer = next;
-        i++;
-        break;
-      case "--logo-placement":
-        a.logoPlacement = next as LogoPlacement;
-        i++;
-        break;
-      case "--fonts":
-        a.fonts = next;
-        i++;
-        break;
-      case "--aspect":
-        a.aspect = next as Aspect;
-        i++;
-        break;
-      case "--showcase":
-        a.showcase = true;
-        break;
-      case "--yes":
-      case "-y":
-        a.yes = true;
-        break;
+    const valueKey = Object.hasOwn(VALUE_FLAGS, cur) ? VALUE_FLAGS[cur] : undefined;
+    const switchKey = Object.hasOwn(SWITCH_FLAGS, cur) ? SWITCH_FLAGS[cur] : undefined;
+
+    if (valueKey) {
+      a[valueKey] = argv[i + 1];
+      i++;
+    } else if (switchKey) {
+      a[switchKey] = true;
     }
   }
-  return a;
+
+  return a as Args;
 }
 
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConst.F_OK);
+
     return true;
   } catch {
     return false;
@@ -107,23 +87,31 @@ function hslOf(r: number, g: number, b: number): { H: number; S: number; L: numb
   let H = 0,
     S = 0;
   const L = (max + min) / 2;
+
   if (max !== min) {
     const d = max - min;
     S = L > 0.5 ? d / (2 - max - min) : d / (max + min);
+
     if (max === r) H = (g - b) / d + (g < b ? 6 : 0);
     else if (max === g) H = (b - r) / d + 2;
     else H = (r - g) / d + 4;
     H *= 60;
   }
+
   return { H, S, L };
 }
 
 function hueSector(H: number, c: number, x: number): [number, number, number] {
   if (H < 60) return [c, x, 0];
+
   if (H < 120) return [x, c, 0];
+
   if (H < 180) return [0, c, x];
+
   if (H < 240) return [0, x, c];
+
   if (H < 300) return [x, 0, c];
+
   return [c, 0, x];
 }
 
@@ -145,12 +133,14 @@ function complementary(hex: string): string {
       .toString(16)
       .padStart(2, "0")
       .toUpperCase();
+
   return `#${toHex(rr)}${toHex(gg)}${toHex(bb)}`;
 }
 
 async function ask(rl: readline.Interface, q: string, def?: string): Promise<string> {
   const p = def ? `${q} [${def}] ` : `${q} `;
   const ans = (await rl.question(p)).trim();
+
   return ans || def || "";
 }
 
@@ -205,6 +195,7 @@ async function resolveChoice<T extends string>(
 ): Promise<T> {
   if (given || !rl) return given ?? fallback;
   const answer = await ask(rl, question, fallback);
+
   return (options as readonly string[]).includes(answer) ? (answer as T) : fallback;
 }
 
@@ -220,13 +211,17 @@ async function resolveName(args: Args, rl: Prompter): Promise<string> {
         )
       : "");
   if (!name) fail("--name required");
+
   return name;
 }
 
 async function resolveTemplatePath(args: Args, rl: Prompter, name: string) {
   const defaultPath = join(TEMPLATES_ROOT, name);
+
   if (args.path) return resolve(args.path);
+
   if (rl) return resolve(await ask(rl, "Storage path:", defaultPath));
+
   return defaultPath;
 }
 
@@ -244,6 +239,7 @@ async function resolveLogo(args: Args, rl: Prompter): Promise<string> {
   if (!given) fail("--logo required");
   const logo = resolve(given);
   if (!(await exists(logo))) fail(`logo not found: ${logo}`);
+
   return logo;
 }
 
@@ -259,6 +255,7 @@ async function resolvePrimary(args: Args, rl: Prompter): Promise<string> {
         )
       : "");
   if (!primary || !isHex(primary)) fail("--primary must be hex like #0E1335");
+
   return primary;
 }
 
@@ -267,6 +264,7 @@ async function resolveAccent(args: Args, rl: Prompter, primary: string) {
   const accent =
     args.accent ||
     (rl ? await ask(rl, `Accent color (hex) [derived: ${suggested}]:`, suggested) : "");
+
   return accent && isHex(accent) ? accent : suggested;
 }
 
@@ -277,6 +275,7 @@ async function resolveShowcase(args: Args, rl: Prompter) {
     "Generate showcase deck demonstrating every layout? (y/n):",
     "n"
   );
+
   return answer.toLowerCase().startsWith("y");
 }
 
@@ -308,6 +307,7 @@ async function collectSettings(args: Args, rl: Prompter): Promise<TemplateSettin
     "16:9"
   );
   const showcase = await resolveShowcase(args, rl);
+
   return {
     name,
     tplPath,
@@ -353,6 +353,7 @@ async function main() {
 
   if (rl) {
     printSummary(settings);
+
     if (!args.yes) await confirmWrite(rl);
     rl.close();
   }

@@ -9,6 +9,7 @@ function skippedOnError(label: string, check: () => string | null): string | nul
     return check();
   } catch (err) {
     logError(`StopOrchestrator:${label}`, err);
+
     return null;
   }
 }
@@ -20,5 +21,6 @@ export function replySendBack(payload: StopTurnPayload | null): string | null {
     skippedOnError("claim-check", () => watchClaims(payload)) ??
     skippedOnError("adaptation-rules", () => watchReplyRules(payload));
   rememberSendBack(payload, reason !== null);
+
   return reason;
 }

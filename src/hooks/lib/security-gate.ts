@@ -82,6 +82,7 @@ function firstStringArg(
     const value = args[key];
     if (typeof value === "string" && value.length > 0) return value;
   }
+
   return undefined;
 }
 
@@ -108,6 +109,7 @@ function runModeGateRefusal(
 ): GateRefusal | null {
   const message = runModeRefusal(call, cwd);
   if (!message) return null;
+
   return {
     tool: call.tool,
     target: call.filePath ?? cwd,
@@ -123,6 +125,7 @@ function shellExecRefusal(input: ShellExecInput, cwd: string): GateRefusal | nul
   if (runRefusal) return runRefusal;
   const reason = checkBashCommand(input.command);
   if (!reason) return null;
+
   return {
     tool: "shell",
     target: cwd,
@@ -132,18 +135,24 @@ function shellExecRefusal(input: ShellExecInput, cwd: string): GateRefusal | nul
   };
 }
 
+function logVerdictSoDeniedIsNotMistakenForSilent(
+  command: string,
+  reason: string | null
+): void {
+  const verdict = reason ? `BLOCK(${reason})` : "ALLOW";
+  logDebug("SecurityValidator", `bashVerdict=${verdict} command=${command}`);
+}
+
 function shellCommandRefusal(
   toolUse: NonNullable<ReturnType<typeof normalizeToolUse>>,
   command: string,
   cwd: string
 ): GateRefusal | null {
   const reason = checkBashCommand(command);
-  // "No output" from a downstream tool is indistinguishable between "denied,
-  // never ran" and "ran, produced nothing" — logging the verdict here, next
-  // to the literal command, is what actually tells the two apart.
-  const verdict = reason ? `BLOCK(${reason})` : "ALLOW";
-  logDebug("SecurityValidator", `bashVerdict=${verdict} command=${command}`);
+  logVerdictSoDeniedIsNotMistakenForSilent(command, reason);
+
   if (!reason) return null;
+
   return {
     tool: toolUse.toolName,
     target: cwd,

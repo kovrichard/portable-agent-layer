@@ -23,17 +23,20 @@ function legacyRecord(name: string, path: string) {
       `created: "2026-01-01"\nupdated: "2026-02-02"\n---\n\n` +
       `## Goal\nShip the thing.\n\n## Criteria\n- [ ] ISC-1: works\n`
   );
+
   return resolve(dir, "ISA.md");
 }
 
 function checkout(name: string): string {
   const dir = resolve(HOME, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
 async function migration() {
   const { checkPendingMigrations } = await import("../src/cli/migrate");
+
   return checkPendingMigrations().find((m) => m.id === "v4-paths-to-bindings");
 }
 

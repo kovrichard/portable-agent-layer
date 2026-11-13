@@ -96,6 +96,7 @@ export function extractionSchema() {
     relation: text,
     fact: text,
   });
+
   return closedObject({ entities: { type: "array" as const, items: entity } });
 }
 
@@ -118,7 +119,9 @@ function userTexts(messages: Message[]): string[] {
 function unseenMessages(messages: Message[], cursor: Cursor | undefined): Message[] {
   if (!messages.some((m) => m.id))
     return messages.slice(messages.findLastIndex((m) => m.role === "user"));
+
   if (typeof cursor === "number") return [];
+
   return messagesAfter(messages, cursor);
 }
 
@@ -130,11 +133,13 @@ export function unseenUserText(
   const fresh = userTexts(unseenMessages(messages, cursor));
   const text = fresh.map((t, i) => `${i + 1}. ${proseOnly(t).trim()}`).join("\n");
   const lastId = messages.findLast((m) => m.id)?.id;
+
   return { text: text.slice(-MAX_TEXT), count: fresh.length, lastId };
 }
 
 function hasUnknownProperName(text: string, ignored: Set<string>): boolean {
   const sentences = proseOnly(text).split(/[.!?\n]+/);
+
   return sentences.some((s) =>
     s
       .trim()
@@ -151,7 +156,9 @@ export function worthExtracting(
   excluded: string[]
 ): boolean {
   if (proseOnly(text).trim().length < MIN_TEXT) return false;
+
   if (findMentions(text, index).length > 0) return true;
+
   return hasUnknownProperName(text, new Set(excluded.map(foldName)));
 }
 
@@ -159,6 +166,7 @@ function knownLine(entity: NamedEntity): string {
   const aliases =
     entity.aliases.length > 0 ? ` (also: ${entity.aliases.join(", ")})` : "";
   const kind = entity.domain === "People" ? "person" : "company";
+
   return `${entity.slug} | ${kind} | ${entity.title}${aliases}`;
 }
 
@@ -182,6 +190,7 @@ export function extractionUser(text: string, index: NameIndex): string {
     .filter((e) => !isExcluded(e, index))
     .slice(0, MAX_KNOWN)
     .map(knownLine);
+
   return `Known entries (slug | kind | name):\n${known.join("\n") || "(none)"}\n\nMessages:\n${text}`;
 }
 
@@ -191,6 +200,7 @@ function domainOf(kind: ExtractedEntity["kind"]): NamedEntity["domain"] {
 
 function namesUser(e: ExtractedEntity, excluded: string[]): boolean {
   const own = new Set(excluded.filter(Boolean).map(foldName));
+
   return [e.name, ...e.aliases].some((n) => own.has(foldName(n)));
 }
 
@@ -201,6 +211,7 @@ type Resolution =
 
 function resolveExisting(e: ExtractedEntity, sameDomain: NamedEntity[]): Resolution {
   const entity = sameDomain.find((c) => c.slug === e.existing);
+
   return entity
     ? { kind: "known", entity }
     : { kind: "review", reason: "unknown-existing", candidates: [] };
@@ -209,6 +220,7 @@ function resolveExisting(e: ExtractedEntity, sameDomain: NamedEntity[]): Resolut
 /** "Dan" alone may be a known Daniel under a nickname the store hasn't seen yet. */
 function newcomer(e: ExtractedEntity): Resolution {
   const firstNameOnly = e.kind === "person" && !/\s/.test(e.name.trim());
+
   return firstNameOnly
     ? { kind: "review", reason: "first-name-only", candidates: [] }
     : { kind: "new" };
@@ -217,16 +229,20 @@ function newcomer(e: ExtractedEntity): Resolution {
 function resolveEntity(e: ExtractedEntity, index: NameIndex): Resolution {
   const domain = domainOf(e.kind);
   const sameDomain = indexedEntities(index).filter((c) => c.domain === domain);
+
   if (e.existing) return resolveExisting(e, sameDomain);
   const { entities, exact } = lookupName(e.name, index);
   const candidates = entities.filter((c) => c.domain === domain);
   if (candidates.length === 0) return newcomer(e);
+
   if (exact && candidates.length === 1) return { kind: "known", entity: candidates[0] };
+
   return { kind: "review", reason: "ambiguous", candidates };
 }
 
 function otherNames(e: ExtractedEntity, storedName: string): string[] {
   const names = [e.name, ...e.aliases].map((n) => n.trim()).filter(Boolean);
+
   return [...new Set(names)].filter((n) => foldName(n) !== foldName(storedName));
 }
 
@@ -235,6 +251,7 @@ function storedOrganization(organization: string, index: NameIndex): string | nu
   if (!organization.trim()) return null;
   const { entities, exact } = lookupName(organization, index);
   const companies = entities.filter((c) => c.domain === "Companies");
+
   return exact && companies.length === 1 ? companies[0].title : organization;
 }
 
@@ -278,6 +295,7 @@ export function ingestInput(
 ): IngestInput {
   const name = known?.title ?? (newName?.trim() || e.name.trim());
   const slug = known?.slug ?? null;
+
   return e.kind === "person"
     ? { people: [personInput(e, name, index, slug)] }
     : { companies: [companyInput(e, name, slug)] };
@@ -303,6 +321,7 @@ export function planExtraction(
       entity,
       candidates: candidates.map((c) => c.slug).sort(),
     });
+
   for (const e of extracted) {
     if (!e.name.trim() || namesUser(e, excluded)) continue;
     const resolution = resolveEntity(e, index);
@@ -310,18 +329,21 @@ export function planExtraction(
       queue(e, resolution.reason, resolution.candidates);
       continue;
     }
+
     if (resolution.kind === "known" && isExcluded(resolution.entity, index)) continue;
     const known = resolution.kind === "known" ? resolution.entity : null;
     const input = ingestInput(e, index, known);
     plan.ingest.people?.push(...(input.people ?? []));
     plan.ingest.companies?.push(...(input.companies ?? []));
   }
+
   return plan;
 }
 
 export function parseExtraction(output: string): ExtractedEntity[] {
   try {
     const parsed = JSON.parse(output) as { entities?: ExtractedEntity[] };
+
     return Array.isArray(parsed.entities) ? parsed.entities : [];
   } catch {
     return [];
@@ -335,6 +357,7 @@ function cursorFile(): string {
 function readCursors(): Record<string, Cursor> {
   const file = cursorFile();
   if (!existsSync(file)) return {};
+
   try {
     return JSON.parse(readFileSync(file, "utf-8")) as Record<string, Cursor>;
   } catch {

@@ -133,6 +133,7 @@ function isCorrectionKind(value: unknown): value is CorrectionKindName {
 
 function unlistedKind(kind: unknown, description: string): CorrectionKind | null {
   const suggested = text(kind);
+
   return suggested ? { kind: "other", suggested, description } : null;
 }
 
@@ -140,12 +141,16 @@ export function parseCorrectionKind(
   output: string | null | undefined
 ): CorrectionKind | null {
   if (!output) return null;
+
   try {
     const parsed = JSON.parse(output) as Record<string, unknown>;
     const description = text(parsed.description);
+
     if (!isCorrectionKind(parsed.kind)) return unlistedKind(parsed.kind, description);
+
     if (parsed.kind !== "other")
       return { kind: parsed.kind, suggested: "", description: "" };
+
     return { kind: "other", suggested: text(parsed.suggested), description };
   } catch {
     return null;
@@ -161,5 +166,6 @@ export function withCorrectionKind(
   kind: CorrectionKind | null
 ): TurnInput {
   if (!kind) return turn;
+
   return { ...turn, correctionKind: { ...kind, version: CORRECTION_KINDS_VERSION } };
 }

@@ -25,6 +25,7 @@ function markFile(): string {
 export function readReviewMark(): string | null {
   try {
     const parsed = JSON.parse(readFileSync(markFile(), "utf-8"));
+
     return typeof parsed.lastReviewedTs === "string" ? parsed.lastReviewedTs : null;
   } catch {
     return null;
@@ -47,8 +48,10 @@ export function isMaintainerEnv(cwd: string = process.cwd()): boolean {
 /** Count reflections newer than the last review mark (all of them, if never reviewed). */
 export function countUnreviewed(mark: string | null = readReviewMark()): number {
   const reflections = readReflections(paths.reflectionsFile());
+
   if (!mark) return reflections.length;
   const cutoff = new Date(mark).getTime();
+
   return reflections.filter((r) => r.ts && new Date(r.ts).getTime() > cutoff).length;
 }
 
@@ -74,6 +77,7 @@ export function algorithmReviewNudge(
     ? Math.floor((now.getTime() - new Date(mark).getTime()) / DAY_MS)
     : Number.POSITIVE_INFINITY;
   if (sinceDays < NUDGE_MIN_DAYS) return null;
+
   return { count, sinceDays, since: mark };
 }
 
@@ -83,6 +87,7 @@ export function loadAlgorithmReviewNudge(now: Date = new Date()): string {
   if (!n) return "";
   const since = n.since ? new Date(n.since).toISOString().slice(0, 10) : "the start";
   const age = Number.isFinite(n.sinceDays) ? `, ${n.sinceDays}d` : "";
+
   return [
     "## Algorithm Review Due",
     `🔧 ${n.count} new algorithm reflections since ${since}${age} — run \`/algorithm-update\` to fold the recurring ones into ALGORITHM.md.`,

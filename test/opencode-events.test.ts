@@ -20,6 +20,7 @@ let home: string;
 function streamed(type: string): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
@@ -181,6 +182,7 @@ describe("the opencode plugin routes its bus events to these loggers", () => {
   async function plugin(): Promise<any> {
     for (const { env } of agentDirOverrides()) process.env[env] = resolve(home, env);
     const { default: PALPlugin } = await import("../src/targets/opencode/plugin");
+
     return await PALPlugin({ directory: home, client: {} } as never);
   }
 

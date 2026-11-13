@@ -17,6 +17,7 @@ let dbPath: string;
 function streamed(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
@@ -35,6 +36,7 @@ function fixtureDb(): Database {
   db.run(
     "INSERT INTO sessions (id, cwd, host_type, summary, created_at) VALUES ('ses_local', '/work/repo', NULL, 'a summary', '2026-10-12T09:00:00.000Z'), ('ses_cloud', '/runner/repo', 'github', NULL, '2026-10-12T09:00:00.000Z')"
   );
+
   return db;
 }
 

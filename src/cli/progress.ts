@@ -46,6 +46,7 @@ function scopeFrom(values: { scope?: string }): string {
 
 function requireText(text: string | undefined, what: string): string {
   if (!text?.trim()) throw new UsageError(`${what} is required`);
+
   return text.trim();
 }
 
@@ -54,23 +55,28 @@ function targetNode(tree: ScopeTree, idOrPrefix: string | undefined): WorkNode {
     const node = findNode(tree, idOrPrefix);
     if (!node)
       throw new NodeError(`No single node matches "${idOrPrefix}" in ${tree.scope}`);
+
     return node;
   }
+
   const active = tree.active ? tree.nodes.get(tree.active) : undefined;
   if (!active)
     throw new NodeError(
       `No active node in ${tree.scope}; pass --node, or open or enter one first`
     );
+
   return active;
 }
 
 function guarded(run: () => void): number {
   try {
     run();
+
     return 0;
   } catch (err) {
     if (!(err instanceof NodeError)) throw err;
     console.error(err.message);
+
     return 1;
   }
 }
@@ -79,6 +85,7 @@ function nodeToRecordOn(scope: string, idOrPrefix: string | undefined): WorkNode
   const tree = readTree(scope);
   if (idOrPrefix || tree.active) return targetNode(tree, idOrPrefix);
   const id = openSessionNode(scope, progressSession());
+
   return targetNode(readTree(scope), id);
 }
 
@@ -101,7 +108,9 @@ function record<T extends Parameters<typeof appendEvent>[2]>(
 
 function parentFor(tree: ScopeTree, under: string | undefined, root: boolean) {
   if (root) return null;
+
   if (under) return targetNode(tree, under).id;
+
   return tree.active;
 }
 
@@ -110,6 +119,7 @@ function optionalIsc(isc: string | undefined): number | undefined {
   const parsed = Number(isc);
   if (!Number.isInteger(parsed) || parsed < 1)
     throw new UsageError(`--isc must be an ISC number, got "${isc}"`);
+
   return parsed;
 }
 
@@ -140,9 +150,11 @@ function cmdOpen(
 ): number {
   const text = requireText(title, "A title");
   const isc = optionalIsc(values.isc);
+
   return guarded(() => {
     const scope = scopeFrom(values);
     const tree = readTree(scope);
+
     if (!values.new) refuseRepeatedTopic(tree, text);
     const parent = parentFor(tree, values.under, values.root === true);
     const id = newNodeId();
@@ -160,6 +172,7 @@ function backTo(scope: string): string {
   const tree = readTree(scope);
   const active = tree.active ? tree.nodes.get(tree.active) : undefined;
   if (!active) return "No node is active now.";
+
   return `Back to ${active.title} [${active.id}]${suffix(", stopped at: ", active.stoppedAt)}.`;
 }
 
@@ -181,6 +194,7 @@ function cmdDone(values: { scope?: string; node?: string; summary?: string }): n
 function reportWorktreeCleanup({ removed, kept }: WorktreeCleanup): void {
   for (const { path, branch } of removed)
     console.log(`Removed worktree ${path}; undo: git worktree add ${path} ${branch}`);
+
   for (const { path, reason } of kept) console.log(`Kept worktree ${path}: it ${reason}`);
 }
 
@@ -199,8 +213,10 @@ function cmdShow(values: { scope?: string; node?: string; json?: boolean }): num
       console.log(
         renderSessionContext(tree) || `No work recorded for ${tree.scope} yet.`
       );
+
       return;
     }
+
     const node = targetNode(tree, values.node);
     console.log(
       values.json ? JSON.stringify(node, null, 2) : renderNodeDetail(tree, node)
@@ -210,11 +226,15 @@ function cmdShow(values: { scope?: string; node?: string; json?: boolean }): num
 
 function cmdList(values: { scope?: string; all?: boolean; json?: boolean }): number {
   const tree = readTree(scopeFrom(values));
+
   if (values.json) {
     console.log(JSON.stringify({ ...tree, nodes: [...tree.nodes.values()] }, null, 2));
+
     return 0;
   }
+
   console.log(renderTreeList(tree, values.all === true));
+
   return 0;
 }
 

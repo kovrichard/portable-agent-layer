@@ -34,12 +34,14 @@ export function setIscStatus(project: string, id: number, close: boolean): Write
   };
   const move = close ? completeIsc(sections, id) : reopenIsc(sections, id);
   if (!move.ok) return { ok: false, status: 404, error: move.reason };
+
   if (move.already) return { ok: true, changed: false };
   p.criteria = move.criteria;
   p.changelog = move.changelog;
   p.updated = new Date().toISOString();
   writeProject(p);
   logCommitment(project, id, close ? "kept" : "reopened", "control-room");
+
   return { ok: true, changed: true };
 }
 
@@ -58,6 +60,7 @@ export function isQuadrant(value: unknown): value is Quadrant {
 export function setPlacement(project: string, quadrant: Quadrant | null): WriteOutcome {
   const p = readProject(project);
   if (!p) return missing(project);
+
   if (quadrant) {
     p.placed = quadrant;
     p.placed_by = "user";
@@ -65,8 +68,10 @@ export function setPlacement(project: string, quadrant: Quadrant | null): WriteO
     p.placed = undefined;
     p.placed_by = undefined;
   }
+
   p.updated = new Date().toISOString();
   writeProject(p);
+
   return { ok: true, changed: true };
 }
 
@@ -77,6 +82,7 @@ export interface InstallSettings {
 
 export function readInstallSettings(): InstallSettings {
   const identity = rawSettings().identity ?? {};
+
   return {
     actor: identity.principal?.name ?? "",
     timezone: identity.principal?.timezone ?? "",
@@ -88,13 +94,17 @@ export function writeInstallSettings(update: Partial<InstallSettings>): WriteOut
   if (update.timezone && !isTimezone(update.timezone)) {
     return { ok: false, status: 400, error: `not a timezone: ${update.timezone}` };
   }
+
   const data = rawSettings();
   const identity = data.identity ?? {};
   const principal = { ...identity.principal };
+
   if (update.actor !== undefined) principal.name = update.actor;
+
   if (update.timezone !== undefined) principal.timezone = update.timezone;
   writeSettings({ ...data, identity: { ...identity, principal } });
   reload();
+
   return { ok: true, changed: true };
 }
 
@@ -106,12 +116,14 @@ export function setAutoUpdate(enabled: boolean): WriteOutcome {
   const data = rawSettings();
   writeSettings({ ...data, autoUpdate: { ...data.autoUpdate, enabled, decided: true } });
   reload();
+
   return { ok: true, changed: true };
 }
 
 function isTimezone(value: string): boolean {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: value });
+
     return true;
   } catch {
     return false;

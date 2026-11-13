@@ -2,16 +2,18 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
 import {
-  buildClaudeArgs,
-  buildCodexArgs,
-  buildCopilotArgs,
-  buildCursorArgs,
-  buildOpenAiBody,
-  buildOpencodeArgs,
   inference,
   plannedInferenceRoute,
   previewInferenceRoute,
 } from "../src/hooks/lib/inference";
+import {
+  buildClaudeArgs,
+  buildCodexArgs,
+  buildCopilotArgs,
+  buildCursorArgs,
+  buildOpencodeArgs,
+} from "../src/hooks/lib/inference-agents";
+import { buildOpenAiBody } from "../src/hooks/lib/inference-api";
 import {
   FABLE_MODEL,
   HAIKU_5_5_MODEL,
@@ -27,6 +29,7 @@ import { freshTestDir } from "./lib/test-home";
 
 function flagValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);
+
   return i === -1 ? undefined : args[i + 1];
 }
 
@@ -241,6 +244,7 @@ function pathWithFakeAgent(binary: string): string {
   const name = process.platform === "win32" ? `${binary}.cmd` : binary;
   writeFileSync(resolve(dir, name), "");
   chmodSync(resolve(dir, name), 0o755);
+
   return `${dir}${delimiter}${process.env.PATH ?? ""}`;
 }
 
@@ -250,6 +254,7 @@ describe("plannedInferenceRoute", () => {
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "claude";
     process.env.PATH = pathWithFakeAgent("claude");
+
     try {
       expect(plannedInferenceRoute("medium")).toEqual({
         agent: "claude",
@@ -269,6 +274,7 @@ describe("inference on a tier the route lacks", () => {
     delete process.env.PAL_INFERENCE_DISABLED;
     process.env.PAL_AGENT = "antigravity";
     process.env.PATH = pathWithFakeAgent("agy");
+
     try {
       expect(await inference({ user: "hi", tier: "flagship" })).toEqual({
         success: false,

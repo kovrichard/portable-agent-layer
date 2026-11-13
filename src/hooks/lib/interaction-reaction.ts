@@ -49,11 +49,13 @@ const REPEAT_MIN_KEYWORDS = 5;
 
 export function isCorrection(text: string): boolean {
   const trimmed = text.trim();
+
   return CORRECTION_RE.test(trimmed) || CLAIM_DISPUTED_RE.test(trimmed);
 }
 
 export function isRepeat(text: string, previous: string | undefined): boolean {
   if (!previous || extractKeywords(text).size < REPEAT_MIN_KEYWORDS) return false;
+
   return similarity(text, previous) >= REPEAT_SIMILARITY;
 }
 
@@ -71,10 +73,13 @@ function sentences(text: string): string[] {
 function isAcceptance(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.includes("?") || FAILURE_RE.test(trimmed)) return false;
+
   if (HEDGE_RE.test(trimmed.split(/[.!?\n]/)[0])) return false;
+
   if (APPROVAL_RE.test(trimmed) || BARE_OK_RE.test(trimmed)) return true;
   const all = sentences(trimmed);
   if (isShortGoAhead(all.at(-1) ?? "")) return true;
+
   return isShortGoAhead(all[0] ?? "") && !HEDGE_RE.test(trimmed);
 }
 
@@ -90,8 +95,12 @@ function isNewTopic(text: string): boolean {
 
 export function reactionTo(text: string, previousPrompt: string | undefined): Reaction {
   if (isCorrection(text)) return "corrected";
+
   if (isRepeat(text, previousPrompt)) return "repeated";
+
   if (isAcceptance(text)) return praisesTheResult(text) ? "approved" : "go-ahead";
+
   if (isNewTopic(text)) return "new-topic";
+
   return "follow-up";
 }

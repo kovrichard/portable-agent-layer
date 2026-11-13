@@ -27,6 +27,7 @@ beforeEach(() => {
     build: () => {
       builds++;
       writeAt(resolve(page.dist, "index.html"), Date.now() / 1000);
+
       return true;
     },
   };

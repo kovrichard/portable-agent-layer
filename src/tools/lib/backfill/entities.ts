@@ -27,5 +27,6 @@ export function backfillEntities(known: Set<string>, since?: string): number {
   const rows = list()
     .filter((entity) => entity.frontmatter.created)
     .map((entity) => ({ entity, ts: entity.frontmatter.created }));
+
   return emitUnseen(rows, (row) => entityEventId(row.entity), emitEntity, known, since);
 }

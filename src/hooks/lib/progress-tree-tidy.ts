@@ -40,6 +40,7 @@ function lastMergeOf(node: WorkNode): SettledPr | null {
   const merged = node.settledPrs.filter((pr) => pr.state === "merged");
   if (!merged.length || [...refs].some((ref) => !merged.some((pr) => pr.ref === ref)))
     return null;
+
   return merged.reduce((a, b) => (Date.parse(b.at) > Date.parse(a.at) ? b : a));
 }
 
@@ -52,6 +53,7 @@ export function mergedButOpen(tree: ScopeTree): MergedNode[] {
   return [...tree.nodes.values()].flatMap((node) => {
     if (node.status === "done") return [];
     const lastMerge = lastMergeOf(node);
+
     return lastMerge && untouchedSince(node, lastMerge) ? [{ node, lastMerge }] : [];
   });
 }
@@ -70,8 +72,10 @@ type Rarity = (word: string) => number;
 /** A word most titles in the scope use ("tree", "factory") says little about which topic a title is. */
 function rarityAmong(titles: string[]): Rarity {
   const uses = new Map<string, number>();
+
   for (const title of titles)
     for (const word of significantWords(title)) uses.set(word, (uses.get(word) ?? 0) + 1);
+
   return (word) => Math.log(1 + titles.length / (uses.get(word) ?? 1));
 }
 
@@ -80,6 +84,7 @@ function repeats(a: Set<string>, b: Set<string>, rarity: Rarity): boolean {
   if (shared.length < MIN_SHARED_WORDS) return false;
   const weight = (words: Iterable<string>) =>
     [...words].reduce((sum, word) => sum + rarity(word), 0);
+
   return weight(shared) / Math.min(weight(a), weight(b)) >= MIN_SHARED_SHARE;
 }
 
@@ -105,6 +110,7 @@ export function similarNodes(
   const nodes = [...tree.nodes.values()];
   const rarity = rarityAmong(nodes.map((node) => node.title));
   const words = significantWords(title);
+
   return nodes.filter(
     (node) =>
       stillRelevant(node, now) && repeats(words, significantWords(node.title), rarity)

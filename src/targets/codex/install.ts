@@ -7,20 +7,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  addCodexStatuslineConfig,
-  copyAgentsForCodex,
-  copySkills,
-  countSkills,
-  loadCodexHooksTemplate,
-  loadCodexRulesTemplate,
-  log,
-  mergeCodexHooks,
-  mergeCodexRules,
-  readJson,
-  replaceConfig,
-  replaceJsonConfig,
-} from "../lib";
+import { replaceConfig, replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { copyAgentsForCodex } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
+import { loadCodexHooksTemplate, mergeCodexHooks } from "./hooks";
+import { loadCodexRulesTemplate, mergeCodexRules } from "./rules";
+import { addCodexStatuslineConfig } from "./statusline";
 
 /**
  * Ensure `features.hooks = true` in config.toml without touching other content.
@@ -28,21 +22,26 @@ import {
  */
 function enableCodexHooks(configPath: string): void {
   let content = "";
+
   if (existsSync(configPath)) {
     content = readFileSync(configPath, "utf-8");
     // Already enabled — nothing to do
     if (/^\s*hooks\s*=\s*true/m.test(content)) {
       log.info("Codex hooks already enabled in config.toml");
+
       return;
     }
+
     // [features] section exists but no hooks line — insert after the header
     if (/^\[features\]/m.test(content)) {
       content = content.replace(/(\[features\][^\n]*\n)/, "$1hooks = true\n");
       writeFileSync(configPath, content, "utf-8");
       log.success("Added hooks = true to existing [features] section in config.toml");
+
       return;
     }
   }
+
   // No config.toml, or no [features] section — append the block
   const block = `${content.endsWith("\n") || content === "" ? "" : "\n"}\n[features]\nhooks = true\n`;
   writeFileSync(configPath, content + block, "utf-8");
@@ -54,8 +53,10 @@ function enableCodexStatusline(configPath: string): void {
   const updated = addCodexStatuslineConfig(content);
   if (updated === content) {
     log.info("Codex status line already configured in config.toml");
+
     return;
   }
+
   writeFileSync(configPath, updated, "utf-8");
   log.success("Configured Codex TUI status line in ~/.codex/config.toml");
 }

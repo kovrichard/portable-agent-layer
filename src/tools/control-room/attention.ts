@@ -48,6 +48,7 @@ function readFile(): string {
 function readMarks(): ReadState {
   const file = readFile();
   if (!existsSync(file)) return {};
+
   try {
     return JSON.parse(readFileSync(file, "utf-8")) as ReadState;
   } catch {
@@ -61,13 +62,16 @@ function writeMarks(marks: ReadState): void {
 
 export function markRead(ids: string[], now: Date = new Date()): number {
   const marks = readMarks();
+
   for (const id of ids) marks[id] = now.toISOString();
   writeMarks(marks);
+
   return ids.length;
 }
 
 function refusals(now: Date): AttentionItem[] {
   const since = new Date(now.getTime() - REFUSAL_WINDOW_DAYS * DAY_MS);
+
   return queryLedger({ since })
     .filter((e) => e.outcome === "denied" || e.outcome === "blocked")
     .map((e) => ({
@@ -85,6 +89,7 @@ function refusals(now: Date): AttentionItem[] {
 
 function anchorProject(target: string): string | null {
   const match = /^\{proj:([^}]+)\}/.exec(target);
+
   return match ? match[1] : null;
 }
 
@@ -150,5 +155,6 @@ export function attention(now: Date = new Date()): AttentionView {
     .map((item) => ({ ...item, read: marks[item.id] !== undefined }))
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, MAX_ITEMS);
+
   return { unread: items.filter((i) => !i.read).length, items };
 }

@@ -33,6 +33,7 @@ function filesBunDiscovers(): string[] {
     readFileSync(report, "utf-8").matchAll(/<testsuite [^>]*?file="([^"]+)"/g),
     (match) => match[1].replaceAll("\\", "/")
   );
+
   return [...new Set(files)].sort();
 }
 

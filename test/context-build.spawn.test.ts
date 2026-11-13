@@ -16,6 +16,7 @@ describe("buildSystemReminder", () => {
   function withSessionIn<T>(dir: string, run: () => T): T {
     const savedStart = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = dir;
+
     try {
       return run();
     } finally {
@@ -42,6 +43,7 @@ describe("buildSystemReminder", () => {
       JSON.stringify({ dynamicContext: { progressTree: true } })
     );
     reload();
+
     return dir;
   }
 
@@ -73,6 +75,7 @@ describe("buildSystemReminder", () => {
     });
     const savedStart = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = startDir;
+
     try {
       expect(buildSystemReminder()).toContain("**started-here** (just now) → here");
     } finally {

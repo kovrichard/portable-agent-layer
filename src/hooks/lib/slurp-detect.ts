@@ -41,6 +41,7 @@ export const diskProbe: FileProbe = {
   sizeOf(path) {
     try {
       const stat = statSync(path);
+
       return stat.isFile() ? stat.size : null;
     } catch {
       return null;
@@ -49,6 +50,7 @@ export const diskProbe: FileProbe = {
   readScript(path) {
     const size = this.sizeOf(path);
     if (size === null || size > MAX_SCRIPT_BYTES) return null;
+
     try {
       return readFileSync(path, "utf-8");
     } catch {
@@ -79,6 +81,7 @@ function codeSlurps(code: string): [idiom: string, path: string][] {
   const literal = CODE_IDIOMS.flatMap(([idiom, pattern]) =>
     Array.from(code.matchAll(pattern), (m) => [idiom, m[2] as string] as [string, string])
   );
+
   return [...literal, ...pythonWithOpenSlurps(code)];
 }
 
@@ -95,21 +98,25 @@ function unquoted(word: string): string {
 export function shellTokens(command: string): string[] {
   return Array.from(command.matchAll(SHELL_TOKEN)).flatMap(([, , operator, word]) => {
     if (operator) return [operator];
+
     return word ? [unquoted(word)] : [];
   });
 }
 
 function pipelineSegments(tokens: string[]): string[][] {
   const segments: string[][] = [[]];
+
   for (const token of tokens) {
     if (SHELL_OPERATORS.has(token)) segments.push([]);
     else segments.at(-1)?.push(token);
   }
+
   return segments.filter((s) => s.length > 0);
 }
 
 function withoutEnvAssignments(segment: string[]): string[] {
   const start = segment.findIndex((t) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(t));
+
   return start < 0 ? [] : segment.slice(start);
 }
 
@@ -119,6 +126,7 @@ function programName(segment: string[]): string {
 
 function redirectedInput(segment: string[]): string | null {
   const at = segment.indexOf("<");
+
   return at >= 0 ? (segment[at + 1] ?? null) : null;
 }
 
@@ -138,18 +146,22 @@ const skipValues =
     at + count;
 const streams: JqOption = (call, _, at) => {
   call.streams = true;
+
   return at;
 };
 const slurps: JqOption = (call, _, at) => {
   call.slurp = true;
+
   return at;
 };
 const filterFromFile: JqOption = (call, _, at) => {
   call.filterSeen = true;
+
   return at + 1;
 };
 const sideFile: JqOption = (call, args, at) => {
   call.sideFiles.push(args[at + 2] ?? "");
+
   return at + 2;
 };
 const endOfFiles: JqOption = (_, args) => args.length;
@@ -188,36 +200,43 @@ function parseJq(args: string[]): JqCall {
     streams: false,
     filterSeen: false,
   };
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] as string;
     const option = JQ_OPTIONS[arg];
     if (option) i = option(call, args, i);
     else takeJqWord(call, arg);
   }
+
   return call;
 }
 
 function catFiles(segment: string[] | undefined): string[] {
   if (!segment || programName(segment) !== "cat") return [];
+
   return segment.slice(1).filter((t) => !t.startsWith("-"));
 }
 
 function stdinFiles(segment: string[], previous: string[] | undefined): string[] {
   const redirected = redirectedInput(segment);
+
   return redirected ? [redirected] : catFiles(previous);
 }
 
 function jqSlurps(segment: string[], previous: string[] | undefined): [string, string][] {
   const call = parseJq(segment.slice(1));
   const sides = call.sideFiles.map((f) => ["jq --slurpfile", f] as [string, string]);
+
   if (call.streams) return sides;
   const idiom = call.slurp ? "jq -s" : "jq";
   const inputs = call.files.length > 0 ? call.files : stdinFiles(segment, previous);
+
   return [...sides, ...inputs.map((f) => [idiom, f] as [string, string])];
 }
 
 function scriptArgument(segment: string[]): string | null {
   const script = segment.slice(1).find((t) => !t.startsWith("-") && t !== "run");
+
   return script && SCRIPT_EXTENSIONS.has(extname(script)) ? script : null;
 }
 
@@ -231,6 +250,7 @@ function segmentSlurps(
   const script = scriptArgument(segment);
   const scriptPath = script ? expandPath(script, cwd) : null;
   const source = scriptPath ? probe.readScript(scriptPath) : null;
+
   return source ? codeSlurps(source) : [];
 }
 
@@ -247,6 +267,7 @@ export function commandSlurps(
     ),
   ];
   const seen = new Set<string>();
+
   return found.flatMap(([idiom, path]) => {
     const full = expandPath(path, cwd);
     if (full === null) return [];
@@ -254,6 +275,7 @@ export function commandSlurps(
     const key = `${idiom}\0${full}`;
     if (bytes === null || seen.has(key)) return [];
     seen.add(key);
+
     return [{ path: full, idiom, bytes }];
   });
 }

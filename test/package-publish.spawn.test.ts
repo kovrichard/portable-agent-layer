@@ -20,10 +20,12 @@ function copyOfWhatGitWouldPublish(into: string): string {
   );
   expect(listed.status).toBe(0);
   const copy = resolve(into, "package");
+
   for (const file of listed.stdout.split("\0").filter(Boolean)) {
     mkdirSync(dirname(resolve(copy, file)), { recursive: true });
     copyFileSync(resolve(REPO, file), resolve(copy, file));
   }
+
   return copy;
 }
 
@@ -36,6 +38,7 @@ describe("package publish surface", () => {
 
   test("prepare script exits 0 when .git is absent (package mode)", () => {
     const sandbox = freshTestDir(import.meta.file);
+
     try {
       const script = resolve(REPO, ".husky/install.mjs");
       const result = spawnSync("bun", [script], {
@@ -52,6 +55,7 @@ describe("package publish surface", () => {
 
   test("packed tarball contains .husky/install.mjs", () => {
     const sandbox = freshTestDir(import.meta.file);
+
     try {
       const pack = spawnSync(
         "bun",

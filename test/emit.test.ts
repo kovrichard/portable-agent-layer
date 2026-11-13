@@ -14,6 +14,7 @@ function captureStdout(): void {
   captured = [];
   process.stdout.write = (chunk: string) => {
     captured.push(String(chunk));
+
     return true;
   };
 }

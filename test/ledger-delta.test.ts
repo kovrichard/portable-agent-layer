@@ -23,14 +23,17 @@ async function lib() {
 /** A small deterministic generator, so a failure names a seed that reproduces it. */
 function rng(seed: number) {
   let state = seed >>> 0;
+
   return () => {
     state = (state * 1664525 + 1013904223) >>> 0;
+
     return state / 0x100000000;
   };
 }
 
 function randomFile(next: () => number, lines: number): string {
   const out: string[] = [];
+
   for (let i = 0; i < lines; i++) {
     // Repeat from a small alphabet so the diff meets real ambiguity: unique
     // lines make alignment trivial and would hide an off-by-one.
@@ -40,6 +43,7 @@ function randomFile(next: () => number, lines: number): string {
       ]
     );
   }
+
   return out.join("\n");
 }
 
@@ -47,6 +51,7 @@ function randomFile(next: () => number, lines: number): string {
 function mutate(next: () => number, content: string): string {
   const lines = content.split("\n");
   const edits = 1 + Math.floor(next() * 4);
+
   for (let i = 0; i < edits; i++) {
     const at = Math.floor(next() * (lines.length + 1));
     const roll = next();
@@ -54,6 +59,7 @@ function mutate(next: () => number, content: string): string {
     else if (roll < 0.67) lines.splice(at, 1 + Math.floor(next() * 3));
     else lines.splice(at, 1, `replaced ${i}`);
   }
+
   return lines.join("\n");
 }
 
@@ -193,6 +199,7 @@ describe("what a delta records", () => {
   // ledger asserting something that never happened.
   test("an action that did not land records no delta", async () => {
     const { recordAction } = await lib();
+
     for (const outcome of ["denied", "failed"] as const) {
       const entry = recordAction({
         tool: "Edit",

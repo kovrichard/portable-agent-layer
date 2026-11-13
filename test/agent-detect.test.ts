@@ -242,6 +242,7 @@ describe("blockResponse", () => {
   test("every claude/vscode block carries the reason in both spellings", () => {
     for (const agent of ["claude", "vscode"]) {
       process.env.PAL_AGENT = agent;
+
       for (const event of [undefined, "Stop", "PreToolUse"]) {
         const p = JSON.parse(blockResponse("why it stopped", event));
         expect(p.reason).toBe("why it stopped");

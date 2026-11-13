@@ -32,7 +32,9 @@ export function finalPerMessage<T>(
   messageIdOf: (call: T) => string | undefined
 ): T[] {
   const byMessage = new Map<unknown, T>();
+
   for (const call of calls) byMessage.set(messageIdOf(call) ?? call, call);
+
   return [...byMessage.values()];
 }
 
@@ -51,6 +53,7 @@ export function cacheWritesOf(usage: TranscriptUsage): CacheWrites {
   const fiveMinute = usage.cache_creation?.ephemeral_5m_input_tokens;
   const oneHour = usage.cache_creation?.ephemeral_1h_input_tokens;
   const hasBreakdown = fiveMinute !== undefined || oneHour !== undefined;
+
   return {
     cacheWrite5m: hasBreakdown
       ? (fiveMinute ?? 0)

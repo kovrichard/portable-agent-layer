@@ -146,8 +146,10 @@ describe("the doctor's report, at a terminal", () => {
       command: `pal cli ${"fix ".repeat(20)}`,
       external: false,
     });
+
     for (const width of [40, 60, 100]) {
       const lines = renderReport({ ...base, findings: [long] }, rich(width));
+
       for (const line of lines) expect(visibleWidth(line)).toBeLessThanOrEqual(width);
     }
   });

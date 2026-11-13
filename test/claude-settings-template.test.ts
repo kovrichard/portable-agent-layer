@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { loadSettingsTemplate } from "../src/targets/lib";
+import { loadSettingsTemplate } from "../src/targets/settings-merge";
 
 const PKG = resolve(import.meta.dir, "..").replaceAll("\\", "/");
 const TEMPLATE = resolve(PKG, "assets/templates/settings.claude.json");

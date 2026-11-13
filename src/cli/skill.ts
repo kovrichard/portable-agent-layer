@@ -11,7 +11,8 @@ import { getActiveAgent } from "../hooks/lib/agent";
 import { flagshipAuthorModel } from "../hooks/lib/models";
 import { withPalEnv } from "../hooks/lib/pal-env";
 import { isInside, palHome, palPkg } from "../hooks/lib/paths";
-import { linkPersonalSkill, log } from "../targets/lib";
+import { log } from "../targets/log";
+import { linkPersonalSkill } from "../targets/skills";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import {
   formatReport,
@@ -23,6 +24,7 @@ import {
 /** Entry names under ~/.pal/skills/, sorted; dangling links included. */
 function skillEntries(dir: string): string[] {
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir).sort();
 }
 
@@ -42,14 +44,17 @@ function doctorAll(): number {
 
   const names = entries.filter((n) => {
     const path = resolve(dir, n);
+
     return !isDanglingLink(path) && statSync(path).isDirectory();
   });
   if (names.length === 0) {
     log.warn(`No skills found in ${dir}`);
+
     return 0;
   }
 
   const reports = names.map((n) => lintSkill(resolve(dir, n)));
+
   for (const report of reports) console.log(formatSummary(report));
 
   const failing = reports.filter((r) => r.errors > 0).length;
@@ -58,6 +63,7 @@ function doctorAll(): number {
   console.log(
     `\n${reports.length} skills — ${failing} failing, ${warning} with warnings, ${clean} clean`
   );
+
   return failing > 0 ? 1 : 0;
 }
 
@@ -75,37 +81,48 @@ function toolFileName(tool: string): string {
 function runSkillTool(skill: string, tool: string, toolArgs: string[]): number {
   if (!isPlainSegment(skill) || !isPlainSegment(tool)) {
     log.error("Skill and tool must be plain names — no path separators, no '..'");
+
     return 1;
   }
+
   const file = toolFileName(tool);
   const path = resolve(palHome(), "skills", skill, "tools", file);
   if (!existsSync(path)) {
     log.error(`No tool '${file}' in skill '${skill}' — looked in ${path}`);
+
     return 1;
   }
+
+  const env = isShippedTool(path) ? withPalEnv(process.env) : process.env;
   const { status } = spawnSync("bun", [path, ...toolArgs], {
     stdio: "inherit",
-    env: isShippedTool(path) ? withPalEnv(process.env) : process.env,
+    env: { ...env, PAL_HOME: palHome() },
   });
+
   return status ?? 1;
 }
 
 /** Real paths, so a personal skill symlinked from elsewhere never passes as shipped. */
 function isShippedTool(path: string): boolean {
   const shipped = resolve(palPkg(), "assets", "skills");
+
   return existsSync(shipped) && isInside(realpathSync(shipped), realpathSync(path));
 }
 
 function doctorOne(name: string): number {
   const report = lintSkill(resolveSkillDir(name));
   console.log(formatReport(report));
+
   return report.errors > 0 ? 1 : 0;
 }
 
 function doctor(name: string | undefined, all: boolean): number {
   if (all && name) throw new UsageError("give a skill name or --all, not both");
+
   if (all) return doctorAll();
+
   if (!name) throw new UsageError("missing <name> (or --all)");
+
   return doctorOne(name);
 }
 
@@ -123,9 +140,11 @@ function link(name: string): number {
           "(opencode: auto via ~/.pal/skills/)"
       );
     }
+
     return 0;
   } catch (e) {
     log.error(e instanceof Error ? e.message : String(e));
+
     return 1;
   }
 }
@@ -133,6 +152,7 @@ function link(name: string): number {
 export function printAuthorModel(): number {
   const model = flagshipAuthorModel(getActiveAgent());
   if (model) console.log(model);
+
   return 0;
 }
 

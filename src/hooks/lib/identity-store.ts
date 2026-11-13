@@ -41,6 +41,7 @@ export function shortId(id: string): string {
 
 function hasUsableId(value: unknown): value is { id: string } {
   const v = value as { id?: unknown } | null;
+
   return typeof v?.id === "string" && v.id.length > 0;
 }
 
@@ -48,6 +49,7 @@ function hasUsableId(value: unknown): value is { id: string } {
 function saveIdentity<T extends IdentityBase>(file: string, record: T): T {
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
+
   return record;
 }
 
@@ -71,6 +73,7 @@ export function loadIdentity<T extends IdentityBase>(
       /* fall through to minting a fresh identity below */
     }
   }
+
   return saveIdentity(file, create());
 }
 
@@ -100,6 +103,7 @@ export function writeRegistryEntry(
     file,
     stringify({ ...fields, updated: new Date().toISOString() }, body || existingBody)
   );
+
   return file;
 }
 
@@ -110,8 +114,10 @@ export function writeRegistryEntry(
 export function readRegistryEntries(dir: string): RegistryFields[] {
   mkdirSync(dir, { recursive: true });
   const entries: RegistryFields[] = [];
+
   for (const name of readdirSync(dir)) {
     if (!name.endsWith(".md")) continue;
+
     try {
       const { meta } = parse<Record<string, string>>(
         readFileSync(resolve(dir, name), "utf-8")
@@ -121,6 +127,7 @@ export function readRegistryEntries(dir: string): RegistryFields[] {
       /* a malformed entry must not hide the rest of the registry */
     }
   }
+
   return entries;
 }
 
@@ -134,5 +141,6 @@ export function resolveDisplayName(id: string, registry: NameableEntry[]): strin
   const entry = registry.find((e) => e.id === id);
   if (!entry) return shortId(id);
   const sharesLabel = registry.some((e) => e.id !== id && e.label === entry.label);
+
   return sharesLabel ? `${entry.label}·${shortId(id)}` : entry.label;
 }

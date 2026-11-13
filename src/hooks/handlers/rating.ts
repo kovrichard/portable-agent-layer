@@ -15,26 +15,26 @@ import {
 } from "../lib/adaptation-candidates";
 import { readRules } from "../lib/adaptation-rules";
 import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
-import {
-  correctionKindRequest,
-  needsCorrectionKind,
-  parseCorrectionKind,
-  withCorrectionKind,
-} from "../lib/correction-kind";
+import { needsCorrectionKind, withCorrectionKind } from "../lib/correction-kind";
 import { spawnDetachedInference } from "../lib/detached-inference";
-import { canInfer, inference } from "../lib/inference";
+import { canInfer } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
+import { judge } from "../lib/judge";
 import { logDebug } from "../lib/log";
 import { paths } from "../lib/paths";
 import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
-  correctionCheckRequest,
+  correctionCheckJudgment,
+  correctionCheckOf,
+  correctionKindJudgment,
+  correctionKindOf,
+  reactionJudgment,
+  reactionLabelOf,
+} from "../lib/rating-judgments";
+import {
   needsCorrectionCheck,
-  parseCorrectionCheck,
-  parseReactionLabel,
   ratingContext,
   ratingFromLabels,
-  reactionRequest,
   settledLabel,
   turnFromLabels,
 } from "../lib/reaction-rating";
@@ -45,6 +45,7 @@ import {
   drafterRequest,
   parseDraft,
 } from "../lib/rule-drafter";
+import { ruleRecurringJudgment } from "../lib/shadow-judgments";
 import { emitRating } from "../lib/signals";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */
@@ -56,15 +57,16 @@ function getLastResponse(sessionId?: string): string {
       string,
       { response?: string }
     >;
-    // Look up by session, or fall back to most recent entry
     if (sessionId && cache[sessionId]) {
       return cache[sessionId].response ?? "";
     }
+
     // No session match — return empty rather than wrong context
     return "";
   } catch {
     /* non-critical */
   }
+
   return "";
 }
 
@@ -151,6 +153,7 @@ function isPraise(prompt: string): boolean {
     .replace(/[.!?,'"]/g, "");
   const words = normalized.split(/\s+/);
   if (words.length > 3) return false;
+
   return (
     POSITIVE_PRAISE_WORDS.has(normalized) ||
     POSITIVE_PHRASES.has(normalized) ||
@@ -166,14 +169,16 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
 
   if (isPraise(trimmed)) {
     emitRating(8, `Direct praise: "${trimmed}"`, "implicit", reply);
+
     return;
   }
 
   if (isSystemText(trimmed)) return;
+
   if (!reply) return;
 
-  // Skip very short, very long, or code-like messages
   if (trimmed.length < 5 || trimmed.length > 500) return;
+
   if (/^[/$`{]/.test(trimmed) || trimmed.includes("\n\n")) return;
 
   // claude --print has 3-5s of cold start, too slow for UserPromptSubmit.
@@ -193,13 +198,13 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
 }
 
 async function labelReaction(reply: string, message: string, sessionId?: string) {
-  const result = await inference(reactionRequest(reply, message, sessionId));
-  return result.success ? parseReactionLabel(result.output) : null;
+  return reactionLabelOf(await judge(reactionJudgment(reply, message, sessionId)));
 }
 
 async function checkCorrection(reply: string, message: string, sessionId?: string) {
-  const result = await inference(correctionCheckRequest(reply, message, sessionId));
-  return result.success ? parseCorrectionCheck(result.output) : null;
+  return correctionCheckOf(
+    await judge(correctionCheckJudgment(reply, message, sessionId))
+  );
 }
 
 async function labelCorrectionKind(
@@ -208,28 +213,33 @@ async function labelCorrectionKind(
   issue: string,
   sessionId?: string
 ) {
-  const result = await inference(correctionKindRequest(reply, message, issue, sessionId));
-  return result.success ? parseCorrectionKind(result.output) : null;
+  return correctionKindOf(
+    await judge(correctionKindJudgment(reply, message, issue, sessionId))
+  );
 }
 
 function knownRules() {
   const waiting = readCandidates().filter((candidate) => candidate.verdict === "waiting");
+
   return [
     ...readRules(),
     ...waiting.map((candidate) => ({ ...candidate, status: "candidate" })),
   ];
 }
 
-async function draftRuleCandidate(sessionId?: string): Promise<void> {
+/** @lintignore exercised directly by test/shadow-rule-recurring.spawn.test.ts */
+export async function draftRuleCandidate(sessionId?: string): Promise<void> {
   const turns = withRequests(readTurns());
   reproveWaiting(turns);
   const corrections = correctionsToDraftFrom(turns);
   const known = knownRules();
   if (!canRepeat(corrections) && !canWiden(corrections, known)) return;
-  const result = await inference(drafterRequest(corrections, known, sessionId));
-  const candidate = result.success ? parseDraft(result.output, corrections, known) : null;
+  const result = await judge(
+    ruleRecurringJudgment(corrections, drafterRequest(corrections, known, sessionId))
+  );
+  const candidate = parseDraft(result.fallbackOutput, corrections, known);
   if (candidate) recordCandidate(candidate, turns);
-  else logDebug("rule-drafter", `no candidate: ${result.output ?? result.error ?? ""}`);
+  else logDebug("rule-drafter", `no candidate: ${result.fallbackOutput ?? ""}`);
 }
 
 /** Background mode: label the reaction, check a possible correction, name a confirmed one's kind, store the rating. */
@@ -249,6 +259,7 @@ async function runReactionRatingAndStore(
     if (label && rating !== null) {
       emitRating(rating, ratingContext(label, message), "implicit", reply);
     }
+
     const turn = turnFromLabels(
       { session: sessionId ?? "", message, replyEnd: reply },
       label,
@@ -257,7 +268,9 @@ async function runReactionRatingAndStore(
     const kind = needsCorrectionKind(turn)
       ? await labelCorrectionKind(reply, message, turn.issue, sessionId)
       : null;
+
     if (turn) appendTurn(withCorrectionKind(turn, kind), sentAt);
+
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
     const { logError } = await import("../lib/log");
@@ -284,6 +297,7 @@ export function captureRating(
       "explicit",
       getLastResponse(sessionId).slice(0, 500)
     );
+
     return;
   }
 
@@ -307,5 +321,6 @@ if (process.argv[2] === "--sentiment") {
       Number.isNaN(sentAt.getTime()) ? new Date() : sentAt
     );
   }
+
   process.exit(0);
 }

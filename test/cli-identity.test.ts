@@ -116,6 +116,7 @@ describe("actor label derivation", () => {
 describe("pal cli actor / machine", () => {
   async function run(subject: "actor" | "machine", args: string[]) {
     const { runIdentity } = await import("../src/cli/identity");
+
     return runIdentity(subject, args);
   }
 

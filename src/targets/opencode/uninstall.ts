@@ -7,7 +7,9 @@ import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "n
 import { resolve } from "node:path";
 import { platform } from "../../hooks/lib/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
-import { log, removeAgentsFromOpencode, removePalDocs } from "../lib";
+import { log } from "../log";
+import { removePalDocs } from "../pal-docs";
+import { removeAgentsFromOpencode } from "../shipped-agents";
 import { palHomePattern, removePalHomeAllow } from "./permission";
 
 const OC_GLOBAL_DIR = platform.opencodeDir() || "";
@@ -20,6 +22,7 @@ if (!OC_GLOBAL_DIR || !PAL_CLAUDE_DIR) {
 }
 
 const pluginPath = resolve(OC_GLOBAL_DIR, "plugins", "pal-plugin.ts");
+
 try {
   unlinkSync(pluginPath);
   log.success("Removed PAL plugin");
@@ -37,12 +40,14 @@ removePalDocs();
 
 const agentsMd = resolve(OC_GLOBAL_DIR, "AGENTS.md");
 const claudeMd = resolve(PAL_CLAUDE_DIR, "CLAUDE.md");
+
 try {
   unlinkSync(claudeMd);
   log.success("Removed ~/.claude/CLAUDE.md");
 } catch {
   /* gone */
 }
+
 try {
   unlinkSync(agentsMd);
   log.success("Removed ~/.config/opencode/AGENTS.md");
@@ -68,6 +73,7 @@ if (existsSync(configPath) && statSync(configPath).size > 0) {
         ocConfig.instructions = filtered;
       }
     }
+
     writeFileSync(configPath, `${JSON.stringify(ocConfig, null, 2)}\n`, "utf-8");
     log.success("Removed PAL entries from config.json");
   } catch {

@@ -47,6 +47,7 @@ function newestPerReaction(samples: ReactionSample[]): ReactionSample[] {
   const kept = (Object.keys(KEPT) as Reaction[]).flatMap((reaction) =>
     samples.filter((s) => s.reaction === reaction).slice(-KEPT[reaction])
   );
+
   return kept.sort((a, b) => a.ts.localeCompare(b.ts));
 }
 

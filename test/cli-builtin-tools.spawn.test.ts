@@ -92,6 +92,7 @@ const WRITE_CASES: Record<string, string[]> = {
 /** Two homes mean two registries, so their generated ids differ by design. */
 function normalize(text: string, home: string): string {
   const homes = [home, home.replaceAll("\\", "/"), home.replaceAll("\\", "\\\\")];
+
   return homes
     .reduce((acc, h) => acc.replaceAll(h, "HOME"), text)
     .replace(
@@ -115,6 +116,7 @@ describe("pal cli <tool> — the writing path, not just --help", () => {
     (verb, args) => {
       const viaCliHome = freshTestDir(import.meta.file);
       const viaPathHome = freshTestDir(import.meta.file);
+
       try {
         const viaCli = spawnSync("bun", [CLI, "cli", verb, ...args], {
           env: { ...process.env, PAL_HOME: viaCliHome },
@@ -136,6 +138,7 @@ describe("pal cli <tool> — the writing path, not just --help", () => {
         const tree = treeOf(viaCliHome);
         expect(tree).toEqual(treeOf(viaPathHome));
         expect(tree.length).toBeGreaterThan(0);
+
         for (const rel of tree) {
           expect(
             normalize(readFileSync(resolve(viaCliHome, rel), "utf-8"), viaCliHome)
@@ -212,6 +215,7 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
   function skillWithKeyTool(dir: string): string {
     mkdirSync(resolve(dir, "tools"), { recursive: true });
     writeFileSync(resolve(dir, "tools", "key.ts"), PRINT_KEY);
+
     return dir;
   }
 
@@ -226,6 +230,7 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
       PAL_PKG: pkg,
     };
     delete env.PAL_GEMINI_API_KEY;
+
     return spawnSync("bun", [CLI, "cli", "skill", "run", skill, "key"], {
       env,
       encoding: "utf-8",
@@ -255,5 +260,30 @@ describe("pal cli skill run — ~/.pal/.env reaches shipped skills only", () => 
 
   test("a personal skill linked in from outside the package does not either", () => {
     expect(runKeyTool("linked").stdout.trim()).toBe("key=[]");
+  });
+});
+
+describe("pal cli skill run — the tool learns where PAL's home is", () => {
+  test("with PAL_HOME unset, the tool receives the home pal resolved", () => {
+    const userHome = freshTestDir(`${import.meta.file}-user-home`);
+    const pal = resolve(userHome, ".pal");
+    mkdirSync(resolve(pal, "skills", "where", "tools"), { recursive: true });
+    writeFileSync(
+      resolve(pal, "skills", "where", "tools", "home.ts"),
+      `console.log(\`home=[\${process.env.PAL_HOME ?? ""}]\`);\n`
+    );
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      HOME: userHome,
+      USERPROFILE: userHome,
+    };
+    delete env.PAL_HOME;
+    delete env.PAL_TEST_SANDBOX;
+    const result = spawnSync("bun", [CLI, "cli", "skill", "run", "where", "home"], {
+      env,
+      encoding: "utf-8",
+      timeout: 20000,
+    });
+    expect(result.stdout.trim()).toBe(`home=[${pal}]`);
   });
 });

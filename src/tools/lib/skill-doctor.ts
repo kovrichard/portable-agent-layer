@@ -11,10 +11,16 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, extname, relative, resolve } from "node:path";
-import { splitFrontmatter } from "../../hooks/lib/frontmatter";
+import { basename, resolve } from "node:path";
 import { palHome, toPath } from "../../hooks/lib/paths";
-import { declaredTriggers } from "../../hooks/lib/skill-triggers";
+import {
+  findAbsolutePaths,
+  leadTriggers,
+  type ParsedSkill,
+  parseSkill,
+  quoteList,
+  stripCode,
+} from "./skill-parse";
 
 type Level = "pass" | "warn" | "error";
 
@@ -32,133 +38,11 @@ export interface DoctorReport {
   warnings: number;
 }
 
-export interface ParsedSkill {
-  name: string | null;
-  description: string | null;
-  descriptionQuoted: boolean;
-  triggers: string[];
-  shipped: boolean;
-  license: string | null;
-  derivedFrom: string | null;
-  body: string;
-}
-
-const SHIPPED_SOURCE = "portable-agent-layer";
-
 const RESERVED_WORDS = ["anthropic", "claude"];
 const MAX_NAME = 64;
 const MAX_DESCRIPTION = 1024;
 const MAX_BODY_LINES = 500;
 const MIN_TRIGGERS = 3;
-
-/** File extensions worth scanning for hardcoded paths (SKILL.md + its scripts). */
-const SCANNABLE_EXT = new Set([".md", ".ts", ".js", ".mjs", ".cjs", ".sh", ".py"]);
-
-/** Machine/user-specific absolute paths that will not survive an export to
- * another machine or user: POSIX home dirs and Windows user profiles. Portable
- * forms ($HOME, ~, %USERPROFILE%, env vars) are deliberately not matched. */
-const ABSOLUTE_PATH_RE =
-  /(?:\/(?:Users|home)\/[A-Za-z0-9._-]+|\/root\/[A-Za-z0-9._-]|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+)/;
-
-/** Collect SKILL.md and sibling script files, skipping vendored/VCS trees. */
-export function collectSkillFiles(skillDir: string): string[] {
-  const out: string[] = [];
-  const walk = (dir: string) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
-      const full = resolve(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.isFile() && SCANNABLE_EXT.has(extname(entry.name))) out.push(full);
-    }
-  };
-  walk(skillDir);
-  return out;
-}
-
-/** Find machine-specific absolute paths across a skill's files. */
-export function findAbsolutePaths(skillDir: string): string[] {
-  const hits: string[] = [];
-  for (const file of collectSkillFiles(skillDir)) {
-    const rel = relative(skillDir, file).replaceAll("\\", "/");
-    const lines = readFileSync(file, "utf-8").split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      const m = ABSOLUTE_PATH_RE.exec(lines[i]);
-      if (m) hits.push(`${rel}:${i + 1} → ${m[0]}`);
-    }
-  }
-  return hits;
-}
-
-/** Split a SKILL.md into frontmatter fields and body. */
-export function parseSkill(content: string): ParsedSkill {
-  const split = splitFrontmatter(content);
-  if (!split) {
-    return {
-      name: null,
-      description: null,
-      descriptionQuoted: false,
-      triggers: [],
-      shipped: false,
-      license: null,
-      derivedFrom: null,
-      body: content,
-    };
-  }
-  const { frontmatter, body } = split;
-  const name = /^name:\s*"?(.+?)"?\s*$/m.exec(frontmatter)?.[1] ?? null;
-  const rawDescription = /^description:[ \t]*(.*?)\s*$/m.exec(frontmatter)?.[1] ?? null;
-  const descriptionQuoted =
-    rawDescription !== null &&
-    rawDescription.length >= 2 &&
-    rawDescription.startsWith('"') &&
-    rawDescription.endsWith('"');
-  const description = descriptionQuoted ? rawDescription.slice(1, -1) : rawDescription;
-  return {
-    name,
-    description,
-    descriptionQuoted,
-    triggers: declaredTriggers(frontmatter),
-    shipped: metadataField(frontmatter, "source") === SHIPPED_SOURCE,
-    license: topLevelField(frontmatter, "license"),
-    derivedFrom: metadataField(frontmatter, "derived-from"),
-    body,
-  };
-}
-
-/** Value of a top-level `key:` line in the frontmatter, unquoted. */
-export function topLevelField(frontmatter: string, key: string): string | null {
-  return (
-    new RegExp(String.raw`^${key}:\s*"?(.+?)"?\s*$`, "m").exec(frontmatter)?.[1] ?? null
-  );
-}
-
-/** Value of an indented `key:` line under the `metadata:` block, unquoted. */
-export function metadataField(frontmatter: string, key: string): string | null {
-  return (
-    new RegExp(String.raw`^[ \t]+${key}:\s*"?(.+?)"?\s*$`, "m").exec(frontmatter)?.[1] ??
-    null
-  );
-}
-
-/** Render triggers for a report line: `"a", "b"` or `"a" then "b"`. */
-export function quoteList(triggers: string[], separator: string): string {
-  return triggers.map((trigger) => `"${trigger}"`).join(separator);
-}
-
-/**
- * The triggers every skill must declare first: its own name, then the
- * de-hyphenated form a user would actually type. A single-word name has only
- * the one form, and the parser dedupes anyway, so it requires just itself.
- */
-export function leadTriggers(name: string): string[] {
-  const spaced = name.replaceAll("-", " ");
-  return spaced === name ? [name] : [name, spaced];
-}
-
-/** Remove fenced and inline code so prose checks don't trip on examples. */
-export function stripCode(s: string): string {
-  return s.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
-}
 
 /**
  * Evaluate the skill at `skillDir` (a folder containing SKILL.md) and return a
@@ -172,17 +56,19 @@ export function lintSkill(skillDir: string): DoctorReport {
 
   if (!existsSync(skillDir)) {
     add("error", "structure", `No skill directory at ${skillDir}`);
+
     return { dir: skillDir, name: null, findings, errors: 1, warnings: 0 };
   }
 
-  // The runtime only loads a file named exactly `SKILL.md`. On case-insensitive
-  // filesystems (macOS, Windows) `existsSync` would accept `skill.md`, so match
-  // the real on-disk entry, not a case-folded path.
+  // The runtime loads only an exact `SKILL.md`, and on macOS and Windows existsSync
+  // would also accept `skill.md`, so match the real on-disk entry.
   const skillFile = readdirSync(skillDir).find((e) => e.toLowerCase() === "skill.md");
   if (!skillFile) {
     add("error", "structure", `No SKILL.md found in ${skillDir}`);
+
     return { dir: skillDir, name: null, findings, errors: 1, warnings: 0 };
   }
+
   skillFile === "SKILL.md"
     ? add("pass", "file.name", "skill file is named SKILL.md")
     : add(
@@ -204,6 +90,7 @@ export function lintSkill(skillDir: string): DoctorReport {
 
   const errors = findings.filter((f) => f.level === "error").length;
   const warnings = findings.filter((f) => f.level === "warn").length;
+
   return { dir: skillDir, name: skill.name, findings, errors, warnings };
 }
 
@@ -211,6 +98,7 @@ type AddFinding = (level: Level, check: string, message: string) => void;
 
 function checkProvenance(skill: ParsedSkill, add: AddFinding): void {
   if (!skill.shipped) return;
+
   if (skill.license) add("pass", "license", `licensed ${skill.license}`);
   else if (skill.derivedFrom)
     add("pass", "license", `unlicensed by design — derived from ${skill.derivedFrom}`);
@@ -268,48 +156,56 @@ function checkDescription(
   if (!description) {
     add("error", "description", "Missing `description` in frontmatter");
   } else {
-    description.length <= MAX_DESCRIPTION
-      ? add(
-          "pass",
-          "description.length",
-          `${description.length}/${MAX_DESCRIPTION} chars`
-        )
-      : add(
-          "error",
-          "description.length",
-          `${description.length} chars exceeds ${MAX_DESCRIPTION}`
-        );
-    descriptionQuoted
-      ? add("pass", "description.quoted", "value is wrapped in double quotes")
-      : add(
-          "warn",
-          "description.quoted",
-          'value is not wrapped in double quotes — unquoted YAML mis-parses on colons, commas, and quotes; wrap it in "..." (escaping any inner " as \\")'
-        );
-    /<[^>]+>/.test(description)
-      ? add(
-          "warn",
-          "description.xml",
-          "contains angle-bracket content — Anthropic disallows XML tags; rephrase placeholders like <x> in prose"
-        )
-      : add("pass", "description.xml", "no XML tags");
-    /\bwhen/i.test(description)
-      ? add("pass", "description.trigger", "states when to use the skill")
-      : add(
-          "warn",
-          "description.trigger",
-          "no 'when to use' trigger — add 'Use when …' so the dispatcher can match it"
-        );
-    /\b(I can|I['’]ll|I will|I help|you can|you will|you could|you['’]ll)\b/i.test(
-      description
-    )
-      ? add(
-          "warn",
-          "description.pov",
-          "reads first/second person — write descriptions in third person (e.g. 'Processes…', 'Generates…')"
-        )
-      : add("pass", "description.pov", "third person");
+    checkDescriptionFormat(description, descriptionQuoted, add);
+    checkDescriptionWording(description, add);
   }
+}
+
+function checkDescriptionFormat(
+  description: string,
+  descriptionQuoted: boolean,
+  add: AddFinding
+): void {
+  description.length <= MAX_DESCRIPTION
+    ? add("pass", "description.length", `${description.length}/${MAX_DESCRIPTION} chars`)
+    : add(
+        "error",
+        "description.length",
+        `${description.length} chars exceeds ${MAX_DESCRIPTION}`
+      );
+  descriptionQuoted
+    ? add("pass", "description.quoted", "value is wrapped in double quotes")
+    : add(
+        "warn",
+        "description.quoted",
+        'value is not wrapped in double quotes — unquoted YAML mis-parses on colons, commas, and quotes; wrap it in "..." (escaping any inner " as \\")'
+      );
+}
+
+function checkDescriptionWording(description: string, add: AddFinding): void {
+  /<[^>]+>/.test(description)
+    ? add(
+        "warn",
+        "description.xml",
+        "contains angle-bracket content — Anthropic disallows XML tags; rephrase placeholders like <x> in prose"
+      )
+    : add("pass", "description.xml", "no XML tags");
+  /\bwhen/i.test(description)
+    ? add("pass", "description.trigger", "states when to use the skill")
+    : add(
+        "warn",
+        "description.trigger",
+        "no 'when to use' trigger — add 'Use when …' so the dispatcher can match it"
+      );
+  /\b(I can|I['’]ll|I will|I help|you can|you will|you could|you['’]ll)\b/i.test(
+    description
+  )
+    ? add(
+        "warn",
+        "description.pov",
+        "reads first/second person — write descriptions in third person (e.g. 'Processes…', 'Generates…')"
+      )
+    : add("pass", "description.pov", "third person");
 }
 
 function checkTriggers({ name, triggers }: ParsedSkill, add: AddFinding): void {
@@ -377,6 +273,7 @@ function checkReferenceDepth(
   const isDeeperRef = (target: string) =>
     !/^https?:/.test(target) && resolve(skillDir, target) !== skillFilePath;
   let nested = false;
+
   for (const m of body.matchAll(linkRe)) {
     const target = m[1];
     if (!isDeeperRef(target)) continue;
@@ -395,6 +292,7 @@ function checkReferenceDepth(
       );
     }
   }
+
   if (!nested) add("pass", "references.depth", "references are one level deep");
 }
 
@@ -410,9 +308,8 @@ function checkWindowsPaths(body: string, add: AddFinding): void {
 }
 
 function checkAbsolutePaths(skillDir: string, add: AddFinding): void {
-  // A personal skill MAY legitimately hardcode a machine-specific path (e.g. a
-  // cloud-mount vault), so this is a warning, never an error — it flags paths
-  // that will not survive being exported to another machine or user.
+  // A warning, never an error: a personal skill may rightly hardcode a path on
+  // this machine, such as a cloud-mounted vault.
   const absHits = findAbsolutePaths(skillDir);
   if (absHits.length > 0) {
     const shown = absHits.slice(0, 3).join("; ");
@@ -429,30 +326,36 @@ function checkAbsolutePaths(skillDir: string, add: AddFinding): void {
 
 /** Render a report as a human-readable string. */
 /** One scannable line per skill for a whole-store run: verdict plus the checks that fired. */
+function folderNameTheReaderPassesBack(dir: string): string {
+  return basename(dir).padEnd(20);
+}
+
 export function formatSummary(r: DoctorReport): string {
   const fired = (level: Level) =>
     r.findings.filter((f) => f.level === level).map((f) => f.check);
-  // The folder name, not the frontmatter name — the folder is what the reader
-  // passes back to `pal cli skill doctor <name>`, and a mismatch between the two
-  // is itself one of the errors this line reports.
-  const name = basename(r.dir).padEnd(20);
+  const name = folderNameTheReaderPassesBack(r.dir);
 
   if (r.errors > 0) {
     return `✗ ${name} ${r.errors} error(s): ${fired("error").join(", ")}`;
   }
+
   if (r.warnings > 0) {
     return `⚠ ${name} ${r.warnings} warning(s): ${fired("warn").join(", ")}`;
   }
+
   return `✓ ${name} clean`;
 }
 
 export function formatReport(r: DoctorReport): string {
   const icon = { pass: "✓", warn: "⚠", error: "✗" } as const;
   const lines = [`skill-doctor: ${r.name ?? "(unparsed)"}  —  ${r.dir}`];
+
   for (const f of r.findings) {
     lines.push(`  ${icon[f.level]} ${f.check}: ${f.message}`);
   }
+
   let verdict: string;
+
   if (r.errors > 0) {
     verdict = `FAIL — ${r.errors} error(s), ${r.warnings} warning(s)`;
   } else if (r.warnings > 0) {
@@ -460,7 +363,9 @@ export function formatReport(r: DoctorReport): string {
   } else {
     verdict = "PASS — all checks clean";
   }
+
   lines.push(`  ${verdict}`);
+
   return lines.join("\n");
 }
 
@@ -474,5 +379,6 @@ export function resolveSkillDir(arg: string): string {
   if (existsSync(resolve(asPath, "SKILL.md"))) return asPath;
   const byName = resolve(palHome(), "skills", arg);
   if (existsSync(resolve(byName, "SKILL.md"))) return byName;
+
   return asPath;
 }

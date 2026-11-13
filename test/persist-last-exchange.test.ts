@@ -21,6 +21,7 @@ beforeEach(() => {
 describe("persistLastExchange", () => {
   test("keeps the exchange for recall after a compaction", () => {
     persistLastExchange(messages, "sess-1");
+
     for (const name of ["sess-1.json", "latest.json"]) {
       const saved = JSON.parse(
         readFileSync(resolve(STATE, "last-exchange", name), "utf-8")

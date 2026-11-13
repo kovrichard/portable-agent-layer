@@ -30,9 +30,11 @@ function register(
     recognizes: (name) => name.endsWith(suffix),
     lookup: async (name) => {
       asked.push(name);
+
       return found;
     },
   };
+
   return { row, asked };
 }
 

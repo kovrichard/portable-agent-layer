@@ -47,6 +47,7 @@ export function newTask({ title, repo, category }, env = process.env, now = new 
   const specPath = join(taskDir(id, env), "spec.md");
   writeFileSync(specPath, "");
   appendEvent({ event: "task_created", task: id, category }, env, now);
+
   return { id, specPath };
 }
 
@@ -58,14 +59,17 @@ function openRunStart(events, id) {
   const finished = events
     .slice(index + 1)
     .some((event) => event.event === "run_finished" && event.task === id);
+
   return finished ? null : events[index];
 }
 
 function poTranscriptOf(transcriptPath) {
   if (typeof transcriptPath !== "string") return null;
+
   if (basename(dirname(transcriptPath)) !== "subagents") return null;
   const sessionDir = dirname(dirname(transcriptPath));
   const sessionId = basename(sessionDir);
+
   return { sessionId, path: join(dirname(sessionDir), `${sessionId}.jsonl`) };
 }
 
@@ -75,9 +79,11 @@ function poSessions(events, id, startIso) {
     .map((e) => poTranscriptOf(e.transcriptPath))
     .filter(Boolean);
   const byPath = new Map();
+
   for (const session of sessions) {
     if (!byPath.has(session.path)) byPath.set(session.path, session);
   }
+
   return [...byPath.values()];
 }
 
@@ -88,6 +94,7 @@ function poEvent(id, session, startIso) {
   );
   const totals = transcriptTotals(counted);
   if (totals.turns === 0) return null;
+
   return {
     event: "role_finished",
     task: id,
@@ -113,9 +120,11 @@ function recordPoSessions(events, id, startIso, env) {
 function recordRunFinished(id, status, env) {
   const start = openRunStart(readEvents(env), id);
   if (!start) return;
+
   try {
     recordPoSessions(readEvents(env), id, start.ts, env);
   } catch {}
+
   appendEvent(
     {
       event: "run_finished",
@@ -132,7 +141,9 @@ export function setStatus(id, status, note, env = process.env) {
   const task = { ...readTask(id, env), status, ...(note ? { note } : {}) };
   writeTask(task, env);
   appendEvent({ event: "task_status", task: id, status, ...(note ? { note } : {}) }, env);
+
   if (FINAL_STATUSES.includes(status)) recordRunFinished(id, status, env);
+
   return task;
 }
 
@@ -142,6 +153,7 @@ export function recordQuestion(id, question, env = process.env, now = new Date()
     `${JSON.stringify({ ts: now.toISOString(), question })}\n`
   );
   appendEvent({ event: "question_to_user", task: id }, env, now);
+
   return setStatus(id, "waiting", question, env);
 }
 
@@ -153,6 +165,7 @@ export function recordPoHandover(id, role, reason, prompt, env = process.env, mo
     env
   );
   appendEvent({ event: "role_run", task: id, role, model: model || "default" }, env);
+
   return { file };
 }
 
@@ -161,6 +174,7 @@ function wholeNumber(name, value) {
   if (!Number.isInteger(number) || number < 0) {
     throw new Error(`${name} must be a whole number, got "${value}"`);
   }
+
   return number;
 }
 
@@ -173,6 +187,7 @@ export function recordReview(id, round, findings, env = process.env) {
     findings: wholeNumber("findings", findings),
   };
   appendEvent(event, env);
+
   return event;
 }
 
@@ -180,6 +195,7 @@ export function recordTest(id, unmet, env = process.env) {
   readTask(id, env);
   const event = { event: "test", task: id, unmet: wholeNumber("unmet", unmet) };
   appendEvent(event, env);
+
   return event;
 }
 
@@ -187,6 +203,7 @@ function git(args, cwd, env) {
   const result = spawnSync("git", args, { cwd, env, encoding: "utf8" });
   if (result.status !== 0)
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -213,6 +230,7 @@ function repoClaudeMdFor(task, config, env) {
   const found = readInstructions(join(task.repo, "CLAUDE.md"), env);
   if (found === null) return null;
   recordMissingImports(task.id, found.missing, env);
+
   return { path: found.path, text: found.text };
 }
 
@@ -237,10 +255,12 @@ export function prepare(id, env = process.env) {
     git(["worktree", "add", "-b", branch, worktree, `origin/${base}`], task.repo, env);
     runPrepareCommand(config.prepare, worktree, env);
   }
+
   writeTask({ ...task, base, branch, worktree, config, repoClaudeMd }, env);
   const resumable = task.status === "running" && openRunStart(readEvents(env), id);
   if (task.status !== "ready" && !resumable) markStarted(id, env);
   const settingsFile = writeRoleSettings({ ...task, worktree }, env);
+
   return {
     worktree,
     branch,
@@ -271,13 +291,13 @@ export function prepare(id, env = process.env) {
 export function poModel(pluginDir = PLUGIN_ROOT) {
   const agentFile = join(pluginDir, "agents", "po.md");
   if (!existsSync(agentFile)) return undefined;
-  return readFileSync(agentFile, "utf8")
-    .match(/^model: (.+)$/m)?.[1]
-    .trim();
+
+  return /^model: (.+)$/m.exec(readFileSync(agentFile, "utf8"))?.[1].trim();
 }
 
 function shellArg(value) {
   if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(value)) return value;
+
   return `"${value.replace(/\\(?=[\\"$`]|$)|["$`]/g, "\\$&")}"`;
 }
 
@@ -346,8 +366,10 @@ export function withDecision(spec, line) {
   const next = lines.findIndex((text, index) => index > start && text.startsWith("## "));
   const end = next === -1 ? lines.length : next;
   let last = end - 1;
+
   while (last > start && lines[last].trim() === "") last -= 1;
   const insert = last === start ? ["", line] : [line];
+
   return `${[...lines.slice(0, last + 1), ...insert, ...lines.slice(last + 1)].join("\n")}\n`;
 }
 
@@ -359,6 +381,7 @@ export function withoutDecisions(spec) {
   const end = next === -1 ? lines.length : next;
   const before = lines.slice(0, start).join("\n").trimEnd();
   const after = lines.slice(end).join("\n");
+
   return after === "" ? `${before}\n\n` : `${before}\n\n${after}`;
 }
 
@@ -372,12 +395,14 @@ export function appendDecision(
   const specPath = join(taskDir(id, env), "spec.md");
   writeFileSync(specPath, withDecision(readFileSync(specPath, "utf8"), line));
   appendEvent({ event: "decision", task: id, role }, env, now);
+
   return { line };
 }
 
 export function showTask(id, env = process.env) {
   const mine = readEvents(env).filter((event) => event.task === id);
   const estimate = mine.filter((event) => event.event === "estimate").at(-1);
+
   return {
     ...readTask(id, env),
     latestStep: mine.at(-1) ?? null,
@@ -388,6 +413,7 @@ export function showTask(id, env = process.env) {
 const COMMANDS = {
   doctor: () => {
     requireTools();
+
     return { ready: true };
   },
   new: ([title, repo, category]) => newTask({ title, repo, category }),
@@ -409,5 +435,6 @@ if (isMain(import.meta.url)) {
     process.stderr.write(`usage: task.mjs ${Object.keys(COMMANDS).join("|")} ...\n`);
     process.exit(2);
   }
+
   printJson(handler(rest));
 }

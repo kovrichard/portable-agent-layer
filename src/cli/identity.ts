@@ -20,7 +20,7 @@ import {
   machineFilePath,
   setLabel,
 } from "../hooks/lib/machine";
-import { log } from "../targets/lib";
+import { log } from "../targets/log";
 import { type Group, group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 export type IdentitySubject = "actor" | "machine";
@@ -49,6 +49,7 @@ const SUBJECTS: Record<IdentitySubject, SubjectOps> = {
     read: () => loadMachine(),
     rename: (name) => {
       const updated = setLabel(name);
+
       return updated;
     },
     register: () => {
@@ -64,6 +65,7 @@ function show(subject: IdentitySubject): number {
   console.log(`${subject}: ${label} (${shortId(id)}) — ${ops.noun}`);
   console.log(`  id:   ${id}`);
   console.log(`  file: ${ops.file()}`);
+
   return 0;
 }
 
@@ -72,22 +74,28 @@ function rename(subject: IdentitySubject, name: string): number {
   const before = ops.read();
   const after = ops.rename(name);
   ops.register();
+
   if (after.label === before.label) {
     log.info(`${subject} is already named ${after.label}`);
+
     return 0;
   }
+
   log.success(`${subject} renamed: ${before.label} → ${after.label}`);
+
   return 0;
 }
 
 function renameTo(subject: IdentitySubject, words: string[]): number {
   const name = words.join(" ").trim();
   if (!name) throw new UsageError("the name is empty");
+
   return rename(subject, name);
 }
 
 export function identityCommand(subject: IdentitySubject): Group {
   const { noun } = SUBJECTS[subject];
+
   return group({
     summary: `Show or rename this ${subject} — ${noun}`,
     fallback: "show",

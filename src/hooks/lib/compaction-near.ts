@@ -6,7 +6,7 @@ import { appendEvent, logQuietly } from "./events";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { modelLimitsFor } from "./models";
 import { platform } from "./paths";
-import { contextModelOf, contextTokensOf } from "./session-events";
+import { contextModelOf, contextTokensOf, lastCompactionAt } from "./session-events";
 import { isPalSpawnedInference } from "./spawn-guard";
 
 const MAX_OUTPUT_CAP = 20_000;
@@ -77,6 +77,7 @@ export function compactionInput(
   window: number
 ): CompactionPointInput {
   const limits = modelLimitsFor(model);
+
   return {
     window,
     modelContextWindow: limits?.contextWindow ?? window,
@@ -119,14 +120,17 @@ function readJsonObject(path: string): Record<string, unknown> {
 function positiveTokens(value: unknown): number | null {
   if (typeof value === "number")
     return Number.isFinite(value) && value > 0 ? value : null;
+
   if (typeof value !== "string" || value.trim() === "") return null;
   const parsed = Number(value);
+
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function objectField(record: unknown, key: string): Record<string, unknown> | null {
   const owner = plainObject(record);
   if (!owner || !Object.hasOwn(owner, key)) return null;
+
   return plainObject(owner[key]);
 }
 
@@ -139,6 +143,7 @@ function perModelSettingsWindow(
   model: string | null
 ): number | null {
   if (typeof model !== "string") return null;
+
   return settingsWindow(
     objectField(objectField(settings, "modelSettings"), model)?.autoCompactWindow
   );
@@ -155,6 +160,7 @@ function settingsEnvWindow(settings: Record<string, unknown>): number | null {
 function cachedWindow(model: string | null, claudeJsonPath: string): number | null {
   if (typeof model !== "string") return null;
   const cache = objectField(readJsonObject(claudeJsonPath), "autoCompactWindowsCache");
+
   return cache && Object.hasOwn(cache, model) ? positiveTokens(cache[model]) : null;
 }
 
@@ -176,9 +182,11 @@ export function resolveCompactionWindow(
     [firstWindow(settings.map(settingsEnvWindow)), "settings-env"],
     [cachedWindow(sources.model, sources.claudeJsonPath), "cache"],
   ];
+
   for (const [tokens, source] of candidates) {
     if (tokens !== null) return { tokens, source };
   }
+
   return sources.modelContextWindow !== null
     ? { tokens: sources.modelContextWindow, source: "model" }
     : null;
@@ -211,6 +219,13 @@ function hookProjectDir(payload: CompactionHookPayload): string {
     : process.cwd();
 }
 
+function freshContextTokens(payload: CompactionHookPayload): number | null {
+  return contextTokensOf(
+    payload.transcript_path ?? undefined,
+    lastCompactionAt(hookSessionId(payload) ?? null)
+  );
+}
+
 export function recordCompactionNear(
   payload: CompactionHookPayload | null,
   live = false
@@ -219,7 +234,7 @@ export function recordCompactionNear(
   logQuietly("compaction_near", () => {
     if (!payload || isPalSpawnedInference() || !isClaude()) return;
     const transcriptPath = payload.transcript_path ?? undefined;
-    const contextTokens = contextTokensOf(transcriptPath);
+    const contextTokens = freshContextTokens(payload);
     if (contextTokens === null) return;
     const model = contextModelOf(transcriptPath);
     const compactionWindow = currentCompactionWindow(model, hookProjectDir(payload));
@@ -246,6 +261,7 @@ export function recordCompactionNear(
       { session: hookSessionId(payload) ?? null }
     );
   });
+
   return verdict;
 }
 
@@ -258,13 +274,14 @@ export function compactionWarningReminder(
 ): string | null {
   if (!verdict?.predicted) return null;
   const line = `Context: ${thousands(verdict.contextTokens)}k tokens, auto-compaction at ${thousands(verdict.compactAtTokens)}k (${Math.max(0, thousands(verdict.tokensLeft))}k left). Before the next long step, record where the work stands: pal cli progress stopped "<where it stands, what comes next>".`;
+
   return ["<system-reminder>", line, "</system-reminder>"].join("\n");
 }
 
 export function recordIdleCompactionNear(payload: CompactionHookPayload | null): void {
   logQuietly("compaction_near", () => {
     if (!payload || isPalSpawnedInference() || !isClaude()) return;
-    const contextTokens = contextTokensOf(payload.transcript_path ?? undefined);
+    const contextTokens = freshContextTokens(payload);
     if (contextTokens === null) return;
     const idleMinTokens = idleCompactMinTokens(process.env);
     if (contextTokens < idleMinTokens) return;

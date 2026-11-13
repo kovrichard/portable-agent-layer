@@ -27,6 +27,7 @@ function schedule(...args: string[]): Promise<number> {
 
 function only(): Schedule {
   const [stored] = readSchedules();
+
   return stored;
 }
 

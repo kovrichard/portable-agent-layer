@@ -11,6 +11,8 @@ export function dependencyInstall(
   underTest = process.env.PAL_TEST_SANDBOX === "1"
 ): string[] | null {
   if (underTest) return null;
+
   if (repoMode) return ["install", "--frozen-lockfile"];
+
   return unresolvedDependencies(pkg).length > 0 ? ["install", "--production"] : null;
 }

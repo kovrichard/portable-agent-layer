@@ -37,6 +37,7 @@ function isHungarianCompanyName(name: string): boolean {
 
 function comparable(name: string): string {
   const short = LONG_FORMS.reduce((n, [re, form]) => n.replace(re, form), name);
+
   return short.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 }
 
@@ -46,7 +47,9 @@ function decoded(html: string): string {
   return html.replace(/&(#x?[0-9a-f]+|\w+);/gi, (whole, code: string) => {
     if (code.startsWith("#x"))
       return String.fromCodePoint(Number.parseInt(code.slice(2), 16));
+
     if (code.startsWith("#")) return String.fromCodePoint(Number(code.slice(1)));
+
     return ENTITIES[code] ?? whole;
   });
 }
@@ -69,9 +72,11 @@ function remember(response: Response, jar: Map<string, string>): void {
  *  because a search result lives in the session the search was posted from. */
 function session(fetchImpl: Fetch) {
   const jar = new Map<string, string>();
+
   return async (url: string, form?: URLSearchParams): Promise<Page> => {
     let current = url;
     let body = form;
+
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
       const response = await fetchImpl(current, {
         method: body ? "POST" : "GET",
@@ -90,9 +95,12 @@ function session(fetchImpl: Fetch) {
         body = undefined;
         continue;
       }
+
       if (!response.ok) throw new Error(`${current}: HTTP ${response.status}`);
+
       return { url: current, html: await response.text() };
     }
+
     throw new Error(`${url}: too many redirects`);
   };
 }
@@ -108,6 +116,7 @@ function searchHits(html: string): Hit[] {
   const results = html.matchAll(
     /<a href="([^"]*\/ceg-adatlap\/([a-z0-9-]+)-(\d{10})\.html)"[^>]*>[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2>/g
   );
+
   return Array.from(results, ([, url, slug, number, title]) => ({
     name: plainText(title.replace(/<small[\s\S]*?<\/small>/g, "")),
     number,
@@ -130,6 +139,7 @@ async function findRegistered(
   const exact = searchHits(results.html).filter(
     (hit) => comparable(hit.name) === comparable(name)
   );
+
   return exact.length === 1 ? exact[0] : null;
 }
 
@@ -138,12 +148,14 @@ function field(html: string, label: string): string {
     String.raw`<h6[^>]*>\s*${label}\s*</h6>\s*<p[^>]*>([\s\S]*?)</p>`,
     "i"
   ).exec(html)?.[1];
+
   return value ? plainText(value) : "";
 }
 
 /** Names only: the register also prints each officer's mother's name and home address. */
 function managers(html: string): string[] {
   const block = OFFICERS_RE.exec(html)?.[1] ?? "";
+
   return Array.from(block.matchAll(/<strong[^>]*>([\s\S]*?)<\/strong>/g), ([, n]) =>
     plainText(n)
   );
@@ -151,6 +163,7 @@ function managers(html: string): string[] {
 
 function proceedings(html: string): string {
   const sentence = PROCEEDINGS_RE.exec(html)?.[1];
+
   return sentence ? plainText(sentence) : "";
 }
 
@@ -160,6 +173,7 @@ function formattedNumber(digits: string): string {
 
 function entryFrom(hit: Hit, record: Page): RegisteredCompany {
   const html = record.html;
+
   return {
     name: hit.name,
     fullName: field(html, "Teljes név"),
@@ -184,6 +198,7 @@ async function lookupHungarianCompany(
   const hit = await findRegistered(name, browse);
   if (!hit) return null;
   const record = await browse(`${NEMZETICEGTAR}${hit.slug}-c${hit.number}.html`);
+
   return entryFrom(hit, record);
 }
 

@@ -79,6 +79,7 @@ export function toolCallsOf(step: AntigravityStep): AntigravityToolCall[] {
 export function antigravityMessage(step: AntigravityStep): AntigravityMessage | null {
   const request = typedRequest(step);
   if (request) return { role: "user", content: request };
+
   return isModelText(step) ? { role: "assistant", content: step.content } : null;
 }
 
@@ -88,11 +89,13 @@ export function antigravityMessage(step: AntigravityStep): AntigravityMessage | 
  */
 export function latestUserRequest(transcriptPath: string): string | null {
   const step = stepsOf(transcriptPath).findLast(typedByUser);
+
   return step ? typedRequest(step) : null;
 }
 
 function replyToLatestRequest(steps: AntigravityStep[]): string | undefined {
   const request = steps.findLastIndex(typedByUser);
+
   return steps.slice(request + 1).findLast(isModelText)?.content;
 }
 
@@ -109,7 +112,9 @@ export interface AntigravityStopFields {
  */
 export function isSideStop(payload: AntigravityStopFields | null): boolean {
   if (!payload?.conversationId) return false;
+
   if (payload.fullyIdle === false) return true;
+
   return (
     typeof payload.transcriptPath === "string" &&
     latestUserRequest(payload.transcriptPath) === null
@@ -123,7 +128,9 @@ export function withTranscriptReply<T extends AntigravityStopFields & HookTurnPa
   if (!payload?.conversationId || typeof payload.transcriptPath !== "string") {
     return payload;
   }
+
   if (hookFinalReply(payload)) return payload;
   const reply = replyToLatestRequest(stepsOf(payload.transcriptPath));
+
   return reply ? { ...payload, lastAssistantMessage: reply } : payload;
 }

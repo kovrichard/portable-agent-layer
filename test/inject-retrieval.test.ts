@@ -49,14 +49,17 @@ function enableDebugLogging() {
 
 function readDebugLog(): string {
   const path = resolve(TEST_HOME, "debug", "debug.log");
+
   return existsSync(path) ? readFileSync(path, "utf-8") : "";
 }
 
 function blockFor(ms: number): string {
   const end = performance.now() + ms;
+
   while (performance.now() < end) {
     /* occupy the thread so no timer can interleave */
   }
+
   return "completed";
 }
 

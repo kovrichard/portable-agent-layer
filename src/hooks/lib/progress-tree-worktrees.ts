@@ -36,6 +36,7 @@ export function attachNewWorktrees(
   const { scope, node, file, now } = attachTo;
   if (known && node) {
     const seen = new Set(known);
+
     for (const { path, branch } of current.filter((w) => !seen.has(w.path)))
       appendEvent(
         scope,
@@ -46,6 +47,7 @@ export function attachNewWorktrees(
         now
       );
   }
+
   return current.map((w) => w.path);
 }
 
@@ -66,11 +68,13 @@ export function cleanUpNodeWorktrees(
   onlyBranch?: string
 ): WorktreeCleanup {
   const cleanup: WorktreeCleanup = { removed: [], kept: [] };
+
   for (const worktree of nodeWorktrees(node, onlyBranch)) {
     if (!stillListed(cwd, worktree)) continue;
     const reason = removalBlocker(cwd, worktree) ?? removeWorktree(cwd, worktree);
     if (reason) cleanup.kept.push({ path: worktree.path, reason });
     else cleanup.removed.push(worktree);
   }
+
   return cleanup;
 }

@@ -54,11 +54,13 @@ function quietly(fn: () => void): string {
   const captured: string[] = [];
   const log = console.log;
   console.log = (...parts: unknown[]) => captured.push(parts.join(" "));
+
   try {
     fn();
   } finally {
     console.log = log;
   }
+
   return captured.join("\n");
 }
 
@@ -173,6 +175,7 @@ describe("v9-progress-tree-names: what it reports", () => {
     ],
   ])("a dry run with the new folder present=%p says what it would do", (both, line) => {
     writeEvents(oldFolder(), [EVENT]);
+
     if (both) writeEvents(newFolder(), [EVENT]);
     expect(quietly(() => runMigrate(["--dry-run"]))).toContain(line);
   });
@@ -253,22 +256,24 @@ describe("the schema and the template name no progress-tree switch", () => {
 });
 
 describe("the old names are gone from src/ and assets/", () => {
-  const ALLOWED = resolve(import.meta.dir, "..", "src", "cli", "migrate.ts");
+  const MIGRATIONS_DIR = resolve(import.meta.dir, "..", "src", "cli", "migrations");
   const OLD_NAME = /workTree|work-tree/;
 
   function filesUnder(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {
       const path = resolve(dir, name);
+
       if (name === "node_modules" || name === "dist") return [];
+
       return statSync(path).isDirectory() ? filesUnder(path) : [path];
     });
   }
 
-  test("only migrate.ts mentions workTree or work-tree", () => {
+  test("only the migrations mention workTree or work-tree", () => {
     const root = resolve(import.meta.dir, "..");
     const offenders = ["src", "assets"]
       .flatMap((dir) => filesUnder(resolve(root, dir)))
-      .filter((file) => file !== ALLOWED)
+      .filter((file) => !file.startsWith(MIGRATIONS_DIR))
       .filter((file) => OLD_NAME.test(readFileSync(file, "utf-8")));
     expect(offenders).toEqual([]);
   });

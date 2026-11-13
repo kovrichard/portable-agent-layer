@@ -16,6 +16,7 @@ import { raw as readSettings, write as writeSettings } from "../hooks/lib/settin
 function whatItDoes(): string {
   const onClose =
     "When you close a session, PAL checks for a new release (at most hourly) and installs it in the background.\nOpening PAL is never slowed down, and the statusline says when to restart.";
+
   return isRepoMode()
     ? `${onClose}\nIt waits while this clone has uncommitted changes.`
     : onClose;
@@ -36,6 +37,7 @@ export async function promptAutoUpdate(): Promise<boolean> {
   });
   if (clack.isCancel(enabled)) {
     clack.log.warn("Skipped — will ask again next time");
+
     return true;
   }
 
@@ -43,5 +45,6 @@ export async function promptAutoUpdate(): Promise<boolean> {
   writeSettings(settings);
   const state = enabled ? "Automatic updates on" : "Automatic updates off";
   clack.log.success(`${state} · change later: control room → Settings → Updates`);
+
   return true;
 }

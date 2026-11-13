@@ -28,6 +28,7 @@ recordHookRunOnExit();
 
 // Recursion guard — spawned subprocesses don't compact, so nothing to persist.
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 interface PreCompactInput {
@@ -41,6 +42,7 @@ interface PreCompactInput {
 const main = async () => {
   const input = await readStdinJSON<PreCompactInput>();
   logCompaction(input);
+
   if (!input?.transcript_path) {
     logDebug("PreCompactPersist", "No transcript_path in input — skipping");
     process.exit(0);
@@ -52,6 +54,7 @@ const main = async () => {
       logDebug("PreCompactPersist", "Transcript empty or unreadable");
       process.exit(0);
     }
+
     const sessionId = input.session_id ?? "unknown";
 
     // Stop fires after every response and is authoritative. Skip if it already

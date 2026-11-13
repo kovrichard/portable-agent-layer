@@ -50,6 +50,7 @@ export function defaultLabel(id: string): string {
 
 function newIdentity(): MachineIdentity {
   const id = crypto.randomUUID();
+
   return {
     id,
     label: defaultLabel(id),
@@ -110,5 +111,6 @@ export function displayName(id: string, registry: RegistryEntry[]): string {
 export function ensureRegistered(home: string = palHome()): MachineIdentity {
   const identity = loadMachine(home);
   writeRegistryEntry({ id: identity.id, label: identity.label, os: identity.os });
+
   return identity;
 }

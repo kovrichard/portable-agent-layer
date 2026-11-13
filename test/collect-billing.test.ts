@@ -31,6 +31,7 @@ let home: string;
 function writeJson(path: string, value: unknown): string {
   mkdirSync(resolve(path, ".."), { recursive: true });
   writeFileSync(path, JSON.stringify(value));
+
   return path;
 }
 
@@ -55,6 +56,7 @@ function everythingWritten(): string {
   const dirs = ["memory/events", "memory/content", "memory/state"].map((d) =>
     resolve(home, d)
   );
+
   return dirs
     .filter(existsSync)
     .flatMap((dir) => readdirSync(dir).map((f) => resolve(dir, f)))
@@ -65,6 +67,7 @@ function everythingWritten(): string {
 function modelCalls(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
     .map((l) => JSON.parse(l))
@@ -74,6 +77,7 @@ function modelCalls(): Record<string, unknown>[] {
 beforeEach(() => {
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
+
   for (const { env } of agentDirOverrides()) process.env[env] = resolve(home, env);
   process.env.XDG_DATA_HOME = resolve(home, "data");
   mkdirSync(resolve(home, "memory", "state"), { recursive: true });

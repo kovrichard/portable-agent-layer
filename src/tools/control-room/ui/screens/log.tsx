@@ -66,19 +66,24 @@ const EMPTY_FILTER: LogFilter = {
 /** The machines a row could name are whatever the window actually contains. */
 function machinesIn(view: Loaded<LedgerView>): string[] {
   if (view.state !== "ready") return [];
+
   return [...new Set(view.data.rows.map((r) => r.machine))].filter(Boolean).sort();
 }
 
 function ledgerQuery(filter: LogFilter): string {
   const params = new URLSearchParams();
+
   for (const [key, value] of Object.entries(filter)) if (value) params.set(key, value);
   const query = params.toString();
+
   return query ? `/api/ledger?${query}` : "/api/ledger";
 }
 
 function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
+
   if (outcome === "failed") return "outline" as const;
+
   return "alarm" as const;
 }
 
@@ -90,6 +95,7 @@ function Field({
   control: (id: string) => React.ReactNode;
 }) {
   const id = useId();
+
   return (
     <div className="flex flex-col gap-1">
       <Label htmlFor={id}>{label}</Label>
@@ -107,6 +113,7 @@ function Stats({ view }: { view: LedgerView }) {
       label: o,
     })),
   ];
+
   return (
     <div className="mb-4 grid grid-cols-2 gap-px border border-divider bg-divider sm:grid-cols-3 lg:grid-cols-6">
       {cells.map((cell) => (
@@ -170,25 +177,26 @@ function Row({
   );
 }
 
-export function Log({
-  filter,
-  onFilter,
-}: {
+type FilterProps = {
   filter: LogFilter;
   onFilter: (next: Partial<LogFilter>) => void;
-}) {
-  const projects = useLoaded<{ slug: string }[]>("/api/projects");
-  const view = useLoaded<LedgerView>(ledgerQuery(filter));
-  const [expanded, setExpanded] = useState<string | null>(null);
+};
 
-  const choices = (key: keyof LogFilter, values: readonly string[], all = "all") => (
+function Choices({
+  name,
+  values,
+  all = "all",
+  filter,
+  onFilter,
+}: FilterProps & { name: keyof LogFilter; values: readonly string[]; all?: string }) {
+  return (
     <Field
-      label={key}
+      label={name}
       control={(id) => (
         <NativeSelect
           id={id}
-          value={filter[key]}
-          onChange={(e) => onFilter({ [key]: e.target.value })}
+          value={filter[name]}
+          onChange={(e) => onFilter({ [name]: e.target.value })}
         >
           <option value="">{all}</option>
           {values.map((value) => (
@@ -200,83 +208,121 @@ export function Log({
       )}
     />
   );
+}
+
+function DateBound({
+  name,
+  filter,
+  onFilter,
+}: FilterProps & { name: "since" | "until" }) {
+  return (
+    <Field
+      label={name}
+      control={(id) => (
+        <Input
+          id={id}
+          type="date"
+          value={filter[name]}
+          onChange={(e) => onFilter({ [name]: e.target.value })}
+        />
+      )}
+    />
+  );
+}
+
+function FilterBar({
+  projectSlugs,
+  machines,
+  ...props
+}: FilterProps & { projectSlugs: string[]; machines: string[] }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-end gap-3">
+      <Choices name="project" values={projectSlugs} {...props} />
+      <Choices name="runtime" values={RUNTIMES} {...props} />
+      <Choices name="machine" values={machines} all="both" {...props} />
+      <Choices name="authority" values={AUTHORITIES} {...props} />
+      <Choices name="outcome" values={PAGE_OUTCOMES} {...props} />
+      <DateBound name="since" {...props} />
+      <DateBound name="until" {...props} />
+      <Button variant="secondary" onClick={() => props.onFilter(EMPTY_FILTER)}>
+        reset
+      </Button>
+    </div>
+  );
+}
+
+type Expansion = {
+  expanded: string | null;
+  setExpanded: (id: string | null) => void;
+};
+
+function LedgerTable({
+  rows,
+  expanded,
+  setExpanded,
+}: Expansion & { rows: LedgerViewRow[] }) {
+  return (
+    <Scroller>
+      <Table className="min-w-[880px] text-[12.5px]">
+        <TableHeader>
+          <tr>
+            {COLUMNS.map((column) => (
+              <TableHead key={column}>{column}</TableHead>
+            ))}
+          </tr>
+        </TableHeader>
+        <TableBody>
+          {rows.slice(0, MAX_ROWS).map((r) => (
+            <Row
+              key={r.id}
+              r={r}
+              open={expanded === r.id}
+              onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </Scroller>
+  );
+}
+
+function LedgerResults({ view, ...expansion }: Expansion & { view: LedgerView }) {
+  return (
+    <>
+      <Stats view={view} />
+      <div className="blueprint flex min-h-0 flex-1 flex-col bg-bg">
+        {view.rows.length === 0 ? (
+          <Empty>No actions in this window.</Empty>
+        ) : (
+          <LedgerTable rows={view.rows} {...expansion} />
+        )}
+      </div>
+      {view.rows.length > MAX_ROWS && (
+        <p className="pt-2 text-[12px] text-neutral-500">
+          Newest {MAX_ROWS} of {view.rows.length}. Narrow the window for the rest.
+        </p>
+      )}
+    </>
+  );
+}
+
+export function Log({ filter, onFilter }: FilterProps) {
+  const projects = useLoaded<{ slug: string }[]>("/api/projects");
+  const view = useLoaded<LedgerView>(ledgerQuery(filter));
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        {choices(
-          "project",
-          projects.state === "ready" ? projects.data.map((p) => p.slug) : []
-        )}
-        {choices("runtime", RUNTIMES)}
-        {choices("machine", machinesIn(view), "both")}
-        {choices("authority", AUTHORITIES)}
-        {choices("outcome", PAGE_OUTCOMES)}
-        <Field
-          label="since"
-          control={(id) => (
-            <Input
-              id={id}
-              type="date"
-              value={filter.since}
-              onChange={(e) => onFilter({ since: e.target.value })}
-            />
-          )}
-        />
-        <Field
-          label="until"
-          control={(id) => (
-            <Input
-              id={id}
-              type="date"
-              value={filter.until}
-              onChange={(e) => onFilter({ until: e.target.value })}
-            />
-          )}
-        />
-        <Button variant="secondary" onClick={() => onFilter(EMPTY_FILTER)}>
-          reset
-        </Button>
-      </div>
+      <FilterBar
+        filter={filter}
+        onFilter={onFilter}
+        projectSlugs={projects.state === "ready" ? projects.data.map((p) => p.slug) : []}
+        machines={machinesIn(view)}
+      />
 
       <Pending value={view} />
       {view.state === "ready" && (
-        <>
-          <Stats view={view.data} />
-          <div className="blueprint flex min-h-0 flex-1 flex-col bg-bg">
-            {view.data.rows.length === 0 ? (
-              <Empty>No actions in this window.</Empty>
-            ) : (
-              <Scroller>
-                <Table className="min-w-[880px] text-[12.5px]">
-                  <TableHeader>
-                    <tr>
-                      {COLUMNS.map((column) => (
-                        <TableHead key={column}>{column}</TableHead>
-                      ))}
-                    </tr>
-                  </TableHeader>
-                  <TableBody>
-                    {view.data.rows.slice(0, MAX_ROWS).map((r) => (
-                      <Row
-                        key={r.id}
-                        r={r}
-                        open={expanded === r.id}
-                        onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </Scroller>
-            )}
-          </div>
-          {view.data.rows.length > MAX_ROWS && (
-            <p className="pt-2 text-[12px] text-neutral-500">
-              Newest {MAX_ROWS} of {view.data.rows.length}. Narrow the window for the
-              rest.
-            </p>
-          )}
-        </>
+        <LedgerResults view={view.data} expanded={expanded} setExpanded={setExpanded} />
       )}
     </section>
   );

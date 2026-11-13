@@ -27,6 +27,7 @@ const output = () => printed.join("\n");
 function activeId(): string {
   const id = tree().active;
   if (!id) throw new Error("no active node");
+
   return id;
 }
 

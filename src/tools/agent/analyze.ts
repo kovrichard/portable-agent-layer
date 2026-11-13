@@ -47,6 +47,7 @@ export function run(argv: string[] = scriptArgs()): Promise<number> {
 
 async function printAnalysis(actionable: boolean | undefined): Promise<undefined> {
   const result = await analyze({ actionable });
+
   for (const line of reportLines(result)) console.log(line);
   writeLastAnalyzeDate(new Date().toISOString());
 }

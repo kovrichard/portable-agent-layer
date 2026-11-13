@@ -201,7 +201,10 @@ describe("what each route answers", () => {
 
   test("anything else is a 404", async () => {
     const base = await listen();
-    expect((await fetch(`${base}/api/nope`)).status).toBe(404);
+    const response = await fetch(`${base}/api/nope`);
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "not found" });
   });
 
   test("/api/ledger narrows by runtime, machine and authority", async () => {
@@ -430,6 +433,7 @@ describe("the knobs behind the grid", () => {
 
     const quietAt = async () => {
       const grid = await getJson<Matrix>(`${base}/api/matrix`);
+
       return (
         [...grid.now, ...grid.plan].find((i) => i.id === "demo")?.urgentBecause ?? []
       );
@@ -571,6 +575,7 @@ describe("the one thing the page may change", () => {
 describe("the relationship tab", () => {
   const draftRule = async () => {
     const { addDraft } = await import("../src/hooks/lib/adaptation-rules");
+
     return addDraft({
       when: "Claiming tests pass",
       trigger: { side: "reply", pattern: "tests? pass" },

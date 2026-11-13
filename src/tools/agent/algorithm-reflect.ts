@@ -60,6 +60,7 @@ export const command = leaf({
   run: ({ values }) => {
     const { task, q1, q2, q3 } = values;
     if (!task || !q1 || !q2 || !q3) throw new UsageError(missingRequired(values));
+
     return appendReflection(
       buildReflection({
         task,
@@ -84,11 +85,13 @@ function missingRequired(
   values: Partial<Record<(typeof REQUIRED)[number], string>>
 ): string {
   const missing = REQUIRED.filter((name) => !values[name]).map((name) => `--${name}`);
+
   return `missing ${missing.join(", ")}`;
 }
 
 function reflectionsPath(): string {
   paths.reflections();
+
   return paths.reflectionsFile();
 }
 

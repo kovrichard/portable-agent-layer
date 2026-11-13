@@ -93,6 +93,7 @@ function wordCount(text: string): number {
 
 function replyShape(text: string, at: Date): ReplyShape {
   const lines = text.split("\n");
+
   return {
     at: at.toISOString(),
     words: wordCount(text),
@@ -106,12 +107,14 @@ function replyShape(text: string, at: Date): ReplyShape {
 function answeredReply(track: SessionTrack): ReplyShape | null {
   const reply = track.reply;
   if (!reply || !track.lastPromptAt) return null;
+
   return reply.at >= track.lastPromptAt ? reply : null;
 }
 
 function isSkimmed(reply: ReplyShape | null, gapSec: number | null): boolean {
   if (!reply || gapSec === null || gapSec <= 0 || reply.words < SKIM_MIN_WORDS)
     return false;
+
   return reply.words / gapSec > SKIM_WORDS_PER_SEC;
 }
 
@@ -128,6 +131,7 @@ function measureTurn(
 ): TurnEvent {
   const reply = answeredReply(track);
   const gapSec = reply ? (now.getTime() - new Date(reply.at).getTime()) / 1000 : null;
+
   return {
     ts: now.toISOString(),
     session,
@@ -167,6 +171,7 @@ function logTurn(event: TurnEvent, prompt: string, text: string, id: string): vo
 
 function secondsBetween(from: string | undefined, to: Date): number | null {
   if (!from) return null;
+
   return Math.round((to.getTime() - new Date(from).getTime()) / 100) / 10;
 }
 
@@ -193,6 +198,7 @@ function logReply(
 
 function readLegacyTurns(file: string): TurnEvent[] {
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .split("\n")
     .filter(Boolean)
@@ -208,6 +214,7 @@ function readLegacyTurns(file: string): TurnEvent[] {
 function legacyTurnsSince(since: Date): TurnEvent[] {
   const fromMonth = since.toISOString().slice(0, 7);
   const sinceTs = since.toISOString();
+
   return readdirSync(legacyTurnsDir())
     .filter((f) => f.endsWith(".jsonl") && f.slice(0, 7) >= fromMonth)
     .sort()
@@ -225,6 +232,7 @@ export function legacyTurns(): TurnEvent[] {
 function withStreamed(legacy: TurnEvent[], streamed: LoggedEvent[]): TurnEvent[] {
   const backfilled = new Set(streamed.map((e) => e.id));
   const notBackfilled = legacy.filter((turn) => !backfilled.has(legacyTurnId(turn)));
+
   return [...notBackfilled, ...(streamed as unknown as TurnEvent[])];
 }
 
@@ -236,6 +244,7 @@ export function turnsSince(since: Date): TurnEvent[] {
 
 function turnsInMonth(month: Date): TurnEvent[] {
   const file = `${month.toISOString().slice(0, 7)}.jsonl`;
+
   return withStreamed(
     readLegacyTurns(resolve(legacyTurnsDir(), file)),
     eventsInMonth("turn", month)
@@ -245,6 +254,7 @@ function turnsInMonth(month: Date): TurnEvent[] {
 /** This month and last, outside the session being judged. */
 function historyOutside(session: string, now: Date): TurnEvent[] {
   const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+
   return [...turnsInMonth(lastMonth), ...turnsInMonth(now)].filter(
     (e) => e.session !== session
   );
@@ -252,6 +262,7 @@ function historyOutside(session: string, now: Date): TurnEvent[] {
 
 function usualReplyWords(history: TurnEvent[]): number | null {
   const replies = history.flatMap((e) => (e.reply ? [e.reply.words] : []));
+
   return replies.length >= BASELINE_MIN_SAMPLES ? median(replies) : null;
 }
 
@@ -260,6 +271,7 @@ function baseline(events: TurnEvent[]): Baseline {
   const gaps = events
     .filter((e) => e.gapSec !== null && !e.afterBreak)
     .map((e) => e.gapSec);
+
   return {
     words:
       events.length >= BASELINE_MIN_SAMPLES
@@ -336,12 +348,15 @@ function reminderForIgnoredHint(
   history: TurnEvent[]
 ): string | null {
   if (complied !== false || !asksForLess(moodKey)) return null;
+
   if (replyWords === undefined || usualReply === null) return null;
+
   return ignoredHintReminder(replyWords, usualReply, shorterApprovedMore(history));
 }
 
 function joinReminders(...reminders: (string | null)[]): string | null {
   const said = reminders.filter((r): r is string => r !== null);
+
   return said.length ? said.join("\n") : null;
 }
 
@@ -391,5 +406,6 @@ export function observeTurn(
     recent,
     mood: mood.key,
   });
+
   return reminder;
 }

@@ -32,9 +32,11 @@ const GH_ON_LINUX: Partial<Record<LinuxFamily, string>> = {
 export function gitInstallHint(platform: NodeJS.Platform, osRelease: string): Fix {
   if (platform === "win32")
     return { say: "Install git", command: "winget install Git.Git", external: true };
+
   if (platform === "darwin")
     return { say: "Install git", command: "brew install git", external: true };
   const family = linuxFamily(osRelease);
+
   return family
     ? { say: "Install git", command: GIT_ON_LINUX[family], external: true }
     : { say: "Install git with your package manager" };
@@ -43,10 +45,12 @@ export function gitInstallHint(platform: NodeJS.Platform, osRelease: string): Fi
 export function ghInstallHint(platform: NodeJS.Platform, osRelease: string): Fix {
   if (platform === "win32")
     return { say: "Install gh", command: "winget install GitHub.cli", external: true };
+
   if (platform === "darwin")
     return { say: "Install gh", command: "brew install gh", external: true };
   const family = linuxFamily(osRelease);
   const command = family ? GH_ON_LINUX[family] : undefined;
+
   return command
     ? { say: "Install gh", command, external: true }
     : { say: `Install gh as described at ${GH_LINUX_DOCS}` };
@@ -59,6 +63,7 @@ function run(binary: string, args: string[], timeoutMs: number) {
     timeout: timeoutMs,
     windowsHide: true,
   });
+
   return {
     answered: !result.exitedDueToTimeout,
     ok: result.success,
@@ -70,12 +75,14 @@ function installed(name: string, timeoutMs: number) {
   const binary = findBinaryOnPath(name);
   if (!binary) return null;
   const version = run(binary, ["--version"], timeoutMs);
+
   return version.ok ? { binary, version: version.firstLine } : null;
 }
 
 function gitFinding(host: Host): Finding {
   const git = installed("git", host.timeoutMs);
   if (git) return passed("git", git.version);
+
   return warning(
     "git.missing",
     "git not found — project matching by remote, the update check and auto-update skip without it",
@@ -93,12 +100,14 @@ function ghFinding(host: Host): Finding {
     );
   const auth = run(gh.binary, ["auth", "status"], host.loginTimeoutMs);
   if (!auth.answered) return passed("gh", `${gh.version} — login not checked in time`);
+
   if (!auth.ok)
     return warning("gh.logged-out", `${gh.version} is not logged in`, {
       say: "Log in",
       command: "gh auth login",
       external: true,
     });
+
   return passed("gh", `${gh.version}, logged in`);
 }
 
@@ -110,5 +119,6 @@ export function versionControlFindings(host: Partial<Host> = {}): Finding[] {
     timeoutMs,
     loginTimeoutMs: host.loginTimeoutMs ?? timeoutMs,
   };
+
   return [gitFinding(resolved), ghFinding(resolved)];
 }

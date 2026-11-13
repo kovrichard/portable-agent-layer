@@ -20,8 +20,10 @@ function writeFakeBinary(dir: string, binary: string): void {
       resolve(dir, `${binary}.cmd`),
       `@echo off\r\necho ${binary} 2026.10.01\r\n`
     );
+
     return;
   }
+
   const path = resolve(dir, binary);
   writeFileSync(path, `#!/bin/sh\necho "${binary} 2026.10.01"\n`);
   chmodSync(path, 0o755);
@@ -30,7 +32,9 @@ function writeFakeBinary(dir: string, binary: string): void {
 function binDirWith(name: string, binaries: string[]): string {
   const dir = resolve(ROOT, name);
   mkdirSync(dir, { recursive: true });
+
   for (const binary of binaries) writeFakeBinary(dir, binary);
+
   return dir;
 }
 

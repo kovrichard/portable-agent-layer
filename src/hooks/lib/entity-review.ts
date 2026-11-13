@@ -32,6 +32,7 @@ function parseItem(line: string): ReviewItem[] {
 export function pendingReviews(): ReviewItem[] {
   const file = reviewQueueFile();
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8").split("\n").filter(Boolean).flatMap(parseItem);
 }
 
@@ -41,6 +42,7 @@ function takeFromQueue(id: string): ReviewItem | null {
   if (!item) return null;
   const rest = items.filter((i) => i !== item);
   writeFileSync(reviewQueueFile(), rest.map((i) => `${JSON.stringify(i)}\n`).join(""));
+
   return item;
 }
 
@@ -55,6 +57,7 @@ function chosenEntity(
     (e) => e.domain === domain && e.slug === slug
   );
   if (!entity) throw new Error(`no ${domain} entry with slug "${slug}"`);
+
   return entity;
 }
 
@@ -63,6 +66,7 @@ export function loadEntityReviewNudge(): string {
   if (count === 0) return "";
   const waiting =
     count === 1 ? "1 person or company waits" : `${count} people or companies wait`;
+
   return [
     "## Entity Review Due",
     `👥 ${waiting} for the user's answer before the knowledge store records them — offer \`pal cli knowledge review\`.`,
@@ -76,9 +80,12 @@ function acceptedInput(
 ): IngestInput {
   if (!item.profile) {
     const known = chosenEntity(item, choice.as, index);
+
     return ingestInput(item.entity, index, known, choice.name);
   }
+
   const target = chosenEntity(item, choice.as ?? item.entity.existing, index);
+
   return profileIngest(
     { ...item, entity: { ...item.entity, existing: target?.slug ?? "" } },
     target?.title ?? choice.name ?? item.entity.name
@@ -97,5 +104,6 @@ export function acceptReview(id: string, choice: AcceptChoice = {}): Accepted | 
   const result = ingestEntities(acceptedInput(queued, choice, index), queued.source);
   takeFromQueue(id);
   const written = result.people[0] ?? result.companies[0];
+
   return { item: queued, slug: written.slug, created: written.created };
 }

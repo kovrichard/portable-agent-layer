@@ -16,6 +16,7 @@ function railOn(term: Partial<Terminal>) {
   const rail = new LiveRail(style, (text) => {
     out += text;
   });
+
   return { rail, output: () => out };
 }
 
@@ -64,6 +65,7 @@ describe("a step, at a terminal", () => {
 
     await rail.step("Cursor", "installing…", async () => {
       await Bun.sleep(5);
+
       return { detail: ["12 hooks"], notes: [{ level: "warn", text: "kept rules" }] };
     });
 

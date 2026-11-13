@@ -21,6 +21,7 @@ function setSettings(data: Record<string, unknown>) {
 function streamLines(month: string): Record<string, unknown>[] {
   const file = resolve(home, "memory", "events", `${month}.jsonl`);
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -176,6 +177,7 @@ describe("a failed write", () => {
     const dir = resolve(home, "memory", "events");
     mkdirSync(dir, { recursive: true });
     chmodSync(dir, 0o500);
+
     try {
       expect(appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" })).toBeNull();
     } finally {
@@ -210,7 +212,38 @@ describe("cost", () => {
     appendEvent("turn", { words: 1 }, { ts: "2026-09-10T10:00:00.000Z" });
     const runs = 50;
     const start = performance.now();
+
     for (let i = 0; i < runs; i++) appendEvent("turn", { words: i }, {});
     expect((performance.now() - start) / runs).toBeLessThan(5);
+  });
+});
+
+describe("admittedFields table (plan step 2)", () => {
+  test("a turn keeps no field nested deeper than one level", () => {
+    expect(admittedFields("turn", { reply: { a: { b: { c: 1 } } } })).toEqual({});
+  });
+
+  test("a judge_call keeps a choice answer with its probabilities", () => {
+    const fields = {
+      systemOneAnswers: { r: { choice: "a", probabilities: { a: 0.9 } } },
+    };
+    expect(admittedFields("judge_call", fields)).toEqual(fields);
+  });
+
+  test("a judge_call keeps a score answer with its probability list", () => {
+    const fields = {
+      systemOneAnswers: { m: { score: 2, probabilities: [0.1, 0.3, 0.6] } },
+    };
+    expect(admittedFields("judge_call", fields)).toEqual(fields);
+  });
+
+  test("a judge_call drops an answer nested deeper than its allowance", () => {
+    expect(
+      admittedFields("judge_call", { systemOneAnswers: { r: { p: { x: { y: 1 } } } } })
+    ).toEqual({});
+  });
+
+  test("a judge_call drops a field it does not declare", () => {
+    expect(admittedFields("judge_call", { prompt: "x" })).toEqual({});
   });
 });

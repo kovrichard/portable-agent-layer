@@ -26,6 +26,7 @@ export type AgentType = AgentName | "vscode";
 
 function asAgentType(value: string | undefined): AgentType | undefined {
   if (!value) return undefined;
+
   return value === "vscode" || isAgentName(value) ? value : undefined;
 }
 
@@ -42,6 +43,7 @@ function agentFromEnv(): AgentType | undefined {
  */
 export function agentFromArgv(): AgentType | undefined {
   const flag = process.argv.find((a) => a.startsWith("--agent="));
+
   return asAgentType(flag?.slice("--agent=".length));
 }
 
@@ -86,9 +88,13 @@ function inAntigravity(): boolean {
  */
 function agentFromRuntimeEnv(): AgentType | undefined {
   if (inCursorAgent()) return "cursor";
+
   if (inCodex()) return "codex";
+
   if (inClaudeCode()) return "claude";
+
   if (inAntigravity()) return "antigravity";
+
   return undefined;
 }
 
@@ -115,6 +121,7 @@ export function declaredAgent(): AgentType | undefined {
   if (explicit) return explicit;
   const flag = agentFromArgv();
   if (flag && !SHARED_CONFIG_AGENTS.has(flag)) return flag;
+
   return agentFromRuntimeEnv() ?? flag;
 }
 
@@ -184,8 +191,10 @@ function firstObject(...values: unknown[]): Record<string, unknown> | undefined 
 /** Copilot's CLI sends toolArgs as JSON text where the others send an object. */
 function parsedObject(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== "string") return undefined;
+
   try {
     const parsed = JSON.parse(value);
+
     return firstObject(parsed);
   } catch {
     return undefined;
@@ -194,6 +203,7 @@ function parsedObject(value: unknown): Record<string, unknown> | undefined {
 
 function toolInputOf(payload: Record<string, unknown>): Record<string, unknown> {
   const candidates = [payload.tool_input, payload.toolArgs, payload.toolInput];
+
   return firstObject(...candidates) ?? candidates.map(parsedObject).find(Boolean) ?? {};
 }
 
@@ -202,6 +212,7 @@ function nestedToolCall(payload: Record<string, unknown>): ToolUseRequest | null
   const call = firstObject(payload.toolCall);
   const toolName = firstString(call?.name);
   if (!call || !toolName) return null;
+
   return { toolName, toolInput: firstObject(call.args) ?? {} };
 }
 
@@ -218,6 +229,7 @@ export function normalizeToolUse(raw: unknown): ToolUseRequest | null {
   if (!payload) return null;
   const toolName = firstString(payload.tool_name, payload.toolName);
   if (!toolName) return nestedToolCall(payload);
+
   return {
     toolName,
     toolInput: toolInputOf(payload),
@@ -251,6 +263,10 @@ function isStopEvent(hookEventName?: string): boolean {
  * carrying both spellings here is what lets one registration serve both — a
  * second VS Code-specific hooks file made every event run twice.
  */
+function sharesClaudeSettingsFile(): boolean {
+  return isClaude() || isVscode();
+}
+
 function claudeBlock(reason: string, hookEventName?: string): string {
   return JSON.stringify({
     decision: "block",
@@ -275,7 +291,9 @@ export const hearsPromptContext = () => !isCursor();
  */
 export function promptContextResponse(context: string): string | null {
   if (isCopilot()) return null;
+
   if (isCursor()) return JSON.stringify({ additional_context: context });
+
   if (isCodex() || isVscode()) {
     return JSON.stringify({
       hookSpecificOutput: {
@@ -284,14 +302,18 @@ export function promptContextResponse(context: string): string | null {
       },
     });
   }
+
   return `${context}\n`;
 }
 
 /** Stops the agent from ending its turn and hands it the reason as its next input. */
 export function stopBlockResponse(reason: string): string {
   if (isCursor()) return JSON.stringify({ followup_message: reason });
+
   if (isCodex()) return JSON.stringify({ additionalContext: reason });
+
   if (isAntigravity()) return JSON.stringify({ decision: "continue", reason });
+
   return blockResponse(reason, "Stop");
 }
 
@@ -299,9 +321,11 @@ export function blockResponse(reason: string, hookEventName?: string): string {
   if (isAntigravity()) {
     return JSON.stringify({ decision: "deny", reason });
   }
+
   if (isCursor()) {
     return JSON.stringify({ permission: "deny", user_message: reason });
   }
+
   if (isCopilot()) {
     return isStopEvent(hookEventName)
       ? JSON.stringify({ decision: "block", reason })
@@ -310,6 +334,7 @@ export function blockResponse(reason: string, hookEventName?: string): string {
           permissionDecisionReason: reason,
         });
   }
+
   if (isCodex() && hookEventName === "PreToolUse") {
     return JSON.stringify({
       hookSpecificOutput: {
@@ -319,11 +344,8 @@ export function blockResponse(reason: string, hookEventName?: string): string {
       },
     });
   }
-  // Only the surfaces that share ~/.claude/settings.json need both spellings.
-  // Handing the extra key to codex or opencode would be a shape they never
-  // asked to parse, for a duplication problem they don't have.
-  if (isClaude() || isVscode()) {
-    return claudeBlock(reason, hookEventName);
-  }
+
+  if (sharesClaudeSettingsFile()) return claudeBlock(reason, hookEventName);
+
   return JSON.stringify({ decision: "block", reason });
 }

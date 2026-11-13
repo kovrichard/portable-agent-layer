@@ -20,6 +20,7 @@ function shownNotes(): { notes: unknown[][]; restore: () => void } {
   const info = spyOn(clack.log, "info").mockImplementation((...args) => {
     notes.push(args);
   });
+
   return {
     notes,
     restore: () => {
@@ -41,11 +42,13 @@ describe("the telemetry notice at install", () => {
   test("is shown once in a terminal, with how to turn it off", async () => {
     setTTY(true);
     const { notes, restore } = shownNotes();
+
     try {
       expect(await noticeTelemetry()).toBe(true);
     } finally {
       restore();
     }
+
     expect(notes[0][1]).toBe("Anonymous usage count");
     expect(String(notes[0][0])).toContain("pal cli telemetry show");
     expect(notes[1]).toEqual(["Turn it off any time: pal cli telemetry off"]);
@@ -57,11 +60,13 @@ describe("the telemetry notice at install", () => {
     write({ telemetry: { enabled: false } });
     reload();
     const { restore } = shownNotes();
+
     try {
       await noticeTelemetry();
     } finally {
       restore();
     }
+
     expect(rawSettings().telemetry).toEqual({ enabled: false, noticeShown: true });
   });
 
@@ -70,22 +75,26 @@ describe("the telemetry notice at install", () => {
     write({ telemetry: { noticeShown: true } });
     reload();
     const { notes, restore } = shownNotes();
+
     try {
       expect(await noticeTelemetry()).toBe(false);
     } finally {
       restore();
     }
+
     expect(notes).toEqual([]);
   });
 
   test("without a terminal it counts as not shown", async () => {
     setTTY(undefined);
     const { notes, restore } = shownNotes();
+
     try {
       expect(await noticeTelemetry()).toBe(false);
     } finally {
       restore();
     }
+
     expect(notes).toEqual([]);
     expect(rawSettings().telemetry).toBeUndefined();
   });

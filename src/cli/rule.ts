@@ -85,16 +85,22 @@ export function runRule(args: string[]): Promise<number> {
 
 function cmdList(all: boolean, json: boolean): number {
   const rules = readRules().filter((r) => all || r.status === "draft");
+
   if (json) {
     console.log(JSON.stringify(rules, null, 2));
+
     return 0;
   }
+
   if (rules.length === 0) {
     console.log(all ? "No rules yet." : "No drafts waiting.");
+
     return 0;
   }
+
   const measure: Measure = { turns: readTurns(EFFECT_WINDOW_DAYS), rules: readRules() };
   console.log(rules.map((rule) => formatRule(rule, measure)).join("\n\n"));
+
   return 0;
 }
 
@@ -105,6 +111,7 @@ interface Measure {
 
 function formatRule(rule: AdaptationRule, measure: Measure): string {
   const label = isOpinion(rule) ? "opinion" : rule.status;
+
   return [
     `${rule.id}  [${label}]  ${rule.when}`,
     ...(rule.widens ? [`  widens: ${rule.widens}`] : []),
@@ -126,17 +133,20 @@ function offerLines(rule: AdaptationRule): string[] {
   if (rule.offer !== "opinion-only" || rule.status !== "draft" || rule.opinionGate)
     return [];
   const why = rule.trigger ? "the trigger did not prove" : "no trigger";
+
   return [`  offer: ${why}; keep it as an opinion or deny it`];
 }
 
 function gateLines(rule: AdaptationRule, { turns, rules }: Measure): string[] {
   const advice = gateAdvice(rule, rules, turns);
+
   return advice ? [`  no opinion: ${advice}`] : [];
 }
 
 function effectLines(rule: AdaptationRule, { turns, rules }: Measure): string[] {
   const effect = opinionEffectOf(rule, rules, turns);
   if (!effect) return [];
+
   return [
     `  effect: ${formatWindows(effect)} (${effect.verdict})`,
     `  other kinds: ${formatWindows(effect.control)}`,
@@ -158,15 +168,19 @@ function resultLine(id: string, rule: AdaptationRule): string {
   if (rule.id !== id)
     return `Rule ${rule.id} now triggers on: ${rule.trigger?.pattern} (widened by ${id})`;
   const label = isOpinion(rule) ? "kept as an opinion" : rule.status;
+
   return `Rule ${id} ${label}: ${rule.when}`;
 }
 
 function report(id: string, result: DecideResult): number {
   if (!result.ok) {
     console.error(result.reason);
+
     return 1;
   }
+
   console.log(resultLine(id, result.rule));
+
   return 0;
 }
 
@@ -178,6 +192,7 @@ function correctionKind(kind: string | undefined): CorrectionKindName {
 
 function required(name: string, value: string | undefined): string {
   if (!value?.trim()) throw new UsageError(`--${name} is required`);
+
   return value.trim();
 }
 
@@ -193,5 +208,6 @@ function cmdAddOpinion(
     steering: required("steering", steering),
     evidence: evidence?.trim() ? [evidence.trim()] : [],
   });
+
   return report(result.ok ? result.rule.id : "", result);
 }

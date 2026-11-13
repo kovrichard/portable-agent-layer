@@ -12,17 +12,19 @@
  */
 
 import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
-import { palHome } from "../../../../src/hooks/lib/paths";
 
-const DOWNLOADS_DIR = join(palHome(), "memory", "downloads");
+const PAL_HOME = process.env.PAL_HOME || join(homedir(), ".pal");
+const DOWNLOADS_DIR = join(PAL_HOME, "memory", "downloads");
 
 function buildDatePath(): string {
   const now = new Date();
   const yyyy = now.getFullYear().toString();
   const mm = (now.getMonth() + 1).toString().padStart(2, "0");
   const dd = now.getDate().toString().padStart(2, "0");
+
   return join(yyyy, mm, dd);
 }
 
@@ -30,8 +32,10 @@ function extractFilename(url: string, override?: string): string {
   if (override) {
     return override.endsWith(".pdf") ? override : `${override}.pdf`;
   }
+
   const urlPath = new URL(url).pathname;
   const name = basename(urlPath);
+
   return name.endsWith(".pdf") ? name : `${name}.pdf`;
 }
 
@@ -51,6 +55,7 @@ async function main() {
 
   // Validate URL
   let parsed: URL;
+
   try {
     parsed = new URL(url);
   } catch {

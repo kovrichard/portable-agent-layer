@@ -197,6 +197,7 @@ function updateEvents(): Record<string, unknown>[] {
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -267,6 +268,7 @@ function fakeUpdateCommand(): string {
   );
   git("add", "-A");
   git("commit", "-m", "fake update command");
+
   return seen;
 }
 

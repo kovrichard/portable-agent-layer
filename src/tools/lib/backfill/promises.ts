@@ -36,6 +36,7 @@ const secondsBetween = (from: string, to: string) =>
 function readPromises(): StoredPromise[] {
   const file = resolve(paths.memory(), "commitments.json");
   if (!existsSync(file)) return [];
+
   try {
     return JSON.parse(readFileSync(file, "utf-8")).items ?? [];
   } catch {
@@ -55,6 +56,7 @@ function made(promise: StoredPromise): PromiseRow {
 
 function closed(promise: StoredPromise): PromiseRow[] {
   if (promise.status === "open" || !promise.closedAt) return [];
+
   return [
     {
       id: `promise:${promise.id}:${promise.createdAt}:${promise.status}`,
@@ -87,5 +89,6 @@ function emitPromise(row: PromiseRow): void {
 /** Appends the promises not yet logged and returns how many events. */
 export function backfillPromises(known: Set<string>, since?: string): number {
   const rows = readPromises().flatMap((promise) => [made(promise), ...closed(promise)]);
+
   return emitUnseen(rows, (row) => row.id, emitPromise, known, since);
 }

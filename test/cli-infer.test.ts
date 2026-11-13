@@ -29,14 +29,17 @@ function recording(reply: Awaited<ReturnType<typeof inference>>) {
   const calls: InferenceCall[] = [];
   const infer = async (call: InferenceCall) => {
     calls.push(call);
+
     return reply;
   };
+
   return { calls, infer };
 }
 
 function file(name: string, content: string): string {
   const path = resolve(dir, name);
   writeFileSync(path, content);
+
   return path;
 }
 
@@ -120,6 +123,7 @@ describe("pal cli infer", () => {
     const asked: unknown[] = [];
     const plan = (tier: string, caller?: string) => {
       asked.push([tier, caller]);
+
       return { agent: "codex", route: "codex-spawn", model: "gpt-x" };
     };
 

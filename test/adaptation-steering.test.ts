@@ -29,12 +29,14 @@ function approved(over: Partial<DraftInput>) {
     ...over,
   });
   decideRule(rule.id, "approved");
+
   return rule;
 }
 
 function events() {
   const path = resolve(HOME, "memory", "adaptation", "rule-events.jsonl");
   if (!existsSync(path)) return [];
+
   return readFileSync(path, "utf-8")
     .trim()
     .split("\n")

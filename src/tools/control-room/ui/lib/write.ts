@@ -14,6 +14,7 @@ export async function post(path: string, body: unknown): Promise<string | null> 
     });
     if (res.ok) return null;
     const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+
     return payload?.error ?? `${path} answered ${res.status}`;
   } catch (e) {
     return e instanceof Error ? e.message : String(e);

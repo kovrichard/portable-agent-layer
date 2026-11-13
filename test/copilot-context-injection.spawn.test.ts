@@ -79,6 +79,7 @@ describe("LoadContext on Copilot", () => {
 
 function injectedEvents(): Record<string, number>[] {
   const dir = resolve(sandbox, "home", "memory", "events");
+
   return readdirSync(dir)
     .flatMap((file) => readFileSync(resolve(dir, file), "utf-8").trim().split("\n"))
     .map((line) => JSON.parse(line))

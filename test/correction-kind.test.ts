@@ -66,6 +66,7 @@ describe("correctionKindRequest", () => {
     expect(request.caller).toBe("correction-kind");
     expect(request.jsonSchema.properties.kind.enum).toEqual([...CORRECTION_KINDS]);
     expect(CORRECTION_KINDS.at(-1)).toBe("other");
+
     for (const kind of CORRECTION_KINDS) expect(request.system).toContain(`- ${kind}:`);
   });
 });
@@ -95,6 +96,7 @@ async function evalUserPrompt(vars: Record<string, string>): Promise<string> {
   const config = Bun.YAML.parse(await Bun.file(CONFIG).text()) as {
     prompts: { raw: string }[];
   };
+
   return Object.entries(vars)
     .reduce(
       (raw, [name, value]) => raw.replace(`{{${name}}}`, value),

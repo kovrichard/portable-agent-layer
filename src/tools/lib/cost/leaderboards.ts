@@ -23,6 +23,7 @@ const mostExpensive = (entries: Entry[]) =>
 
 function board(calls: LoggedEvent[], labelOf: (call: LoggedEvent) => string): Entry[] {
   const entries = new Map<string, Entry>();
+
   for (const call of calls) {
     const label = labelOf(call);
     const entry = entries.get(label) ?? { label, cost: 0, unpriced: 0 };
@@ -31,6 +32,7 @@ function board(calls: LoggedEvent[], labelOf: (call: LoggedEvent) => string): En
     if (price === null) entry.unpriced++;
     else entry.cost += price;
   }
+
   return mostExpensive([...entries.values()]);
 }
 
@@ -43,17 +45,20 @@ function sessionLabel(session: string | null, own: LoggedEvent[]): string {
   );
   const [first] = own.sort((a, b) => a.ts.localeCompare(b.ts));
   const id = session?.slice(0, 8) ?? "no session";
+
   return `${id} (${project?.name ?? "no project"}, ${dayOf(first)})`;
 }
 
 /** A session is named by the project most of its calls ran in, and the day it started. */
 function sessionLabels(calls: LoggedEvent[]): Map<string | null, string> {
   const bySession = new Map<string | null, LoggedEvent[]>();
+
   for (const call of calls) {
     const own = bySession.get(call.session) ?? [];
     bySession.set(call.session, own);
     own.push(call);
   }
+
   return new Map(
     [...bySession].map(([session, own]) => [session, sessionLabel(session, own)])
   );
@@ -63,6 +68,7 @@ function turnBoard(events: LoggedEvent[]): Entry[] {
   return mostExpensive(
     turnSpans(events).flatMap((span) => {
       const cost = turnCost(span);
+
       return cost === null ? [] : [{ label: whereAndWhen(span.turn), cost, unpriced: 0 }];
     })
   );
@@ -72,6 +78,7 @@ function turnBoard(events: LoggedEvent[]): Entry[] {
 export function leaderboards(events: LoggedEvent[]): Leaderboards {
   const calls = ofType(events, "model_call");
   const sessions = sessionLabels(calls);
+
   return {
     projects: board(calls, projectOf),
     sessions: board(calls, (call) => String(sessions.get(call.session))),

@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { eventsSince } from "../src/hooks/lib/events";
-import { buildCliPrompt, buildCopilotArgs, inference } from "../src/hooks/lib/inference";
+import { inference } from "../src/hooks/lib/inference";
+import { buildCopilotArgs } from "../src/hooks/lib/inference-agents";
+import { buildCliPrompt } from "../src/hooks/lib/inference-prompt";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { copilotReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -27,7 +29,9 @@ const PRESERVED = [
 
 function savedEnv(): Record<string, string | undefined> {
   const saved: Record<string, string | undefined> = {};
+
   for (const k of PRESERVED) saved[k] = process.env[k];
+
   return saved;
 }
 function restoreEnv(saved: Record<string, string | undefined>) {
@@ -123,6 +127,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     delete process.env[SPAWN_GUARD_ENV.SENTINEL];
     delete process.env[SPAWN_GUARD_ENV.DEPTH];
     delete process.env.PAL_INFERENCE_DISABLED;
+
     for (const name of COPILOT_TOKEN_ENV) delete process.env[name];
     process.env.COPILOT_HOME = "/users/own-copilot-home";
     process.env.PAL_AGENT = "copilot";
@@ -137,6 +142,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     writeFakeBin(tmpBin, "copilot", reportsWhereItRan());
     prependPath(tmpBin);
     const result = await inference({ user: "hi", timeout: 5000 });
+
     return JSON.parse(result.output ?? "{}");
   }
 
@@ -223,6 +229,7 @@ describe("inference dispatcher — copilot spawn integration (fake binary)", () 
     );
     prependPath(tmpBin);
     await inference({ user: "hi", timeout: 5000 });
+
     return eventsSince("inference_call", new Date(0))[0];
   }
 

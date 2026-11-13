@@ -54,11 +54,13 @@ function deadline(values: { for?: string; until?: string }): Date {
 
 function runOf(kind: RunKind): Run | null {
   const run = readRun(currentScope());
+
   return run?.kind === kind ? run : null;
 }
 
 function noRun(kind: RunKind): number {
   console.error(`No ${kind} run in ${currentScope()}.`);
+
   return 1;
 }
 
@@ -74,6 +76,7 @@ function printStatus(kind: RunKind): number {
   const run = runOf(kind);
   if (!run) return noRun(kind);
   console.log(describeRun(run));
+
   return 0;
 }
 
@@ -84,6 +87,7 @@ function statsUntil(run: Run, at: Date) {
     finishedAt: at.toISOString(),
     sessions: run.sessions ?? [],
   };
+
   return gatherRunStats(window, process.cwd());
 }
 
@@ -92,6 +96,7 @@ function withCurrentSession(run: Run): Run {
   const session = progressSession();
   const sessions = run.sessions ?? [];
   if (!session || sessions.includes(session)) return run;
+
   return { ...run, sessions: [...sessions, session] };
 }
 
@@ -111,6 +116,7 @@ function endRun(kind: RunKind): number {
   recordIfEndedUnfinished(run);
   clearRun(run.scope);
   console.log(`Ended the ${kind} run that was due at ${untilLabel(run)}.`);
+
   return 0;
 }
 
@@ -132,6 +138,7 @@ function startTimebox(values: {
   console.log(
     `Time box set: ends at ${untilLabel(run)}. After that only \`pal cli\` and report edits run.`
   );
+
   return 0;
 }
 
@@ -140,6 +147,7 @@ function estimate(text: string | undefined): number {
     throw new UsageError(
       "give how long the tasks and fallbacks will take with --estimate"
     );
+
   try {
     return estimateMinutesFrom(text);
   } catch (err) {
@@ -157,6 +165,7 @@ function startUnattended(values: {
   report?: string;
 }): number {
   refuseIfRunning();
+
   if (!values.task?.length) throw new UsageError("give each approved task with --task");
   const run = newRun({
     kind: "unattended",
@@ -170,6 +179,7 @@ function startUnattended(values: {
   });
   writeRun(withCurrentSession(run));
   console.log(describeRun(run));
+
   return 0;
 }
 
@@ -179,6 +189,7 @@ function logEntry(text: string): number {
   const run = withCurrentSession(found);
   writeRun({ ...run, log: [...run.log, { at: new Date().toISOString(), entry: text }] });
   console.log(`Logged (${run.log.length + 1} entries).`);
+
   return 0;
 }
 
@@ -189,6 +200,7 @@ function markDone(): number {
   if (!run.done) recordFinished(run);
   writeRun({ ...run, done: true });
   console.log("Marked done: the agent may stop. The run ends when the user is back.");
+
   return 0;
 }
 

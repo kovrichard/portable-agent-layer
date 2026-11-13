@@ -29,9 +29,13 @@ const NO_ROUTE = ["none", "disabled"];
 
 function failureOf(outcome: InferenceOutcome, route: string): string | null {
   if (outcome.success) return null;
+
   if (NO_ROUTE.includes(route)) return "unavailable";
+
   if (outcome.error?.startsWith(SCHEMA_MISMATCH)) return "schema";
+
   if (outcome.output) return "unparsable";
+
   return outcome.error ? "error" : "no-reply";
 }
 

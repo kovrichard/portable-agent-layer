@@ -79,6 +79,7 @@ export function defaultActorLabel(id: string): string {
 
 function newActor(): ActorIdentity {
   const id = crypto.randomUUID();
+
   return { id, label: defaultActorLabel(id), createdAt: new Date().toISOString() };
 }
 
@@ -96,6 +97,7 @@ function repairActor(stored: Partial<ActorIdentity> & { id: string }): ActorIden
  */
 function principalName(): string {
   const name = identity().principal.name.trim();
+
   return !name || name === "User" ? "" : name;
 }
 
@@ -114,6 +116,7 @@ export function loadActor(home: string = palHome()): ActorIdentity {
   const actor = loadIdentity(actorFilePath(home), newActor, repairActor);
   if (actor.label !== defaultActorLabel(actor.id)) return actor;
   const name = principalName();
+
   return name ? { ...actor, label: name } : actor;
 }
 
@@ -149,6 +152,7 @@ export function actorDisplayName(id: string, registry: ActorRegistryEntry[]): st
 export function ensureActorRegistered(home: string = palHome()): ActorIdentity {
   const actor = loadActor(home);
   writeActorEntry({ id: actor.id, label: actor.label });
+
   return actor;
 }
 

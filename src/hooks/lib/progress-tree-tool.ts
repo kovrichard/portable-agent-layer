@@ -60,22 +60,26 @@ function toolOutputText(payload: Record<string, unknown>): string {
   const result = resultOf(payload);
   const record = recordOf(result);
   if (record) return stringIn(record, OUTPUT_KEYS) ?? "";
+
   return typeof result === "string" ? result : "";
 }
 
 function exitCodeOf(source: unknown): number | null {
   const record = recordOf(source);
   const code = EXIT_KEYS.map((k) => record?.[k]).find((v) => typeof v === "number");
+
   return (code as number | undefined) ?? null;
 }
 
 function failedExit(source: unknown): boolean {
   const code = exitCodeOf(source);
+
   return code !== null && code !== 0;
 }
 
 function callFailed(payload: Record<string, unknown>): boolean {
   const result = recordOf(resultOf(payload));
+
   return (
     unappliedVerdictOf(payload) !== null ||
     (typeof payload.error === "string" && payload.error !== "") ||
@@ -92,11 +96,13 @@ function callDenied(payload: Record<string, unknown>): boolean {
 
 function commandOf(payload: Record<string, unknown>): string | null {
   const call = normalizeToolUse(payload);
+
   return call ? stringIn(call.toolInput, COMMAND_KEYS) : null;
 }
 
 function createdPrUrl(command: string, output: string): string | null {
   if (!GH_PR_CREATE_RE.test(command)) return null;
+
   return Array.from(output.matchAll(PR_URL_RE), (m) => m[0]).at(-1) ?? null;
 }
 
@@ -115,6 +121,7 @@ function publishedArtifact(payload: Record<string, unknown>): Artifact | null {
   const url = result ? stringIn(result, ["url"]) : null;
   if (!url) return null;
   const title = result ? stringIn(result, ["title"]) : null;
+
   return { kind: "artifact", ref: url, ...(title && { label: title }) };
 }
 
@@ -127,6 +134,7 @@ function sessionNodeFor(
   const tree = readTree(scope, file, session);
   if (tree.active) return tree.nodes.get(tree.active);
   const id = openSessionNode(scope, session, file, now);
+
   return readTree(scope, file, session).nodes.get(id);
 }
 

@@ -14,6 +14,7 @@ import { readStdinJSON } from "./lib/stdin";
 recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 try {

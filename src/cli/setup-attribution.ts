@@ -13,7 +13,7 @@ import {
   raw as readSettings,
   write as writeSettings,
 } from "../hooks/lib/settings";
-import { buildAttributionText } from "../targets/lib";
+import { buildAttributionText } from "../targets/claude/attribution";
 
 /** Prompt once for git attribution opt-in; true when it asked. */
 export async function promptAttribution(): Promise<boolean> {
@@ -36,6 +36,7 @@ export async function promptAttribution(): Promise<boolean> {
   });
   if (clack.isCancel(enabled)) {
     clack.log.warn("Skipped — will ask again next time");
+
     return true;
   }
 
@@ -45,5 +46,6 @@ export async function promptAttribution(): Promise<boolean> {
   clack.log.success(
     `${state} · change later: edit pal-settings.json, then run 'pal install'`
   );
+
   return true;
 }

@@ -17,6 +17,21 @@ Wire it into `klint.yaml` for editor autocomplete and validation:
 # yaml-language-server: $schema=./klint.schema.yaml
 ```
 
+## Config format (v2)
+
+`rules` has four parts: `recommended: true` enables the six sonar rules at `error`, `core` holds the built-in rules by name, and `sonar` holds the sonar rules by name without the `sonar/` prefix (an entry there overrides `recommended`), and `experimental` holds opt-in rules under trial (`no-date-equality`, `no-floating-promise`); `recommended` never enables them and their ids have no prefix. Output rule ids stay `sonar/…`.
+
+```yaml
+rules:
+  recommended: true
+  core:
+    no-string-match: error
+  sonar:
+    prefer-at: warn
+```
+
+The v1 format (a flat `rules` map with `sonar/` prefixes, and `plugins: [sonar]`) still reads, with one `klint/config` warning. Run `klint migrate` to upgrade the config in place; comments, blank lines and key order are kept. `klint migrate --check` exits 1 on v1 and 0 on v2 and never writes. `klint --fix` migrates first, and when the migration is refused it adds one `klint/config` warning and keeps fixing.
+
 ## Workflow
 
 1. **Understand the constraint** — if scope is ambiguous, ask: which files/layers are involved? should it block or warn? are there legitimate exceptions?
@@ -48,8 +63,8 @@ Wire it into `klint.yaml` for editor autocomplete and validation:
 
 6. **Verify zero new violations on the current codebase:**
    ```sh
-   bun klint/cli.ts        # in-repo
-   npx klint               # after npm install
+   npx klint               # npm
+   klint                   # PyPI, NuGet, Homebrew
    ```
    If new violations appear on existing code, fix them first or adjust the rule scope — then land the rule.
 
@@ -237,6 +252,150 @@ Two rules govern how an ignored line behaves, and both matter:
 `ignore` tests the **physical source line**, so it only ever applies to lines already identified as
 comments — code containing the same text is untouched. Enforced identically in both engines.
 
+### Blank lines — control flow and blocks
+
+Pick `blank-line-before-control-flow` to keep an `if`, loop, `switch`/`match`, `try`, `return` or
+similar statement visually separate from the statement above it. Pick `blank-line-after-block` for the
+IDE2003-style rule: a blank line below a block statement when another statement follows it. Both run
+on TypeScript/JavaScript, Python, Swift, Rust and C#, and both are opt-in.
+
+```yaml
+rules:
+  core:
+    blank-line-before-control-flow: error
+    blank-line-after-block: warn
+```
+
+Or with options:
+
+```yaml
+rules:
+  core:
+    blank-line-before-control-flow:
+      severity: error
+      include: ["src/**", "!src/generated/**"]
+      statements: [if, for, while, switch, try, return, guard, loop, with]
+      allowSetup: true
+    blank-line-after-block:
+      severity: warn
+      include: ["src/**"]
+      statements: [if, for, while, switch, try, guard, loop, with]
+```
+
+- `statements` narrows the kinds a rule targets. The default is every kind the rule supports, and
+  `statements: []` turns the rule off. `match` is an alias of `switch`. `return` belongs only to
+  `blank-line-before-control-flow`; an unknown keyword, or `return` on the after rule, raises one
+  `klint/config` warning and the other keywords still apply.
+- `allowSetup` (before rule only, default `true`) skips an `if`, `guard` or `switch` whose condition
+  uses a plain name assigned by the statement directly above it, such as `x = f();` then `if (x) …`.
+
+`klint --fix` inserts the missing blank lines, one per gap, and changes nothing else. Files with a
+syntax error are skipped. Run `klint --fix` again to confirm it reports nothing left to fix.
+
+A comment directly above a statement belongs to it, so the blank line goes above the comment. A
+Python docstring counts as a comment. A C# preprocessor line or a Swift `#if`/`#else`/`#endif` line
+separates statements like a blank line, so no line is inserted next to it.
+
+### Cognitive complexity — cap per-function complexity
+
+Pick `cognitive-complexity` to gate how complex each function may get, the way SonarJS's
+`cognitive-complexity` rule (S3776, `eslint-plugin-sonarjs` 3.0.5) does, with the same scores, on
+TypeScript/JavaScript, Python, Swift, Rust and C#. It is opt-in.
+
+```yaml
+rules:
+  core:
+    cognitive-complexity: error
+```
+
+Or with options:
+
+```yaml
+rules:
+  core:
+    cognitive-complexity: {warn: 10, error: 20}
+```
+
+```yaml
+rules:
+  core:
+    cognitive-complexity:
+      - {error: 15}
+      - {warn: 10, error: 20, include: ["scripts/**"]}
+```
+
+- `warn` and `error` are integers of at least 1; set either or both. A bare `error` or `warn` uses 15.
+  A function whose score is **above** a limit is reported, one diagnostic at the highest level it
+  exceeds. An invalid limit (0, a negative number, a fraction, a string) raises one `klint/config`
+  warning and that entry is ignored. `error` below `warn` raises one warning and the rule runs with
+  `error` only.
+- A list sets limits per glob. The last entry whose `include` matches a file wins; entries do not
+  merge; a file no entry matches is not checked; an empty list turns the rule off.
+- The old `{max, severity}` form is still read, with one `klint/config` warning in a v2 config. Run
+  `klint migrate` to upgrade it. The migration:
+
+| old | new |
+|---|---|
+| `{max: M}` or `{max: M, severity: error}` | `{error: M}` |
+| `{max: M, severity: warn}` | `{warn: M}` |
+| `{max: M, severity: off}` | `off` |
+| `{severity: S}` (no `max`) | `{S: <default>}`, i.e. `{error: 15}` / `{warn: 50}`; `off` → `off` |
+| `include`, `skipBlankLines` | kept unchanged in the same object |
+
+- There is no `--fix`: split the function. A nested closure is reported on its own, starting at
+  nesting 0, not added to the enclosing function. Files with a syntax error are skipped.
+
+### Function length — cap per-function length
+
+Pick `function-length` to gate how long each function body may be, the way Biome's
+`noExcessiveLinesPerFunction` does, with the same counts, on TypeScript/JavaScript, Python, Swift,
+Rust and C#. It is opt-in.
+
+```yaml
+rules:
+  core:
+    function-length: error
+```
+
+Or with options:
+
+```yaml
+rules:
+  core:
+    function-length: {warn: 60, error: 80, skipBlankLines: true}
+```
+
+```yaml
+rules:
+  core:
+    function-length:
+      - {error: 50}
+      - {warn: 60, error: 80, include: ["scripts/**"]}
+```
+
+- `warn` and `error` are integers of at least 1; set either or both. A bare `error` or `warn` uses 50.
+  A function whose body counts **above** a limit is reported, one diagnostic at the highest level it
+  exceeds. An invalid limit (0, a negative number, a fraction, a string) raises one `klint/config`
+  warning and that entry is ignored. `error` below `warn` raises one warning and the rule runs with
+  `error` only.
+- A list sets limits per glob. The last entry whose `include` matches a file wins; entries do not
+  merge; a file no entry matches is not checked; an empty list turns the rule off.
+- `skipBlankLines` defaults to `false`. A non-boolean value raises one `klint/config` warning and the
+  rule uses `false`.
+- The old `{max, severity}` form is still read, with one `klint/config` warning in a v2 config. Run
+  `klint migrate` to upgrade it. The migration:
+
+| old | new |
+|---|---|
+| `{max: M}` or `{max: M, severity: error}` | `{error: M}` |
+| `{max: M, severity: warn}` | `{warn: M}` |
+| `{max: M, severity: off}` | `off` |
+| `{severity: S}` (no `max`) | `{S: <default>}`, i.e. `{error: 15}` / `{warn: 50}`; `off` → `off` |
+| `include`, `skipBlankLines` | kept unchanged in the same object |
+- There is no `--fix`: split the function. A nested function's lines count toward its parent, and it
+  is also reported on its own. Getters and setters are not checked. Files with a syntax error are
+  skipped.
+
 ## Pitfalls
 
 - `pattern` in `singleton` and `forbidden` is a **literal substring** by default — it will not catch `process.env["KEY"]` (bracket notation). Either grep for both forms, or use a `re:` regex prefix to match them in one rule. Caveat: a literal pattern that itself begins with `re:` cannot be expressed (it is always read as a regex), and regexes must stay in the common JS/RE2 subset (no lookaround or backreferences) so both engines agree.
@@ -255,10 +414,10 @@ After adding or modifying a rule, report:
 - The YAML stanza added
 - The grep evidence that confirmed the pattern is real
 - The test written and its result
-- The output of `bun run klint` (or `npx klint`) confirming zero new violations
+- The output of `npx klint` (or `klint`) confirming zero new violations
 
 ## Do NOT use
 
 - To fix TypeScript type errors, lint issues, or Biome violations — those are separate tools
 - To enforce naming conventions (hooks must start with `use`, components must be PascalCase) — use ESLint with the appropriate plugin
-- To write custom TypeScript AST rules in `klint.rules.ts` — that is a separate, code-level workflow
+- To write custom code-level rules — klint has no plugin API; express the policy as an `arch` rule or use a linter with one

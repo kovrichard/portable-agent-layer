@@ -47,6 +47,7 @@ function writeTranscript(project: string, name: string, lines: string[]): string
   mkdirSync(dir, { recursive: true });
   const filepath = resolve(dir, name);
   writeFileSync(filepath, lines.join("\n"), "utf-8");
+
   return filepath;
 }
 
@@ -55,6 +56,7 @@ const MINUTES_AGO = (n: number) => new Date(Date.now() - n * 60_000);
 /** Explicit mtimes, so which file is newest never depends on write timing. */
 function agedAt(filepath: string, when: Date): string {
   utimesSync(filepath, when, when);
+
   return filepath;
 }
 
@@ -168,6 +170,7 @@ describe("accumulateUsage", () => {
         },
       },
     ];
+
     try {
       const usage = accumulateUsage(
         assistantLine(

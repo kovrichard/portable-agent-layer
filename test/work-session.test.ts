@@ -14,6 +14,7 @@ beforeEach(() => {
 function tail(from: number, to: number) {
   return Array.from({ length: to - from }, (_, k) => {
     const i = from + k;
+
     return { role: i % 2 === 0 ? "user" : "assistant", content: `m${i}`, id: `id${i}` };
   });
 }

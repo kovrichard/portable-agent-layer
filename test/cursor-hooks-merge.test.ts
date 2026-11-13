@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mergeCursorHooks, unmergeCursorHooks } from "../src/targets/lib";
+import { mergeCursorHooks, unmergeCursorHooks } from "../src/targets/cursor/hooks";
 
 const TEMPLATE = {
   version: 1,

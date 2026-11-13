@@ -7,18 +7,13 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  addStatuslineConfig,
-  copyAgentsForCursor,
-  copySkills,
-  copyStatusline,
-  countSkills,
-  loadCursorHooksTemplate,
-  log,
-  mergeCursorHooks,
-  readJson,
-  replaceJsonConfig,
-} from "../lib";
+import { replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { copyAgentsForCursor } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
+import { addStatuslineConfig, copyStatusline } from "../statusline";
+import { loadCursorHooksTemplate, mergeCursorHooks } from "./hooks";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CURSOR_DIR = platform.cursorDir();
@@ -42,10 +37,12 @@ const agentCount = copyAgentsForCursor(cursorAgentsDir);
 log.success(`${countSkills()} skills · ${agentCount} agents → ~/.cursor/`);
 
 copyStatusline("cursor");
+
 if (!existsSync(CLI_CONFIG)) {
   writeFileSync(CLI_CONFIG, "{}\n", "utf-8");
   log.info("Created new cli-config.json");
 }
+
 const cliConfig = readJson<Record<string, unknown>>(CLI_CONFIG, {});
 replaceJsonConfig(CLI_CONFIG, addStatuslineConfig(cliConfig, "cursor"));
 log.success("Merged statusLine into cli-config.json");

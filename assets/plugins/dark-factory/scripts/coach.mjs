@@ -53,11 +53,13 @@ function swallow(action) {
   } catch {
     return false;
   }
+
   return true;
 }
 
 export function startCoach(taskId, status, env = process.env) {
   if (!COACHED_STATUSES.includes(status)) return;
+
   try {
     appendEvent({ event: "coach_started", task: taskId }, env);
     spawn(process.execPath, [join(PLUGIN_ROOT, "scripts", "coach.mjs"), "run", taskId], {
@@ -74,6 +76,7 @@ export function startCoach(taskId, status, env = process.env) {
 
 function discardedEveryRule(applied) {
   const stored = applied.created.length + applied.updated.length;
+
   return (
     stored === 0 && applied.events.some((event) => event.event === "coach_rule_rejected")
   );
@@ -81,6 +84,7 @@ function discardedEveryRule(applied) {
 
 function coachFailed(taskId, error, env) {
   appendEvent({ event: "coach_failed", task: taskId, error }, env);
+
   return { task: taskId, error };
 }
 
@@ -88,11 +92,14 @@ function runDiff(task, env) {
   if (task.pr) {
     const result = run("gh", ["pr", "diff", task.pr], task.repo, env);
     if (!result.ok) throw new Error(`could not read the run's diff: ${result.err}`);
+
     return { text: result.out, command: `gh pr diff ${task.pr}` };
   }
+
   const range = `origin/${task.base}...HEAD`;
   const result = run("git", ["diff", range], task.worktree, env);
   if (!result.ok) throw new Error(`could not read the run's diff: ${result.err}`);
+
   return { text: result.out, command: `git diff ${range}` };
 }
 
@@ -125,6 +132,7 @@ function listOrNone(lines) {
 
 function findingLine(finding) {
   const rejection = finding.rejectReason ? ` (rejected: ${finding.rejectReason})` : "";
+
   return `- ${finding.id} [${finding.status}] ${finding.role} · ${finding.class}: ${finding.rule}${rejection}`;
 }
 
@@ -201,11 +209,13 @@ function coveredResult(taskId, outcome, { env, expected, openFindings }) {
       resumeError: resumed.error ?? "the coach returned no result",
     };
   const result = mergeCoachResults(first, resumed.structured);
+
   return { result, missing: missingOf(result, { expected, openFindings }) };
 }
 
 function correctionsReviewed(corrections, missing) {
   const missingSources = new Set(missing.map((item) => item.source));
+
   return corrections.filter((correction) =>
     correction.commits.every((commit) => !missingSources.has(commit.sha))
   );
@@ -229,10 +239,13 @@ function storeResult(taskId, covered, { env, names, now, corrections, expected }
   const applied = withFindingsLock(env, () => {
     const stored = applyCoachResult(readFindings(env), result, { taskId, names, now });
     writeFindings(stored.store, env);
+
     return stored;
   });
+
   for (const event of applied.events) appendEvent(event, env);
   recordIncomplete(taskId, missing, resumeError, env);
+
   if (!discardedEveryRule(applied))
     recordCorrectionsGiven(correctionsReviewed(corrections, missing), env);
   appendEvent(
@@ -246,6 +259,7 @@ function storeResult(taskId, covered, { env, names, now, corrections, expected }
     },
     env
   );
+
   return applied;
 }
 
@@ -284,6 +298,7 @@ function coachRun(taskId, env, now) {
     corrections,
     expected,
   });
+
   return {
     task: taskId,
     created: applied.created,
@@ -309,6 +324,7 @@ export function approvalSpec(finding) {
     finding.role === "po"
       ? [roleFile, "assets/plugins/dark-factory/skills/po/SKILL.md"]
       : [roleFile];
+
   return [
     `# Coach: ${finding.role} ${finding.class}`,
     "",
@@ -341,6 +357,7 @@ export function approvalSpec(finding) {
 
 export function approveFinding(id, options = {}) {
   const env = options.env ?? process.env;
+
   return withFindingsLock(env, () => approveFindingLocked(id, options));
 }
 
@@ -365,6 +382,7 @@ function approveFindingLocked(id, { repo, env = process.env, now = new Date() })
   writeFileSync(specPath, approvalSpec(finding));
   markApprovedWithLockHeld(id, taskId, env, now);
   appendEvent({ event: "coach_finding_approved", id, task: taskId }, env);
+
   return { id, task: taskId, specPath };
 }
 
@@ -377,7 +395,9 @@ function severityThenId(a, b) {
 
 function groupByRole(rows) {
   const groups = new Map();
+
   for (const row of rows) groups.set(row.role, [...(groups.get(row.role) ?? []), row]);
+
   return [...groups].map(([role, findings]) => ({
     role,
     findings: findings.sort(severityThenId),
@@ -400,6 +420,7 @@ export function listFindings(env = process.env) {
       metric: finding.metric,
       evidenceCount: finding.evidence.length,
     }));
+
   return groupByRole(rows).sort(
     (a, b) => bestRank(a) - bestRank(b) || a.role.localeCompare(b.role)
   );
@@ -420,6 +441,7 @@ function appliedRow(finding, env) {
   const mergedMs = new Date(mergedAt).getTime();
   const before = runs.filter((item) => new Date(item.finishedAt).getTime() < mergedMs);
   const after = runs.filter((item) => new Date(item.finishedAt).getTime() > mergedMs);
+
   return {
     id: finding.id,
     role: finding.role,
@@ -444,15 +466,20 @@ export function appliedReport(env = process.env) {
 
 function repoFlag(args) {
   const index = args.indexOf("--repo");
+
   return index === -1 ? undefined : args[index + 1];
 }
 
 function executeCommand(command, args) {
   if (command === "run") return runCoach(args[0]);
+
   if (command === "list")
     return args.includes("--applied") ? appliedReport() : listFindings();
+
   if (command === "show") return findingById(args[0]);
+
   if (command === "reject") return rejectFinding(args[0], args[1]);
+
   return approveFinding(args[0], { repo: repoFlag(args) });
 }
 
@@ -470,6 +497,7 @@ if (isMain(import.meta.url)) {
   const [command, ...args] = process.argv.slice(2);
   if (!Object.hasOwn(ARG_COUNTS, command) || args.length < ARG_COUNTS[command])
     usageExit();
+
   try {
     commandExit(command, executeCommand(command, args));
   } catch (error) {

@@ -160,6 +160,7 @@ const PROTECTED_PATHS: RegExp[] = [
 
 function comparable(path: string): string {
   const forward = path.replaceAll("\\", "/").replace(/\/+$/, "");
+
   return process.platform === "win32" ? forward.toLowerCase() : forward;
 }
 
@@ -171,6 +172,7 @@ function absoluteComparable(path: string): string {
 function pathBelow(root: string, path: string): string | null {
   const base = absoluteComparable(root);
   const target = absoluteComparable(path);
+
   return target.startsWith(`${base}/`) ? target.slice(base.length + 1) : null;
 }
 
@@ -190,12 +192,14 @@ function pathInsideManagedRoot(path: string): string | null {
     const below = pathBelow(root, path);
     if (below !== null) return below;
   }
+
   return null;
 }
 
 function managedFileAt(below: string): string | undefined {
   return HOOK_MANAGED_FILES.find((name) => {
     const file = comparable(name);
+
     return below === file || below.endsWith(`/${file}`);
   });
 }
@@ -211,6 +215,7 @@ function managedPathReason(path: string): string | null {
   if (file) return `${file} is managed automatically by hooks — do not edit directly`;
   const dir = managedDirAt(below);
   if (dir) return `${dir}/ is managed automatically by hooks — do not edit directly`;
+
   return null;
 }
 
@@ -233,6 +238,7 @@ const INLINE_CODE_FLAG =
 function runsInlineCode(segment: string): boolean {
   const unquoted = segment.replace(QUOTED, " ");
   if (/(?:^|\s)eval(?=\s|$)/.test(unquoted)) return true;
+
   return CODE_RUNNER.test(unquoted) && INLINE_CODE_FLAG.test(unquoted);
 }
 
@@ -251,6 +257,7 @@ function managedReasonInSegment(segment: string): string | null {
     const reason = managedPathReason(path);
     if (reason) return reason;
   }
+
   return null;
 }
 
@@ -269,6 +276,7 @@ function splitOnUnquotedSeparators(cmd: string): CommandPiece[] {
   const pieces: CommandPiece[] = [];
   let current = "";
   let quote: string | null = null;
+
   for (const char of cmd) {
     if (quote) {
       if (char === quote) quote = null;
@@ -279,9 +287,12 @@ function splitOnUnquotedSeparators(cmd: string): CommandPiece[] {
       current = "";
       continue;
     }
+
     current += char;
   }
+
   pieces.push({ text: current, separator: "" });
+
   return pieces;
 }
 
@@ -306,6 +317,7 @@ export function runsOnlyPalCli(cmd: string): boolean {
     .map((piece) => piece.text)
     .filter((text) => text.trim() !== "");
   const [first, ...rest] = pieces;
+
   return (
     first !== undefined &&
     isPalCliInvocation(first) &&
@@ -320,18 +332,22 @@ function unquotedSegments(cmd: string): string[] {
 /** Check a bash command against blocked patterns. Returns reason string or null. */
 export function checkBashCommand(fullCommand: string): string | null {
   const cmd = withoutPalCliInvocations(fullCommand);
+
   for (const [pattern, reason] of BLOCKED_COMMANDS) {
     if (pattern.test(cmd)) return reason;
   }
+
   if (WIN_ELEVATION_WRAPPER.test(cmd)) {
     for (const [pattern, reason] of WIN_ELEVATED_THREATS) {
       if (pattern.test(cmd)) return reason;
     }
   }
+
   for (const segment of unquotedSegments(cmd)) {
     const reason = managedReasonInSegment(segment);
     if (reason && !READ_ONLY_COMMANDS.test(segment)) return reason;
   }
+
   return null;
 }
 
@@ -351,7 +367,9 @@ function isShippedSkill(name: string): boolean {
 function palInstalledReason(path: string): string | null {
   const [dir, entry] = pathBelow(palHome(), path)?.split("/") ?? [];
   if (!dir || !entry || !PAL_INSTALLED_DIRS.includes(dir)) return null;
+
   if (dir === "skills" && !isShippedSkill(entry)) return null;
+
   return `~/.pal/${dir}/ is managed by 'pal install' — edit the source in the PAL repo instead`;
 }
 
@@ -359,8 +377,10 @@ function palInstalledReason(path: string): string | null {
 export function checkFilePath(filePath: string): string | null {
   const reason = managedPathReason(filePath) ?? palInstalledReason(filePath);
   if (reason) return reason;
+
   if (PROTECTED_PATHS.some((pattern) => pattern.test(filePath))) {
     return `Protected path: ${filePath}`;
   }
+
   return null;
 }

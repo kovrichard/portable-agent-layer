@@ -74,6 +74,7 @@ export function proseOnly(text: string): string {
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];
   let last = 0;
+
   for (const m of text.matchAll(/[\p{L}\p{N}](?:[\p{L}\p{N}'’.-]*[\p{L}\p{N}])?/gu)) {
     const start = m.index ?? 0;
     tokens.push({
@@ -83,6 +84,7 @@ function tokenize(text: string): Token[] {
     });
     last = start + m[0].length;
   }
+
   return tokens;
 }
 
@@ -93,17 +95,20 @@ function words(name: string): string[] {
 function companyNames(entity: NamedEntity): string[] {
   const bare = withoutLegalSuffix(foldName(entity.title));
   const site = entity.domainName ? foldName(entity.domainName).split(".")[0] : "";
+
   return [entity.title, bare, site, ...entity.aliases];
 }
 
 function personNames(entity: NamedEntity): string[] {
   const parts = words(entity.title);
   const reversed = parts.length === 2 ? `${parts[1]} ${parts[0]}` : "";
+
   return [entity.title, reversed, ...entity.aliases];
 }
 
 function fullTerms(entity: NamedEntity): Term[] {
   const names = entity.domain === "People" ? personNames(entity) : companyNames(entity);
+
   return names
     .map(words)
     .filter((tokens) => tokens.join(" ").length >= 2)
@@ -114,6 +119,7 @@ function partialTerms(entity: NamedEntity): Term[] {
   if (entity.domain !== "People") return [];
   const parts = words(entity.title);
   if (parts.length < 2) return [];
+
   return parts
     .filter((p) => p.length >= MIN_PARTIAL)
     .map((p) => ({ tokens: [p], entity, partial: true }));
@@ -135,6 +141,7 @@ export function buildNameIndex(
   terms.sort(
     (a, b) => Number(a.partial) - Number(b.partial) || b.tokens.length - a.tokens.length
   );
+
   return { terms, excluded };
 }
 
@@ -162,6 +169,7 @@ function besideUnknownName(tokens: Token[], at: number): boolean {
   const next = tokens[at + 1];
   if (joinedTo(next) && isCapitalized(next)) return true;
   const prev = tokens[at - 1];
+
   return joinedTo(tokens[at]) && isCapitalized(prev) && !startsSentence(tokens, at - 1);
 }
 
@@ -172,7 +180,9 @@ function isLoneWordOfPerson(term: Term): boolean {
 function termsAt(index: NameIndex, tokens: Token[], at: number): Term[] {
   const first = index.terms.find((t) => matchesAt(tokens, at, t));
   if (!first) return [];
+
   if (isLoneWordOfPerson(first) && besideUnknownName(tokens, at)) return [];
+
   return index.terms.filter(
     (t) =>
       t.partial === first.partial &&
@@ -197,9 +207,11 @@ export function findMentions(text: string, index: NameIndex): Mention[] {
   const tokens = tokenize(proseOnly(text));
   const found = new Map<string, Mention>();
   let at = 0;
+
   while (at < tokens.length) {
     const terms = termsAt(index, tokens, at);
     const width = terms[0]?.tokens.length ?? 1;
+
     if (terms.length > 0) {
       const said = tokens
         .slice(at, at + width)
@@ -207,8 +219,10 @@ export function findMentions(text: string, index: NameIndex): Mention[] {
         .join(" ");
       addMention(found, said, terms, index);
     }
+
     at += width;
   }
+
   return [...found.values()];
 }
 
@@ -222,6 +236,7 @@ export function lookupName(
   const named = (t: Term) => t.tokens.join(" ") === folded;
   const full = index.terms.filter((t) => !t.partial && named(t));
   if (full.length > 0) return { entities: distinctEntities(full), exact: true };
+
   return { entities: distinctEntities(index.terms.filter(named)), exact: false };
 }
 

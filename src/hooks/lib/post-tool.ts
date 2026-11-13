@@ -35,10 +35,12 @@ function recordApplied(payload: Payload): void {
 function recordUnapplied(payload: Payload, verdict: UnappliedVerdict): void {
   const calls = ledgeredCalls(payload);
   if (calls.length === 0) return;
+
   for (const call of calls) {
     const entry = commitUnapplied(call, verdict);
     logDebug("post-tool", `${entry.outcome} ${entry.id} ${entry.target}`);
   }
+
   reapStalePending();
 }
 
@@ -68,6 +70,7 @@ export function runPostToolHandlers(
   argv: string[] = process.argv
 ): void {
   const only = argv.find((a) => a.startsWith("--only="))?.slice("--only=".length);
+
   for (const [name, handle] of Object.entries(HANDLERS)) {
     if (!only || only === name) handle(payload);
   }

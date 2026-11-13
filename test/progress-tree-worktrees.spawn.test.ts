@@ -30,6 +30,7 @@ function git(dir: string, ...args: string[]): string {
     { cwd: dir, encoding: "utf-8" }
   );
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -59,7 +60,9 @@ function worktree(branch: string, pushed = true): string {
   const path = resolve(root, branch.replace("/", "-"));
   git(repo, "worktree", "add", "-q", "-b", branch, path, "origin/main");
   commit(path, `${branch.replace("/", "-")}.txt`);
+
   if (pushed) git(path, "push", "-q", "-u", "origin", branch);
+
   return path;
 }
 
@@ -124,6 +127,7 @@ describe("a worktree that appears during the work", () => {
 describe("cleaning up a node's worktrees", () => {
   function attached(...paths: [string, string][]): void {
     openNode();
+
     for (const [path, branch] of paths)
       appendEvent(
         repo,

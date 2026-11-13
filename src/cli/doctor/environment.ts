@@ -28,8 +28,11 @@ const NEWEST_UBUNTU_PLAYWRIGHT_KNOWS = 24.04;
 function playwrightBrowsersPath(): string {
   if (process.env.PLAYWRIGHT_BROWSERS_PATH) return process.env.PLAYWRIGHT_BROWSERS_PATH;
   const home = homedir();
+
   if (process.platform === "darwin") return resolve(home, "Library/Caches/ms-playwright");
+
   if (process.platform === "win32") return resolve(home, "AppData/Local/ms-playwright");
+
   return resolve(home, ".cache/ms-playwright");
 }
 
@@ -43,6 +46,7 @@ function installedPlaywright(): PlaywrightBuild | null {
     const shell = (browsers as { name: string; revision: string }[]).find(
       (b) => b.name === "chromium-headless-shell"
     );
+
     return shell ? { version, revision: shell.revision } : null;
   } catch {
     return null;
@@ -53,6 +57,7 @@ function hasChromium(host: BrowserHost): boolean {
   if (!existsSync(host.browsersPath)) return false;
   const dirs = readdirSync(host.browsersPath);
   const revision = host.playwright?.revision;
+
   return revision
     ? dirs.some(
         (d) => d === `chromium_headless_shell-${revision}` || d === `chromium-${revision}`
@@ -62,19 +67,23 @@ function hasChromium(host: BrowserHost): boolean {
 
 function playwrightPlatformOverride(host: BrowserHost): string {
   if (host.platform !== "linux") return "";
+
   if (osReleaseField(host.osRelease, "ID") !== "ubuntu") return "";
   const version = Number.parseFloat(osReleaseField(host.osRelease, "VERSION_ID"));
   if (!(version > NEWEST_UBUNTU_PLAYWRIGHT_KNOWS)) return "";
+
   return `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-${host.arch === "arm64" ? "arm64" : "x64"} `;
 }
 
 function chromiumInstallCommand(host: BrowserHost): string {
   const pinned = host.playwright ? `playwright@${host.playwright.version}` : "playwright";
+
   return `${playwrightPlatformOverride(host)}bun x ${pinned} install chromium`;
 }
 
 export function playwrightFinding(host: BrowserHost): Finding {
   if (hasChromium(host)) return passed("playwright", "Playwright Chromium installed");
+
   return warning(
     "playwright.missing",
     "Playwright's Chromium is not installed — create-pdf, consulting-report and screenshots fail",
@@ -115,6 +124,7 @@ export async function installChromium(
   run: (command: string) => Promise<boolean> | boolean = runInShell
 ): Promise<boolean | null> {
   if (hasChromium(host)) return null;
+
   return run(chromiumInstallCommand(host));
 }
 
@@ -131,6 +141,7 @@ function putPalOnPath(install: PalInstall): Fix {
     return {
       say: `Add ${install.bunBin} to PATH in your shell profile — Bun put pal there`,
     };
+
   return install.repoMode
     ? {
         say: "Link the checkout — a shell alias is invisible to agents",
@@ -167,8 +178,10 @@ function rtkInstall(): Fix {
     return {
       say: "Download rtk.exe from https://github.com/rtk-ai/rtk/releases and add it to PATH",
     };
+
   if (process.platform === "darwin")
     return { say: "Install rtk", command: "brew install rtk", external: true };
+
   return {
     say: "Install rtk",
     command:

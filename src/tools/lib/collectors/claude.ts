@@ -65,6 +65,7 @@ function completeLinesFrom(bytes: Buffer, offset: number) {
   if (end <= offset) return { lines: [], end: offset };
   const lines: { text: string; start: number }[] = [];
   let start = offset;
+
   for (const text of bytes
     .subarray(offset, end - 1)
     .toString("utf-8")
@@ -72,6 +73,7 @@ function completeLinesFrom(bytes: Buffer, offset: number) {
     lines.push({ text, start });
     start += Buffer.byteLength(text) + 1;
   }
+
   return { lines, end };
 }
 
@@ -79,6 +81,7 @@ function settledMessages(bytes: Buffer, offset: number, settled: boolean): Settl
   const { lines, end } = completeLinesFrom(bytes, offset);
   const groups = new Map<string, { start: number; line: ModelCallLine }>();
   let newest: string | undefined;
+
   for (const { text, start } of lines) {
     if (!text.includes('"usage"')) continue;
     const line = parsed(text);
@@ -87,8 +90,10 @@ function settledMessages(bytes: Buffer, offset: number, settled: boolean): Settl
     groups.set(id, { start: groups.get(id)?.start ?? start, line });
     newest = id;
   }
+
   const unfinished = settled || !newest ? undefined : groups.get(newest);
   if (unfinished && newest) groups.delete(newest);
+
   return {
     messages: [...groups.values()].map((group) => group.line),
     resumeAt: unfinished?.start ?? end,
@@ -150,6 +155,7 @@ function copiesOfDeletedTranscripts(
   projectsDir: string
 ): Transcript[] {
   if (!existsSync(copiesDir)) return [];
+
   return readdirSync(copiesDir, { recursive: true, encoding: "utf-8" })
     .map((file) => file.split(sep).join("/"))
     .filter((file) => file.endsWith(".jsonl.gz"))
@@ -176,14 +182,17 @@ export function collectClaude(
     ...liveTranscripts(projectsDir, now),
     ...(copiesDir ? copiesOfDeletedTranscripts(copiesDir, projectsDir) : []),
   ];
+
   for (const transcript of transcripts) {
     const offset = Number(cursor[transcript.key] ?? 0);
     const read = settledMessages(transcript.bytes(), offset, transcript.settled);
     if (read.resumeAt === offset) continue;
+
     for (const line of read.messages) emitModelCall(line, billingAt(line.timestamp));
     emitted += read.messages.length;
     cursor[transcript.key] = read.resumeAt;
     writeCursor("claude", cursor);
   }
+
   return emitted;
 }

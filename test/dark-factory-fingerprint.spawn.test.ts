@@ -25,11 +25,13 @@ function git(...args: string[]): string {
     env: { ...process.env, ...GIT_ENV },
   });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout;
 }
 
 function fingerprint(): unknown {
   const run = { worktree: repo, env, effects: { spawnTool } };
+
   return build.worktreeFingerprint(run);
 }
 

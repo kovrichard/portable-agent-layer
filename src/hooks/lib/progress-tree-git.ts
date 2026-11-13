@@ -33,6 +33,7 @@ function git(cwd: string, ...args: string[]): string | null {
     encoding: "utf-8",
     timeout: GIT_TIMEOUT_MS,
   });
+
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
@@ -40,6 +41,7 @@ function snapshot(cwd: string): GitSnapshot | null {
   const head = git(cwd, "rev-parse", "HEAD");
   const branch = git(cwd, "rev-parse", "--abbrev-ref", "HEAD");
   if (!head || !branch) return null;
+
   return { head, branch, email: git(cwd, "config", "user.email") ?? "" };
 }
 
@@ -47,6 +49,7 @@ function snapshot(cwd: string): GitSnapshot | null {
 function committedHere(cwd: string): Set<string> {
   const reflog = git(cwd, "reflog", `-${MAX_REFLOG}`, "--format=%H%x09%gs");
   if (!reflog) return new Set();
+
   return new Set(
     reflog
       .split("\n")
@@ -67,6 +70,7 @@ function ownCommitsSince(cwd: string, from: string, to: string, email: string): 
   );
   if (!log) return [];
   const madeHere = committedHere(cwd);
+
   return log
     .split("\n")
     .map((line) => line.split("\t"))
@@ -87,6 +91,7 @@ interface GitMoves {
 function attachMoves({ scope, node, branch, commits, file, now }: GitMoves): void {
   if (branch)
     appendEvent(scope, node, "attach", { kind: "branch", ref: branch }, file, now);
+
   for (const commit of commits)
     appendEvent(
       scope,
@@ -128,6 +133,7 @@ export function attachGitProgress(
     if (node) attachMoves({ scope, node, branch, commits, file, now });
     attachNewWorktrees(cwd, cursor.worktrees, { scope, node, file, now });
   }
+
   appendEvent(
     scope,
     "",

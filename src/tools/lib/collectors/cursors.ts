@@ -15,6 +15,7 @@ function cursorsFile(): string {
 
 function readAll(): Record<string, SourceCursor> {
   if (!existsSync(cursorsFile())) return {};
+
   try {
     return JSON.parse(readFileSync(cursorsFile(), "utf-8"));
   } catch {

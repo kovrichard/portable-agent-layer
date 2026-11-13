@@ -25,6 +25,7 @@ export interface Tally {
 
 export function tally(findings: Finding[]): Tally {
   const of = (severity: Severity) => findings.filter((f) => f.severity === severity);
+
   return {
     fails: of("fail"),
     warns: of("warn"),
@@ -60,6 +61,7 @@ function fixText(fix: Fix): string {
 
 function plainLine(finding: Finding): string {
   const fix = finding.fix ? ` -> ${fixText(finding.fix)}` : "";
+
   return `${PLAIN_LEVEL[finding.severity]} ${finding.title}${fix}`;
 }
 
@@ -70,6 +72,7 @@ export function plainProblemLines(t: Tally): string[] {
 function plainReport(report: DoctorReport, verbose: boolean): string[] {
   const t = tally(report.findings);
   const agents = report.agents.length > 0 ? report.agents.join(", ") : "no agent";
+
   return [
     `PAL ${report.version} · ${agents} · ${plainSummary(t)}`,
     ...(verbose ? t.passes.map(plainLine) : []),
@@ -93,13 +96,16 @@ export function wrapSegments(segments: Segment[], width: number): string[] {
   let end = 0;
   const bounds = segments.map((s) => {
     end += s.text.length;
+
     return end;
   });
+
   return wrapWords(text, width).map(({ text: chunk, start }) =>
     segments
       .map((segment, i) => {
         const from = Math.max(start, bounds[i - 1] ?? 0);
         const to = Math.min(start + chunk.length, bounds[i]);
+
         return to > from ? segment.paint(text.slice(from, to)) : "";
       })
       .join("")
@@ -116,6 +122,7 @@ function titleSegments(
   const text = homeShortened(title);
   const split = text.indexOf(TITLE_REST);
   if (split < 0) return [{ text, paint: main }];
+
   return [
     { text: text.slice(0, split), paint: main },
     { text: `${separator}${text.slice(split + TITLE_REST.length)}`, paint: style.dim },
@@ -132,6 +139,7 @@ function fixLines(style: Style, fix: Fix, width: number, indent: string): string
   const segment = fix.command
     ? { text: fix.command, paint: style.cmd }
     : { text: homeShortened(fix.say), paint: asIs };
+
   return hanging(wrapSegments([segment], width), arrow, pad);
 }
 
@@ -140,10 +148,12 @@ const textWidth = (style: Style, indent: string) =>
 
 export function problemLines(style: Style, t: Tally, indent = "  "): string[] {
   const width = textWidth(style, indent);
+
   return [...t.fails, ...t.warns].flatMap((problem) => {
     const kind = problem.severity === "fail" ? "fail" : "warn";
     const main = kind === "fail" ? style.bold : asIs;
     const head = `${indent}${mark(style, kind)} `;
+
     return [
       ...hanging(
         wrapSegments(titleSegments(style, problem.title, main), width),
@@ -165,6 +175,7 @@ function optionalLines(style: Style, item: Finding): string[] {
     { text: ` ${style.glyph.dash} `, paint: style.dim },
     how,
   ];
+
   return hanging(
     wrapSegments(segments, textWidth(style, "  ")),
     `  ${style.dim(style.glyph.dot)} `,
@@ -180,6 +191,7 @@ function agentOf(finding: Finding, agents: string[]): string | undefined {
 
 function passLines(style: Style, finding: Finding): string[] {
   const segments = titleSegments(style, finding.title, asIs, ` ${style.glyph.dot} `);
+
   return hanging(
     wrapSegments(segments, textWidth(style, "  ")),
     `  ${mark(style, "ok")} `,
@@ -191,6 +203,7 @@ function agentLines(style: Style, agent: string, passes: Finding[]): string[] {
   const label = (AGENT_REGISTRY[agent as AgentName]?.label ?? agent).padEnd(12);
   const briefs = passes.map((f) => f.brief ?? f.title).join(` ${style.glyph.dot} `);
   const width = textWidth(style, "  ") - label.length - 1;
+
   return hanging(
     wrapSegments([{ text: briefs, paint: style.dim }], width),
     `  ${mark(style, "ok")} ${label} `,
@@ -205,6 +218,7 @@ function groupLines(style: Style, group: Group, passes: Finding[], agents: strin
   const perAgent = agents
     .map((agent) => [agent, inGroup.filter((f) => agentOf(f, agents) === agent)] as const)
     .filter(([, found]) => found.length > 0);
+
   return [
     `  ${style.bold(style.gradient(group))}`,
     ...own.flatMap((f) => passLines(style, f)),
@@ -221,6 +235,7 @@ function headline(style: Style, t: Tally, report: DoctorReport): string[] {
   const pal = style.bold(`PAL ${report.version}`);
   const head = `  ${healthBadge(style, count, true)}  ${pal}`;
   const oneLine = `${head}  ${agents}`;
+
   return visibleWidth(oneLine) <= style.term.width ? [oneLine] : [head, `  ${agents}`];
 }
 
@@ -232,6 +247,7 @@ function richReport(report: DoctorReport, verbose: boolean, style: Style): strin
       : ` ${style.glyph.dot} ${seconds(report.elapsedMs)}`;
   const footer = `${plural(t.passes.length, "check")} passed${elapsed}`;
   const problems = problemLines(style, t);
+
   return [
     "",
     ...headline(style, t, report),

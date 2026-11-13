@@ -12,7 +12,7 @@ import {
   installedShippedAgentCount,
   nativeAgentsDir,
   staleShippedAgents,
-} from "../../targets/lib";
+} from "../../targets/shipped-agents";
 import { NO_SESSION_AGENT_MESSAGE } from "../session-agent";
 import { type Finding, type Fix, failing, optional, passed, warning } from "./finding";
 
@@ -41,11 +41,13 @@ function checkTool(cmd: string, versionArgs: string[] = ["--version"]): ToolChec
     });
     if (result.status === 0) {
       const version = (result.stdout?.toString() || "").trim().split("\n")[0];
+
       return { name: cmd, available: true, version };
     }
   } catch {
     // not found
   }
+
   return { name: cmd, available: false };
 }
 
@@ -57,9 +59,11 @@ function checkTool(cmd: string, versionArgs: string[] = ["--version"]): ToolChec
 function checkCopilot(): ToolCheck {
   const cli = checkTool("copilot", ["version"]);
   if (cli.available) return cli;
+
   if (existsSync(platform.copilotDir())) {
     return { name: "copilot", available: true, version: "~/.copilot (no CLI on PATH)" };
   }
+
   return cli;
 }
 
@@ -70,6 +74,7 @@ function checkCopilot(): ToolCheck {
 function checkCursor(): ToolCheck {
   const cli = checkTool("cursor-agent");
   if (cli.available) return cli;
+
   return checkTool("cursor");
 }
 
@@ -92,6 +97,7 @@ function agentChecks(
 
 export function detectAgents(): DoctorResult {
   const bun = { name: "bun", available: true, version: Bun.version };
+
   if (process.env.PAL_SKIP_DOCTOR === "1") {
     return {
       ...agentChecks((agent) => ({ name: agent, available: true })),
@@ -100,7 +106,9 @@ export function detectAgents(): DoctorResult {
       hasAgent: true,
     };
   }
+
   const agents = agentChecks((agent) => AGENT_PROBES[agent]());
+
   return {
     ...agents,
     bun,
@@ -167,6 +175,7 @@ function extractAllHookCommands(obj: unknown, out: string[] = []): string[] {
       }
     }
   }
+
   return out;
 }
 
@@ -202,8 +211,10 @@ function isPalHook(cmd: string, agent: AgentName): boolean {
 
 function readHookCommands(file: string): string[] | "missing" | "unreadable" {
   if (!existsSync(file)) return "missing";
+
   try {
     const data = JSON.parse(readFileSync(file, "utf-8"));
+
     return extractAllHookCommands(data.hooks ?? data);
   } catch {
     return "unreadable";
@@ -235,32 +246,41 @@ function hookFindings(agent: AgentName, file: string, contextHook: string): Find
       ),
     ];
 
-  const findings = [
+  return [
     passed(
       `${agent}.hooks`,
       `${label}: ${pal.length} hooks registered`,
       `${pal.length} hooks`
     ),
+    ...undeclaredHookFindings(agent, pal),
+    ...brokenScriptFindings(agent, pal),
   ];
+}
+
+function undeclaredHookFindings(agent: AgentName, pal: string[]): Finding[] {
   const undeclared = pal.filter((c) => !declaresAgent(c, agent));
-  if (undeclared.length > 0)
-    findings.push(
-      failing(
-        `${agent}.hooks.undeclared`,
-        `${label}: ${undeclared.length} of ${pal.length} hooks do not name ${agent} as their agent`,
-        reinstall(agent)
-      )
-    );
+  if (undeclared.length === 0) return [];
+
+  return [
+    failing(
+      `${agent}.hooks.undeclared`,
+      `${labelOf(agent)}: ${undeclared.length} of ${pal.length} hooks do not name ${agent} as their agent`,
+      reinstall(agent)
+    ),
+  ];
+}
+
+function brokenScriptFindings(agent: AgentName, pal: string[]): Finding[] {
   const broken = pal.filter((c) => scriptPaths(c).some((path) => !existsSync(path)));
-  if (broken.length > 0)
-    findings.push(
-      failing(
-        `${agent}.hooks.scripts`,
-        `${label}: ${broken.length} of ${pal.length} hooks run a script that no longer exists (${scriptPaths(broken[0]).find((p) => !existsSync(p))})`,
-        reinstall(agent)
-      )
-    );
-  return findings;
+  if (broken.length === 0) return [];
+
+  return [
+    failing(
+      `${agent}.hooks.scripts`,
+      `${labelOf(agent)}: ${broken.length} of ${pal.length} hooks run a script that no longer exists (${scriptPaths(broken[0]).find((p) => !existsSync(p))})`,
+      reinstall(agent)
+    ),
+  ];
 }
 
 function opencodePluginFile(): string {
@@ -270,6 +290,7 @@ function opencodePluginFile(): string {
 function opencodePluginFindings(): Finding[] {
   const installed = opencodePluginFile();
   const source = resolve(palPkg(), "src", "targets", "opencode", "plugin.ts");
+
   if (!existsSync(installed))
     return [
       failing(
@@ -278,6 +299,7 @@ function opencodePluginFindings(): Finding[] {
         reinstall("opencode")
       ),
     ];
+
   if (existsSync(source) && statSync(installed).mtimeMs < statSync(source).mtimeMs)
     return [
       warning(
@@ -286,6 +308,7 @@ function opencodePluginFindings(): Finding[] {
         reinstall("opencode")
       ),
     ];
+
   return [
     passed("opencode.hooks", "opencode plugin installed and current", "plugin current"),
   ];
@@ -300,6 +323,7 @@ function subagentFinding(agent: AgentName): Finding {
       `${label}: subagents match this PAL version`,
       "subagents current"
     );
+
   return warning(
     `${agent}.subagents`,
     `${label}: installed subagents differ from this PAL version — ${stale.join(", ")}`,
@@ -309,6 +333,7 @@ function subagentFinding(agent: AgentName): Finding {
 
 function countSkills(dir: string): number {
   if (!existsSync(dir)) return 0;
+
   return readdirSync(dir).filter((f) => existsSync(resolve(dir, f, "SKILL.md"))).length;
 }
 
@@ -327,6 +352,7 @@ function oneAgentFindings(agent: AgentName): Finding[] {
       : opencodePluginFindings()),
     subagentFinding(agent)
   );
+
   if (layout.instructions) {
     const { file, name } = layout.instructions;
     findings.push(
@@ -335,12 +361,14 @@ function oneAgentFindings(agent: AgentName): Finding[] {
         : failing(`${agent}.instructions`, `${name} is missing`, reinstall(agent))
     );
   }
+
   return findings;
 }
 
 function palHookCount(agent: AgentName): number {
   const file = WIRING[agent].hookFile?.();
   const commands = file ? readHookCommands(file) : "missing";
+
   return Array.isArray(commands) ? commands.filter((c) => isPalHook(c, agent)).length : 0;
 }
 
@@ -355,6 +383,7 @@ export function agentInventory(agent: AgentName): string[] {
   const plural = (count: number, noun: string) =>
     `${count} ${noun}${count === 1 ? "" : "s"}`;
   const wiring = WIRING[agent].hookFile ? plural(palHookCount(agent), "hook") : "plugin";
+
   return [
     plural(countSkills(skillsDirOf(agent)), "skill"),
     wiring,
@@ -365,6 +394,7 @@ export function agentInventory(agent: AgentName): string[] {
 export function agentFindings(agents: AgentName[]): Finding[] {
   if (agents.length === 0) return [];
   const agentsMd = resolve(platform.opencodeDir(), "AGENTS.md");
+
   return [
     existsSync(agentsMd)
       ? passed("agents-md", "AGENTS.md present")
@@ -386,6 +416,7 @@ export function rosterFindings(agents: AgentName[]): Finding[] {
     ];
   const others = AGENT_NAMES.filter((name) => !agents.includes(name));
   if (others.length === 0) return [];
+
   return [
     optional(
       "agents.others",

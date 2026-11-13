@@ -177,6 +177,15 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostGitInfo.ts --agent=claude"
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [

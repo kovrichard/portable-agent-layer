@@ -8,15 +8,11 @@
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  copyAgentsForCopilot,
-  copySkills,
-  countSkills,
-  loadCopilotHooksTemplate,
-  log,
-  vscodeSettingsFile,
-} from "../lib";
-import { enableCopilotInstructions } from "../vscode-settings";
+import { log } from "../log";
+import { copyAgentsForCopilot } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
+import { enableCopilotInstructions, vscodeSettingsFile } from "../vscode-settings";
+import { loadCopilotHooksTemplate } from "./hooks";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const COPILOT_DIR = platform.copilotDir();
@@ -47,15 +43,18 @@ log.success(`${countSkills()} skills · ${agentCount} agents → ~/.copilot/`);
 const vsSettingsPath = vscodeSettingsFile();
 const manualHint =
   'Add manually: { "chat.instructionsFilesLocations": { "~/.copilot/instructions": true } }';
+
 if (vsSettingsPath) {
   try {
     const outcome = enableCopilotInstructions(vsSettingsPath);
     if (outcome === "enabled")
       log.success("Enabled ~/.copilot/instructions in VS Code settings");
+
     if (outcome === "needs-manual-edit")
       log.warn(
         `VS Code settings aren't plain JSON, so PAL left them untouched — ${manualHint}`
       );
+
     if (outcome === "vscode-never-launched")
       log.info("Skipped VS Code settings — VS Code has not been launched yet");
   } catch {

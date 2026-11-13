@@ -39,6 +39,7 @@ function statePath(): string {
 
 function readState(): TelemetryState | null {
   if (!existsSync(statePath())) return null;
+
   try {
     return JSON.parse(readFileSync(statePath(), "utf-8")) as TelemetryState;
   } catch {
@@ -48,6 +49,7 @@ function readState(): TelemetryState | null {
 
 function writeState(state: TelemetryState): TelemetryState {
   writeFileSync(statePath(), `${JSON.stringify(state, null, 2)}\n`, "utf-8");
+
   return state;
 }
 
@@ -60,10 +62,15 @@ export function telemetryState(): TelemetryState {
 
 export function optOutReason(env: Env = process.env): string | null {
   if (!telemetryEnabled()) return "turned off in settings";
+
   if (env.DO_NOT_TRACK === "1") return "DO_NOT_TRACK is set";
+
   if (env.PAL_TELEMETRY_DISABLED === "1") return "PAL_TELEMETRY_DISABLED is set";
+
   if (env.PAL_TEST_SANDBOX === "1") return "test sandbox";
+
   if (env.CI) return "running in CI";
+
   return null;
 }
 
@@ -73,11 +80,13 @@ export function heartbeatEndpoint(env: Env = process.env): string | null {
 
 function sentWithinADay(state: TelemetryState | null, now: number): boolean {
   if (!state?.attemptedAt) return false;
+
   return now - new Date(state.attemptedAt).getTime() < DAY_MS;
 }
 
 export function heartbeatDue(env: Env = process.env, now: number = Date.now()): boolean {
   if (optOutReason(env) !== null || !heartbeatEndpoint(env)) return false;
+
   return !sentWithinADay(readState(), now);
 }
 
@@ -110,6 +119,7 @@ async function post(url: string, payload: Heartbeat, fetchImpl: typeof fetch) {
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });
+
     return { outcome: response.ok ? "sent" : "failed", status: response.status } as const;
   } catch {
     return { outcome: "failed", status: null } as const;
@@ -128,8 +138,10 @@ export async function sendHeartbeat(
   const skipReason = optOutReason(env) ?? (heartbeatEndpoint(env) ? null : "no endpoint");
   if (skipReason) {
     logHeartbeat({ outcome: "skipped", skipReason });
+
     return "skipped";
   }
+
   stampAttempt(now);
   const payload = buildHeartbeat(agents);
   const { outcome, status } = await post(
@@ -138,6 +150,7 @@ export async function sendHeartbeat(
     fetchImpl
   );
   logHeartbeat({ outcome, payload, status });
+
   return outcome;
 }
 

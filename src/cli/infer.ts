@@ -34,6 +34,7 @@ function tierOf(name = "small"): InferenceTier {
       `Unknown tier "${name}". Use ${INFERENCE_TIERS.join(", ")}.`
     );
   }
+
   return tier;
 }
 
@@ -42,12 +43,14 @@ function timeoutMs(seconds = String(DEFAULT_TIMEOUT_SECONDS)): number {
   if (!Number.isFinite(value) || value <= 0) {
     throw new InferInputError(`--timeout takes a number of seconds, not "${seconds}".`);
   }
+
   return value * 1000;
 }
 
 function promptOf(stdin: string): string {
   const prompt = stdin.trim();
   if (!prompt) throw new InferInputError("No prompt: pipe it in on stdin.");
+
   return prompt;
 }
 
@@ -73,6 +76,7 @@ function schemaFrom(path: string | undefined): Record<string, unknown> | undefin
   if (!path) return undefined;
   const schema = readSchema(path);
   assertCheckable(path, schema);
+
   return schema;
 }
 
@@ -90,7 +94,9 @@ function requestFrom(values: InferValues, stdin: string): Parameters<Infer>[0] {
 
 function failureReason(result: Awaited<ReturnType<Infer>>, wantedJson: boolean): string {
   if (result.error) return result.error;
+
   if (wantedJson && result.output) return "the reply was not JSON";
+
   return "no inference route answered (run `pal cli doctor`)";
 }
 
@@ -100,20 +106,26 @@ export async function inferFromCli(
   infer: Infer = inference
 ): Promise<number> {
   let request: Parameters<Infer>[0];
+
   try {
     request = requestFrom(values, stdin);
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
+
     return 1;
   }
+
   const result = await infer(request);
   if (!result.success || !result.output) {
     console.error(
       `Inference failed: ${failureReason(result, Boolean(request.jsonSchema))}`
     );
+
     return 1;
   }
+
   console.log(result.output);
+
   return 0;
 }
 
@@ -123,9 +135,11 @@ export function routeFromCli(
 ): number {
   try {
     console.log(JSON.stringify(plan(tierOf(values.tier), values.caller)));
+
     return 0;
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
+
     return 1;
   }
 }

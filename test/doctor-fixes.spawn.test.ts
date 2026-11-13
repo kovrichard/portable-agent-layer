@@ -60,6 +60,7 @@ function sandboxEnv(root: string): Record<string, string> {
   const dirs = Object.fromEntries(
     AGENT_DIRS.map((dir) => [`PAL_${dir.slice(1).toUpperCase()}_DIR`, resolve(root, dir)])
   );
+
   return {
     ...(inherited as Record<string, string>),
     ...dirs,
@@ -81,16 +82,19 @@ function sh(root: string, command: string, cwd = root) {
     encoding: "utf-8",
     timeout: 120_000,
   });
+
   return { ok: result.status === 0, output: `${result.stdout}${result.stderr}` };
 }
 
 function fakeAgentsOnPath(root: string): void {
   const bin = resolve(root, "bin");
   mkdirSync(bin, { recursive: true });
+
   for (const agent of ["claude", "opencode", "cursor-agent", "copilot", "codex"]) {
     writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
     chmodSync(resolve(bin, agent), 0o755);
   }
+
   linkFile(process.execPath, resolve(bin, "bun"));
 }
 
@@ -103,6 +107,7 @@ function installFromTarball(root: string): string {
   const tarball = readdirSync(root).find((file) => file.endsWith(".tgz"));
   const added = sh(root, `bun add -g ${resolve(root, tarball as string)}`);
   if (!added.ok) throw new Error(`bun add -g failed: ${added.output}`);
+
   return resolve(
     root,
     ".bun",
@@ -128,18 +133,21 @@ function trackedAndNewFiles(): string[] {
 
 function checkOut(root: string): string {
   const pkg = resolve(root, "checkout");
+
   for (const file of trackedAndNewFiles())
     cpSync(resolve(REPO, file), resolve(pkg, file), { verbatimSymlinks: true });
   mkdirSync(resolve(pkg, ".git"));
   linkDir(resolve(REPO, "node_modules"), resolve(pkg, "node_modules"));
   const linked = sh(root, "bun link", pkg);
   if (!linked.ok) throw new Error(`bun link failed: ${linked.output}`);
+
   return pkg;
 }
 
 function doctor(sandbox: Sandbox): Finding[] {
   const cli = resolve(sandbox.pkg, "src", "cli", "index.ts");
   const { output } = sh(sandbox.root, `bun ${cli} cli doctor --json`);
+
   return JSON.parse(output.slice(output.indexOf("{"))).findings.filter(
     (f: Finding) => f.severity === "fail" || f.severity === "warn"
   );
@@ -189,14 +197,17 @@ function restore(root: string): void {
 function prepare(mode: Mode): Sandbox {
   const root = resolve(outsideRepoHome(import.meta.file), mode);
   removeOnceReleased(root);
+
   for (const dir of STATE_DIRS) mkdirSync(resolve(root, dir), { recursive: true });
   fakeAgentsOnPath(root);
   const pkg = mode === "package" ? installFromTarball(root) : checkOut(root);
   const installed = sh(root, "pal cli install");
+
   if (!existsSync(resolve(root, "home", "memory", "pal-settings.json")))
     throw new Error(`pal cli install failed: ${installed.output}`);
   knowEachOther(root);
   snapshot(root);
+
   return { root, pkg };
 }
 
@@ -246,6 +257,7 @@ const BREAKAGES: Breakage[] = [
     },
     path: (s) => {
       mkdirSync(at(s, "demo"), { recursive: true });
+
       return at(s, "demo");
     },
   },

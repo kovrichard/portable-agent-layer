@@ -45,6 +45,12 @@ export interface PalSettingsData {
     disable?: string[];
     rules?: Array<{ tag: string; pattern: string; snippet: string }>;
   };
+  /** System One judgments: provider, pinned model and the callers in shadow or live. Absent means every caller is off. */
+  systemOne?: {
+    provider?: string;
+    model?: string;
+    callers?: Record<string, "shadow" | "live">;
+  };
   [key: string]: unknown;
 }
 
@@ -68,6 +74,7 @@ function settingsPath(): string {
 
 function readSettingsFile(p: string): PalSettingsData {
   if (!existsSync(p)) return {};
+
   try {
     return JSON.parse(readFileSync(p, "utf-8")) as PalSettingsData;
   } catch {
@@ -78,12 +85,14 @@ function readSettingsFile(p: string): PalSettingsData {
 function load(): PalSettingsData {
   const p = settingsPath();
   if (cached?.path !== p) cached = { path: p, data: readSettingsFile(p) };
+
   return cached.data;
 }
 
 /** Force re-read from disk (useful after writes) */
 export function reload(): PalSettingsData {
   cached = null;
+
   return load();
 }
 
@@ -132,6 +141,10 @@ export function eventLogEnabled(): boolean {
 
 export function telemetryEnabled(): boolean {
   return load().telemetry?.enabled !== false;
+}
+
+export function systemOneSettings(): PalSettingsData["systemOne"] {
+  return load().systemOne;
 }
 
 /** Get the loadAtStartup file list */

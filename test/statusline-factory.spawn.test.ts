@@ -57,6 +57,7 @@ function render(): string {
         encoding: "utf-8",
         env,
       });
+
   return run.stdout ?? "";
 }
 
@@ -89,6 +90,20 @@ describe("the dark-factory line", () => {
     expect(line).toMatch(/gate (✓|ok)/);
     expect(line).toContain("PR #195");
     expect(line).not.toContain("no activity");
+  });
+
+  test("puts step/planned before the role when the role_run carries them", () => {
+    task("2026-11-05-counted", "running", [
+      { ts: minutesAgo(4), event: "role_run", role: "test-writer", step: 3, planned: 6 },
+    ]);
+    expect(factoryLines()[0]).toMatch(/counted (·|-) 3\/6 test-writer 4m/);
+  });
+
+  test("shows no step/planned for a role_run without them", () => {
+    task("2026-11-05-uncounted", "running", [
+      { ts: minutesAgo(4), event: "role_run", role: "test-writer" },
+    ]);
+    expect(factoryLines()[0]).toMatch(/uncounted (·|-) test-writer 4m/);
   });
 
   test("marks a failed gate", () => {

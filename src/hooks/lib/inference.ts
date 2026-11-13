@@ -20,12 +20,7 @@
  * yet wired and currently fall through to the API path.
  */
 
-import { readFileSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
 import { z } from "zod";
-import type { TranscriptUsage } from "../../tools/lib/transcript-usage";
 import {
   getActiveAgent,
   isAntigravity,
@@ -36,41 +31,43 @@ import {
   isOpencode,
 } from "./agent";
 import {
-  extractAntigravityText,
-  INFERENCE_AGENT,
-  removeSpawnedConversation,
-  streamJsonPrompt,
-  writeInferenceAgent,
-} from "./antigravity-inference";
-import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
+  buildCodexArgs,
+  buildCursorArgs,
+  CODEX_REPLY,
+  inferenceViaAntigravitySpawn,
+  inferenceViaClaudeSpawn,
+  inferenceViaCopilotSpawn,
+  inferenceViaOpencodeSpawn,
+} from "./inference-agents";
+import { inferenceViaApi, inferenceViaOpenAiApi } from "./inference-api";
 import {
-  anthropicUsage,
-  antigravitySpawnUsage,
-  claudeResult,
-  claudeSpawnUsage,
-  codexSpawnUsage,
-  copilotSessionId,
-  copilotShutdownUsage,
-  copilotSpawnUsage,
-  type InferenceUsage,
-  jsonLines,
-  type OpenAiUsage,
-  openAiUsage,
-  opencodeSpawnUsage,
-} from "./inference-usage";
+  getAntigravityBinary,
+  getClaudeBinary,
+  getCodexBinary,
+  getCopilotBinary,
+  getCursorBinary,
+  getOpencodeBinary,
+  hasAntigravityBinary,
+  hasClaudeBinary,
+  hasCodexBinary,
+  hasCopilotBinary,
+  hasCursorBinary,
+  hasOpencodeBinary,
+} from "./inference-binaries";
+import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
+import { buildCliPrompt, parseJsonFromOutput } from "./inference-prompt";
+import { inferenceViaCliSpawn } from "./inference-spawn";
+import { type InferenceOptions, type InferenceResult, modelFor } from "./inference-types";
 import { logDebug, logError } from "./log";
 import {
   type FixedModelRoute,
   type InferenceTier,
-  inferenceEffort,
   inferenceModel,
   isFixedModelRoute,
 } from "./models";
-import { opencodeTierModel, writeInstructionFreeConfig } from "./opencode-config";
+import { opencodeTierModel } from "./opencode-config";
 import { withPalEnv } from "./pal-env";
-import { platform } from "./paths";
-import { buildSpawnGuardEnv, getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
-import { findBinaryOnPath } from "./which";
+import { getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 
 export function hasApiKey(): boolean {
   return !!withPalEnv().PAL_ANTHROPIC_API_KEY;
@@ -94,12 +91,9 @@ interface RoutePreview {
   reason: string;
 }
 
-function modelFor(route: FixedModelRoute, opts: InferenceOptions): string {
-  return inferenceModel(route, opts.tier, opts.caller);
-}
-
 function smallModelOf(route: InferenceRoute): string | undefined {
   if (route === "opencode-spawn") return opencodeTierModel("small") ?? undefined;
+
   return isFixedModelRoute(route) ? inferenceModel(route, "small") : undefined;
 }
 
@@ -109,33 +103,42 @@ function smallModelOf(route: InferenceRoute): string | undefined {
  */
 export function previewInferenceRoute(): RoutePreview & { model?: string } {
   const preview = previewRoute();
+
   return { ...preview, model: smallModelOf(preview.route) };
 }
 
 function nativeRoutePreview(agent: RoutePreview["agent"]): RoutePreview | null {
   if (isClaude() && hasClaudeBinary())
     return { agent, route: "claude-spawn", reason: "claude binary on PATH" };
+
   if (isCodex() && hasCodexBinary())
     return { agent, route: "codex-spawn", reason: "codex binary on PATH" };
+
   if (isCodex() && hasOpenAiKey())
     return {
       agent,
       route: "openai-api",
       reason: "codex agent without codex binary; PAL_OPENAI_API_KEY set",
     };
+
   if (isOpencode() && hasOpencodeBinary())
     return { agent, route: "opencode-spawn", reason: "opencode binary on PATH" };
+
   if (isCopilot() && hasCopilotBinary())
     return { agent, route: "copilot-spawn", reason: "copilot binary on PATH" };
+
   if (isCursor() && hasCursorBinary())
     return { agent, route: "cursor-spawn", reason: "cursor-agent binary on PATH" };
+
   if (isAntigravity() && hasAntigravityBinary())
     return { agent, route: "antigravity-spawn", reason: "agy binary on PATH" };
+
   return null;
 }
 
 function previewRoute(): RoutePreview {
   const agent = getActiveAgent();
+
   if (process.env.PAL_INFERENCE_DISABLED === "1") {
     return {
       agent,
@@ -143,14 +146,17 @@ function previewRoute(): RoutePreview {
       reason: "PAL_INFERENCE_DISABLED=1 (test kill-switch)",
     };
   }
+
   const native = nativeRoutePreview(agent);
   if (native) return native;
+
   if (hasApiKey())
     return {
       agent,
       route: "anthropic-api",
       reason: "fallback — PAL_ANTHROPIC_API_KEY set",
     };
+
   return {
     agent,
     route: "none",
@@ -159,50 +165,32 @@ function previewRoute(): RoutePreview {
   };
 }
 
-/** True if any inference path is currently usable (subscription CLI OR API key). */
 /** Routes whose CLI can be limited to web search and fetch alone. */
 function canSearchWeb(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
+
   if (isCodex() && hasCodexBinary()) return true;
+
   return isCopilot() && hasCopilotBinary();
 }
 
+/** True if any inference path is currently usable (subscription CLI OR API key). */
 export function canInfer(): boolean {
   if (isClaude() && hasClaudeBinary()) return true;
+
   if (isCodex() && hasCodexBinary()) return true;
+
   if (isCodex() && hasOpenAiKey()) return true;
+
   if (isOpencode() && hasOpencodeBinary()) return true;
+
   if (isCopilot() && hasCopilotBinary()) return true;
+
   if (isCursor() && hasCursorBinary()) return true;
+
   if (isAntigravity() && hasAntigravityBinary()) return true;
+
   return hasApiKey();
-}
-
-interface InferenceOptions {
-  system?: string;
-  user: string;
-  /** Model size; the active route maps it to that provider's model. Default "small". */
-  tier?: InferenceTier;
-  maxTokens?: number;
-  timeout?: number;
-  /** JSON schema the reply must match; a reply that doesn't fails with the reason */
-  jsonSchema?: Record<string, unknown>;
-  /** Opaque label identifying the calling handler — appears in debug logs as caller=X */
-  caller?: string;
-  /** Session ID the call is associated with — appears in debug logs as sessionId=X */
-  sessionId?: string;
-  /** Let the model search and read the web, and nothing else; a route that can't fails */
-  web?: boolean;
-}
-
-interface InferenceResult {
-  success: boolean;
-  output?: string;
-  /** First line of a failed CLI's error output. */
-  error?: string;
-  usage?: InferenceUsage;
-  /** The model the route ran on, when PAL picked it. */
-  model?: string;
 }
 
 function schemaProblem(
@@ -211,6 +199,7 @@ function schemaProblem(
 ): string | undefined {
   const checked = z.fromJSONSchema(schema).safeParse(parseJsonFromOutput(output));
   if (checked.success) return undefined;
+
   return checked.error.issues
     .map((issue) => `${issue.path.join(".") || "reply"}: ${issue.message}`)
     .join("; ");
@@ -220,7 +209,9 @@ function plannedRoute(opts: InferenceOptions): { route: string; model: string | 
   const { route } = previewRoute();
   if (route === "opencode-spawn")
     return { route, model: opencodeTierModel(opts.tier ?? "small") };
+
   if (isFixedModelRoute(route)) return { route, model: modelFor(route, opts) };
+
   return { route, model: null };
 }
 
@@ -247,6 +238,7 @@ export async function inference(opts: InferenceOptions): Promise<InferenceResult
   const started = performance.now();
   const result = await checkedInference(opts);
   logInferenceCall(opts, planned, result, performance.now() - started);
+
   return { ...result, model: planned.model ?? undefined };
 }
 
@@ -259,6 +251,7 @@ async function checkedInference(opts: InferenceOptions): Promise<InferenceResult
     "inference",
     `caller=${opts.caller ?? "anonymous"} schema mismatch: ${problem}`
   );
+
   return {
     ...result,
     success: false,
@@ -287,6 +280,7 @@ function spawnRoute(
     pick: (opts) => {
       if (!isActive()) return null;
       const bin = binary();
+
       return bin ? () => run(bin, opts) : null;
     },
   };
@@ -340,897 +334,38 @@ async function routeInference(opts: InferenceOptions): Promise<InferenceResult> 
   if (process.env.PAL_INFERENCE_DISABLED === "1") {
     return { success: false };
   }
+
   const depth = getInferenceDepth();
   if (depth >= SPAWN_GUARD_ENV.MAX_DEPTH) {
     logDebug("inference", `refuse: depth=${depth} >= max=${SPAWN_GUARD_ENV.MAX_DEPTH}`);
+
     return { success: false };
   }
+
   const agent = getActiveAgent();
   const caller = opts.caller ?? "anonymous";
   const session = opts.sessionId ?? "-";
   const tag = `caller=${caller} sessionId=${session}`;
+
   if (opts.web && !canSearchWeb()) {
     logDebug("inference", `${tag} refuse: no web route agent=${agent}`);
+
     return { success: false, error: `web research is not available on ${agent} yet` };
   }
+
   for (const route of INFERENCE_ROUTES) {
     const run = route.pick(opts);
     if (!run) continue;
     const model = route.modelRoute ? ` model=${modelFor(route.modelRoute, opts)}` : "";
     logDebug("inference", `${tag} route=${route.name} agent=${agent}${model}`);
+
     return run();
   }
+
   logDebug(
     "inference",
     `${tag} route=none agent=${agent} hasApiKey=false hasOpenAiKey=${hasOpenAiKey()} hasClaude=${hasClaudeBinary()} hasCodex=${hasCodexBinary()} hasOpencode=${hasOpencodeBinary()} hasCopilot=${hasCopilotBinary()} hasCursor=${hasCursorBinary()} hasAgy=${hasAntigravityBinary()}`
   );
+
   return { success: false };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-agent CLI metadata — binary presence + argv builders
-// ─────────────────────────────────────────────────────────────────────────────
-
-const binaryCache = new Map<string, string | null>();
-
-function cachedBinary(name: string): string | null {
-  const key = `${name}\0${process.env.PATH ?? ""}`;
-  if (!binaryCache.has(key)) binaryCache.set(key, findBinaryOnPath(name));
-  return binaryCache.get(key) ?? null;
-}
-
-function getClaudeBinary(): string | null {
-  return cachedBinary("claude");
-}
-
-function getCodexBinary(): string | null {
-  return cachedBinary("codex");
-}
-
-function getOpencodeBinary(): string | null {
-  return cachedBinary("opencode");
-}
-
-function getCopilotBinary(): string | null {
-  return cachedBinary("copilot");
-}
-
-function getCursorBinary(): string | null {
-  return cachedBinary("cursor-agent");
-}
-
-function getAntigravityBinary(): string | null {
-  return cachedBinary("agy");
-}
-
-function hasClaudeBinary(): boolean {
-  return getClaudeBinary() !== null;
-}
-function hasCodexBinary(): boolean {
-  return getCodexBinary() !== null;
-}
-function hasOpencodeBinary(): boolean {
-  return getOpencodeBinary() !== null;
-}
-function hasCopilotBinary(): boolean {
-  return getCopilotBinary() !== null;
-}
-function hasCursorBinary(): boolean {
-  return getCursorBinary() !== null;
-}
-function hasAntigravityBinary(): boolean {
-  return getAntigravityBinary() !== null;
-}
-
-/**
- * Build the argv for `claude --print …`. Pure.
- *
- * `--system-prompt` is deliberately absent: PAL's system prompts run to several
- * paragraphs, and an argv element cannot carry a newline on Windows once
- * Bun.spawn resolves claude to its .cmd shim and cmd.exe re-parses the command
- * line. System, user and any JSON-schema instruction all travel together on
- * stdin instead, the same way every other agent receives them.
- */
-const CLAUDE_WEB_TOOLS = "WebSearch,WebFetch";
-
-/** --tools alone makes the web tools visible; --allowed-tools spares them the prompt. */
-function claudeTools(opts: InferenceOptions): string[] {
-  return opts.web
-    ? ["--tools", CLAUDE_WEB_TOOLS, "--allowed-tools", CLAUDE_WEB_TOOLS]
-    : ["--tools", ""];
-}
-
-export function buildClaudeArgs(
-  opts: InferenceOptions,
-  systemPromptFile?: string
-): string[] {
-  const args = [
-    "--print",
-    "--model",
-    modelFor("claude-spawn", opts),
-    ...claudeTools(opts),
-    "--output-format",
-    "json",
-    "--setting-sources",
-    "",
-  ];
-  if (systemPromptFile) args.push("--system-prompt-file", systemPromptFile);
-  return args;
-}
-
-const CLAUDE_REPLY: CliReply = {
-  text: (raw) => {
-    const result = claudeResult(raw);
-    return result?.is_error ? "" : String(result?.result ?? "").trim();
-  },
-  usage: claudeSpawnUsage,
-};
-
-type ClaudeAuthMode = "token" | "native";
-
-function claudeAuthMode(): ClaudeAuthMode {
-  return withPalEnv().CLAUDE_CODE_OAUTH_TOKEN ? "token" : "native";
-}
-
-/** Lines logged before spawns were tagged came from the native login. */
-export function loggedClaudeAuthMode(message: string): ClaudeAuthMode {
-  return /\bauth=token\b/.test(message) ? "token" : "native";
-}
-
-/** https://code.claude.com/docs/en/authentication#authentication-precedence */
-const WITHOUT_KEYS_OUTRANKING_TOKEN = {
-  ANTHROPIC_API_KEY: undefined,
-  ANTHROPIC_AUTH_TOKEN: undefined,
-};
-
-function credentialOverridesFor(mode: ClaudeAuthMode) {
-  return mode === "token" ? WITHOUT_KEYS_OUTRANKING_TOKEN : {};
-}
-
-/**
- * Claude keeps a real system prompt, unlike the other agents, so the system text
- * reaches it through --system-prompt-file rather than --system-prompt. Only the
- * path travels in argv, which is what makes this work on Windows: an argv
- * element cannot carry a newline once Bun.spawn resolves claude to its .cmd
- * shim, and PAL's system prompts run to several paragraphs. Folding the system
- * text into the user message instead is not an option — Claude treats
- * instructions embedded in message content as an injection attempt and refuses.
- */
-async function inferenceViaClaudeSpawn(
-  bin: string,
-  opts: InferenceOptions
-): Promise<InferenceResult> {
-  const mode = claudeAuthMode();
-  const spawnClaude = (args: string[]) =>
-    inferenceViaCliSpawn(bin, args, opts.user, opts, CLAUDE_REPLY, {
-      env: credentialOverridesFor(mode),
-      logTag: `auth=${mode}`,
-    });
-  const system = opts.jsonSchema
-    ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
-    : opts.system;
-  if (!system) return spawnClaude(buildClaudeArgs(opts));
-
-  const dir = await mkdtemp(join(tmpdir(), "pal-system-"));
-  try {
-    const file = join(dir, "system-prompt.md");
-    await writeFile(file, system, "utf-8");
-    return await spawnClaude(buildClaudeArgs(opts, file));
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
-
-/**
- * Build the argv for `codex exec …` from inference options. Pure.
- *
- * Recursion + tool-use defense (mirrors claude's `--setting-sources '' --tools ''`):
- *   --ignore-user-config  → no ~/.codex/config.toml → no hooks load in the child
- *   --ignore-rules        → no execpolicy .rules files load
- *   --sandbox read-only   → child cannot execute shell commands even if it tries
- *   --ephemeral           → no session persistence; one-shot only
- *   --json                → NDJSON events: the reply and the turn's token usage
- *
- * Codex has no --system-prompt equivalent, so system + user + JSON-schema become
- * one prompt. That prompt goes in on stdin, not as a positional argument, because
- * a PAL prompt spans several paragraphs and an argv element cannot carry a
- * newline on Windows: Bun.spawn resolves the CLI to its .cmd shim, cmd.exe
- * re-parses the command line, and the child exits non-zero having written
- * nothing. Codex reads its instructions from stdin when no positional prompt is
- * given, so this costs nothing on POSIX and is the only thing that works on
- * Windows. Do not move the prompt back into argv.
- */
-export function buildCodexArgs(opts: InferenceOptions): string[] {
-  return [
-    "exec",
-    "-m",
-    modelFor("codex-spawn", opts),
-    "--color",
-    "never",
-    "--skip-git-repo-check",
-    "--ignore-user-config",
-    "--ignore-rules",
-    "--sandbox",
-    "read-only",
-    "--ephemeral",
-    "--json",
-    ...(opts.web ? ["-c", "web_search=live"] : []),
-    ...codexEffortArgs(opts),
-  ];
-}
-
-function codexEffortArgs(opts: InferenceOptions): string[] {
-  const effort = inferenceEffort("codex-spawn", opts.tier);
-  return effort ? ["-c", `model_reasoning_effort="${effort}"`] : [];
-}
-
-interface CodexItem {
-  type?: string;
-  text?: string;
-}
-
-const CODEX_REPLY: CliReply = {
-  text: (raw) =>
-    jsonLines(raw)
-      .filter((event) => event.type === "item.completed")
-      .map((event) => event.item as CodexItem)
-      .findLast((item) => item?.type === "agent_message")
-      ?.text?.trim() ?? "",
-  usage: codexSpawnUsage,
-};
-
-/**
- * Build the argv for `opencode run …` from inference options. Pure.
- *
- * Recursion defense:
- *   --pure         → run WITHOUT external plugins → PAL's own opencode plugin
- *                    doesn't load in the spawned child → no hook recursion.
- *   --format json  → emits NDJSON events on stdout; we extract the agent's
- *                    text via extractOpencodeText() rather than wading through
- *                    decoration ("> build · provider/model" banner etc).
- *
- * opencode (like codex) has no --system-prompt equivalent, so system + user +
- * JSON-schema are concatenated and delivered on stdin rather than as the
- * positional message, for the same reason as codex: a multi-paragraph argv
- * element does not survive cmd.exe on Windows. Provider/model is left unset so
- * opencode uses the user's configured default.
- */
-export function buildOpencodeArgs(opts: InferenceOptions): string[] {
-  const model = opencodeTierModel(opts.tier ?? "small");
-  return ["run", "--pure", "--format", "json", ...(model ? ["-m", model] : [])];
-}
-
-// Without its own AGENTS.md, opencode falls back to ~/.claude/CLAUDE.md, and it
-// lists every Claude and external skill in its tool description.
-const OPENCODE_WITHOUT_EXTERNAL_CONTEXT = {
-  OPENCODE_DISABLE_CLAUDE_CODE: "1",
-  OPENCODE_DISABLE_EXTERNAL_SKILLS: "1",
-};
-
-/** Runs from an empty directory so no project AGENTS.md is in reach either. */
-async function inferenceViaOpencodeSpawn(
-  bin: string,
-  opts: InferenceOptions
-): Promise<InferenceResult> {
-  const dir = await mkdtemp(join(tmpdir(), "pal-opencode-"));
-  try {
-    writeInstructionFreeConfig(dir);
-    return await inferenceViaCliSpawn(
-      bin,
-      buildOpencodeArgs(opts),
-      buildCliPrompt(opts),
-      opts,
-      { text: extractOpencodeText, usage: opencodeSpawnUsage },
-      { cwd: dir, env: { XDG_CONFIG_HOME: dir, ...OPENCODE_WITHOUT_EXTERNAL_CONTEXT } }
-    );
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
-
-/**
- * Build the argv for `cursor-agent -p …` from inference options. Pure.
- *
- * Recursion + tool-use defense:
- *   --mode ask          → read-only Q&A; the agent cannot edit files or run
- *                          shell commands, eliminating any path back into our
- *                          hooks. Cursor's equivalent of claude's `--tools ''`
- *                          and codex's `--sandbox read-only`.
- *   --output-format text → clean stdout (default but explicit)
- *   --trust              → required for headless mode; without it, cursor-agent
- *                          exits 0 with a "trust this directory" hint instead
- *                          of running inference. Safe to pair with --mode ask
- *                          because that mode disallows tool calls anyway.
- *
- * cursor-agent has no --system-prompt flag, so system + user + JSON-schema are
- * concatenated into one prompt delivered on stdin rather than as the trailing
- * positional argument: a multi-paragraph argv element cannot survive cmd.exe on
- * Windows. `-p` stays because for cursor-agent it means --print, not --prompt.
- *
- * Auth note: cursor-agent picks up either `cursor-agent login` credentials or
- * `CURSOR_API_KEY` env var. PAL doesn't manage these — that's the user's setup.
- */
-export function buildCursorArgs(_opts: InferenceOptions): string[] {
-  return ["-p", "--mode", "ask", "--output-format", "text", "--trust"];
-}
-
-/**
- * Build the argv for a one-turn `agy` stream-json session. Pure.
- *
- * The prompt goes in as one NDJSON `user` event on stdin (streamJsonPrompt), not
- * through `-p`: a multi-paragraph argv element cannot survive cmd.exe on Windows,
- * and stream-json input drops a `-p` prompt anyway. Closing stdin ends the
- * session once the turn's `result` event is out.
- *
- * `--json-schema` is deliberately absent: under the tool-less agent it looped
- * through several turns, so the schema rides in the prompt as for every other CLI.
- */
-export function buildAntigravityArgs(opts: InferenceOptions): string[] {
-  return [
-    "--input-format",
-    "stream-json",
-    "--output-format",
-    "stream-json",
-    "--model",
-    modelFor("antigravity-spawn", opts),
-    "--agent",
-    INFERENCE_AGENT,
-  ];
-}
-
-/** Runs from an empty workspace that holds only the tool-less inference agent. */
-async function inferenceViaAntigravitySpawn(
-  bin: string,
-  opts: InferenceOptions
-): Promise<InferenceResult> {
-  const dir = await mkdtemp(join(tmpdir(), "pal-antigravity-"));
-  try {
-    writeInferenceAgent(dir);
-    return await inferenceViaCliSpawn(
-      bin,
-      buildAntigravityArgs(opts),
-      streamJsonPrompt(buildCliPrompt(opts)),
-      opts,
-      { text: extractAntigravityText, usage: antigravitySpawnUsage },
-      { cwd: dir, afterRun: removeSpawnedConversation }
-    );
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
-
-/**
- * Build the argv for `copilot -p …` from inference options. Pure.
- *
- * Recursion defense:
- *   --no-custom-instructions  → don't load PAL's copilot custom instructions
- *                                in the spawned child (equivalent to claude's
- *                                `--setting-sources ''` and opencode's `--pure`)
- *   --disable-builtin-mcps    → no MCP servers in the child (extra safety)
- *   --no-auto-update          → prevent CLI self-update from delaying the spawn
- *   --no-color                → clean stdout for capture
- *   --available-tools=none    → Copilot has no "no tools" flag; an allowlist
- *                                naming an unknown tool hides every tool
- *   --deny-tool=…             → backstop: deny rules win over any allow rule
- *   --silent                  → keeps the tool-filter notices out of stdout
- *   --output-format json      → JSONL events: the reply and the prompt's token usage
- *   web: only web_fetch, pre-approved for every URL; Copilot has no search tool,
- *        so it fetches search pages itself
- *
- * Copilot has no --system-prompt flag, so system + user + JSON-schema are
- * concatenated into one prompt delivered on stdin. `-p/--prompt` is deliberately
- * absent: it takes the prompt inline, and a multi-paragraph argv element cannot
- * survive cmd.exe when Bun.spawn resolves copilot to its Windows .cmd shim.
- * Piping stdin keeps copilot non-interactive, so dropping -p costs nothing.
- */
-export function buildCopilotArgs(opts: InferenceOptions): string[] {
-  return [
-    "--no-custom-instructions",
-    "--disable-builtin-mcps",
-    "--no-auto-update",
-    "--no-color",
-    "--silent",
-    "--output-format",
-    "json",
-    ...copilotTools(opts),
-    "--deny-tool=shell",
-    "--deny-tool=write",
-  ];
-}
-
-interface CopilotMessage {
-  content?: string;
-}
-
-const COPILOT_REPLY: CliReply = {
-  text: (raw) =>
-    jsonLines(raw)
-      .filter((event) => event.type === "assistant.message")
-      .map((event) => (event.data as CopilotMessage | undefined)?.content?.trim())
-      .findLast(Boolean) ?? "",
-  usage: copilotSpawnUsage,
-};
-
-function copilotSessionUsage(home: string, raw: string): InferenceUsage | undefined {
-  const id = copilotSessionId(raw);
-  if (!id) return undefined;
-  try {
-    return copilotShutdownUsage(
-      readFileSync(join(home, "session-state", id, "events.jsonl"), "utf-8")
-    );
-  } catch {
-    return undefined;
-  }
-}
-
-/** stdout reports only the prompt side; the run's own session file in its home has the rest. */
-function copilotReply(home: string): CliReply {
-  return {
-    ...COPILOT_REPLY,
-    usage: (raw) => copilotSessionUsage(home, raw) ?? copilotSpawnUsage(raw),
-  };
-}
-
-const COPILOT_TOKEN_ENV = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
-
-/** A /login account lives in COPILOT_HOME's config.json; only a token variable logs in without it. */
-function copilotLogsInWithoutHome(env: NodeJS.ProcessEnv): boolean {
-  return COPILOT_TOKEN_ENV.some((name) => Boolean(env[name]));
-}
-
-/** --no-custom-instructions still loads COPILOT_HOME/instructions, where PAL's identity lives. */
-async function inferenceViaCopilotSpawn(
-  bin: string,
-  opts: InferenceOptions
-): Promise<InferenceResult> {
-  const spawn = (home: string, place?: SpawnPlace) =>
-    inferenceViaCliSpawn(
-      bin,
-      buildCopilotArgs(opts),
-      buildCliPrompt(opts),
-      opts,
-      copilotReply(home),
-      place
-    );
-  const env = withPalEnv(process.env);
-  if (!copilotLogsInWithoutHome(env))
-    return spawn(env.COPILOT_HOME || platform.copilotDir());
-  const dir = await mkdtemp(join(tmpdir(), "pal-copilot-"));
-  try {
-    return await spawn(dir, { cwd: dir, env: { COPILOT_HOME: dir } });
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
-
-function copilotTools(opts: InferenceOptions): string[] {
-  return opts.web
-    ? ["--available-tools=web_fetch", "--allow-tool=web_fetch", "--allow-all-urls"]
-    : ["--available-tools=none", "--deny-tool=url"];
-}
-
-/**
- * Extract the agent's text reply from opencode --format json NDJSON output.
- * Concatenates all `type:"text"` event payloads in order. Returns empty
- * string on parse failure or no text events.
- */
-export function extractOpencodeText(rawStdout: string): string {
-  const texts: string[] = [];
-  for (const line of rawStdout.split("\n")) {
-    if (!line.trim()) continue;
-    try {
-      const event = JSON.parse(line) as {
-        type?: string;
-        part?: { type?: string; text?: string };
-      };
-      if (event.type === "text" && event.part?.type === "text" && event.part.text) {
-        texts.push(event.part.text);
-      }
-    } catch {
-      /* not a JSON line — opencode also emits non-JSON lines, skip them */
-    }
-  }
-  return texts.join("").trim();
-}
-
-/**
- * Render a JSON schema for a prompt without double quotes.
- *
- * Bun.spawn resolves an agent CLI on Windows to its `.cmd` shim, which npm
- * installs it as, and cmd.exe re-parses the command line it is handed. A double
- * quote inside an argv element does not survive that round trip: the child exits
- * non-zero having written nothing, so the dispatcher sees an empty abort and
- * gives up. Single quotes carry the same shape to a model and are inert to
- * cmd.exe, so the schema travels intact on every platform.
- */
-function schemaForPrompt(schema: Record<string, unknown>): string {
-  return JSON.stringify(schema).replaceAll('"', "'");
-}
-
-/** The one instruction line that asks a CLI agent for schema-shaped JSON. */
-export function schemaInstruction(schema: Record<string, unknown>): string {
-  return `Respond with ONLY a JSON value matching this schema (no prose, no markdown): ${schemaForPrompt(schema)}`;
-}
-
-/** system + user + schema instruction, the single prompt a CLI agent receives. */
-export function buildCliPrompt(opts: InferenceOptions): string {
-  const parts: string[] = [];
-  if (opts.system) parts.push(opts.system);
-  parts.push(opts.user);
-  if (opts.jsonSchema) parts.push(schemaInstruction(opts.jsonSchema));
-  return parts.join("\n\n");
-}
-
-/** Append a JSON-schema instruction to the system prompt (PAI pattern). */
-export function injectJsonSchemaInstruction(
-  systemPrompt: string,
-  schema: Record<string, unknown>
-): string {
-  const schemaLine = schemaInstruction(schema);
-  return systemPrompt ? `${systemPrompt}\n\n${schemaLine}` : schemaLine;
-}
-
-/** Extract a JSON object or array from raw text output. Returns null on failure. */
-export function parseJsonFromOutput(output: string): unknown | null {
-  const objectMatch = /\{[\s\S]*\}/.exec(output);
-  const arrayMatch = /\[[\s\S]*\]/.exec(output);
-  for (const candidate of [objectMatch?.[0], arrayMatch?.[0]]) {
-    if (!candidate) continue;
-    try {
-      return JSON.parse(candidate);
-    } catch {
-      /* try next */
-    }
-  }
-  return null;
-}
-
-export function agentFailureText(stdout: string): string {
-  try {
-    const result = (JSON.parse(stdout) as { result?: unknown }).result;
-    return typeof result === "string" ? result : stdout;
-  } catch {
-    return stdout;
-  }
-}
-
-function firstLine(text: string): string | undefined {
-  return text
-    .split("\n")
-    .find((line) => line.trim())
-    ?.trim();
-}
-
-interface RawSpawnResult {
-  code: number | null;
-  stdout: string;
-  stderr: string;
-  timedOut: boolean;
-}
-
-async function readPipe(pipe: unknown): Promise<string> {
-  if (!pipe || typeof pipe === "number") return "";
-  try {
-    return await new Response(pipe as ReadableStream<Uint8Array>).text();
-  } catch {
-    return "";
-  }
-}
-
-/**
- * One CLI invocation. Returns raw streams + exit info, no parsing.
- * Used by every per-agent dispatcher (claude --print, codex exec, etc).
- */
-async function singleCliAttempt(
-  binary: string,
-  args: string[],
-  stdinInput: string,
-  env: NodeJS.ProcessEnv,
-  timeout: number,
-  cwd?: string
-): Promise<RawSpawnResult> {
-  return new Promise<RawSpawnResult>((resolve) => {
-    let timedOut = false;
-    let settled = false;
-    const finish = (r: RawSpawnResult) => {
-      if (settled) return;
-      settled = true;
-      resolve(r);
-    };
-
-    let proc: ReturnType<typeof Bun.spawn>;
-    try {
-      proc = Bun.spawn([binary, ...args], {
-        env,
-        cwd,
-        stdin: "pipe",
-        stdout: "pipe",
-        stderr: "pipe",
-        windowsHide: true,
-      });
-    } catch (err) {
-      logError("inference:spawn", err);
-      finish({ code: null, stdout: "", stderr: "", timedOut: false });
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try {
-        proc.kill();
-      } catch {
-        /* ignore */
-      }
-    }, timeout);
-
-    const stdinWriter =
-      proc.stdin && typeof proc.stdin !== "number"
-        ? (proc.stdin as {
-            write: (s: string) => void;
-            end: () => void;
-            close?: () => void;
-          })
-        : null;
-    if (stdinWriter) {
-      try {
-        if (stdinInput) stdinWriter.write(stdinInput);
-        stdinWriter.end();
-      } catch (err) {
-        logError("inference:stdin", err);
-      }
-    }
-
-    void (async () => {
-      const stdout = await readPipe(proc.stdout);
-      const stderr = await readPipe(proc.stderr);
-      await proc.exited;
-      clearTimeout(timer);
-      finish({ code: proc.exitCode, stdout, stderr, timedOut });
-    })();
-  });
-}
-
-/** How to read a CLI's stdout: the reply's text, and what the call cost. */
-interface CliReply {
-  text: (rawStdout: string) => string;
-  usage: (rawStdout: string) => InferenceUsage | undefined;
-}
-
-const PLAIN_REPLY: CliReply = { text: (raw) => raw, usage: () => undefined };
-
-interface SpawnPlace {
-  cwd?: string;
-  env?: Record<string, string | undefined>;
-  logTag?: string;
-  /** Sees the final attempt's stdout whatever the outcome, timeouts included. */
-  afterRun?: (rawStdout: string) => void;
-}
-
-function retryJitterMs(): number {
-  const fixed = process.env.PAL_INFERENCE_RETRY_JITTER_MS;
-  if (fixed !== undefined && /^\d+$/.test(fixed)) return Number(fixed);
-  return 500 + Math.floor(Math.random() * 1000);
-}
-
-/**
- * Generic CLI dispatcher: spawn `binary args`, write stdinInput to stdin (may be
- * empty for argv-only CLIs like codex), capture stdout, retry once on empty-abort.
- * Mirrors PAI's universal pattern across all supported subscription CLIs.
- */
-async function inferenceViaCliSpawn(
-  binary: string,
-  args: string[],
-  stdinInput: string,
-  opts: InferenceOptions,
-  reply: CliReply = PLAIN_REPLY,
-  place: SpawnPlace = {}
-): Promise<InferenceResult> {
-  const timeout = opts.timeout ?? 15000;
-  const env = { ...buildSpawnGuardEnv(withPalEnv(process.env)), ...place.env };
-  const started = Date.now();
-  const caller = opts.caller ?? "anonymous";
-  const session = opts.sessionId ?? "-";
-  const tag = [`caller=${caller}`, `sessionId=${session}`, place.logTag]
-    .filter(Boolean)
-    .join(" ");
-  // Friendly name for logs — strip path + extension so cross-platform diffs
-  // (e.g. C:\…\claude.cmd vs /usr/local/bin/claude) read the same in debug.log.
-  const binaryName = basename(binary).replace(/\.(cmd|bat|exe|com)$/i, "");
-
-  // Attempt 1
-  let attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
-
-  // Universal retry on empty-output exit≠0 (correlates strongly with burst-
-  // concurrency races — the binary silently aborts without writing to either
-  // stream). One retry only, 500-1500ms jitter so the burst settles.
-  const isEmptyAbort =
-    attempt.code !== 0 &&
-    !attempt.timedOut &&
-    attempt.stdout.length === 0 &&
-    attempt.stderr.length === 0;
-  if (isEmptyAbort) {
-    const jitterMs = retryJitterMs();
-    logDebug(
-      "inference:spawn",
-      `${tag} retry: empty-abort binary=${binaryName} exit=${attempt.code} after ${Date.now() - started}ms, jitter=${jitterMs}ms`
-    );
-    await new Promise((r) => setTimeout(r, jitterMs));
-    attempt = await singleCliAttempt(binary, args, stdinInput, env, timeout, place.cwd);
-  }
-
-  place.afterRun?.(attempt.stdout);
-  const elapsedMs = Date.now() - started;
-  const usage = reply.usage(attempt.stdout);
-  const finish = (result: InferenceResult): InferenceResult => {
-    logDebug(
-      "inference:spawn",
-      `${tag} done binary=${binaryName} success=${result.success} bytes=${result.output?.length ?? 0} elapsedMs=${elapsedMs}`
-    );
-    return { ...result, usage };
-  };
-
-  if (attempt.timedOut) {
-    logError("inference:spawn", `${tag} timeout binary=${binaryName} after ${timeout}ms`);
-    return finish({ success: false });
-  }
-  if (attempt.code !== 0) {
-    const said = agentFailureText(attempt.stdout);
-    logError(
-      "inference:spawn",
-      `${tag} exited=${attempt.code} binary=${binaryName} argv=${JSON.stringify(args)} stderr(${attempt.stderr.length})=${attempt.stderr.slice(0, 300)} stdout(${attempt.stdout.length})=${said.slice(0, 300)}`
-    );
-    return finish({ success: false, error: firstLine(attempt.stderr || said) });
-  }
-  const rawText = attempt.stdout.trim();
-  if (!rawText) return finish({ success: false });
-  const text = reply.text(rawText);
-  if (!text) {
-    // Extraction returned empty — the binary succeeded but our extractor found
-    // no usable text. Log the raw stdout so we can see what was actually emitted.
-    logError(
-      "inference:spawn",
-      `${tag} extract-empty binary=${binaryName} rawStdout(${rawText.length})=${rawText.slice(0, 500)}`
-    );
-    return finish({ success: false });
-  }
-  if (opts.jsonSchema) {
-    const parsed = parseJsonFromOutput(text);
-    if (parsed === null) return finish({ success: false, output: text });
-    return finish({ success: true, output: JSON.stringify(parsed) });
-  }
-  return finish({ success: true, output: text });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Anthropic API path — used when no claude binary is available, or when the
-// active agent is not claude. Preserves the original PAL inference behavior.
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function inferenceViaApi(opts: InferenceOptions): Promise<InferenceResult> {
-  const apiKey = withPalEnv().PAL_ANTHROPIC_API_KEY;
-  if (!apiKey) return { success: false };
-
-  const { system, user, maxTokens = 200, timeout = 5000, jsonSchema } = opts;
-
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-
-    const body: Record<string, unknown> = {
-      model: modelFor("anthropic-api", opts),
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: user }],
-    };
-    if (system) body.system = system;
-    if (jsonSchema) {
-      body.output_config = {
-        format: { type: "json_schema", schema: jsonSchema },
-      };
-    }
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timer);
-
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => "");
-      logError("inference", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
-      return { success: false };
-    }
-
-    const data = (await response.json()) as Record<string, unknown>;
-    const usage = data?.usage ? anthropicUsage(data.usage as TranscriptUsage) : undefined;
-
-    const content = data?.content as Array<{ text?: string }> | undefined;
-    const text = content?.[0]?.text?.trim();
-    if (!text) return { success: false, usage };
-
-    return { success: true, output: text, usage };
-  } catch (err) {
-    logError("inference", err);
-    return { success: false };
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OpenAI API path — fallback for codex users without a codex binary on PATH.
-// Codex users almost always have an OpenAI key already; falling back to
-// Anthropic for them would be backwards. Uses chat/completions with the
-// structured-output schema for JSON-mode callers.
-// ─────────────────────────────────────────────────────────────────────────────
-
-export function buildOpenAiBody(opts: InferenceOptions): Record<string, unknown> {
-  const { system, user, maxTokens = 500, jsonSchema } = opts;
-  const messages: Array<{ role: string; content: string }> = [];
-  if (system) messages.push({ role: "system", content: system });
-  messages.push({ role: "user", content: user });
-
-  const body: Record<string, unknown> = {
-    model: modelFor("openai-api", opts),
-    max_tokens: maxTokens,
-    messages,
-  };
-  const effort = inferenceEffort("openai-api", opts.tier);
-  if (effort) body.reasoning_effort = effort;
-  if (jsonSchema) {
-    body.response_format = {
-      type: "json_schema",
-      json_schema: { name: "structured_response", strict: true, schema: jsonSchema },
-    };
-  }
-  return body;
-}
-
-async function inferenceViaOpenAiApi(opts: InferenceOptions): Promise<InferenceResult> {
-  const apiKey = withPalEnv().PAL_OPENAI_API_KEY;
-  if (!apiKey) return { success: false };
-
-  const { timeout = 15000 } = opts;
-
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    const body = buildOpenAiBody(opts);
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timer);
-
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => "");
-      logError("inference:openai", `HTTP ${response.status}: ${errBody.slice(0, 200)}`);
-      return { success: false };
-    }
-
-    const data = (await response.json()) as Record<string, unknown>;
-    const usage = data?.usage ? openAiUsage(data.usage as OpenAiUsage) : undefined;
-
-    const choices = data?.choices as
-      | Array<{ message?: { content?: string } }>
-      | undefined;
-    const text = choices?.[0]?.message?.content?.trim();
-    if (!text) return { success: false, usage };
-
-    return { success: true, output: text, usage };
-  } catch (err) {
-    logError("inference:openai", err);
-    return { success: false };
-  }
 }

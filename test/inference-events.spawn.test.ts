@@ -22,6 +22,7 @@ function calls(): Record<string, unknown>[] {
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -34,6 +35,7 @@ beforeEach(() => {
     if (saved[k] === undefined) delete process.env[k];
     else process.env[k] = saved[k];
   }
+
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
   process.env.PAL_AGENT = "copilot";

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { replaceConfig, replaceJsonConfig } from "../src/targets/lib";
+import { replaceConfig, replaceJsonConfig } from "../src/targets/config-backups";
 import { freshTestDir } from "./lib/test-home";
 
 let dir: string;
@@ -64,6 +64,7 @@ describe("replaceConfig", () => {
   test("a name is a backup only when all of it after .bak. is a timestamp", () => {
     writeFileSync(config, "a");
     const lookalikes = [1, 2, 3, 4, 5, 6].flatMap((n) => [`v${n}`, `${n}v`]);
+
     for (const suffix of lookalikes) writeFileSync(`${config}.bak.${suffix}`, "mine");
     replaceConfig(config, "a");
     expect(backups()).toHaveLength(lookalikes.length);

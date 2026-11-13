@@ -11,6 +11,7 @@ export function notify(id, kind, message, env = process.env) {
       }).status === 0
     : false;
   appendEvent({ event: "notify", task: id, kind, delivered }, env);
+
   return { delivered, configured: Boolean(command) };
 }
 

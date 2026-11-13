@@ -25,11 +25,13 @@ async function backfill(...args: string[]): Promise<string[]> {
   const log = spyOn(console, "log").mockImplementation((line: string) => {
     printed.push(line);
   });
+
   try {
     await runCommand(eventsCommand, ["backfill", ...args], ["pal", "cli", "events"]);
   } finally {
     log.mockRestore();
   }
+
   return printed;
 }
 

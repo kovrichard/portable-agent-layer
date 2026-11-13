@@ -11,21 +11,14 @@ import { dirname, resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
 import { ensureAntigravityRule } from "../../hooks/lib/claude-md";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  addStatuslineConfig,
-  copyAgentsForAntigravity,
-  copySkills,
-  copyStatusline,
-  countSkills,
-  loadHooksTemplate,
-  loadSettingsTemplate,
-  log,
-  mergeSettings,
-  nativeAgentsDir,
-  readJson,
-  replaceJsonConfig,
-  writeJson,
-} from "../lib";
+import { replaceJsonConfig } from "../config-backups";
+import { loadHooksTemplate } from "../hooks-template";
+import { readJson, writeJson } from "../json-file";
+import { log } from "../log";
+import { loadSettingsTemplate, mergeSettings } from "../settings-merge";
+import { copyAgentsForAntigravity, nativeAgentsDir } from "../shipped-agents";
+import { copySkills, countSkills } from "../skills";
+import { addStatuslineConfig, copyStatusline } from "../statusline";
 
 const PLUGIN_DIR = platform.antigravityPluginDir();
 

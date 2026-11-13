@@ -44,6 +44,7 @@ interface AssistantMessage {
 function assistantMessageOf(row: MessageRow): AssistantMessage | null {
   try {
     const message = JSON.parse(row.data) as AssistantMessage;
+
     return message.role === "assistant" ? message : null;
   } catch {
     return null;
@@ -56,6 +57,7 @@ function stillStreaming(message: AssistantMessage, row: MessageRow, now: Date): 
 
 function durationOf(message: AssistantMessage): number | undefined {
   const { created, completed } = message.time ?? {};
+
   return created && completed ? completed - created : undefined;
 }
 
@@ -108,16 +110,21 @@ export function collectOpencode(dbPath: string, now: Date = new Date()): number 
   );
   const billingOf = opencodeBilling(resolve(dirname(dbPath), "auth.json"));
   let emitted = 0;
+
   for (const row of rows) {
     const message = assistantMessageOf(row);
     if (message && stillStreaming(message, row, now)) break;
+
     if (message) {
       emitModelCall(row, message, billingOf(message.providerID));
       emitted++;
     }
+
     cursor.order = row.time_created;
     cursor.id = row.id;
   }
+
   writeCursor("opencode", cursor);
+
   return emitted;
 }

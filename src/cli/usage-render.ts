@@ -40,11 +40,13 @@ function rowCells(style: Style, label: string, b: Bucket, width: number): RowCel
 /** A window without calls fades whole, so the ones that spent stand out. */
 function row(style: Style, label: string, b: Bucket, width = LABEL_WIDTH): string {
   const cells = rowCells(style, label, b, width);
+
   if (b.calls === 0)
     return style.dim(
       `${cells.label}${cells.tokens} tok${cells.calls} calls${cells.cost}`
     );
   const cost = b.unpriced === b.calls ? style.dim(cells.cost) : style.cmd(cells.cost);
+
   return [
     cells.label,
     style.soft(cells.tokens),
@@ -67,6 +69,7 @@ function windowRows(style: Style, buckets: TimeBuckets): string[] {
 function agentSections(style: Style, agents: AgentReport[]): string[] {
   const used = usedAgents(agents);
   if (used.length === 0) return [`  ${style.dim("No agent usage recorded")}`, ""];
+
   return used.flatMap(({ label, usage }) => [
     heading(style, label),
     ...windowRows(style, usage.buckets),
@@ -79,6 +82,7 @@ function modelSection(style: Style, agents: AgentReport[]): string[] {
   if (sorted.length === 0) return [];
   const names = sorted.map(([model]) => modelLabel(model));
   const width = Math.max(LABEL_WIDTH, ...names.map((name) => name.length + 2));
+
   return [
     subtle(style, "By model", "all time"),
     ...sorted.map(([, bucket], i) => row(style, names[i], bucket, width)),
@@ -90,6 +94,7 @@ function projectSection(style: Style, agents: AgentReport[]): string[] {
   const sorted = projectsByCost(agents);
   if (sorted.length === 0) return [];
   const width = Math.max(LABEL_WIDTH, ...sorted.map(([name]) => name.length + 2));
+
   return [
     subtle(style, "By project", "all time"),
     ...sorted.map(([project, buckets]) => row(style, project, buckets.total, width)),
@@ -107,11 +112,14 @@ function inferenceSections(style: Style, data: UsageData): string[] {
 
 function rtkLine(style: Style, gain: RtkGain): string {
   const summary = gain.summary;
+
   if (!gain.installed) return style.dim("not installed");
+
   if (!summary || summary.total_commands === 0)
     return style.dim("installed, no savings recorded yet");
   const dot = ` ${style.dim(style.glyph.dot)} `;
   const average = `${summary.avg_savings_pct.toFixed(1)}%`;
+
   return [
     `${style.soft(fmt(summary.total_saved))}${style.dim(" tokens saved")}`,
     `${style.soft(average)}${style.dim(" avg")}`,
@@ -126,6 +134,7 @@ function rtkSection(style: Style, gain: RtkGain): string[] {
 function noteLines(style: Style, data: UsageData): string[] {
   const join = (names: string[]) => names.join(` ${style.glyph.dot} `);
   const unpriced = unpricedAgents(data.agents);
+
   return [
     ...(data.untracked.length > 0
       ? [
@@ -144,11 +153,13 @@ function headline(style: Style, data: UsageData): string {
   const agents = usedAgents(data.agents).map((agent) => agent.label);
   const names = agents.length > 0 ? agents.join(` ${style.glyph.dot} `) : "no agent";
   const total = style.bold(style.cmd(fmtCost(grandBucket(data).cost)));
+
   return `  ${mark(style, "ask")} ${style.gradient("PAL usage")}  ${total}  ${style.soft(names)}`;
 }
 
 function richLines(style: Style, data: UsageData): string[] {
   const notes = noteLines(style, data);
+
   return [
     "",
     headline(style, data),

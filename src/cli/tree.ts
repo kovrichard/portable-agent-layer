@@ -23,6 +23,7 @@ import { eventsCommand } from "./events";
 import { evidenceCommand } from "./evidence";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
+import { judgeCommand } from "./judge";
 import { knowledgeCommand } from "./knowledge";
 import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
@@ -72,6 +73,7 @@ function agentOptions(verb: string): OptionSpecs {
     agent,
     { type: "boolean", description: `${verb} ${AGENT_REGISTRY[agent].label}` },
   ]);
+
   return {
     ...Object.fromEntries(perAgent),
     all: { type: "boolean", description: `${verb} every supported agent` },
@@ -87,6 +89,7 @@ const DRY_RUN: OptionSpec = { type: "boolean", description: "Show what would hap
 function debugCommand(admin: AdminHandlers): Group {
   const state = (s: DebugState, summary: string) =>
     leaf({ summary, run: () => admin.debug(s) });
+
   return group({
     summary: "Verbose hook debug logging (persisted)",
     fallback: "status",
@@ -98,7 +101,7 @@ function debugCommand(admin: AdminHandlers): Group {
   });
 }
 
-function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
+function lifecycleCommands(admin: AdminHandlers): Record<string, Leaf> {
   return {
     init: leaf({
       summary: "Scaffold PAL home and install (default: every installed agent)",
@@ -131,6 +134,11 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       },
       run: admin.update,
     }),
+  };
+}
+
+function stateTransferCommands(admin: AdminHandlers): Record<string, Leaf> {
+  return {
     export: leaf({
       summary: "Export your state to a zip",
       args: "[path]",
@@ -146,6 +154,11 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       },
       run: admin.import,
     }),
+  };
+}
+
+function maintenanceCommands(admin: AdminHandlers): Record<string, Leaf> {
+  return {
     status: leaf({ summary: "Show PAL configuration", run: admin.status }),
     doctor: leaf({
       summary: "Find what is wrong and how to fix it; exits 1 on any failure",
@@ -171,6 +184,14 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
   };
 }
 
+function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
+  return {
+    ...lifecycleCommands(admin),
+    ...stateTransferCommands(admin),
+    ...maintenanceCommands(admin),
+  };
+}
+
 export function cliTree(admin: AdminHandlers): Group {
   return group({
     summary: "Admin commands for the Portable Agent Layer",
@@ -187,6 +208,7 @@ export function cliTree(admin: AdminHandlers): Group {
       events: eventsCommand,
       evidence: evidenceCommand,
       infer: inferCommand,
+      judge: judgeCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),
       telos: telosCommand,
@@ -218,5 +240,6 @@ export function inertAdmin(): AdminHandlers {
 
 export function adminCommandNames(): string[] {
   const names = Object.keys(cliTree(inertAdmin()).commands);
+
   return names.filter((name) => !builtinToolVerbs.includes(name));
 }

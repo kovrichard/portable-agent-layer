@@ -26,6 +26,7 @@ function step(score: number, maxScore: number, palette: typeof DEFAULT_STEPS) {
   const clamped = Math.max(1, Math.min(score, maxScore));
   const t = (clamped - 1) / (maxScore - 1);
   const idx = Math.round(t * (palette.length - 1));
+
   return palette[idx];
 }
 
@@ -40,6 +41,7 @@ export function ScoreBadge({
     background: s.bg,
     borderColor: s.border,
   };
+
   return (
     <span
       className="inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-md font-sans text-sm font-bold border border-transparent"

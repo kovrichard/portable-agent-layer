@@ -13,7 +13,7 @@ import {
 } from "../hooks/lib/settings";
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { canonicalTimeZone } from "../hooks/lib/wall-clock";
-import { log } from "../targets/lib";
+import { log } from "../targets/log";
 import { leaf } from "../tools/lib/command";
 
 export const telosCommand = leaf({
@@ -30,6 +30,7 @@ export const timezoneCommand = leaf({
 
 function printTelosStatus(): number {
   const topics = telosStatus();
+
   for (const topic of topics) {
     const mark = topic.answered ? "answered " : "unanswered";
     const tier = topic.priority ? "" : "  (optional)";
@@ -39,6 +40,7 @@ function printTelosStatus(): number {
   const next = topics.find((topic) => topic.priority && !topic.answered);
   console.log("");
   console.log(next ? `next: ${next.key}` : "next: none — every priority topic answered");
+
   return 0;
 }
 
@@ -50,6 +52,7 @@ function timezone(words: string[]): number {
     console.log(
       current ? `timezone: ${current}` : "timezone: not set — times read as UTC"
     );
+
     return 0;
   }
 
@@ -57,6 +60,7 @@ function timezone(words: string[]): number {
   if (!zone) {
     log.error(`Not a timezone Intl recognises: ${requested}`);
     log.info("Use an IANA name — Europe/Budapest, America/New_York, Asia/Tokyo");
+
     return 1;
   }
 
@@ -66,5 +70,6 @@ function timezone(words: string[]): number {
   settings.identity.principal.timezone = zone;
   writeSettings(settings);
   log.success(`timezone: ${zone}`);
+
   return 0;
 }

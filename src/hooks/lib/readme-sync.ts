@@ -33,6 +33,7 @@ function extractEnvVars(): string[] {
   const pathsFile = resolve(pkg, "src", "hooks", "lib", "paths.ts");
   if (existsSync(pathsFile)) {
     const content = readFileSync(pathsFile, "utf-8");
+
     for (const match of content.matchAll(/process\.env\.(PAL_\w+)/g)) {
       vars.add(match[1]);
     }
@@ -82,6 +83,7 @@ export function shippedSkillNames(): string[] {
  */
 function documentedSkillNames(readme: string): string[] {
   const section = /^## Skills$([\s\S]*?)(?=^## )/m.exec(readme)?.[1] ?? "";
+
   return Array.from(section.matchAll(/^\|\s*`([a-z0-9-]+)`\s*\|/gm), (m) => m[1]);
 }
 

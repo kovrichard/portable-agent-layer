@@ -20,6 +20,7 @@ async function hook() {
 
 async function entries() {
   const { ledgerPath } = await import("../src/hooks/lib/ledger");
+
   return readFileSync(ledgerPath(), "utf-8")
     .trim()
     .split("\n")
@@ -42,6 +43,7 @@ describe("opencode tool names reach the ledger's tool filter", () => {
 
   test("its read and shell tools are not", async () => {
     const { ledgeredTarget } = await hook();
+
     for (const tool of ["read", "bash", "shell", "grep", "glob", "list"]) {
       expect(ledgeredTarget(tool, { filePath: "/w/a.ts" })).toBeNull();
     }

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ledgeredCalls } from "../src/hooks/lib/ledger-hook";
-import { loadCodexHooksTemplate, mergeCodexHooks } from "../src/targets/lib";
+import { loadCodexHooksTemplate, mergeCodexHooks } from "../src/targets/codex/hooks";
 
 const TEMPLATE = resolve(import.meta.dir, "../assets/templates/hooks.codex.json");
 const PKG_ROOT = "/pkg";
@@ -29,6 +29,7 @@ function commands(): { event: string; command: string }[] {
   const cfg = loadCodexHooksTemplate(TEMPLATE, PKG_ROOT) as {
     hooks: Record<string, { hooks: { command: string }[] }[]>;
   };
+
   return Object.entries(cfg.hooks).flatMap(([event, groups]) =>
     groups.flatMap((g) => g.hooks.map((h) => ({ event, command: h.command })))
   );
@@ -179,6 +180,7 @@ describe("every Codex hooks config this repo ships", () => {
 
   function rejectedKeys(path: string): string[] {
     const keys = Object.keys(JSON.parse(readFileSync(path, "utf-8")));
+
     return keys.filter((key) => key !== "hooks" && key !== "description");
   }
 

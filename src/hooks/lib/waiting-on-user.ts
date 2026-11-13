@@ -18,6 +18,7 @@ interface Waiting {
 
 function waitingFile(kind: WaitKind, session: string): string {
   const safe = session.replace(/[^\w-]/g, "_");
+
   return resolve(
     ensureDir(resolve(paths.state(), "waiting-on-user")),
     `${kind}-${safe}.json`
@@ -51,8 +52,10 @@ function takeWaiting(
   const waiting = readWaiting(file);
   if (waiting && !belongs(waiting)) return null;
   rmSync(file, { force: true });
+
   if (!waiting) return null;
   const waited = secondsSince(waiting.ts, now);
+
   return waited >= 0 && waited <= MAX_WAIT_SEC ? waited : null;
 }
 
@@ -63,6 +66,7 @@ export function permissionWaitSec(
   now: Date = new Date()
 ): number | null {
   if (!session) return null;
+
   return takeWaiting("permission", session, now, (waiting) => waiting.tool === tool);
 }
 

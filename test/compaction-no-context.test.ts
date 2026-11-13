@@ -26,6 +26,7 @@ async function labelsFor(
   withCall = true
 ) {
   const session = "s";
+
   if (withCall) {
     appendEvent(
       "model_call",
@@ -33,6 +34,7 @@ async function labelsFor(
       { ts: new Date(BASE).toISOString(), session, runtime: "claude" }
     );
   }
+
   appendEvent(
     "compaction",
     {
@@ -44,6 +46,7 @@ async function labelsFor(
   );
   printed = [];
   await runCompaction(["backtest", "--window", window, "--json"]);
+
   return (JSON.parse(printed[0] ?? "{}") as { labels: Labels }).labels;
 }
 

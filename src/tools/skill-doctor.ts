@@ -18,6 +18,7 @@ if (import.meta.main) {
     console.error("Usage: pal cli skill doctor <skill-dir-or-name>");
     process.exit(2);
   }
+
   const report = lintSkill(resolveSkillDir(arg));
   console.log(formatReport(report));
   process.exit(report.errors > 0 ? 1 : 0);

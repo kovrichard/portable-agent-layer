@@ -100,17 +100,21 @@ function lastRunLine(last: AutoUpdateLedger | null): string {
   if (!last) return "never run";
   const at = latest(last);
   const when = at ? ` · ${clock(at)}` : "";
+
   if (at && at === last.skippedAt) return `waited — ${last.skipped}${when}`;
+
   if (last.finishedAt) {
     return last.ok
       ? `updated ${last.from} → ${last.to}${when}`
       : `failed — ${last.error ?? "unknown error"}${when}`;
   }
+
   return `running since ${clock(last.attemptedAt ?? "")}`;
 }
 
 function versionLine(status: AutoUpdateStatus): string {
   if (status.available && status.latest) return `${status.current} → ${status.latest}`;
+
   return `${status.current} · up to date`;
 }
 
@@ -130,6 +134,7 @@ function Updates({ initial }: { initial: AutoUpdateStatus }) {
     setStatus({ ...status, enabled });
     void setAutoUpdate(enabled).then((failure) => {
       setError(failure);
+
       if (failure) setStatus({ ...status, enabled: !enabled });
     });
   };
@@ -201,6 +206,7 @@ function Ranking({ initial }: { initial: ControlRoomPrefs }) {
   const save = (update: Record<string, unknown>) => {
     void writePrefs(update).then((failure) => {
       setError(failure);
+
       if (!failure) setPrefs({ ...prefs, ...update } as ControlRoomPrefs);
     });
   };
@@ -222,6 +228,7 @@ function Ranking({ initial }: { initial: ControlRoomPrefs }) {
                   onChange={(e) => {
                     const days = Number(e.target.value);
                     setPrefs({ ...prefs, [key]: days });
+
                     if (Number.isInteger(days) && days > 0) save({ [key]: days });
                   }}
                 />
@@ -276,6 +283,7 @@ export function Settings() {
   const updates = useLoaded<AutoUpdateStatus>("/api/update");
 
   if (settings.state !== "ready") return <Pending value={settings} />;
+
   return (
     <div className="grid items-start gap-6 md:grid-cols-2">
       <ThisInstall initial={settings.data} />

@@ -1,11 +1,7 @@
 #!/usr/bin/env bun
 
-// consulting-report skill tool: scaffold a new report directory from the template
-// and install Next.js dependencies.
-//
-// Usage:
-//   pal cli skill run consulting-report scaffold <target-dir> \
-//        [--client "Client Name"] [--title "Report Title"] [--no-install]
+// Scaffold a report directory from the template and install its Next.js dependencies.
+// Usage: pal cli skill run consulting-report scaffold <target-dir> [--client <name>] [--title <title>] [--no-install]
 
 import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
@@ -24,6 +20,7 @@ interface ScaffoldOptions {
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConstants.F_OK);
+
     return true;
   } catch {
     return false;
@@ -32,6 +29,7 @@ async function exists(p: string): Promise<boolean> {
 
 function templateDir(): string {
   const here = dirname(fileURLToPath(import.meta.url));
+
   return resolve(here, "..", "template");
 }
 
@@ -40,6 +38,7 @@ async function scaffold(opts: ScaffoldOptions): Promise<void> {
   if (!(await exists(tpl))) {
     throw new Error(`template not found at ${tpl}`);
   }
+
   if (await exists(opts.targetDir)) {
     throw new Error(`target already exists: ${opts.targetDir}`);
   }
@@ -50,15 +49,18 @@ async function scaffold(opts: ScaffoldOptions): Promise<void> {
   if (opts.clientName || opts.reportTitle) {
     const dataPath = join(opts.targetDir, "lib", "report-data.ts");
     let data = await readFile(dataPath, "utf8");
+
     if (opts.clientName) {
       data = data.replace(/\[CLIENT NAME\]/g, opts.clientName);
     }
+
     if (opts.reportTitle) {
       data = data.replace(
         /Strategic Assessment & Transformation Roadmap/,
         opts.reportTitle
       );
     }
+
     await writeFile(dataPath, data, "utf8");
   }
 
@@ -83,12 +85,15 @@ function parseArgs(argv: string[]): ScaffoldOptions {
       'usage: scaffold.ts <target-dir> [--client "Name"] [--title "Title"] [--no-install]'
     );
   }
+
   const opts: ScaffoldOptions = { targetDir: resolve(argv[0]) };
+
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === "--client") opts.clientName = argv[++i];
     else if (argv[i] === "--title") opts.reportTitle = argv[++i];
     else if (argv[i] === "--no-install") opts.install = false;
   }
+
   return opts;
 }
 

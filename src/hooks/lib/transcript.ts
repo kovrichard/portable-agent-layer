@@ -16,6 +16,7 @@ export interface Message {
 export function parseMessages(raw: string): Message[] {
   try {
     const parsed = JSON.parse(raw);
+
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -24,12 +25,14 @@ export function parseMessages(raw: string): Message[] {
 
 function claudeCodeEntryText(msg: { content?: unknown }): string {
   if (typeof msg.content === "string") return msg.content;
+
   if (Array.isArray(msg.content)) {
     return msg.content
       .filter((c: { type: string }) => c.type === "text")
       .map((c: { text: string }) => c.text)
       .join(" ");
   }
+
   return "";
 }
 
@@ -46,6 +49,7 @@ export function isCodexInjectedContext(text: string): boolean {
 
 function codexTexts(content: unknown): string[] {
   if (!Array.isArray(content)) return [];
+
   return content
     .map((part) => part?.text)
     .filter((text): text is string => typeof text === "string" && text.length > 0);
@@ -57,14 +61,10 @@ function codexMessage(payload: CodexPayload | undefined): Message | null {
   const texts = codexTexts(payload?.content).filter(
     (text) => !isCodexInjectedContext(text)
   );
+
   return texts.length > 0 ? { role, content: texts.join(" ") } : null;
 }
 
-// Claude Code tags transcript lines `type: "user"|"assistant"` with the text
-// under `message.content`. VS Code Copilot's own event log instead uses
-// `type: "user.message"|"assistant.message"` with a flat `data.content`
-// string. Codex nests each message as a `response_item` payload. Antigravity
-// writes one step per line, `type: "USER_INPUT"|"PLANNER_RESPONSE"|…`.
 function parseTranscriptEntry(entry: {
   type?: string;
   message?: { content?: unknown };
@@ -72,15 +72,20 @@ function parseTranscriptEntry(entry: {
   payload?: CodexPayload;
 }): Message | null {
   if (entry.type === "response_item") return codexMessage(entry.payload);
+
   if (entry.type === "user" || entry.type === "assistant") {
     const text = claudeCodeEntryText(entry.message ?? {});
+
     return text ? { role: entry.type, content: text } : null;
   }
+
   if (entry.type === "user.message" || entry.type === "assistant.message") {
     const text = entry.data?.content;
     const role = entry.type === "user.message" ? "user" : "assistant";
+
     return typeof text === "string" && text ? { role, content: text } : null;
   }
+
   return antigravityMessage(entry);
 }
 
@@ -109,6 +114,7 @@ interface EntryIds {
 /** Claude Code, Copilot, Codex and Antigravity each name a line's id differently. */
 function entryId(entry: EntryIds): string | undefined {
   const id = entry.uuid ?? entry.id ?? entry.payload?.id ?? entry.step_index;
+
   return id === undefined ? undefined : String(id);
 }
 
@@ -117,6 +123,7 @@ function messageOfLine(line: string): Message | null {
     const entry = JSON.parse(line);
     const message = parseTranscriptEntry(entry);
     const id = message && entryId(entry);
+
     return message && id ? { ...message, id } : message;
   } catch {
     return null;
@@ -126,6 +133,7 @@ function messageOfLine(line: string): Message | null {
 function messagesOf(lines: string[]): Message[] {
   return lines.flatMap((line) => {
     const message = line.trim() ? messageOfLine(line) : null;
+
     return message ? [message] : [];
   });
 }
@@ -159,6 +167,7 @@ export function recentMessages(
 /** The messages after the one with `id`; all of them when `id` is not among them. */
 export function messagesAfter(messages: Message[], id: string | undefined): Message[] {
   const index = id ? messages.findIndex((m) => m.id === id) : -1;
+
   return messages.slice(index + 1);
 }
 
@@ -174,6 +183,7 @@ export function runningCount(
   lastId: string | undefined
 ): number {
   if (recorded === undefined || !messages.some((m) => m.id)) return messages.length;
+
   return recorded + messagesAfter(messages, lastId).length;
 }
 
@@ -186,19 +196,23 @@ export function readTranscriptTail(
   const length = Math.min(size, bytes);
   const buffer = Buffer.alloc(length);
   const fd = openSync(path, "r");
+
   try {
     readSync(fd, buffer, 0, length, size - length);
   } finally {
     closeSync(fd);
   }
+
   const whole = length === size;
   const lines = buffer.toString("utf-8").split("\n");
+
   return { lines: (whole ? lines : lines.slice(1)).filter(Boolean), whole };
 }
 
 /** Extract string content from a message object */
 export function extractContent(msg: Message | undefined): string {
   if (!msg) return "";
+
   return typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
 }
 
@@ -213,6 +227,7 @@ export function withFinalReply(messages: Message[], finalReply?: string): Messag
   if (!reply) return messages;
   const last = messages.at(-1);
   if (last?.role === "assistant" && extractContent(last).includes(reply)) return messages;
+
   return [...messages, { role: "assistant", content: reply }];
 }
 

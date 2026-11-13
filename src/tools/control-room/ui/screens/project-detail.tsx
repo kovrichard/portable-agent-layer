@@ -22,7 +22,9 @@ const SNOOZE_DAYS = 7;
 
 function outcomeVariant(outcome: string) {
   if (outcome === "applied") return "neutral" as const;
+
   if (outcome === "failed") return "outline" as const;
+
   return "alarm" as const;
 }
 
@@ -37,13 +39,19 @@ function Criteria({
   onChanged: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+
   if (iscs.length === 0) return <Empty>No criteria written yet.</Empty>;
 
+  const settle = (failure: string | null) => {
+    setError(failure);
+
+    if (!failure) onChanged();
+  };
   const toggle = (isc: SnoozableIsc) => {
-    void setIsc(slug, isc.id, isc.status === "open" ? "done" : "open").then((failure) => {
-      setError(failure);
-      if (!failure) onChanged();
-    });
+    void setIsc(slug, isc.id, isc.status === "open" ? "done" : "open").then(settle);
+  };
+  const snooze = (isc: SnoozableIsc) => {
+    void setSnooze(slug, isc.id, isc.snoozedUntil ? 0 : SNOOZE_DAYS).then(settle);
   };
 
   return (
@@ -55,63 +63,70 @@ function Criteria({
       )}
       <ul className="m-0 flex list-none flex-col p-0">
         {iscs.map((isc) => (
-          <li
-            key={isc.id}
-            className={cn(
-              "grid grid-cols-[18px_58px_minmax(0,1fr)] items-start gap-3 border-b border-divider/60 py-2 last:border-b-0",
-              isc.status !== "open" && "opacity-60"
-            )}
-          >
-            <button
-              type="button"
-              disabled={isc.status === "retired"}
-              onClick={() => toggle(isc)}
-              title={isc.status === "open" ? "close this criterion" : "reopen it"}
-              className={cn(
-                "mt-0.5 grid size-3.5 cursor-pointer place-items-center border border-neutral-500 text-[10px] leading-none text-bg hover:border-accent disabled:cursor-default",
-                isc.status === "done" && "bg-accent",
-                isc.status === "retired" && "bg-neutral-400"
-              )}
-            >
-              {ISC_MARK[isc.status]}
-              <span className="sr-only">{isc.status}</span>
-            </button>
-            <span className="pt-px text-[11.5px] text-neutral-600">ISC-{isc.id}</span>
-            <span className="flex items-start justify-between gap-3">
-              <span className="text-pretty">
-                {isc.text}
-                {isc.snoozedUntil && (
-                  <span className="block text-[11.5px] text-neutral-600">
-                    snoozed until {isc.snoozedUntil}
-                  </span>
-                )}
-              </span>
-              {isc.status === "open" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    void setSnooze(slug, isc.id, isc.snoozedUntil ? 0 : SNOOZE_DAYS).then(
-                      (failure) => {
-                        setError(failure);
-                        if (!failure) onChanged();
-                      }
-                    );
-                  }}
-                >
-                  {isc.snoozedUntil ? "wake" : `snooze ${SNOOZE_DAYS}d`}
-                </Button>
-              )}
-            </span>
-          </li>
+          <Criterion key={isc.id} isc={isc} onToggle={toggle} onSnooze={snooze} />
         ))}
       </ul>
     </>
   );
 }
 
+type CriterionProps = {
+  isc: SnoozableIsc;
+  onToggle: (isc: SnoozableIsc) => void;
+  onSnooze: (isc: SnoozableIsc) => void;
+};
+
+function CriterionBox({ isc, onToggle }: Omit<CriterionProps, "onSnooze">) {
+  return (
+    <button
+      type="button"
+      disabled={isc.status === "retired"}
+      onClick={() => onToggle(isc)}
+      title={isc.status === "open" ? "close this criterion" : "reopen it"}
+      className={cn(
+        "mt-0.5 grid size-3.5 cursor-pointer place-items-center border border-neutral-500 text-[10px] leading-none text-bg hover:border-accent disabled:cursor-default",
+        isc.status === "done" && "bg-accent",
+        isc.status === "retired" && "bg-neutral-400"
+      )}
+    >
+      {ISC_MARK[isc.status]}
+      <span className="sr-only">{isc.status}</span>
+    </button>
+  );
+}
+
+function Criterion({ isc, onToggle, onSnooze }: CriterionProps) {
+  return (
+    <li
+      className={cn(
+        "grid grid-cols-[18px_58px_minmax(0,1fr)] items-start gap-3 border-b border-divider/60 py-2 last:border-b-0",
+        isc.status !== "open" && "opacity-60"
+      )}
+    >
+      <CriterionBox isc={isc} onToggle={onToggle} />
+      <span className="pt-px text-[11.5px] text-neutral-600">ISC-{isc.id}</span>
+      <span className="flex items-start justify-between gap-3">
+        <span className="text-pretty">
+          {isc.text}
+          {isc.snoozedUntil && (
+            <span className="block text-[11.5px] text-neutral-600">
+              snoozed until {isc.snoozedUntil}
+            </span>
+          )}
+        </span>
+        {isc.status === "open" && (
+          <Button variant="ghost" size="sm" onClick={() => onSnooze(isc)}>
+            {isc.snoozedUntil ? "wake" : `snooze ${SNOOZE_DAYS}d`}
+          </Button>
+        )}
+      </span>
+    </li>
+  );
+}
+
 function Decisions({ decisions }: { decisions: Decision[] }) {
   if (decisions.length === 0) return <Empty>Nothing recorded.</Empty>;
+
   return (
     <div className="flex flex-col gap-1.5 text-[12.5px]">
       {decisions.map((d) => (
@@ -131,6 +146,7 @@ function Runtimes({ runtimes }: { runtimes: Record<string, number> }) {
   const entries = Object.entries(runtimes);
   if (entries.length === 0) return <Empty>No recorded actions in the window.</Empty>;
   const max = Math.max(1, ...entries.map(([, n]) => n));
+
   return (
     <div className="flex flex-col gap-1.5">
       {entries.map(([runtime, n]) => (
@@ -154,6 +170,7 @@ function Runtimes({ runtimes }: { runtimes: Record<string, number> }) {
 
 function RecentActions({ rows }: { rows: LedgerViewRow[] }) {
   if (rows.length === 0) return <Empty>Nothing recorded yet.</Empty>;
+
   return (
     <div className="flex flex-col gap-1.5">
       {rows.map((r) => (
@@ -172,6 +189,7 @@ function RecentActions({ rows }: { rows: LedgerViewRow[] }) {
 
 function Head({ d }: { d: ProjectDetailView }) {
   const open = d.iscs.filter((i) => i.status === "open").length;
+
   return (
     <>
       <nav className="mb-1.5 text-[12px] text-neutral-600">
@@ -223,71 +241,80 @@ export function ProjectDetail({ slug }: { slug: string }) {
           >
             <Criteria slug={d.slug} iscs={d.iscs} onChanged={reload} />
           </Panel>
-          <div className="grid gap-6 md:grid-cols-2">
-            <Panel title="Next">
-              {d.next.length === 0 ? (
-                <Empty>nothing queued</Empty>
-              ) : (
-                <ol className="m-0 flex list-decimal flex-col gap-1.5 pl-5 text-[12.5px]">
-                  {d.next.map((n) => (
-                    <li key={n}>{n}</li>
-                  ))}
-                </ol>
-              )}
-            </Panel>
-            <Panel title="Blockers">
-              {d.blockers.length === 0 ? (
-                <Empty>none</Empty>
-              ) : (
-                <div className="flex flex-col gap-1.5 text-[12.5px]">
-                  {d.blockers.map((b) => (
-                    <p key={b} className="bg-accent-100 px-2 py-1.5 text-accent-900">
-                      {b}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </Panel>
-          </div>
+          <NextAndBlockers d={d} />
           <Panel title="Decisions">
             <Decisions decisions={d.decisions} />
           </Panel>
         </div>
-        <aside className="flex flex-col gap-6">
-          <Panel title="Where it stopped">
-            <WorkList
-              cards={d.work}
-              empty="No open work in this project's progress tree."
-            />
-          </Panel>
-          <Panel
-            title="Agents on this project · 14d"
-            aside={
-              <Link
-                to={`/log?project=${encodeURIComponent(d.slug)}`}
-                className="hover:text-accent"
-              >
-                full log →
-              </Link>
-            }
-          >
-            <Runtimes runtimes={d.runtimes} />
-            <Separator className="my-3" />
-            <RecentActions rows={d.recent} />
-          </Panel>
-          <Panel title="Context">
-            {d.context.length === 0 ? (
-              <Empty>nothing recorded</Empty>
-            ) : (
-              <ul className="m-0 flex list-disc flex-col gap-1 pl-4 text-[12.5px]">
-                {d.context.map((c) => (
-                  <li key={c}>{c}</li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        </aside>
+        <ProjectAside d={d} />
       </div>
     </section>
+  );
+}
+
+function NextAndBlockers({ d }: { d: ProjectDetailView }) {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <Panel title="Next">
+        {d.next.length === 0 ? (
+          <Empty>nothing queued</Empty>
+        ) : (
+          <ol className="m-0 flex list-decimal flex-col gap-1.5 pl-5 text-[12.5px]">
+            {d.next.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ol>
+        )}
+      </Panel>
+      <Panel title="Blockers">
+        {d.blockers.length === 0 ? (
+          <Empty>none</Empty>
+        ) : (
+          <div className="flex flex-col gap-1.5 text-[12.5px]">
+            {d.blockers.map((b) => (
+              <p key={b} className="bg-accent-100 px-2 py-1.5 text-accent-900">
+                {b}
+              </p>
+            ))}
+          </div>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+function ProjectAside({ d }: { d: ProjectDetailView }) {
+  return (
+    <aside className="flex flex-col gap-6">
+      <Panel title="Where it stopped">
+        <WorkList cards={d.work} empty="No open work in this project's progress tree." />
+      </Panel>
+      <Panel
+        title="Agents on this project · 14d"
+        aside={
+          <Link
+            to={`/log?project=${encodeURIComponent(d.slug)}`}
+            className="hover:text-accent"
+          >
+            full log →
+          </Link>
+        }
+      >
+        <Runtimes runtimes={d.runtimes} />
+        <Separator className="my-3" />
+        <RecentActions rows={d.recent} />
+      </Panel>
+      <Panel title="Context">
+        {d.context.length === 0 ? (
+          <Empty>nothing recorded</Empty>
+        ) : (
+          <ul className="m-0 flex list-disc flex-col gap-1 pl-4 text-[12.5px]">
+            {d.context.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </aside>
   );
 }

@@ -45,18 +45,21 @@ function transcript(messageCount: number, padding: number): string {
     role: i % 2 === 0 ? "user" : "assistant",
     content: `message ${i} ${"x".repeat(padding)}`,
   }));
+
   return JSON.stringify(messages);
 }
 
 function transcriptTail(from: number, to: number, padding: number): string {
   const messages = Array.from({ length: to - from }, (_, k) => {
     const i = from + k;
+
     return {
       role: i % 2 === 0 ? "user" : "assistant",
       content: `message ${i} ${"x".repeat(padding)}`,
       id: `m${i}`,
     };
   });
+
   return JSON.stringify(messages);
 }
 
@@ -68,6 +71,7 @@ function sessionNodes(session: string) {
 function learningFiles(): string[] {
   const dir = resolve(HOME, "memory", "learning", "session");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir, { recursive: true })
     .map(String)
     .filter((f) => f.endsWith(".md"));
@@ -175,6 +179,7 @@ describe("an unfinished session", () => {
     const startDir = freshTestDir(import.meta.file);
     const savedStart = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = startDir;
+
     try {
       await captureSessionIntelligence(transcript(12, 300), "s-moved");
 

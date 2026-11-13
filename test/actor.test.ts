@@ -24,6 +24,7 @@ beforeEach(async () => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   delete process.env.PAL_SPAWNED_INFERENCE;
+
   for (const key of AGENT_SIGNALS) delete process.env[key];
   // settings caches per process and bun shares one across test files.
   (await import("../src/hooks/lib/settings")).reload();
@@ -206,6 +207,7 @@ describe("currentAttribution", () => {
     const { currentAttribution } = await lib();
     const sniffed = ["CURSOR_VERSION", "CODEX_CLI_VERSION", "OPENAI_CODEX"];
     const saved = sniffed.map((k) => [k, process.env[k]] as const);
+
     for (const k of sniffed) delete process.env[k];
 
     expect(currentAttribution().runtime).toBe("unknown");

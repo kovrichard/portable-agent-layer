@@ -25,6 +25,7 @@ function stringList(value: unknown): string[] {
 
 function textField(entity: Entity, key: string): string {
   const value = entity.frontmatter[key];
+
   return typeof value === "string" ? value.trim() : "";
 }
 
@@ -44,6 +45,7 @@ export function loadKnownEntities(rootDir?: string): Entity[] {
 
 export function excludedNames(): string[] {
   const id = identity();
+
   return [id.principal.name, id.ai.name];
 }
 
@@ -68,6 +70,7 @@ export function latestNote(body: string): string {
     .filter((l) => l && !isSourceLine(l))
     .join(" ")
     .replace(/\*\*/g, "");
+
   return text.length > MAX_LATEST ? `${text.slice(0, MAX_LATEST - 1)}…` : text;
 }
 
@@ -83,17 +86,21 @@ function describe(entity: Entity): string {
     (f) => f && f !== "subject"
   );
   const latest = latestNote(entity.body);
+
   return [facts.join(", "), latest].filter(Boolean).join(". ");
 }
 
 function card(mention: Mention, bySlug: Map<string, Entity>): string {
   if (mention.entities.length > 1) {
     const names = mention.entities.map((e) => e.title).join(", ");
+
     return `- "${mention.said}" could be: ${names}. Ask which one if it matters.`;
   }
+
   const entity = bySlug.get(entityKey(mention.entities[0]));
   const summary = entity ? describe(entity) : "";
   const name = `- **${mention.entities[0].title}**`;
+
   return summary ? `${name}: ${summary}` : name;
 }
 
@@ -101,6 +108,7 @@ export function entityReminder(prompt: string, entities: Entity[]): string | nul
   const mentions = findMentions(prompt, loadNameIndex(entities)).slice(0, MAX_CARDS);
   if (mentions.length === 0) return null;
   const bySlug = new Map(entities.map((e) => [entityKey(e), e]));
+
   return [
     "**Known people and companies in this message** (PAL knowledge store):",
     ...mentions.map((m) => card(m, bySlug)),

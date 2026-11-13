@@ -93,5 +93,6 @@ if (process.argv[2] === "--upgrade") {
   if (sid && prompt && expected !== undefined) {
     await upgradeWithInference(sid, prompt, expected);
   }
+
   process.exit(0);
 }

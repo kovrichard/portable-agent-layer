@@ -21,6 +21,7 @@ function countJsonlLines(filepath: string): number {
   try {
     if (!existsSync(filepath)) return 0;
     const content = readFileSync(filepath, "utf-8").trim();
+
     return content ? content.split("\n").length : 0;
   } catch {
     return 0;
@@ -30,6 +31,7 @@ function countJsonlLines(filepath: string): number {
 function countMdFiles(dir: string): number {
   try {
     if (!existsSync(dir)) return 0;
+
     return readdirSync(dir).filter((f) => f.endsWith(".md")).length;
   } catch {
     return 0;
@@ -45,6 +47,7 @@ function getCounts(): Counts {
   // Count skills in the PAL skills dir
   let skills = 0;
   const skillsDir = assets.skills();
+
   try {
     if (existsSync(skillsDir)) {
       skills = readdirSync(skillsDir, { withFileTypes: true }).filter((e) =>
@@ -57,6 +60,7 @@ function getCounts(): Counts {
 
   // Count named sessions
   let sessions = 0;
+
   try {
     const namesPath = resolve(paths.state(), "session-names.json");
     if (existsSync(namesPath)) {

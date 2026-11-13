@@ -36,6 +36,7 @@ export function ruleEventsPath(): string {
 function parseLine(line: string): RuleEvent | null {
   try {
     const parsed = JSON.parse(line) as RuleEvent;
+
     return typeof parsed.ts === "string" && typeof parsed.rule === "string"
       ? parsed
       : null;
@@ -48,6 +49,7 @@ export function readRuleEvents(days = WINDOW_DAYS, now = new Date()): RuleEvent[
   const path = ruleEventsPath();
   if (!existsSync(path)) return [];
   const cutoff = now.getTime() - days * DAY_MS;
+
   return readFileSync(path, "utf-8")
     .split("\n")
     .map(parseLine)
@@ -74,14 +76,19 @@ export function ruleEffects(
   turns: Turn[]
 ): Record<string, RuleEffect> {
   const effects: Record<string, RuleEffect> = {};
+
   for (const event of events) {
     const effect = effects[event.rule] ?? emptyEffect();
     const judge = turnAfter(event, turns);
     effect.fired += 1;
+
     if (event.sentBack) effect.sentBack += 1;
+
     if (judge) effect.judged += 1;
+
     if (isConfirmedCorrection(judge)) effect.correctedAfter += 1;
     effects[event.rule] = effect;
   }
+
   return effects;
 }

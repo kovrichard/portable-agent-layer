@@ -34,6 +34,7 @@ function addReflection(
     q2,
     q3: "",
   };
+
   if (opts.scope) entry.scope = opts.scope;
   appendFileSync(REFL_FILE, `${JSON.stringify(entry)}\n`);
 }
@@ -114,6 +115,87 @@ describe("synthesizeAlgorithm", () => {
     const s = synthesizeAlgorithm();
     expect(s.total).toBe(1);
     expect(s.taskSpecific).toBe(0);
+  });
+
+  test("summarizes each bucket exactly: count, rounded sentiment, projects, deduped quotes", () => {
+    addReflection("  verify the premise first  ", { sentiment: 7, cwd: "/a/pal" });
+    addReflection("verify the premise first", { sentiment: 8, cwd: "/b/fyzz" });
+    addReflection("add an atomic criterion", { sentiment: 9 });
+    addReflection("  plugh  ");
+    addReflection("plugh");
+    addReflection("verify before acting", { sentiment: 8, cwd: "" });
+
+    expect(synthesizeAlgorithm()).toEqual({
+      total: 6,
+      since: null,
+      buckets: [
+        {
+          key: "verify-gate",
+          label: "Establish grounding before acting (verify a fact / prerequisite first)",
+          count: 3,
+          avgSentiment: 7.7,
+          projects: 2,
+          quotes: ["verify the premise first", "verify before acting"],
+        },
+        {
+          key: "criteria",
+          label: "Criteria quality (atomicity, splitting, coverage, anti-criteria)",
+          count: 1,
+          avgSentiment: 9,
+          projects: 1,
+          quotes: ["add an atomic criterion"],
+        },
+      ],
+      unbucketed: 2,
+      unbucketedQuotes: ["plugh"],
+      taskSpecific: 0,
+      taskSpecificQuotes: [],
+    });
+  });
+
+  test("a later bucket with more ideas ranks ahead of an earlier one", () => {
+    addReflection("verify before acting");
+    addReflection("use a subagent");
+    addReflection("research it in parallel");
+    addReflection("add an atomic criterion");
+    addReflection("split the criteria");
+    addReflection("enumerate every criterion");
+
+    expect(synthesizeAlgorithm().buckets.map((b) => b.key)).toEqual([
+      "criteria",
+      "capability",
+      "verify-gate",
+    ]);
+  });
+
+  test("a reflection stamped exactly at the since date is kept", () => {
+    addReflection("verify before acting", { ts: "2026-03-01T00:00:00Z" });
+    addReflection("verify the source first", { ts: "2026-02-28T23:59:59Z" });
+
+    const s = synthesizeAlgorithm(new Date("2026-03-01T00:00:00Z"));
+    expect(s.total).toBe(1);
+    expect(s.buckets[0].quotes).toEqual(["verify before acting"]);
+  });
+
+  test("blank Q2s are skipped and task-specific quotes are trimmed", () => {
+    addReflection("   ");
+    addReflection("  a one-off idea  ", { scope: "task-specific" });
+
+    const s = synthesizeAlgorithm();
+    expect(s.total).toBe(0);
+    expect(s.unbucketed).toBe(0);
+    expect(s.taskSpecificQuotes).toEqual(["a one-off idea"]);
+  });
+
+  test("an empty log yields no buckets, and the since date is echoed back", () => {
+    const since = new Date("2026-03-01T00:00:00Z");
+
+    expect(synthesizeAlgorithm(since)).toMatchObject({
+      total: 0,
+      since: "2026-03-01T00:00:00.000Z",
+      buckets: [],
+      unbucketed: 0,
+    });
   });
 
   test("formatAlgorithmReport renders headers and the unbucketed line", () => {

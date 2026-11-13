@@ -50,6 +50,7 @@ export function transcriptLines(
 ): string[] {
   const path = payload.transcript_path ?? payload.transcriptPath;
   if (!path || !existsSync(path)) return [];
+
   for (let bytes = firstReadBytes; ; bytes *= 4) {
     const { lines, whole } = readTranscriptTail(path, bytes);
     if (whole || lines.some(isPromptLine)) return lines;
@@ -95,6 +96,7 @@ function sendBackReason(claims: string[]): string {
   const ask = claims.some(isVersionControlClaim)
     ? "Read what is committed, pushed, merged or released with git or gh and show it"
     : "Run the check and show its output";
+
   return `Your reply claims what no command in this turn showed: ${quoted}. ${ask}, or say it is unverified.`;
 }
 
@@ -115,6 +117,7 @@ export function watchClaims(
   const blocked = sendsBack(payload, check);
   const session = hookSessionId(payload) ?? "unknown";
   record({ check, commands: commands?.length ?? null, session, blocked }, now);
+
   return blocked ? sendBackReason(check.claims) : null;
 }
 
@@ -134,6 +137,7 @@ function readRecords(file: string): ClaimRecord[] {
 export function claimChecksSince(since: Date): ClaimRecord[] {
   const fromMonth = since.toISOString().slice(0, 7);
   const sinceTs = since.toISOString();
+
   return readdirSync(claimsDir())
     .filter((f) => f.endsWith(".jsonl") && f.slice(0, 7) >= fromMonth)
     .sort()

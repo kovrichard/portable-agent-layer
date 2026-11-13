@@ -45,6 +45,7 @@ export function bindingsBackupPath(home: string = palHome()): string {
 
 function isBindingMap(value: unknown): value is Bindings {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+
   return Object.values(value).every((v) => typeof v === "string");
 }
 
@@ -56,9 +57,11 @@ function isBindingMap(value: unknown): value is Bindings {
 export function readBindings(home: string = palHome()): Bindings {
   const file = bindingsFilePath(home);
   if (!existsSync(file)) return {};
+
   try {
     const parsed: unknown = JSON.parse(readFileSync(file, "utf-8"));
     if (!isBindingMap(parsed)) return {};
+
     return parsed;
   } catch {
     return {};
@@ -73,6 +76,7 @@ export function readBindings(home: string = palHome()): Bindings {
  */
 function assertNotRealHomeDuringTests(home: string): void {
   if (!process.env.PAL_TEST_SANDBOX) return;
+
   if (resolve(home) !== resolve(homedir(), ".pal")) return;
   throw new Error(
     "Refusing to write bindings.json into the real ~/.pal during a test run. " +
@@ -80,16 +84,19 @@ function assertNotRealHomeDuringTests(home: string): void {
   );
 }
 
+function nonEmptySoABadWriteCannotEraseTheBackup(file: string): boolean {
+  return existsSync(file) && readFileSync(file, "utf-8").trim().length > 0;
+}
+
 export function writeBindings(bindings: Bindings, home: string = palHome()): void {
   assertNotRealHomeDuringTests(home);
   const file = bindingsFilePath(home);
-  // Only a differing, non-empty predecessor is worth keeping: backing up an
-  // identical file is noise, and backing up an empty one would let a bad write
-  // erase the copy that made it recoverable.
-  if (existsSync(file) && readFileSync(file, "utf-8").trim().length > 0) {
+  if (nonEmptySoABadWriteCannotEraseTheBackup(file)) {
     copyFileSync(file, bindingsBackupPath(home));
   }
+
   const sorted: Bindings = {};
+
   for (const key of Object.keys(bindings).sort()) sorted[key] = bindings[key];
   writeFileSync(bindingsFilePath(home), `${JSON.stringify(sorted, null, 2)}\n`);
   adoptParkedHistory(sorted, home);

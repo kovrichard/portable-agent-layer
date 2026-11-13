@@ -26,6 +26,7 @@ function nodes(command: Command, path: string[]): [string[], Command][] {
   const children = Object.entries(command.commands).flatMap(([name, sub]) =>
     nodes(sub, [...path, name])
   );
+
   return [[path, command], ...children];
 }
 
@@ -38,6 +39,7 @@ let spies: ReturnType<typeof spyOn>[] = [];
 
 beforeAll(() => {
   sandbox = freshTestDir(import.meta.file);
+
   for (const key of SANDBOX_KEYS) process.env[key] = resolve(sandbox, key);
 });
 
@@ -56,6 +58,7 @@ const at = (path: string[]) => path.slice(2);
 describe("every pal cli command", () => {
   test("the tree reaches the commands it should", () => {
     const paths = TREE.map(([path]) => path.join(" "));
+
     for (const expected of [
       "pal cli install",
       "pal cli rule list",
@@ -100,6 +103,7 @@ describe("every pal cli command", () => {
         expect(text).toStartWith(`Usage: ${name}`);
         expect(text).toContain(command.summary);
       }
+
       expect(err).toEqual([]);
       expect(readdirSync(sandbox)).toEqual([]);
     }

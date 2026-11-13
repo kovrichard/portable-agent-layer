@@ -4,8 +4,10 @@ import {
   detailedLine,
   fmt,
   fmtCost,
+  grandBucket,
   modelLabel,
   parseRtkSummary,
+  projectsByCost,
   type RtkGain,
   rowLine,
   rtkLines,
@@ -20,8 +22,10 @@ import {
   emptyTimeBuckets,
   grandTotal,
   type PalInferenceUsage,
+  readPalInference,
   type TimeBuckets,
 } from "../src/tools/lib/usage-buckets";
+import { event } from "./lib/wrapped-events";
 
 const tokens = (input: number, output: number, cw5m = 0, cw1h = 0, cr = 0) => ({
   input,
@@ -36,14 +40,17 @@ const TS = "2026-09-06T12:00:00.000Z";
 function bucketOf(model: string, scale: number): Bucket {
   const bucket = emptyBucket();
   addToBucket(bucket, model, tokens(scale, scale * 2, scale, scale, scale), TS);
+
   return bucket;
 }
 
 function timeBucketsOf(model: string, scale: number): TimeBuckets {
   const buckets = emptyTimeBuckets();
+
   for (const window of [buckets.today, buckets.week, buckets.month, buckets.total]) {
     addToBucket(window, model, tokens(scale, scale * 2), TS);
   }
+
   return buckets;
 }
 
@@ -287,9 +294,11 @@ describe("usageLines", () => {
 
   test("names the agents the grand total cannot price, and leaves them out of it", () => {
     const unpriced = emptyTimeBuckets();
+
     for (const window of Object.values(unpriced)) {
       Object.assign(window, { calls: 3, unpriced: 3, input: 1_000_000 });
     }
+
     const lines = usageLines(
       report(EMPTY_CC, EMPTY_PAL, {
         agents: [{ label: "Codex", usage: { ...EMPTY_CC, buckets: unpriced } }],
@@ -382,6 +391,24 @@ describe("usageLines", () => {
     expect(line).toBe(detailedLine("a-very-long-model-identifier-9", bucket, 32));
   });
 
+  test("files the unresolvable calls of every agent in one (unknown) row", () => {
+    const agentIn = (scale: number, extra: string) => ({
+      label: extra,
+      usage: {
+        ...EMPTY_CC,
+        byProject: {
+          "(unknown)": timeBucketsOf("claude-opus-5", scale),
+          [extra]: timeBucketsOf("claude-opus-5", 1),
+        },
+      },
+    });
+    const rows = projectsByCost([agentIn(10, "widgets"), agentIn(20, "klint")]);
+    const unknown = rows.filter(([name]) => name === "(unknown)");
+    expect(unknown).toHaveLength(1);
+    expect(unknown[0][1].total.calls).toBe(2);
+    expect(rows).toHaveLength(3);
+  });
+
   test("omits the project section for a single project — it says nothing new", () => {
     const cc: AgentUsage = {
       ...EMPTY_CC,
@@ -468,5 +495,32 @@ describe("usageLines", () => {
     const lines = usageLines(report());
     const rtk = lines.findIndex((l) => l.includes("rtk Compression"));
     expect(rtk).toBe(lines.length - 3);
+  });
+});
+
+describe("System One spend in the report", () => {
+  test("a judge_call gets a PAL Inference block and is in the grand total", () => {
+    const pal = readPalInference(
+      [
+        event(
+          "judge_call",
+          {
+            caller: "c",
+            mode: "shadow",
+            route: "fallback",
+            model: "jev-1.14.0",
+            inputTokens: 1000,
+            costUsd: 0.5,
+            failure: null,
+          },
+          { ts: TS }
+        ),
+      ],
+      new Date(TS)
+    );
+    const data: UsageData = { agents: [], pal, rtk: NO_RTK, untracked: [] };
+    const lines = usageLines(data).join("\n");
+    expect(lines).toContain("PAL Inference (jev-1.14.0)");
+    expect(grandBucket(data).cost).toBeCloseTo(0.5, 10);
   });
 });

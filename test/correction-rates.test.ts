@@ -207,6 +207,7 @@ describe("opinionEffect", () => {
       ...corrections(5, "unverified-claim", -3),
       ...ordinaryTurns(190, -24),
     ];
+
     return opinionEffect(
       "status-quo-bias",
       approvedAt,
@@ -281,6 +282,7 @@ describe("backfillCorrectionKinds", () => {
   function logTurns(): string[] {
     const dir = paths.adaptation();
     const file = resolve(dir, `turns-${new Date().toISOString().slice(0, 7)}.jsonl`);
+
     return existsSync(file) ? readFileSync(file, "utf-8").trim().split("\n") : [];
   }
 
@@ -319,6 +321,7 @@ describe("backfillCorrectionKinds", () => {
     const result = await backfillCorrectionKinds({
       label: async (t) => {
         seen.push(t.message);
+
         return { kind: "unverified-claim", suggested: "", description: "" };
       },
     });

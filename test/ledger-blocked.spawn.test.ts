@@ -35,6 +35,7 @@ async function runValidator(payload: unknown, agent = "claude"): Promise<string>
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   return out.trim();
 }
 
@@ -45,6 +46,7 @@ function preToolUse(toolName: string, toolArgs: Record<string, unknown>) {
 function entries(): LedgerEntry[] {
   const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .split("\n")
     .filter(Boolean)
@@ -123,6 +125,7 @@ describe("a rule refusing is recorded", () => {
 describe("what the page then reads", () => {
   test("blocked is counted, and counted as a refusal", async () => {
     process.env.PAL_HOME = HOME;
+
     try {
       await runValidator(preToolUse("Bash", { command: DANGEROUS }));
       const view = ledgerView({});

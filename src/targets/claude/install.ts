@@ -8,27 +8,21 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palHome, palPkg, platform } from "../../hooks/lib/paths";
 import { identity, raw as readPalSettings } from "../../hooks/lib/settings";
-import {
-  addStatuslineConfig,
-  applyAttribution,
-  copyAgents,
-  copySkills,
-  copyStatusline,
-  countAgents,
-  countMd,
-  countSkills,
-  loadSettingsTemplate,
-  log,
-  mergeSettings,
-  readJson,
-  replaceJsonConfig,
-} from "../lib";
+import { replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { loadSettingsTemplate, mergeSettings } from "../settings-merge";
+import { copySkills, countSkills } from "../skills";
+import { addStatuslineConfig, copyStatusline } from "../statusline";
+import { copyAgents, countAgents, countMd } from "./agents";
+import { applyAttribution } from "./attribution";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CLAUDE_DIR = platform.claudeDir();
 const SETTINGS = resolve(CLAUDE_DIR, "settings.json");
 
 mkdirSync(CLAUDE_DIR, { recursive: true });
+
 if (!existsSync(SETTINGS)) {
   writeFileSync(SETTINGS, "{}\n", "utf-8");
   log.info("Created new settings.json");

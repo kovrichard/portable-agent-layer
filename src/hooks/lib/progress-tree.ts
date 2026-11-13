@@ -8,6 +8,7 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ensureDir, paths } from "./paths";
+import { sameArtifact } from "./progress-artifact-match";
 import { progressSession } from "./progress-session";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
 
@@ -168,6 +169,7 @@ function parseLine(line: string): WorkEvent[] {
 /** Ordered by time, so the union an import merges in replays the same as one machine's log. */
 export function readEvents(file: string = progressTreeFile()): WorkEvent[] {
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .split("\n")
     .filter((line) => line.trim())
@@ -194,34 +196,8 @@ export function appendEvent<T extends WorkEvent["type"]>(
     ...payload,
   } as WorkEvent;
   appendFileSync(file, `${JSON.stringify(event)}\n`, "utf-8");
+
   return event;
-}
-
-type ArtifactRef = { kind: ArtifactKind; ref: string };
-
-const PR_URL_RE = /^https?:\/\//;
-const SHORT_SHA_LENGTH = 7;
-
-function prNumberOf(ref: string): string | null {
-  return /(\d+)$/.exec(ref)?.[1] ?? null;
-}
-
-function samePr(a: string, b: string): boolean {
-  if (PR_URL_RE.test(a) && PR_URL_RE.test(b)) return a === b;
-  const number = prNumberOf(a);
-  return number !== null && number === prNumberOf(b);
-}
-
-function sameCommit(a: string, b: string): boolean {
-  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  return short.length >= SHORT_SHA_LENGTH && long.startsWith(short);
-}
-
-function sameArtifact(a: ArtifactRef, b: ArtifactRef): boolean {
-  if (a.kind !== b.kind) return false;
-  if (a.kind === "pr") return samePr(a.ref, b.ref);
-  if (a.kind === "commit") return sameCommit(a.ref, b.ref);
-  return a.ref === b.ref;
 }
 
 function addArtifact(node: WorkNode, artifact: Artifact): void {
@@ -240,6 +216,7 @@ export function attachOnce(
 ): boolean {
   if (node.artifacts.some((a) => sameArtifact(a, artifact))) return false;
   appendEvent(scope, node.id, "attach", artifact, file, now, session);
+
   return true;
 }
 
@@ -281,6 +258,7 @@ function parkLane(tree: ScopeTree, lane: string): void {
 function release(tree: ScopeTree, node: WorkNode): string | undefined {
   const held = [...tree.lanes].find(([, id]) => id === node.id)?.[0];
   if (held !== undefined) tree.lanes.delete(held);
+
   return held;
 }
 
@@ -300,8 +278,10 @@ function heldElsewhere(tree: ScopeTree, node: WorkNode): boolean {
 /** Finishing a detour hands the work back to the nearest unfinished ancestor no other session holds. */
 function returnToParent(tree: ScopeTree, node: WorkNode, lane: string): void {
   let parent = node.parent ? tree.nodes.get(node.parent) : undefined;
+
   while (parent && parent.status === "done")
     parent = parent.parent ? tree.nodes.get(parent.parent) : undefined;
+
   if (parent && !heldElsewhere(tree, parent)) activate(tree, parent, lane);
 }
 
@@ -316,11 +296,13 @@ const RECORDS: readonly WorkEvent["type"][] = [
 function wakeOnRecord(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
   const lane = laneOf(event);
   if (!RECORDS.includes(event.type) || tree.lanes.has(lane)) return;
+
   if (node.status === "parked" && !heldElsewhere(tree, node)) activate(tree, node, lane);
 }
 
 function applyToNode(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
   wakeOnRecord(tree, node, event);
+
   switch (event.type) {
     case "enter":
       activate(tree, node, laneOf(event));
@@ -360,6 +342,7 @@ function applyToNode(tree: ScopeTree, node: WorkNode, event: WorkEvent): void {
       node.followUps.push({ ts: event.ts, text: event.text, due: event.due });
       break;
   }
+
   node.updated = event.ts;
 }
 
@@ -370,31 +353,39 @@ function settlePr(
   const node = tree.nodes.get(event.node);
   if (!node) return;
   node.settledPrs.push({ ref: event.ref, state: event.state, at: event.at });
+
   if (event.stoppedAt) node.stoppedAt = event.stoppedAt;
 }
 
 function apply(tree: ScopeTree, event: WorkEvent): void {
   tree.laneSeen.set(laneOf(event), event.ts);
+
   if (event.type === "git-cursor") {
     tree.gitCursor = {
       branch: event.branch,
       head: event.head,
       ...(event.worktrees && { worktrees: event.worktrees }),
     };
+
     return;
   }
+
   if (event.type === "pr-settled") {
     settlePr(tree, event);
+
     return;
   }
+
   if (event.type === "open") {
     const parent = event.parent ?? PROJECT_ROOT;
     const node = emptyNode(event.node, event.title, parent, event.ts);
     node.links = event.links ?? {};
     tree.nodes.set(node.id, node);
     activate(tree, node, laneOf(event));
+
     return;
   }
+
   const node = tree.nodes.get(event.node);
   if (node) applyToNode(tree, node, event);
 }
@@ -413,8 +404,10 @@ export function buildTree(
     nodes: new Map(),
     gitCursor: null,
   };
+
   for (const event of events) if (event.scope === scope) apply(tree, event);
   tree.active = tree.lanes.get(session ?? "") ?? null;
+
   return tree;
 }
 
@@ -438,6 +431,7 @@ function heldByOthers(
 ): { busy: WorkNode[]; idle: IdleNode[] } {
   const busy: WorkNode[] = [];
   const idle: IdleNode[] = [];
+
   for (const [lane, id] of tree.lanes) {
     const node = tree.nodes.get(id);
     if (!node || id === tree.active) continue;
@@ -445,6 +439,7 @@ function heldByOthers(
     if (now.getTime() - Date.parse(since) < IDLE_AFTER_MS) busy.push(node);
     else idle.push({ node, since });
   }
+
   return { busy: busy.sort(byRecent), idle };
 }
 
@@ -462,10 +457,12 @@ export function idleElsewhere(tree: ScopeTree, now: Date = new Date()): IdleNode
 export function activePath(tree: ScopeTree): WorkNode[] {
   const path: WorkNode[] = [];
   let node = tree.active ? tree.nodes.get(tree.active) : undefined;
+
   while (node) {
     path.unshift(node);
     node = node.parent ? tree.nodes.get(node.parent) : undefined;
   }
+
   return path;
 }
 
@@ -482,5 +479,6 @@ export function findNode(tree: ScopeTree, idOrPrefix: string): WorkNode | null {
   const exact = tree.nodes.get(idOrPrefix);
   if (exact) return exact;
   const matches = [...tree.nodes.values()].filter((n) => n.id.startsWith(idOrPrefix));
+
   return matches.length === 1 ? matches[0] : null;
 }

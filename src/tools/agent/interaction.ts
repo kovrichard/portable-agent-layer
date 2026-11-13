@@ -49,6 +49,7 @@ function printReport(days: number): undefined {
   const since = new Date(Date.now() - days * DAY_MS);
   const events = turnsSince(since);
   const claims = claimCheckLines(claimChecksSince(since));
+
   for (const line of [...reportLines(summarize(events), days), ...claims])
     console.log(line);
 }

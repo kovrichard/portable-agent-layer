@@ -54,6 +54,7 @@ function mostRecentTranscript(claudeDir: string): SessionFile | null {
   for (const dir of projectDirsIn(claudeDir)) {
     const projPath = resolve(claudeDir, dir.name);
     let files: string[];
+
     try {
       files = readdirSync(projPath).filter((name) => name.endsWith(".jsonl"));
     } catch {
@@ -62,6 +63,7 @@ function mostRecentTranscript(claudeDir: string): SessionFile | null {
 
     for (const name of files) {
       const filepath = resolve(projPath, name);
+
       try {
         const mtime = Bun.file(filepath).lastModified;
         if (!latest || mtime > latest.mtime) {
@@ -113,6 +115,7 @@ function emptyUsage(): SessionUsage {
 
 function parseTranscriptLine(line: string): TranscriptLine[] {
   if (!line) return [];
+
   try {
     return [JSON.parse(line) as TranscriptLine];
   } catch {
@@ -131,6 +134,7 @@ function sessionDurationMs(entries: TranscriptLine[]): number {
   const stamps = entries.flatMap((e) => (e.timestamp ? [e.timestamp] : []));
   const [first, last] = [stamps[0], stamps.at(-1)];
   if (!first || !last) return 0;
+
   return new Date(last).getTime() - new Date(first).getTime();
 }
 
@@ -168,10 +172,13 @@ export function accumulateUsage(transcript: string, sessionId: string): SessionU
   const total = emptyUsage();
   const entries = sessionEntries(transcript, sessionId);
   const assistantTurns = entries.filter((e) => e.type === "assistant");
+
   for (const entry of finalPerMessage(assistantTurns, (e) => e.message?.id)) {
     addTurnUsage(total, entry);
   }
+
   total.durationMs = sessionDurationMs(entries);
+
   return total;
 }
 
@@ -181,22 +188,27 @@ function parseSession(filepath: string, sessionId: string): SessionUsage {
 
 export function fmtTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+
   return String(n);
 }
 
 /** Two decimals reads as money; a sub-dollar session needs four to say anything. */
 export function fmtCost(n: number): string {
   if (n >= 1) return `$${n.toFixed(2)}`;
+
   return `$${n.toFixed(4)}`;
 }
 
 export function fmtDuration(ms: number): string {
   const mins = Math.floor(ms / 60_000);
   if (mins < 1) return "<1m";
+
   if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
   const rem = mins % 60;
+
   return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
 }
 
@@ -212,6 +224,7 @@ const CYAN = "\x1b[36m";
 
 export function summaryLine(project: string, usage: SessionUsage): string {
   const models = [...usage.models].map((m) => m.replace("claude-", "")).join(", ");
+
   return `\n${DIM}Session: ${project} · ${models} · ${fmtDuration(usage.durationMs)} · ${fmtTokens(totalTokens(usage))} tokens · ${usage.calls} calls · ${CYAN}${fmtCost(usage.cost)}${RESET}`;
 }
 
@@ -221,5 +234,6 @@ export function sessionSummary(sessionId: string, claudeDir: string): string | n
   const file = findSessionFile(sessionId, claudeDir);
   if (!file) return null;
   const usage = parseSession(file.filepath, sessionId);
+
   return usage.calls === 0 ? null : summaryLine(file.project, usage);
 }

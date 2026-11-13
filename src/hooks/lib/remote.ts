@@ -45,8 +45,11 @@ export function normalizeRemote(url: string): string | null {
   // another path — so only a real host earns the right to be identity.
   const [hostWithPort, ...rest] = cleaned.split("/");
   const host = hostWithPort.split(":")[0];
+
   if (rest.length === 0 || rest.join("/").length === 0) return null;
+
   if (!/^[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)+$/.test(host)) return null;
+
   return cleaned;
 }
 
@@ -57,5 +60,6 @@ export function detectRemote(dir: string): string | null {
     timeout: GIT_TIMEOUT_MS,
   });
   if (res.status !== 0 || !res.stdout) return null;
+
   return normalizeRemote(res.stdout);
 }

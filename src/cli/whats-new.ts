@@ -30,6 +30,7 @@ function isPrerelease(version: string): boolean {
 /** A stable release's notes already cover the canaries before it, so a stable update skips them. */
 function inRange(tag: string, from: string, to: string): boolean {
   if (isPrerelease(tag) && !isPrerelease(to)) return false;
+
   return newer(tag, from) && !newer(tag, to);
 }
 
@@ -40,6 +41,7 @@ export function noteText(bullet: string): string {
     .replace(/^\*\*[^*]+:\*\*\s*/, "")
     .replace(/\s*\(\[[^\]]*\]\([^)]*\)\)/g, "")
     .trim();
+
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -48,6 +50,7 @@ function section(body: string, heading: string): string[] {
   if (start < 0) return [];
   const rest = body.slice(start).split("\n").slice(1);
   const end = rest.findIndex((line) => line.startsWith("#"));
+
   return (end < 0 ? rest : rest.slice(0, end))
     .filter((line) => /^\s*[*-]\s/.test(line))
     .map(noteText);
@@ -62,6 +65,7 @@ function repoSlug(pkg = palPkg()): string | null {
     const manifest = JSON.parse(readFileSync(resolve(pkg, "package.json"), "utf-8")) as {
       repository?: { url?: string };
     };
+
     return (
       /github\.com\/([^/]+\/[^/.]+)/.exec(manifest.repository?.url ?? "")?.[1] ?? null
     );
@@ -80,6 +84,7 @@ export function summarizeReleases(
     .filter((r) => inRange(r.tag_name, from, to))
     .flatMap((r) => releaseNotes(r.body ?? ""));
   if (items.length === 0) return null;
+
   return {
     items: items.slice(0, SHOWN),
     more: Math.max(0, items.length - SHOWN),
@@ -95,6 +100,7 @@ async function fetchReleases(slug: string): Promise<Release[]> {
       signal: AbortSignal.timeout(3000),
     }
   );
+
   return response.ok ? ((await response.json()) as Release[]) : [];
 }
 
@@ -106,6 +112,7 @@ export async function whatsNew(
 ): Promise<WhatsNew | null> {
   const slug = repoSlug();
   if (!slug) return null;
+
   try {
     return summarizeReleases(await fetchAll(slug), from, to, slug);
   } catch {

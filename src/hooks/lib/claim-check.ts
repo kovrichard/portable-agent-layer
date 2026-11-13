@@ -59,6 +59,7 @@ function withoutQuotes(sentence: string): string {
 export function resultClaims(reply: string): string[] {
   return statements(reply).filter((s) => {
     const own = withoutQuotes(s);
+
     return CLAIM_RE.test(own) && !HEDGED_RE.test(own);
   });
 }
@@ -71,6 +72,7 @@ function isGoalOrHeading(sentence: string): boolean {
 function isStatusClaim(sentence: string): boolean {
   const own = withoutQuotes(sentence);
   if (isGoalOrHeading(own)) return false;
+
   return (
     (VERSION_CONTROL_CLAIM_RE.test(own) || DEPLOY_CLAIM_RE.test(own)) &&
     !STATUS_HEDGED_RE.test(own)
@@ -122,23 +124,28 @@ function promptText(entry: TranscriptLine): string | null {
     const content = entry.message?.content;
     if (typeof content === "string") return content;
     const texts = blocks(content).filter((b) => b.type === "text");
+
     return texts.length ? texts.map((b) => b.text ?? "").join(" ") : null;
   }
+
   if (entry.type === "response_item" && entry.payload?.role === "user") {
     return blocks(entry.payload.content)
       .map((b) => b.text ?? "")
       .join(" ");
   }
+
   return typedRequest(entry);
 }
 
 function isUserPrompt(entry: TranscriptLine): boolean {
   const text = promptText(entry);
+
   return text !== null && !isSystemText(text) && !isCodexInjectedContext(text);
 }
 
 export function isPromptLine(line: string): boolean {
   const entry = parsed(line);
+
   return entry !== null && isUserPrompt(entry);
 }
 
@@ -149,6 +156,7 @@ function callsIn(entry: TranscriptLine, tools: ReadonlySet<string>): string[] {
     return toolCallsOf(entry)
       .filter((call) => tools.has(call.name ?? ""))
       .map((call) => ran(call.args));
+
   if (entry.type === "assistant")
     return blocks(entry.message?.content)
       .filter((b) => b.type === "tool_use" && tools.has(b.name ?? ""))
@@ -156,9 +164,11 @@ function callsIn(entry: TranscriptLine, tools: ReadonlySet<string>): string[] {
   const call = entry.payload;
   if (entry.type !== "response_item" || !call) return [];
   const input = call.input ?? call.arguments ?? call.action;
+
   if (call.type === "local_shell_call")
     return tools === COMMAND_TOOLS ? [ran(input)] : [];
   const isCall = call.type === "function_call" || call.type === "custom_tool_call";
+
   return isCall && tools.has(call.name ?? "") ? [ran(input)] : [];
 }
 
@@ -174,10 +184,12 @@ function callsThisTurn(lines: string[], tools: ReadonlySet<string>): string[] | 
   const entries = lines.map(parsed).filter((e): e is TranscriptLine => e !== null);
   if (!entries.some(isTurnEntry)) return null;
   let calls: string[] = [];
+
   for (const entry of entries) {
     if (isUserPrompt(entry)) calls = [];
     calls.push(...callsIn(entry, tools));
   }
+
   return calls;
 }
 
@@ -187,6 +199,7 @@ export function commandsThisTurn(lines: string[]): string[] | null {
 
 function isBacked(claim: string, commands: string[]): boolean {
   if (!isVersionControlClaim(claim)) return commands.length > 0;
+
   return commands.some((command) => READS_VERSION_CONTROL_RE.test(command));
 }
 
@@ -195,8 +208,10 @@ export function checkClaims(reply: string, commands: string[] | null): ClaimChec
     (s) => resultClaims(s).length > 0 || isStatusClaim(s)
   );
   if (claims.length === 0) return { verdict: "none", claims };
+
   if (commands === null) return { verdict: "unknown", claims };
   const unbacked = claims.filter((claim) => !isBacked(claim, commands));
+
   return unbacked.length > 0
     ? { verdict: "unbacked", claims: unbacked }
     : { verdict: "backed", claims };

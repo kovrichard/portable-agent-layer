@@ -80,7 +80,8 @@
     "eval:correction-kind": "bun eval/correction-kind/build-prompt.ts && bun eval/run.ts correction-kind",
     "eval:correction-kind:test": "bun eval/correction-kind/test-set.ts",
     "eval:rule-drafter": "bun eval/rule-drafter/build-prompt.ts && bun eval/run.ts rule-drafter",
-    "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts"
+    "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts",
+    "eval:pareto-analyze": "bun eval/pareto-analyze/build-prompt.ts && bun eval/run.ts pareto-analyze"
   },
   "lint-staged": {
     "*.ts": [
@@ -92,7 +93,7 @@
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@hughescr/stryker-bun-runner": "1.3.8",
-    "@konvert7/klint": "1.0.2",
+    "@konvert7/klint": "1.6.0",
     "@opencode-ai/plugin": "1.19.5",
     "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
     "@semantic-release/changelog": "7.0.0",

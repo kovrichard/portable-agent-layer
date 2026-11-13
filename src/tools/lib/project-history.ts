@@ -53,6 +53,7 @@ export function decisionRow(project: string, day: string, text: string): History
 export function decisionRows(project: ProjectProgress): HistoryRow[] {
   return (project.decisions ?? "").split("\n").flatMap((line) => {
     const decision = DECISION_LINE.exec(line);
+
     return decision ? [decisionRow(project.name, decision[1], decision[2])] : [];
   });
 }
@@ -60,6 +61,7 @@ export function decisionRows(project: ProjectProgress): HistoryRow[] {
 export function closedIscRows(project: ProjectProgress): HistoryRow[] {
   const rows: HistoryRow[] = [];
   let heading: RegExpExecArray | null = null;
+
   for (const line of (project.changelog ?? "").split("\n")) {
     heading = ARCHIVE_HEADING.exec(line) ?? heading;
     const [isc] = parseIscs(line);
@@ -80,6 +82,7 @@ export function closedIscRows(project: ProjectProgress): HistoryRow[] {
       content: { text: isc.text },
     });
   }
+
   return rows;
 }
 

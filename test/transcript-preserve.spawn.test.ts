@@ -19,6 +19,7 @@ function writeTranscript(rel: string, body: string): string {
   const file = resolve(at.source, rel);
   mkdirSync(resolve(file, ".."), { recursive: true });
   writeFileSync(file, body);
+
   return file;
 }
 

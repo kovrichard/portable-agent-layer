@@ -9,22 +9,20 @@ import { existsSync, lstatSync, readdirSync, rmSync, unlinkSync } from "node:fs"
 import { resolve } from "node:path";
 import { skillsDirOf } from "../../hooks/lib/agent-registry";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  loadSettingsTemplate,
-  log,
-  readJson,
-  removeStatusline,
-  removeStatuslineConfig,
-  replaceJsonConfig,
-  unmergeSettings,
-} from "../lib";
+import { replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { loadSettingsTemplate, unmergeSettings } from "../settings-merge";
+import { removeStatusline, removeStatuslineConfig } from "../statusline";
 
 function unlinkSkillLinks(dir: string): string[] {
   if (!existsSync(dir)) return [];
   const links = readdirSync(dir).filter((name) =>
     lstatSync(resolve(dir, name)).isSymbolicLink()
   );
+
   for (const name of links) unlinkSync(resolve(dir, name));
+
   return links;
 }
 
@@ -55,4 +53,5 @@ if (existsSync(SETTINGS)) {
     "Removed the PAL command allowlist and statusLine from antigravity-cli/settings.json"
   );
 }
+
 removeStatusline("antigravity");

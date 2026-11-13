@@ -12,6 +12,7 @@ const NOW = new Date("2026-09-10T10:00:00.000Z");
 function injected(): Record<string, unknown>[] {
   const file = resolve(home, "memory", "events", "2026-09.jsonl");
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")

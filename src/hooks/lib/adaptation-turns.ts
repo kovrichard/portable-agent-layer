@@ -54,9 +54,11 @@ export interface RequestedTurn extends Turn {
 
 function precedingRequest(turns: Turn[], index: number): string {
   const session = turns[index].session;
+
   for (let i = index - 1; i >= 0; i--) {
     if (turns[i].session === session) return turns[i].message;
   }
+
   return "";
 }
 
@@ -73,11 +75,13 @@ function monthFile(date: Date): string {
 
 function monthEnd(file: string): number | null {
   const match = MONTH_FILE.exec(file);
+
   return match ? Date.UTC(Number(match[1]), Number(match[2]), 1) : null;
 }
 
 function monthFiles(): string[] {
   const dir = paths.adaptation();
+
   return existsSync(dir)
     ? readdirSync(dir)
         .filter((f) => MONTH_FILE.test(f))
@@ -110,6 +114,7 @@ export function appendTurn(turn: TurnInput, now: Date = new Date()): void {
 function parseLine(line: string): Turn | null {
   try {
     const parsed = JSON.parse(line) as Turn;
+
     return typeof parsed.ts === "string" ? parsed : null;
   } catch {
     return null;
@@ -123,6 +128,7 @@ export function turnKey(turn: Turn): string {
 function replacedLine(line: string, replacements: Map<string, Turn>): string {
   const turn = parseLine(line);
   const replacement = turn && replacements.get(turnKey(turn));
+
   return replacement ? JSON.stringify(replacement) : line;
 }
 
@@ -143,6 +149,7 @@ export function replaceTurns(replacements: Map<string, Turn>): void {
 
 export function readTurns(days: number = WINDOW_DAYS, now: Date = new Date()): Turn[] {
   const cutoff = now.getTime() - days * DAY_MS;
+
   return monthFiles()
     .flatMap((file) =>
       readFileSync(resolve(paths.adaptation(), file), "utf-8").split("\n")

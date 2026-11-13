@@ -36,5 +36,6 @@ export function backfillProjects(known: Set<string>, since?: string): number {
       ...decisionRows(project),
     ])
     .filter((row) => row.type !== "commitment" || !live.has(commitmentKey(row.fields)));
+
   return emitUnseen(rows, (row) => row.id, emitHistory, known, since);
 }

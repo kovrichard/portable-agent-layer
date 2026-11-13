@@ -51,6 +51,8 @@ export function backfillSessions(since?: string): number {
       !ended.has(record.sessionId) &&
       (!since || record.ts >= new Date(since).toISOString())
   );
+
   for (const record of fresh) emitSession(record);
+
   return fresh.length;
 }

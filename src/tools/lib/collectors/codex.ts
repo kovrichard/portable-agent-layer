@@ -64,6 +64,7 @@ function rolloutLines(filepath: string): RolloutLine[] {
 
 function withContext(context: RolloutContext, line: RolloutLine): RolloutContext {
   const payload = line.payload ?? {};
+
   if (line.type === "session_meta")
     return {
       ...context,
@@ -71,8 +72,10 @@ function withContext(context: RolloutContext, line: RolloutLine): RolloutContext
       cwd: payload.cwd,
       provider: payload.model_provider,
     };
+
   if (line.type === "turn_context")
     return { ...context, model: payload.model, effort: payload.effort };
+
   return context;
 }
 
@@ -80,6 +83,7 @@ function callsOf(filepath: string): CodexCall[] {
   const calls: CodexCall[] = [];
   let context: RolloutContext = {};
   let lastTotal = -1;
+
   for (const line of rolloutLines(filepath)) {
     context = withContext(context, line);
     const info = line.payload?.type === "token_count" ? line.payload.info : null;
@@ -88,6 +92,7 @@ function callsOf(filepath: string): CodexCall[] {
     lastTotal = total;
     calls.push({ ts: line.timestamp, total, usage: info.last_token_usage, context });
   }
+
   return calls;
 }
 
@@ -115,19 +120,23 @@ export function collectCodex(codexDir: string): number {
   const cursor = readCursor("codex");
   const billing = codexBilling(resolve(codexDir, "auth.json"));
   let emitted = 0;
+
   for (const filepath of codexRollouts(codexDir)) {
     const key = relative(codexDir, filepath).split(sep).join("/");
     const size = statSync(filepath).size;
     if (cursor[`${key}@size`] === size) continue;
     const collectedTotal = Number(cursor[key] ?? -1);
+
     for (const call of callsOf(filepath)) {
       if (call.total <= collectedTotal) continue;
       emitModelCall(call, billing);
       emitted++;
       cursor[key] = call.total;
     }
+
     cursor[`${key}@size`] = size;
     writeCursor("codex", cursor);
   }
+
   return emitted;
 }

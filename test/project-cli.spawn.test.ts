@@ -44,12 +44,14 @@ async function runCli(
     new Response(proc.stderr).text(),
   ]);
   const code = await proc.exited;
+
   return { code, stdout, stderr };
 }
 
 function isaFiles(): string[] {
   const base = resolve(TEST_HOME, "memory", "projects");
   if (!existsSync(base)) return [];
+
   return readdirSync(base).filter((slug) => existsSync(resolve(base, slug, "ISA.md")));
 }
 
@@ -62,6 +64,7 @@ function section(slug: string, heading: string): string {
     "utf-8"
   );
   const hit = isa.split(/^## /m).find((part) => part.startsWith(`${heading}\n`));
+
   return hit ? hit.slice(heading.length).trim() : "";
 }
 

@@ -7,7 +7,8 @@ import {
   streamJsonPrompt,
 } from "../src/hooks/lib/antigravity-inference";
 import { eventsSince } from "../src/hooks/lib/events";
-import { buildAntigravityArgs, inference } from "../src/hooks/lib/inference";
+import { inference } from "../src/hooks/lib/inference";
+import { buildAntigravityArgs } from "../src/hooks/lib/inference-agents";
 import { inferenceModel } from "../src/hooks/lib/models";
 import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
@@ -29,6 +30,7 @@ const PRESERVED = [
 
 function flagValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);
+
   return i === -1 ? undefined : args[i + 1];
 }
 
@@ -47,10 +49,12 @@ function seedConversation(cliDir: string, id: string): string[] {
     resolve(cliDir, "annotations", `${id}.pbtxt`),
     resolve(cliDir, "presence", `${id}.lock`),
   ];
+
   for (const file of files) {
     mkdirSync(resolve(file, ".."), { recursive: true });
     writeFileSync(file, "x");
   }
+
   return [brain, ...files];
 }
 
@@ -126,6 +130,7 @@ describe("inference dispatcher — agy spawn integration (fake binary)", () => {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
     }
+
     tmpBin = freshTestDir(import.meta.file);
     process.env.PAL_HOME = tmpBin;
     process.env.PAL_GEMINI_DIR = resolve(tmpBin, ".gemini");

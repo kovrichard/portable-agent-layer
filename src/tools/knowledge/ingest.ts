@@ -77,6 +77,7 @@ const SOURCE_MARKER_SUFFIX = " -->";
 /** Non-null new wins; null/undefined leaves prior intact. */
 function mergeScalar<T>(prior: T | undefined, next: T | null | undefined): T | undefined {
   if (next === null || next === undefined) return prior;
+
   return next;
 }
 
@@ -87,12 +88,14 @@ function mergeStringArray(
 ): string[] {
   const out = [...(prior ?? [])];
   const seen = new Set(out);
+
   for (const item of next ?? []) {
     if (!seen.has(item)) {
       out.push(item);
       seen.add(item);
     }
   }
+
   return out;
 }
 
@@ -102,14 +105,17 @@ function mergeSocials(
   next: Record<string, string | null> | null | undefined
 ): Record<string, string> {
   const out: Record<string, string> = {};
+
   if (prior && typeof prior === "object") {
     for (const [k, v] of Object.entries(prior as Record<string, unknown>)) {
       if (typeof v === "string" && v.length > 0) out[k] = v;
     }
   }
+
   for (const [k, v] of Object.entries(next ?? {})) {
     if (typeof v === "string" && v.length > 0) out[k] = v;
   }
+
   return out;
 }
 
@@ -118,6 +124,7 @@ function addRelated(list: Related[], rel: Related): Related[] {
   for (const existing of list) {
     if (existing.slug === rel.slug && existing.type === rel.type) return list;
   }
+
   return [...list, rel];
 }
 
@@ -132,6 +139,7 @@ function addRelated(list: Related[], rel: Related): Related[] {
 function industryToTopicTags(industry: string): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
+
   for (const token of industry.toLowerCase().split(/[\s/]+/)) {
     if (!token) continue;
     const prefixed = `topic:${token}`;
@@ -140,6 +148,7 @@ function industryToTopicTags(industry: string): string[] {
       out.push(prefixed);
     }
   }
+
   return out;
 }
 
@@ -174,9 +183,12 @@ export function appendSourceLog(
     .map(([k, v]) => `${k}: ${v}`)
     .join(" · ");
   const lines: string[] = ["", `### ${dateStr} — ${sourceId}`, sourceMarker(sourceId)];
+
   if (attrLine) lines.push(attrLine);
+
   if (contextSnippet?.trim()) lines.push("", contextSnippet.trim());
   const prefix = body.endsWith("\n") || body === "" ? body : `${body}\n`;
+
   return `${prefix}${lines.join("\n")}\n`;
 }
 
@@ -200,14 +212,19 @@ function newPersonEntity(input: PersonInput, slug: string): Entity {
     status: "seedling",
     related: [],
   };
+
   if (input.role) fm.role = input.role;
+
   if (input.title) fm.position = input.title;
+
   if (input.company) fm.company = input.company;
+
   if (input.importance) fm.importance = input.importance;
   const socials = mergeSocials(undefined, input.social);
   if (Object.keys(socials).length > 0) {
     fm.socials = Object.entries(socials).map(([k, v]) => `${k}:${v}`);
   }
+
   return { domain: "People", slug, frontmatter: withAddressing(fm, input), body: "" };
 }
 
@@ -218,6 +235,7 @@ function withAddressing(fm: EntityFrontmatter, input: Addressing): EntityFrontma
   if (aliases.length > 0) fm.aliases = aliases;
   const relation = mergeScalar(fm.relation, input.relation);
   if (relation) fm.relation = relation;
+
   return fm;
 }
 
@@ -233,10 +251,15 @@ function newCompanyEntity(input: CompanyInput, slug: string): Entity {
     status: "seedling",
     related: [],
   };
+
   if (input.domain) fm.domain_name = input.domain;
+
   if (input.industry) fm.industry = input.industry;
+
   if (input.mentioned_as) fm.mentioned_as = input.mentioned_as;
+
   if (input.sentiment) fm.sentiment = input.sentiment;
+
   return { domain: "Companies", slug, frontmatter: withAddressing(fm, input), body: "" };
 }
 
@@ -255,6 +278,7 @@ function mergePerson(prior: Entity, input: PersonInput): Entity {
               // additional colons that must stay inside the value.
               const idx = entry.indexOf(":");
               if (idx <= 0) return null;
+
               return [entry.slice(0, idx), entry.slice(idx + 1)];
             })
             .filter((kv): kv is [string, string] => kv !== null && kv[1].length > 0)
@@ -265,6 +289,7 @@ function mergePerson(prior: Entity, input: PersonInput): Entity {
   if (Object.keys(socials).length > 0) {
     fm.socials = Object.entries(socials).map(([k, v]) => `${k}:${v}`);
   }
+
   return { ...prior, frontmatter: withAddressing(fm, input) };
 }
 
@@ -274,9 +299,11 @@ function mergeCompany(prior: Entity, input: CompanyInput): Entity {
   fm.industry = mergeScalar(fm.industry, input.industry);
   fm.mentioned_as = mergeScalar(fm.mentioned_as, input.mentioned_as);
   fm.sentiment = mergeScalar(fm.sentiment, input.sentiment);
+
   if (input.industry) {
     fm.tags = mergeStringArray(fm.tags, industryToTopicTags(input.industry));
   }
+
   return { ...prior, frontmatter: withAddressing(fm, input) };
 }
 
@@ -302,6 +329,7 @@ function upsertPerson(
     }),
   };
   save(entity, rootDir);
+
   return { slug, created, entity };
 }
 
@@ -328,6 +356,7 @@ function upsertCompany(
     }),
   };
   save(entity, rootDir);
+
   return { slug, created, entity };
 }
 
@@ -348,10 +377,16 @@ function upsertCompany(
  */
 function findExistingCompanyByTitle(name: string, rootDir?: string): string | null {
   const target = name.toLowerCase();
+
   for (const e of list("Companies", rootDir)) {
     if (e.frontmatter.title.toLowerCase() === target) return e.slug;
   }
+
   return null;
+}
+
+function onlyTopicTagsSoNoPhantomEdges(company: Entity): string[] {
+  return company.frontmatter.tags.filter((tag) => tag.startsWith("topic:"));
 }
 
 function linkPersonToCompany(
@@ -361,27 +396,20 @@ function linkPersonToCompany(
   sourceId: string,
   rootDir?: string
 ): void {
-  // Resolution order: (1) in-call lookup map (domain-derived slug wins when
-  // the same payload defines both), (2) existing-store title scan (ISC-21
-  // — re-ingest of a person referencing an already-known company), (3)
-  // fall back to slugify(name) and stub the company.
   const companySlug =
     nameToSlug.get(companyName.toLowerCase()) ??
     findExistingCompanyByTitle(companyName, rootDir) ??
     slugify(companyName);
   if (!companySlug) return;
+
   if (!load("Companies", companySlug, rootDir)) {
     upsertCompany({ name: companyName }, sourceId, rootDir);
   }
+
   const person = load("People", personSlug, rootDir);
   if (!person) return;
-  // ISC-18: inherit ONLY the company's topic:* tags. Structural tags stay
-  // company-scoped so we don't create phantom graph edges between unrelated
-  // people sharing only their employer's slug or other non-facet labels.
   const company = load("Companies", companySlug, rootDir);
-  const inheritedTopicTags = company
-    ? company.frontmatter.tags.filter((t) => t.startsWith("topic:"))
-    : [];
+  const inheritedTopicTags = company ? onlyTopicTagsSoNoPhantomEdges(company) : [];
   const updated: Entity = {
     ...person,
     frontmatter: {
@@ -407,6 +435,7 @@ export function ingestEntities(
   // canonical (possibly domain-derived) slug rather than guessing.
   const companies = (input.companies ?? []).map((c) => {
     const r = upsertCompany(c, sourceId, rootDir);
+
     return { slug: r.slug, created: r.created, name: c.name };
   });
   const nameToSlug = new Map<string, string>(
@@ -414,11 +443,14 @@ export function ingestEntities(
   );
   const people = (input.people ?? []).map((p) => {
     const r = upsertPerson(p, sourceId, rootDir);
+
     if (p.company) {
       linkPersonToCompany(r.slug, p.company, nameToSlug, sourceId, rootDir);
     }
+
     return { slug: r.slug, created: r.created };
   });
+
   return {
     people,
     companies: companies.map(({ slug, created }) => ({ slug, created })),

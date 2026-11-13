@@ -30,8 +30,10 @@ export function agendaPath(): string {
 export function readAgenda(): Agenda | null {
   const path = agendaPath();
   if (!existsSync(path)) return null;
+
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8")) as Agenda;
+
     return Array.isArray(parsed.moves) && parsed.generatedAt ? parsed : null;
   } catch {
     return null;

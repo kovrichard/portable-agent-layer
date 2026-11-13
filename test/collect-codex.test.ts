@@ -21,6 +21,7 @@ let rollout: string;
 function streamed(): Record<string, unknown>[] {
   const dir = resolve(home, "memory", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))

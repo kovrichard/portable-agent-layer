@@ -27,8 +27,10 @@ function registry(version: string) {
   const asked: string[] = [];
   const fetchImpl = (async (url: string) => {
     asked.push(url);
+
     return Response.json({ version });
   }) as unknown as typeof fetch;
+
   return { asked, fetchImpl };
 }
 

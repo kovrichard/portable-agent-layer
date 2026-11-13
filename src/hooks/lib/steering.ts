@@ -31,9 +31,7 @@ interface SteeringRule {
   snippet: string;
 }
 
-// Ordered rule table. Multiple rules may match one prompt; classifyPrompt
-// returns every match in declaration order. Patterns are anchored on word
-// boundaries to avoid substring false-positives (e.g. "warm" ≠ "rm").
+// classifyPrompt returns every matching rule in this order; word boundaries keep "warm" from matching "rm".
 const STEERING_RULES: Array<SteeringRule & { tag: SteeringTag }> = [
   {
     tag: "debugging",
@@ -92,16 +90,20 @@ function effectiveRules(): SteeringRule[] {
   const cfg = raw().steering ?? {};
   const disabled = new Set(cfg.disable ?? []);
   const rules: SteeringRule[] = STEERING_RULES.filter((r) => !disabled.has(r.tag));
+
   for (const u of cfg.rules ?? []) {
     if (!u?.tag || !u?.pattern || !u?.snippet) continue;
     let pattern: RegExp;
+
     try {
       pattern = new RegExp(u.pattern, "i");
     } catch {
       continue; // fail-open: skip malformed regex
     }
+
     rules.push({ tag: u.tag, pattern, snippet: u.snippet });
   }
+
   return rules;
 }
 
@@ -110,12 +112,14 @@ function matchRules(text: string): SteeringRule[] {
   if (!text?.trim()) return [];
   const matched: SteeringRule[] = [];
   const seen = new Set<string>();
+
   for (const rule of effectiveRules()) {
     if (!seen.has(rule.tag) && rule.pattern.test(text)) {
       seen.add(rule.tag);
       matched.push(rule);
     }
   }
+
   return matched;
 }
 
@@ -129,15 +133,18 @@ export function getSteeringReminder(prompt: string): string | null {
   if (!isEnabled("contextualSteering")) return null;
 
   let matched: SteeringRule[];
+
   try {
     matched = matchRules(prompt);
   } catch {
     return null; // fail-open: never block a prompt on a classifier error
   }
+
   if (matched.length === 0) return null;
 
   const lines: string[] = [];
   let budget = MAX_STEERING_BYTES;
+
   for (const rule of matched) {
     const line = `- ${rule.snippet}`;
     const cost = Buffer.byteLength(line);
@@ -145,12 +152,14 @@ export function getSteeringReminder(prompt: string): string | null {
     lines.push(line);
     budget -= cost;
   }
+
   if (lines.length === 0) return null;
 
   const inner = [
     "Heuristic self-checks auto-matched on your prompt — they may be off; ignore any that don't apply:",
     ...lines,
   ];
+
   // Dual-live test period: co-locate the report instruction with the trigger so
   // it fires reliably across sessions/compaction. Flip steeringTestReport off to end it.
   if (isEnabled("steeringTestReport")) {
@@ -158,5 +167,6 @@ export function getSteeringReminder(prompt: string): string | null {
       "— Test period: assistant, briefly note to the user that a steering self-check fired, and which one(s)."
     );
   }
+
   return ["<system-reminder>", ...inner, "</system-reminder>"].join("\n");
 }

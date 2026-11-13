@@ -13,6 +13,7 @@ const TEST_HOME = projectsHome(import.meta.file);
 function checkoutDir(name: string): string {
   const dir = resolve(TEST_HOME, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 

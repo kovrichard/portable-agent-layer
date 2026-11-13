@@ -3,11 +3,11 @@ import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { agentFindings, agentsWithPal, rosterFindings } from "../src/cli/doctor/agents";
 import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
+import { copyAgents } from "../src/targets/claude/agents";
 import {
-  copyAgents,
   copyAgentsForAntigravity,
   copyAgentsForCodex,
-} from "../src/targets/lib";
+} from "../src/targets/shipped-agents";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
@@ -26,15 +26,18 @@ let ROOT: string;
 
 beforeEach(() => {
   ROOT = freshTestDir(import.meta.file);
+
   for (const [name, dir] of Object.entries(DIR_VARS)) {
     process.env[name] = resolve(ROOT, dir);
   }
+
   write(resolve(ROOT, "opencode", "AGENTS.md"), "# PAL");
 });
 
 function write(path: string, content: string): string {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, content);
+
   return path;
 }
 
@@ -79,6 +82,14 @@ describe("an installed agent", () => {
     expect(problems(agentFindings(["claude"]))).toEqual([]);
   });
 
+  test("a healthy hook config yields only real findings, one of them for the hooks", () => {
+    healthyClaude();
+    const findings = agentFindings(["claude"]);
+
+    expect(findings.every((f) => typeof f.id === "string")).toBe(true);
+    expect(findings.filter((f) => f.id.startsWith("claude.hooks"))).toHaveLength(1);
+  });
+
   test("hooks that are not registered fail, with the reinstall command", () => {
     healthyClaude();
     removeOnceReleased(resolve(ROOT, "claude", "settings.json"));
@@ -107,6 +118,9 @@ describe("an installed agent", () => {
     const finding = byId(agentFindings(["claude"]), "claude.hooks.scripts");
     expect(finding?.severity).toBe("fail");
     expect(finding?.title).toContain("1 of 2");
+    expect(finding?.title).toContain(
+      `(${resolve(ROOT, "moved", "src", "hooks", "StopOrchestrator.ts")})`
+    );
     expect(finding?.fix?.command).toBe("pal cli install --claude");
   });
 
@@ -237,6 +251,7 @@ describe("installed subagents", () => {
     healthyClaude();
     write(resolve(ROOT, "pkg", "assets", "agents", "researcher.md"), shippedAgent);
     copyAgents();
+
     return resolve(ROOT, "claude", "agents", "researcher.md");
   }
 

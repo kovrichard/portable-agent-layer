@@ -43,8 +43,10 @@ function writeFakeGhLauncher(bin: string) {
   if (process.platform === "win32") {
     writeFileSync(resolve(bin, "gh.js"), fakeGhScript());
     writeFileSync(resolve(bin, "gh.cmd"), `@echo off\r\nbun "%~dp0gh.js" %*\r\n`);
+
     return;
   }
+
   writeFileSync(resolve(bin, "gh"), `#!/usr/bin/env bun\n${fakeGhScript()}`);
   chmodSync(resolve(bin, "gh"), 0o755);
 }
@@ -75,6 +77,7 @@ function prState(n: number, state: "MERGED" | "CLOSED" | "OPEN") {
 
 function ghCalls(): string[] {
   if (!existsSync(ghLog)) return [];
+
   return readFileSync(ghLog, "utf-8").split("\n").filter(Boolean);
 }
 

@@ -28,6 +28,7 @@ beforeAll(() => {
   removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
   process.env.PAL_HOME = TEST_HOME;
+
   for (const [name, dir] of Object.entries(AGENT_DIRS))
     process.env[name] = resolve(TEST_HOME, "agents", dir);
 });

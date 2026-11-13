@@ -7,19 +7,15 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  loadCursorHooksTemplate,
-  log,
-  readJson,
-  removeAgentsFromCursor,
-  removePalContextFiles,
-  removePalDocs,
-  removeSkills,
-  removeStatusline,
-  removeStatuslineConfig,
-  replaceJsonConfig,
-  unmergeCursorHooks,
-} from "../lib";
+import { replaceJsonConfig } from "../config-backups";
+import { removePalContextFiles } from "../context-files";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { removePalDocs } from "../pal-docs";
+import { removeAgentsFromCursor } from "../shipped-agents";
+import { removeSkills } from "../skills";
+import { removeStatusline, removeStatuslineConfig } from "../statusline";
+import { loadCursorHooksTemplate, unmergeCursorHooks } from "./hooks";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CURSOR_DIR = platform.cursorDir();
@@ -59,6 +55,7 @@ if (existsSync(CLI_CONFIG)) {
 } else {
   log.info("No cli-config.json found, skipping statusLine removal");
 }
+
 removeStatusline("cursor");
 
 const removedRules = removePalContextFiles(resolve(CURSOR_DIR, "rules"), ".mdc");

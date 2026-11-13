@@ -32,6 +32,7 @@ function getOutputPaths() {
   if (!opencodeDir || !claudeDir) {
     throw new Error("PAL_OPENCODE_DIR or PAL_CLAUDE_DIR not set");
   }
+
   return {
     outputPath: resolve(opencodeDir, "AGENTS.md"),
     symlinkPath: resolve(claudeDir, "CLAUDE.md"),
@@ -40,8 +41,10 @@ function getOutputPaths() {
 
 function latestMtime(...filePaths: string[]): number {
   let latest = 0;
+
   for (const p of filePaths) {
     if (!existsSync(p)) continue;
+
     try {
       const mt = statSync(p).mtimeMs;
       if (mt > latest) latest = mt;
@@ -49,6 +52,7 @@ function latestMtime(...filePaths: string[]): number {
       /* skip */
     }
   }
+
   return latest;
 }
 
@@ -60,11 +64,14 @@ function ensureOneSymlink(linkPath: string, targetPath: string): void {
       const currentTarget = resolve(dirname(linkPath), readlinkSync(linkPath));
       if (currentTarget === targetPath) return;
     }
+
     unlinkSync(linkPath);
   } catch {
     // doesn't exist — create it
   }
+
   ensureDir(dirname(linkPath));
+
   try {
     const relTarget = relative(dirname(linkPath), targetPath).replaceAll("\\", "/");
     symlinkSync(relTarget, linkPath);
@@ -155,17 +162,19 @@ function ensureClaudeCodeMd(): void {
   if (!claudeDir) return;
   const claudeMdPath = resolve(claudeDir, "CLAUDE.md");
   const expected = buildClaudeCodeMd();
+
   try {
     if (existsSync(claudeMdPath) && !lstatSync(claudeMdPath).isSymbolicLink()) {
       const current = readFileSync(claudeMdPath, "utf-8");
       if (current === expected) return; // no change needed
       // @imports changed — rewrite
     } else if (existsSync(claudeMdPath)) {
-      unlinkSync(claudeMdPath); // remove symlink
+      unlinkSync(claudeMdPath);
     }
   } catch {
     /* fall through */
   }
+
   try {
     ensureDir(claudeDir);
     writeFileSync(claudeMdPath, expected, "utf-8");
@@ -183,6 +192,7 @@ export function ensureAntigravityRule(): void {
     "PAL — identity, response modes and context routing",
     buildClaudeMd()
   );
+
   try {
     if (existsSync(rulePath) && readFileSync(rulePath, "utf-8") === expected) return;
     ensureDir(dirname(rulePath));
@@ -195,18 +205,22 @@ export function ensureAntigravityRule(): void {
 /** Regenerate AGENTS.md if any source file is newer, write real CLAUDE.md, ensure other symlinks. Returns true if rebuilt. */
 export function regenerateIfNeeded(): boolean {
   const { outputPath } = getOutputPaths();
+
   if (!needsRebuild()) {
     ensureSymlinks();
     ensureClaudeCodeMd();
     ensureAntigravityRule();
+
     return false;
   }
+
   ensureDir(dirname(outputPath));
   writeFileSync(outputPath, buildClaudeMd(), "utf-8");
   // Write Claude Code's CLAUDE.md as a real file (removing any existing symlink)
   const claudeDir = platform.claudeDir();
   if (claudeDir) {
     const claudeMdPath = resolve(claudeDir, "CLAUDE.md");
+
     try {
       if (existsSync(claudeMdPath)) unlinkSync(claudeMdPath);
       ensureDir(claudeDir);
@@ -215,7 +229,9 @@ export function regenerateIfNeeded(): boolean {
       /* ignore — CLAUDE.md write failure is non-fatal */
     }
   }
+
   ensureSymlinks();
   ensureAntigravityRule();
+
   return true;
 }

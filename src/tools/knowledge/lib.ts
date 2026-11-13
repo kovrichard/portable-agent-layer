@@ -33,6 +33,7 @@ import {
 import { resolve } from "node:path";
 import { logEntityFirstSeen, type SeenEntity } from "../../hooks/lib/entity-events";
 import { ensureDir, paths } from "../../hooks/lib/paths";
+import { parseScalar, parseStringArray } from "./yaml-scalars";
 
 // --- Constants --------------------------------------------------------------
 
@@ -110,6 +111,7 @@ export function slugify(input: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
   return kebab;
 }
 
@@ -117,12 +119,15 @@ export function slugify(input: string): string {
 
 function emitScalar(v: unknown): string {
   if (v === null || v === undefined) return '""';
+
   if (typeof v === "number" || typeof v === "boolean") return String(v);
+
   return JSON.stringify(String(v));
 }
 
 function emitStringArray(arr: readonly string[]): string {
   if (arr.length === 0) return "[]";
+
   return `[${arr.map((s) => JSON.stringify(s)).join(", ")}]`;
 }
 
@@ -145,12 +150,15 @@ function emitFrontmatter(fm: EntityFrontmatter): string {
     const line = extraKeyLine(k, v);
     if (line !== null) lines.push(line);
   }
+
   lines.push("---");
+
   return lines.join("\n");
 }
 
 function relatedLines(related: EntityFrontmatter["related"]): string[] {
   if (related.length === 0) return ["related: []"];
+
   return [
     "related:",
     ...related.flatMap((r) => [
@@ -162,75 +170,21 @@ function relatedLines(related: EntityFrontmatter["related"]): string[] {
 
 function extraKeyLine(k: string, v: unknown): string | null {
   if (v === undefined || v === null) return null;
+
   if (Array.isArray(v)) {
     // Other array shapes are out of scope in v1 — skipped silently.
     return v.every((x) => typeof x === "string")
       ? `${k}: ${emitStringArray(v as string[])}`
       : null;
   }
+
   // Nested objects out of scope in v1.
   if (typeof v === "object") return null;
+
   return `${k}: ${emitScalar(v)}`;
 }
 
 // --- YAML parser (bounded schema) ------------------------------------------
-
-function parseScalar(raw: string): unknown {
-  const trimmed = raw.trim();
-  if (trimmed === "") return "";
-  if (trimmed === "true") return true;
-  if (trimmed === "false") return false;
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      return trimmed.slice(1, -1);
-    }
-  }
-  return trimmed;
-}
-
-function parseStringArray(raw: string): string[] {
-  const trimmed = raw.trim();
-  if (trimmed === "[]") return [];
-  if (!(trimmed.startsWith("[") && trimmed.endsWith("]"))) return [];
-  const inner = trimmed.slice(1, -1).trim();
-  if (inner === "") return [];
-  return splitOutsideQuotes(inner).map((piece) => String(parseScalar(piece)));
-}
-
-function splitOutsideQuotes(inner: string): string[] {
-  const out: string[] = [];
-  let buf = "";
-  let inStr = false;
-  let esc = false;
-  for (const ch of inner) {
-    if (esc) {
-      buf += ch;
-      esc = false;
-      continue;
-    }
-    if (ch === "\\" && inStr) {
-      buf += ch;
-      esc = true;
-      continue;
-    }
-    if (ch === '"') {
-      inStr = !inStr;
-      buf += ch;
-      continue;
-    }
-    if (ch === "," && !inStr) {
-      out.push(buf);
-      buf = "";
-      continue;
-    }
-    buf += ch;
-  }
-  if (buf.trim() !== "") out.push(buf);
-  return out;
-}
 
 interface SplitResult {
   fm: string;
@@ -240,6 +194,7 @@ interface SplitResult {
 function splitFrontmatter(raw: string): SplitResult {
   const match = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(raw);
   if (!match) return { fm: "", body: raw };
+
   return { fm: match[1], body: match[2] };
 }
 
@@ -257,12 +212,15 @@ function parseFrontmatter(fmText: string): EntityFrontmatter {
 
   const lines = fmText.split("\n");
   let i = 0;
+
   while (i < lines.length) {
     const entry = parseTopLevelKey(lines[i]);
     i++;
+
     if (!entry) continue;
     const { key, rawVal } = entry;
     const v = rawVal.trim();
+
     if (key === "tags") {
       out.tags = parseStringArray(rawVal);
     } else if (key === "related" && v === "") {
@@ -283,9 +241,11 @@ function parseFrontmatter(fmText: string): EntityFrontmatter {
 
 function parseTopLevelKey(line: string): { key: string; rawVal: string } | null {
   if (line.trim() === "") return null;
+
   if (line.startsWith(" ") || line.startsWith("\t") || line.startsWith("-")) return null;
   const colonIdx = line.indexOf(":");
   if (colonIdx < 0) return null;
+
   return { key: line.slice(0, colonIdx).trim(), rawVal: line.slice(colonIdx + 1) };
 }
 
@@ -295,6 +255,7 @@ function isIndentedChild(line: string): boolean {
 
 function toRelated(partial: Partial<Related> | null): Related | null {
   if (!partial?.slug) return null;
+
   return { slug: partial.slug, type: (partial.type ?? "related") as RelationType };
 }
 
@@ -305,6 +266,7 @@ function parseRelatedBlock(
   const items: Related[] = [];
   let current: Partial<Related> | null = null;
   let i = start;
+
   for (; i < lines.length && isIndentedChild(lines[i]); i++) {
     const t = lines[i].trim();
     if (t.startsWith("- slug:")) {
@@ -317,8 +279,10 @@ function parseRelatedBlock(
       current.type = parseScalar(t.slice("type:".length)) as RelationType;
     }
   }
+
   const last = toRelated(current);
   if (last) items.push(last);
+
   return { items, next: i };
 }
 
@@ -329,25 +293,31 @@ export function validate(entity: Entity): void {
   if (!fm.title || typeof fm.title !== "string") {
     throw new Error(`knowledge: missing or invalid 'title' for ${entity.slug}`);
   }
+
   if (typeof fm.quality !== "number" || fm.quality < 0 || fm.quality > 10) {
     throw new Error(`knowledge: 'quality' must be 0-10 for ${entity.slug}`);
   }
+
   if (!STATUSES.includes(fm.status)) {
     throw new Error(
       `knowledge: 'status' must be one of ${STATUSES.join("|")} for ${entity.slug}`
     );
   }
+
   if (!DOMAINS.includes(entity.domain)) {
     throw new Error(
       `knowledge: 'domain' must be one of ${DOMAINS.join("|")} (got ${entity.domain})`
     );
   }
+
   if (!Array.isArray(fm.tags) || fm.tags.some((t) => typeof t !== "string")) {
     throw new Error(`knowledge: 'tags' must be string[] for ${entity.slug}`);
   }
+
   if (!Array.isArray(fm.related)) {
     throw new Error(`knowledge: 'related' must be array for ${entity.slug}`);
   }
+
   for (const r of fm.related) {
     if (!r.slug || !RELATION_TYPES.includes(r.type)) {
       throw new Error(
@@ -363,12 +333,14 @@ export function serialize(entity: Entity): string {
   validate(entity);
   const fmText = emitFrontmatter(entity.frontmatter);
   const body = entity.body.endsWith("\n") ? entity.body : `${entity.body}\n`;
+
   return `${fmText}\n\n${body}`;
 }
 
 export function parse(domain: Domain, slug: string, raw: string): Entity {
   const { fm, body } = splitFrontmatter(raw);
   const frontmatter = parseFrontmatter(fm);
+
   return { domain, slug, frontmatter, body: body.replace(/^\n+/, "") };
 }
 
@@ -378,8 +350,10 @@ function domainDir(domain: Domain, rootDir?: string): string {
   if (rootDir) {
     const d = resolve(rootDir, domain);
     if (!existsSync(d)) mkdirSync(d, { recursive: true });
+
     return d;
   }
+
   return ensureDir(resolve(paths.knowledge(), domain));
 }
 
@@ -407,6 +381,7 @@ export function save(entity: Entity, rootDir?: string): void {
   const tmp = `${p}.tmp`;
   writeFileSync(tmp, serialize(entity), "utf-8");
   renameSync(tmp, p);
+
   if (firstSeenInTheStore) {
     logEntityFirstSeen(seenEntity(entity));
   }
@@ -415,15 +390,18 @@ export function save(entity: Entity, rootDir?: string): void {
 export function load(domain: Domain, slug: string, rootDir?: string): Entity | null {
   const p = entityPath(domain, slug, rootDir);
   if (!existsSync(p)) return null;
+
   return parse(domain, slug, readFileSync(p, "utf-8"));
 }
 
 export function list(domain?: Domain, rootDir?: string): Entity[] {
   const target = domain ? [domain] : DOMAINS;
   const out: Entity[] = [];
+
   for (const d of target) {
     const dir = domainDir(d, rootDir);
     if (!existsSync(dir)) continue;
+
     for (const entry of readdirSync(dir)) {
       if (!entry.endsWith(".md") || entry.startsWith("_")) continue;
       const slug = entry.slice(0, -3);
@@ -431,6 +409,7 @@ export function list(domain?: Domain, rootDir?: string): Entity[] {
       if (e) out.push(e);
     }
   }
+
   return out;
 }
 
@@ -462,6 +441,7 @@ export function getOrCreate(input: CreateInput, rootDir?: string): Entity {
   if (!slug) {
     throw new Error(`knowledge: cannot derive slug from name "${input.name}"`);
   }
+
   const existing = load(input.domain, slug, rootDir);
   if (existing) return existing;
 
@@ -484,5 +464,6 @@ export function getOrCreate(input: CreateInput, rootDir?: string): Entity {
     body: input.body ?? "",
   };
   save(entity, rootDir);
+
   return entity;
 }

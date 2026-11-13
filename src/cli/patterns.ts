@@ -22,6 +22,7 @@ function printPatterns(): undefined {
     ...focusLines(focusBlocks(activity)),
     ...projectsLines(projectProfiles(activity)),
   ];
+
   for (const line of lines) console.log(line);
 }
 

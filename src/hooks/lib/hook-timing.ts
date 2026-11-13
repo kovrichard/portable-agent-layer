@@ -11,9 +11,11 @@ function elapsedMs(since: number): number {
 export function startHookTiming(hook: string) {
   const started = performance.now();
   const handlers: Record<string, number> = {};
+
   return {
     async time<T>(name: string, work: Promise<T> | (() => Promise<T> | T)): Promise<T> {
       const begun = performance.now();
+
       try {
         return await (typeof work === "function" ? work() : work);
       } finally {

@@ -117,6 +117,7 @@ describe("pal cli cost", () => {
   test("prints the months and the leaderboards", async () => {
     appendEvent("model_call", { costUsd: 2 }, { runtime: "opencode", project: "pal" });
     const log = spyOn(console, "log").mockImplementation(() => {});
+
     try {
       expect(await runCommand(costCommand, [], ["pal", "cli", "cost"])).toBe(0);
       const text = log.mock.calls.join("\n");

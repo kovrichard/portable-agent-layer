@@ -6,18 +6,14 @@
 import { existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { assets, palPkg, platform } from "../../hooks/lib/paths";
-import {
-  loadSettingsTemplate,
-  log,
-  readJson,
-  removeAgents,
-  removePalDocs,
-  removeSkills,
-  removeStatusline,
-  removeStatuslineConfig,
-  replaceJsonConfig,
-  unmergeSettings,
-} from "../lib";
+import { replaceJsonConfig } from "../config-backups";
+import { readJson } from "../json-file";
+import { log } from "../log";
+import { removePalDocs } from "../pal-docs";
+import { loadSettingsTemplate, unmergeSettings } from "../settings-merge";
+import { removeSkills } from "../skills";
+import { removeStatusline, removeStatuslineConfig } from "../statusline";
+import { removeAgents } from "./agents";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
 const CLAUDE_DIR = platform.claudeDir();
@@ -57,12 +53,14 @@ removePalDocs();
 
 const agentsMd = resolve(platform.opencodeDir(), "AGENTS.md");
 const claudeMd = resolve(CLAUDE_DIR, "CLAUDE.md");
+
 try {
   unlinkSync(claudeMd);
   log.success("Removed ~/.claude/CLAUDE.md");
 } catch {
   /* gone */
 }
+
 try {
   unlinkSync(agentsMd);
   log.success("Removed ~/.config/opencode/AGENTS.md");

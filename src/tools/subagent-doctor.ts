@@ -16,8 +16,18 @@ import { basename, resolve } from "node:path";
 import { parseAgentDefinition } from "../hooks/lib/agent-definition";
 import { AGENT_NAMES, type AgentName } from "../hooks/lib/agent-registry";
 import { assets, isDirectChild, namesAPath, palHome, toPath } from "../hooks/lib/paths";
-
-type Level = "pass" | "warn" | "error";
+import {
+  type AddFinding,
+  checkAntigravityBlock,
+  checkClaudeBlock,
+  checkCodexBlock,
+  checkCopilotBlock,
+  checkCursorBlock,
+  checkOpencodeBlock,
+  hasField,
+  type Level,
+  topLevelKeys,
+} from "./subagent-platform-checks";
 
 interface DoctorFinding {
   level: Level;
@@ -47,37 +57,7 @@ const RESERVED_WORDS = ["anthropic", "claude"];
 const MAX_NAME = 64;
 const MAX_DESCRIPTION = 1024;
 const MAX_BODY_LINES = 500;
-
-/** Model values PAL recognises across agents; anything else warns (naming drifts). */
-const KNOWN_MODELS = ["inherit", "fable", "sonnet", "opus", "haiku"];
-const PERMISSION_VALUES = ["allow", "ask", "deny"];
-const OPENCODE_MODES = ["subagent", "primary", "all"];
-const CODEX_SANDBOX_MODES = ["read-only", "workspace-write", "danger-full-access"];
-const CODEX_TABLE_KEYS = ["tools", "skills"];
 const SHARED_FIELDS = ["name", "description"];
-const ANTIGRAVITY_MODELS = ["inherit", "flash", "pro"];
-const ANTIGRAVITY_TOOLS = [
-  "view_file",
-  "write_to_file",
-  "replace_file_content",
-  "multi_replace_file_content",
-  "list_dir",
-  "find_by_name",
-  "grep_search",
-  "search_web",
-  "read_url_content",
-  "run_command",
-  "manage_task",
-  "schedule",
-  "list_permissions",
-  "ask_permission",
-  "invoke_subagent",
-  "define_subagent",
-  "send_message",
-  "manage_subagents",
-  "ask_question",
-  "generate_image",
-];
 
 /** Machine/user-specific absolute paths that will not survive an export. */
 const ABSOLUTE_PATH_RE =
@@ -87,6 +67,7 @@ const ABSOLUTE_PATH_RE =
 function shippedAgentNames(): Set<string> {
   const dir = assets.agents();
   if (!existsSync(dir)) return new Set();
+
   return new Set(
     readdirSync(dir)
       .filter((f) => f.endsWith(".md"))
@@ -98,6 +79,7 @@ function shippedAgentNames(): Set<string> {
 function isShippedSubagentFile(file: string): boolean {
   const dir = assets.agents();
   if (!existsSync(dir) || !existsSync(file)) return false;
+
   return isDirectChild(realpathSync(dir), realpathSync(file));
 }
 
@@ -107,6 +89,7 @@ function parseSubagent(content: string): ParsedSubagent {
   if (!definition.hasFrontmatter) {
     return { ...definition, name: null, description: null, descriptionQuoted: false };
   }
+
   const { global, platforms, body } = definition;
 
   const globalText = global.join("\n");
@@ -130,159 +113,6 @@ function parseSubagent(content: string): ParsedSubagent {
   };
 }
 
-/** Value of a single-line `key: value` field within an un-indented block. */
-function fieldValue(lines: string[], key: string): string | null {
-  const re = new RegExp(String.raw`^${key}:[ \t]*(.*?)\s*$`);
-  for (const line of lines) {
-    const m = re.exec(line);
-    if (m) return m[1].replace(/^"(.*)"$/, "$1");
-  }
-  return null;
-}
-
-function topLevelKeys(lines: string[]): string[] {
-  return lines.flatMap((line) => /^([A-Za-z0-9_-]+):/.exec(line)?.[1] ?? []);
-}
-
-/** True when a block declares `key:` (with or without an inline value). */
-function hasField(lines: string[], key: string): boolean {
-  return lines.some((l) => new RegExp(`^${key}:`).test(l));
-}
-
-function checkClaudeBlock(lines: string[], add: AddFinding): void {
-  const model = fieldValue(lines, "model");
-  if (model) validateModel(model, "claude", add);
-  const tools = fieldValue(lines, "tools");
-  if (tools !== null && tools.trim() === "") {
-    add("warn", "claude.tools", "`tools` is empty — omit it to inherit all tools");
-  }
-}
-
-function checkOpencodeBlock(lines: string[], add: AddFinding): void {
-  const mode = fieldValue(lines, "mode");
-  if (!mode) {
-    add(
-      "warn",
-      "opencode.mode",
-      "no `mode` — set `mode: subagent` so opencode treats it as a delegate"
-    );
-  } else if (!OPENCODE_MODES.includes(mode)) {
-    add(
-      "warn",
-      "opencode.mode",
-      `mode "${mode}" — expected one of ${OPENCODE_MODES.join(", ")}`
-    );
-  } else if (mode !== "subagent") {
-    add("warn", "opencode.mode", `mode is "${mode}", not "subagent" — intended?`);
-  }
-  const model = fieldValue(lines, "model");
-  if (model) validateModel(model, "opencode", add);
-  for (const line of lines) {
-    const perm = /^\s*(read|write|edit|bash|webfetch|skill):\s*"?([a-z-]+)"?\s*$/.exec(
-      line
-    );
-    if (perm && !PERMISSION_VALUES.includes(perm[2])) {
-      add(
-        "warn",
-        "opencode.permission",
-        `${perm[1]}: "${perm[2]}" — expected ${PERMISSION_VALUES.join("/")}`
-      );
-    }
-  }
-}
-
-function checkCursorBlock(lines: string[], add: AddFinding): void {
-  const model = fieldValue(lines, "model");
-  if (model) validateModel(model, "cursor", add);
-  for (const key of ["readonly", "is_background"]) {
-    const v = fieldValue(lines, key);
-    if (v !== null && v !== "true" && v !== "false") {
-      add("warn", `cursor.${key}`, `${key}: "${v}" — must be true or false`);
-    }
-  }
-}
-
-function checkCopilotBlock(lines: string[], add: AddFinding): void {
-  const model = fieldValue(lines, "model");
-  if (model) validateModel(model, "copilot", add);
-}
-
-function checkCodexBlock(lines: string[], add: AddFinding): void {
-  const model = fieldValue(lines, "model");
-  if (model) validateModel(model, "codex", add);
-  const sandbox = fieldValue(lines, "sandbox_mode");
-  if (sandbox !== null && !CODEX_SANDBOX_MODES.includes(sandbox)) {
-    add(
-      "warn",
-      "codex.sandbox_mode",
-      `sandbox_mode "${sandbox}" — expected one of ${CODEX_SANDBOX_MODES.join(", ")}`
-    );
-  }
-  for (const key of CODEX_TABLE_KEYS.filter((k) => hasField(lines, k))) {
-    add(
-      "warn",
-      `codex.${key}`,
-      `Codex reads \`${key}\` as a config table, not a list — the agent will not load; name tools or skills in the body instead`
-    );
-  }
-}
-
-function checkAntigravityBlock(lines: string[], add: AddFinding): void {
-  const model = fieldValue(lines, "model");
-  if (model !== null && !ANTIGRAVITY_MODELS.includes(model)) {
-    add(
-      "warn",
-      "antigravity.model",
-      `model "${model}" — expected one of ${ANTIGRAVITY_MODELS.join(", ")}`
-    );
-  }
-  checkAntigravityTools(antigravityTools(lines), add);
-}
-
-function antigravityTools(lines: string[]): unknown {
-  try {
-    return (Bun.YAML.parse(lines.join("\n")) as { tools?: unknown } | null)?.tools;
-  } catch {
-    return "unparseable";
-  }
-}
-
-function checkAntigravityTools(tools: unknown, add: AddFinding): void {
-  if (tools === undefined || tools === null || (Array.isArray(tools) && !tools.length)) {
-    add(
-      "warn",
-      "antigravity.tools",
-      "no `tools` — Antigravity gives the subagent no tools at all; list the ones it needs"
-    );
-    return;
-  }
-  if (!Array.isArray(tools) || !tools.every((t) => typeof t === "string")) {
-    add("error", "antigravity.tools", "`tools` must be a YAML list of tool names");
-    return;
-  }
-  const unknown = tools.filter((t) => !ANTIGRAVITY_TOOLS.includes(t));
-  unknown.length > 0
-    ? add(
-        "error",
-        "antigravity.tools",
-        `unknown tool(s) ${unknown.join(", ")} — an unmapped tool name can hang the subagent; use Antigravity names such as run_command, view_file, search_web`
-      )
-    : add("pass", "antigravity.tools", `${tools.length} known tool(s)`);
-}
-
-function validateModel(model: string, platform: string, add: AddFinding): void {
-  const known = KNOWN_MODELS.includes(model) || /^(claude-|gpt-|o\d|gemini-)/.test(model);
-  if (!known) {
-    add(
-      "warn",
-      `${platform}.model`,
-      `model "${model}" is unrecognised — confirm it is a valid ${platform} model id/alias`
-    );
-  }
-}
-
-type AddFinding = (level: Level, check: string, message: string) => void;
-
 /**
  * Evaluate the subagent file at `file` (a merged multi-platform .md) and return
  * a structured report. Loader-fatal problems surface as errors; best-practice
@@ -295,12 +125,14 @@ export function lintSubagent(file: string): SubagentReport {
 
   if (!existsSync(file)) {
     add("error", "structure", `No subagent file at ${file}`);
+
     return { file, name: null, findings, errors: 1, warnings: 0 };
   }
 
   const parsed = parseSubagent(readFileSync(file, "utf-8"));
   if (!parsed.hasFrontmatter) {
     add("error", "structure", "No frontmatter (--- … ---) block found");
+
     return { file, name: null, findings, errors: 1, warnings: 0 };
   }
 
@@ -318,6 +150,7 @@ export function lintSubagent(file: string): SubagentReport {
 
   const errors = findings.filter((f) => f.level === "error").length;
   const warnings = findings.filter((f) => f.level === "warn").length;
+
   return { file, name: parsed.name, findings, errors, warnings };
 }
 
@@ -439,10 +272,15 @@ function checkPlatformBlocks(
       );
 
   if (platforms.claude) checkClaudeBlock(platforms.claude, add);
+
   if (platforms.opencode) checkOpencodeBlock(platforms.opencode, add);
+
   if (platforms.cursor) checkCursorBlock(platforms.cursor, add);
+
   if (platforms.copilot) checkCopilotBlock(platforms.copilot, add);
+
   if (platforms.codex) checkCodexBlock(platforms.codex, add);
+
   if (platforms.antigravity) checkAntigravityBlock(platforms.antigravity, add);
 
   // ── skills field: Claude preloads it; the others have no such field ──
@@ -478,10 +316,12 @@ function checkSubagentBody(body: string, add: AddFinding): void {
 function checkSubagentAbsolutePaths(content: string, add: AddFinding): void {
   const hits: string[] = [];
   const allLines = content.split("\n");
+
   for (let i = 0; i < allLines.length; i++) {
     const m = ABSOLUTE_PATH_RE.exec(allLines[i]);
     if (m) hits.push(`${i + 1} → ${m[0]}`);
   }
+
   const more = hits.length > 3 ? ` (+${hits.length - 3} more)` : "";
   hits.length > 0
     ? add(
@@ -496,10 +336,13 @@ function checkSubagentAbsolutePaths(content: string, add: AddFinding): void {
 export function formatSubagentReport(r: SubagentReport): string {
   const icon = { pass: "✓", warn: "⚠", error: "✗" } as const;
   const lines = [`subagent-doctor: ${r.name ?? "(unparsed)"}  —  ${r.file}`];
+
   for (const f of r.findings) {
     lines.push(`  ${icon[f.level]} ${f.check}: ${f.message}`);
   }
+
   let verdict: string;
+
   if (r.errors > 0) {
     verdict = `FAIL — ${r.errors} error(s), ${r.warnings} warning(s)`;
   } else if (r.warnings > 0) {
@@ -507,7 +350,9 @@ export function formatSubagentReport(r: SubagentReport): string {
   } else {
     verdict = "PASS — all checks clean";
   }
+
   lines.push(`  ${verdict}`);
+
   return lines.join("\n");
 }
 
@@ -515,7 +360,9 @@ export function formatSubagentReport(r: SubagentReport): string {
 export function resolveSubagentFile(arg: string): string {
   const direct = toPath(arg);
   if (existsSync(direct) && direct.endsWith(".md")) return direct;
+
   if (namesAPath(arg)) return direct.endsWith(".md") ? direct : `${direct}.md`;
+
   return resolve(palHome(), "agents", arg.endsWith(".md") ? arg : `${arg}.md`);
 }
 
@@ -525,6 +372,7 @@ if (import.meta.main) {
     console.error("Usage: pal cli subagent doctor <file-or-name>");
     process.exit(2);
   }
+
   const report = lintSubagent(resolveSubagentFile(arg));
   console.log(formatSubagentReport(report));
   process.exit(report.errors > 0 ? 1 : 0);

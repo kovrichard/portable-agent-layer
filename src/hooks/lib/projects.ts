@@ -16,11 +16,15 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, parse as parsePath, resolve, sep } from "node:path";
+import * as hostPath from "node:path";
+import { basename, resolve } from "node:path";
 import { type Bindings, readBindings, writeBinding, writeBindings } from "./bindings";
 import { parse, stringify } from "./frontmatter";
 import { palHome, paths } from "./paths";
 import { detectRemote } from "./remote";
+
+/** The path functions of one platform: the host's, or `path.win32` / `path.posix` in tests. */
+export type PlatformPath = typeof hostPath.posix;
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
@@ -57,56 +61,6 @@ export interface ProjectProgress {
   context?: string;
   decisions?: string;
   changelog?: string;
-}
-
-// ── Legacy migration types ────────────────────────────────────────
-// Shared by `pal cli migrate` and `pal tool agent project --migrate` —
-// both convert the old progress-JSON format to current ProjectProgress.
-
-interface LegacyDecision {
-  ts: string;
-  decision: string;
-  rationale: string;
-}
-
-interface LegacyProject {
-  name: string;
-  path: string;
-  status: ProjectStatus;
-  created: string;
-  updated: string;
-  facts?: string[];
-  objectives?: string[];
-  next_steps?: string[];
-  blockers?: string[];
-  decisions?: LegacyDecision[];
-}
-
-/**
- * Convert a parsed legacy progress JSON object into the current ProjectProgress
- * shape. Returns null if required fields (name/path/status) are missing.
- */
-export function legacyJsonToProgress(raw: unknown): ProjectProgress | null {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw as LegacyProject;
-  if (!r.name || !r.path || !r.status) return null;
-  const p: ProjectProgress = {
-    name: r.name,
-    path: r.path,
-    status: r.status,
-    created: r.created ?? new Date().toISOString(),
-    updated: r.updated ?? new Date().toISOString(),
-    ...(r.next_steps?.length ? { next: r.next_steps } : {}),
-    ...(r.blockers?.length ? { blockers: r.blockers } : {}),
-  };
-  if (r.facts?.length) p.context = r.facts.join("\n");
-  if (r.objectives?.length) p.goal = r.objectives.map((o) => `- ${o}`).join("\n");
-  if (r.decisions?.length) {
-    p.decisions = r.decisions
-      .map((d) => `- ${d.ts.slice(0, 10)}: ${d.decision} (${d.rationale})`)
-      .join("\n");
-  }
-  return p;
 }
 
 export const PROJECT_STALE_DAYS_DEFAULT = 14;
@@ -160,6 +114,7 @@ function buildBody(p: ProjectProgress): string {
 
 function extractSections(body: string): Partial<ProjectProgress> {
   const out: Partial<ProjectProgress> = {};
+
   for (const part of body.split(/^## /m).slice(1)) {
     const nl = part.indexOf("\n");
     if (nl === -1) continue;
@@ -169,6 +124,7 @@ function extractSections(body: string): Partial<ProjectProgress> {
     const field = HEADER_TO_FIELD[header];
     if (field) (out as Record<string, string>)[field as string] = content;
   }
+
   return out;
 }
 
@@ -179,6 +135,7 @@ function isaFilePath(slug: string): string {
 function ensureAndGetIsaFile(slug: string): string {
   const dir = resolve(paths.projectHistory(), slug);
   mkdirSync(dir, { recursive: true });
+
   return resolve(dir, "ISA.md");
 }
 
@@ -195,6 +152,7 @@ export function defaultSlug(cwd: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+
   return cleaned || "unnamed";
 }
 
@@ -203,6 +161,7 @@ export function defaultSlug(cwd: string): string {
  */
 export function looksLikeProjectRoot(cwd: string): boolean {
   const cwdAbs = resolve(cwd);
+
   return PROJECT_MARKERS.some((marker) => existsSync(resolve(cwdAbs, marker)));
 }
 
@@ -219,13 +178,16 @@ export function readAllProjects(): ProjectProgress[] {
   if (!existsSync(base)) return [];
   const bindings = readBindings();
   const out: ProjectProgress[] = [];
+
   for (const slug of readdirSync(base)) {
     const file = resolve(base, slug, "ISA.md");
     if (!existsSync(file)) continue;
     const p = readProject(slug, bindings);
     if (p) out.push(p);
   }
+
   seedBindings(out);
+
   return out;
 }
 
@@ -235,6 +197,7 @@ export function readProject(
 ): ProjectProgress | null {
   const file = isaFilePath(name);
   if (!existsSync(file)) return null;
+
   try {
     const content = readFileSync(file, "utf-8");
     const { meta, body } = parse<IsaMeta & { handoff?: string }>(content);
@@ -244,6 +207,7 @@ export function readProject(
     const bound = bindings[meta.name] ?? meta.path;
     const path = bound ? resolve(bound) : undefined;
     const { handoff: _retired, ...kept } = meta;
+
     return { ...kept, path, ...extractSections(body) };
   } catch {
     return null;
@@ -264,39 +228,51 @@ export function writeProject(p: ProjectProgress): void {
     const detected = detectRemote(p.path);
     if (detected) p.remote = detected;
   }
+
   const meta: Record<string, unknown> = {
     name: p.name,
     status: p.status,
     created: p.created,
     updated: p.updated,
   };
+
   // Unlike `path`, this one is written into the record on purpose — it identifies
   // the repository rather than one machine's copy of it.
   if (p.remote) meta.remote = p.remote;
+
   if (p.next?.length) meta.next = p.next;
+
   if (p.blockers?.length) meta.blockers = p.blockers;
+
   if (p.serves) meta.serves = p.serves;
+
   if (p.serves_note) meta.serves_note = p.serves_note;
+
   if (p.serves_by) meta.serves_by = p.serves_by;
+
   if (p.placed) meta.placed = p.placed;
+
   if (p.placed_by) meta.placed_by = p.placed_by;
   writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, buildBody(p)), "utf-8");
-  // Only a path that exists here may be bound. Saving a record is not a claim
-  // about this machine's disk — `path` may have arrived from an imported record
-  // written elsewhere, and binding it would recreate the very leak bindings exist
-  // to prevent. An explicit `writeBinding` from the user stays unguarded.
-  if (p.path && existsSync(p.path)) writeBinding(p.name, p.path);
+
+  if (pathExistsOnThisMachine(p.path)) writeBinding(p.name, p.path);
+}
+
+function pathExistsOnThisMachine(path: string | undefined): path is string {
+  return Boolean(path) && existsSync(path as string);
 }
 
 export function deleteProject(name: string): boolean {
   const file = isaFilePath(name);
   if (!existsSync(file)) return false;
   unlinkSync(file);
+
   try {
     rmdirSync(resolve(paths.projectHistory(), name));
   } catch {
     /* dir not empty or already gone */
   }
+
   return true;
 }
 
@@ -319,27 +295,36 @@ export function deleteProject(name: string): boolean {
  */
 export function projectPathOnThisMachine(
   project: ProjectProgress,
-  bindings: Bindings = readBindings()
+  bindings: Bindings = readBindings(),
+  paths: PlatformPath = hostPath
 ): string | null {
   const bound = bindings[project.name] ?? project.path;
-  return bound ? resolve(bound) : null;
+
+  return bound ? paths.resolve(bound) : null;
 }
 
 export function resolveProjectFromCwd(
   cwd: string,
   projects: ProjectProgress[],
-  bindings: Bindings = readBindings()
+  bindings: Bindings = readBindings(),
+  paths: PlatformPath = hostPath
 ): ProjectProgress | null {
-  const cwdAbs = resolve(cwd);
+  // Windows paths are case-insensitive, so both sides are folded before comparing.
+  const fold = (p: string) => (paths.sep === "\\" ? p.toLowerCase() : p);
+  const cwdAbs = fold(paths.resolve(cwd));
   const matches: { project: ProjectProgress; path: string }[] = [];
+
   for (const project of projects) {
-    const projAbs = projectPathOnThisMachine(project, bindings);
+    const projAbs = projectPathOnThisMachine(project, bindings, paths);
     if (!projAbs) continue;
-    if (cwdAbs === projAbs || cwdAbs.startsWith(projAbs + sep))
-      matches.push({ project, path: projAbs });
+    const key = fold(projAbs);
+    if (cwdAbs === key || cwdAbs.startsWith(key + paths.sep))
+      matches.push({ project, path: key });
   }
+
   if (matches.length === 0) return null;
   matches.sort((a, b) => b.path.length - a.path.length);
+
   return matches[0].project;
 }
 
@@ -351,163 +336,8 @@ export function isStale(
   if (!p.updated) return false;
   const age = now.getTime() - new Date(p.updated).getTime();
   if (!Number.isFinite(age) || age < 0) return false;
+
   return age > thresholdDays * 86_400_000;
-}
-
-/**
- * Walk up from `cwd` looking for the nearest dir with a project marker.
- * Returns absolute path or null. Bounded at 12 levels to avoid runaway walks.
- */
-function findProjectRoot(cwd: string): string | null {
-  let dir = resolve(cwd);
-  const fsRoot = parsePath(dir).root;
-  for (let i = 0; i < 12; i++) {
-    if (looksLikeProjectRoot(dir)) return dir;
-    if (dir === fsRoot) return null;
-    dir = dirname(dir);
-  }
-  return null;
-}
-
-function formatAgo(ts: string): string {
-  if (!ts) return "?";
-  const age = Date.now() - new Date(ts).getTime();
-  if (!Number.isFinite(age)) return "?";
-  if (age < 60_000) return "just now";
-  if (age < 3_600_000) return `${Math.floor(age / 60_000)}m ago`;
-  if (age < 86_400_000) return "today";
-  const days = Math.floor(age / 86_400_000);
-  if (days < 30) return `${days}d ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
-
-const MAX_INLINE_BULLETS = 3;
-const FACTS_BUDGET = 600;
-
-function factLines(context: string): string[] {
-  return context
-    .split("\n")
-    .map((l) => l.replace(/^[-*]\s*/, "").trim())
-    .filter((l) => l && !l.startsWith("#"));
-}
-
-/** Whole facts in written order, so none is cut mid-sentence; the first always fits. */
-function factsLine(project: string, context: string): string {
-  const facts = factLines(context);
-  const shown = facts.slice(0, 1);
-  for (const fact of facts.slice(1)) {
-    if ([...shown, fact].join("; ").length > FACTS_BUDGET) break;
-    shown.push(fact);
-  }
-  const more =
-    shown.length < facts.length ? ` (more: \`pal cli project resume ${project}\`)` : "";
-  return `  Facts: ${shown.join("; ")}${more}`;
-}
-
-function bulletItems(text: string): string[] {
-  return text
-    .split("\n")
-    .map((l) => l.replace(/^[-*]\s*/, "").trim())
-    .filter(Boolean);
-}
-
-function inlineList(label: string, items: string[] | undefined): string[] {
-  if (!items?.length) return [];
-  return [inlineListAlways(label, items)];
-}
-
-function statusAndAgo(p: ProjectProgress): string {
-  const statusPrefix = p.status === "paused" ? "paused, " : "";
-  return `${statusPrefix}${formatAgo(p.updated)}`;
-}
-
-function resolvedProjectLines(p: ProjectProgress): string[] {
-  const stale = isStale(p) ? " ⚠ stale" : "";
-  return [
-    `- **${p.name}** (${statusAndAgo(p)})${stale} → here`,
-    ...(p.context ? [factsLine(p.name, p.context)] : []),
-    ...(p.goal ? [inlineListAlways("Objectives", bulletItems(p.goal))] : []),
-    ...(p.constraints
-      ? [inlineListAlways("Constraints", bulletItems(p.constraints))]
-      : []),
-    ...inlineList("Next", p.next),
-    ...inlineList("Blockers", p.blockers),
-  ];
-}
-
-function inlineListAlways(label: string, items: string[]): string {
-  return `  ${label}: ${items.slice(0, MAX_INLINE_BULLETS).join("; ")}`;
-}
-
-function otherProjectLine(p: ProjectProgress, last: string | undefined): string {
-  const counts: string[] = [];
-  if (p.next?.length) counts.push(`${p.next.length} next`);
-  if (p.blockers?.length) counts.push(`${p.blockers.length} blockers`);
-  const countsSuffix = counts.length > 0 ? ` — ${counts.join(", ")}` : "";
-  const lastSuffix = last ? ` — last: ${last}` : "";
-  return `- **${p.name}** (${statusAndAgo(p)})${countsSuffix}${lastSuffix}`;
-}
-
-/**
- * Format the SessionStart "Active Projects" section.
- *
- * For the cwd-resolved project (`→ here`): full detail with Context, Objectives
- * (from goal section), Next, and Blockers. Other recent projects: one line with
- * counts and the last session's title, enough to follow up from any folder.
- * Quiet ones (>14d) collapse to a single line of names.
- */
-function activeProjectLines(
-  visible: ProjectProgress[],
-  resolvedName: string | undefined,
-  lastSessionTitle: (project: string) => string | undefined
-): string[] {
-  const lines = ["## Active Projects", ""];
-  const sorted = [...visible].sort((a, b) => b.updated.localeCompare(a.updated));
-  const quiet: string[] = [];
-  for (const p of sorted) {
-    if (resolvedName !== undefined && p.name === resolvedName) {
-      lines.push(...resolvedProjectLines(p));
-    } else if (isStale(p)) {
-      quiet.push(p.name);
-    } else {
-      lines.push(otherProjectLine(p, lastSessionTitle(p.name)));
-    }
-  }
-  if (quiet.length > 0) {
-    lines.push(`- Quiet for ${PROJECT_STALE_DAYS_DEFAULT}+ days: ${quiet.join(", ")}`);
-  }
-  return lines;
-}
-
-export function loadActiveProjectsContext(
-  cwd: string = process.cwd(),
-  lastSessionTitle: (project: string) => string | undefined = () => undefined
-): string {
-  const all = readAllProjects();
-  const visible = all.filter((p) => p.status === "active" || p.status === "paused");
-  const resolved = resolveProjectFromCwd(cwd, visible);
-  const projectRoot = findProjectRoot(cwd);
-  const alreadyRegistered =
-    projectRoot !== null &&
-    all.some((p) => p.path !== undefined && resolve(p.path) === projectRoot);
-  const showHint = resolved === null && projectRoot !== null && !alreadyRegistered;
-
-  if (visible.length === 0 && !showHint) return "";
-
-  const lines: string[] = [];
-
-  if (visible.length > 0) {
-    lines.push(...activeProjectLines(visible, resolved?.name, lastSessionTitle));
-  }
-
-  if (showHint) {
-    if (visible.length > 0) lines.push("");
-    lines.push(
-      `💡 \`${projectRoot}\` looks like a project but isn't registered. If substantive work starts here, suggest registering it via \`pal cli project create\`.`
-    );
-  }
-
-  return lines.join("\n");
 }
 
 /**
@@ -533,15 +363,20 @@ export function seedBindings(
 ): string[] {
   const bindings = readBindings(home);
   const seeded: string[] = [];
+
   for (const project of projects) {
     if (!project.name || !project.path) continue;
+
     if (project.name in bindings) continue;
+
     if (!existsSync(project.path)) continue;
     bindings[project.name] = resolve(project.path);
     seeded.push(project.name);
   }
+
   if (seeded.length === 0) return [];
   writeBindings(bindings, home);
+
   return seeded;
 }
 
@@ -574,10 +409,12 @@ export function auditBindings(
       issues.push({ kind: "unlocatable", project: project.name });
       continue;
     }
+
     if (!existsSync(path)) {
       issues.push({ kind: "missing", project: project.name, path });
       continue;
     }
+
     byPath.set(path, [...(byPath.get(path) ?? []), project.name]);
   }
 

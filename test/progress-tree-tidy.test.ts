@@ -14,6 +14,7 @@ beforeEach(() => {
 
 function at(): Date {
   clock += 1000;
+
   return new Date(clock);
 }
 

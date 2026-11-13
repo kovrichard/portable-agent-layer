@@ -26,6 +26,7 @@ function makeRepo(name: string): string {
   writeFileSync(resolve(dir, "tracked.txt"), "one\n");
   git(dir, "add", "-A");
   git(dir, "commit", "-qm", "init");
+
   return dir;
 }
 
@@ -35,6 +36,7 @@ function runHookIn(cwd: string) {
     cwd,
     encoding: "utf-8",
   });
+
   return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
@@ -78,6 +80,7 @@ describe("run-hook clean-worktree skip", () => {
   // for the wrong reason and this case would prove nothing.
   test("runs the gate outside a git repository", () => {
     const dir = freshTestDir(import.meta.file);
+
     try {
       expect(spawnSync("git", ["status"], { cwd: dir }).status).not.toBe(0);
 
@@ -168,6 +171,7 @@ describe("run-hook clean-worktree skip", () => {
       tool_name: "StructuredOutput",
       tool_input: { done: true, summary: "tests written" },
     });
+
     for (const role of ["test-writer", "code-writer", "reviewer"]) {
       const r = spawnSync("bun", ["run", HOOK, "exit", "3"], {
         cwd: dir,
@@ -183,6 +187,7 @@ describe("run-hook clean-worktree skip", () => {
     const dir = makeRepo("no-factory-subagent-rules");
     writeFileSync(resolve(dir, "tracked.txt"), "changed\n");
     const { DARK_FACTORY_ROLE: _unset, ...envWithoutRole } = process.env;
+
     for (const agentType of [
       "dark-factory:test-writer",
       "dark-factory:reviewer",

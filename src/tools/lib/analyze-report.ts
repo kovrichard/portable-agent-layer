@@ -27,6 +27,7 @@ const RULE = c.dim("────────────────────
 /** Green from 7, red at 4 and below, amber for the band between them. */
 function averageColour(average: number) {
   if (average >= 7) return c.green;
+
   return average <= 4 ? c.red : c.yellow;
 }
 
@@ -34,6 +35,7 @@ function ratingsLines(r: RatingsSummary): string[] {
   const average = averageColour(r.average)(`${r.average.toFixed(1)}/10`);
   const low = c.red(`Low (≤4): ${r.low.count}`);
   const high = c.green(`High (≥7): ${r.high.count}`);
+
   return [
     `\n  ${c.bold("Ratings:")} ${average} avg (${r.total} total)`,
     `  ${low} | ${high}`,
@@ -44,12 +46,14 @@ function ratingsLines(r: RatingsSummary): string[] {
 function entryLine(entry: AnalysisEntry, maxChars: number): string {
   const kind = entry.source.startsWith("failure:") ? "failure" : "learning";
   const tag = kind === "failure" ? c.red(`[${kind}]`) : c.yellow(`[${kind}]`);
+
   return `    ${c.dim(entry.date || "unknown")} ${tag} ${entry.text.slice(0, maxChars)}`;
 }
 
 function headingOf(group: PatternGroup): string {
   const domain = c.cyan(`[${group.domain}]`);
   const count = c.bold(`${group.entries.length}x`);
+
   return `  ${domain} ${count}`;
 }
 
@@ -92,16 +96,19 @@ export function reportLines(result: AnalysisResult): string[] {
   if (result.candidates.length > 0) {
     const header = `Graduation Report — ${result.candidates.length} pattern(s) detected`;
     lines.push(`\n  ${c.bold(c.green(header))}\n`, `  ${RULE}\n`);
+
     for (const candidate of result.candidates) lines.push(...candidateLines(candidate));
   }
 
   if (result.emerging.length > 0) {
     lines.push(`  ${c.bold(c.yellow("Emerging (2x — one more to graduate)"))}\n`);
+
     for (const group of result.emerging) lines.push(...emergingLines(group));
   }
 
   if (result.recommendations.length > 0) {
     lines.push(`  ${c.bold("Recommendations:")}\n`);
+
     for (const rec of result.recommendations) lines.push(`    ${rec}`);
     lines.push("");
   }

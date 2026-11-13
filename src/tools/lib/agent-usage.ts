@@ -8,6 +8,7 @@ import { Database } from "bun:sqlite";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, resolve } from "node:path";
+import { type ProjectResolver, projectResolver } from "./project-resolver";
 import {
   type AgentUsage,
   type Tokens,
@@ -33,12 +34,11 @@ function parsed<T>(line: string): T | null {
 
 function filesUnder(dir: string, matches: (name: string) => boolean): string[] {
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir, { recursive: true, encoding: "utf-8" })
     .filter((path) => matches(basename(path)))
     .map((path) => resolve(dir, path));
 }
-
-const projectOf = (cwd: string | undefined) => (cwd && basename(cwd)) || "unknown";
 
 interface CodexTokenUsage {
   input_tokens?: number;
@@ -64,6 +64,7 @@ interface CodexLine {
 /** Codex counts cached input inside input_tokens, and reasoning inside output_tokens. */
 function codexTokens(usage: CodexTokenUsage): Tokens {
   const cached = usage.cached_input_tokens ?? 0;
+
   return {
     input: (usage.input_tokens ?? 0) - cached,
     output: usage.output_tokens ?? 0,
@@ -76,15 +77,22 @@ function codexTokens(usage: CodexTokenUsage): Tokens {
 const CODEX_KEYS = ['"session_meta"', '"turn_context"', '"token_count"'];
 
 /** Codex repeats a token_count event without a new call; the running total tells them apart. */
-function recordCodexRollout(filepath: string, tally: UsageTally): void {
-  let project = "unknown";
+function recordCodexRollout(
+  filepath: string,
+  tally: UsageTally,
+  projectOf: ProjectResolver
+): void {
+  let project = projectOf(undefined);
   let model = "unknown";
   let lastTotal = -1;
+
   for (const line of linesOf(filepath)) {
     const entry = codexEntryOf(line);
     const payload = entry?.payload;
     if (!entry || !payload) continue;
+
     if (entry.type === "session_meta") project = projectOf(payload.cwd);
+
     if (entry.type === "turn_context" && payload.model) model = payload.model;
     const count = tokenCountOf(payload);
     if (!count || !entry.timestamp || count.total === lastTotal) continue;
@@ -101,6 +109,7 @@ function recordCodexRollout(filepath: string, tally: UsageTally): void {
 
 function codexEntryOf(line: string): CodexLine | null {
   if (!CODEX_KEYS.some((key) => line.includes(key))) return null;
+
   return parsed<CodexLine>(line);
 }
 
@@ -108,22 +117,28 @@ function tokenCountOf(payload: NonNullable<CodexLine["payload"]>) {
   const info = payload.type === "token_count" ? payload.info : null;
   const last = info?.last_token_usage;
   if (!last) return null;
+
   return { last, total: info?.total_token_usage?.total_tokens ?? -1 };
 }
 
 export function readCodex(
   codexDir: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  projectOf: ProjectResolver = projectResolver([], {})
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
-  for (const filepath of codexRollouts(codexDir)) recordCodexRollout(filepath, tally);
+
+  for (const filepath of codexRollouts(codexDir))
+    recordCodexRollout(filepath, tally, projectOf);
+
   return tally.usage;
 }
 
 export function codexRollouts(codexDir: string): string[] {
   const isRollout = (name: string) =>
     name.startsWith("rollout-") && name.endsWith(".jsonl");
+
   return ["sessions", "archived_sessions"].flatMap((sub) =>
     filesUnder(resolve(codexDir, sub), isRollout)
   );
@@ -145,6 +160,7 @@ interface OpencodeMessage {
 /** opencode keeps reasoning apart from output, and writes its cache without a TTL. */
 function opencodeTokens(message: OpencodeMessage): Tokens {
   const t = message.tokens ?? {};
+
   return {
     input: t.input ?? 0,
     output: (t.output ?? 0) + (t.reasoning ?? 0),
@@ -158,6 +174,7 @@ const anyTokens = (tokens: Tokens) => Object.values(tokens).some((n) => n > 0);
 
 export function opencodeDatabase(): string {
   const dataHome = process.env.XDG_DATA_HOME || resolve(homedir(), ".local", "share");
+
   return resolve(dataHome, "opencode", "opencode.db");
 }
 
@@ -168,6 +185,7 @@ interface OpencodeRow {
 
 function opencodeAssistantRows(dbPath: string): OpencodeRow[] {
   const db = new Database(dbPath, { readonly: true });
+
   try {
     return db
       .query<OpencodeRow, []>(
@@ -182,16 +200,20 @@ function opencodeAssistantRows(dbPath: string): OpencodeRow[] {
 export function readOpencode(
   dbPath: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  projectOf: ProjectResolver = projectResolver([], {})
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
+
   if (!existsSync(dbPath)) return tally.usage;
   let rows: OpencodeRow[];
+
   try {
     rows = opencodeAssistantRows(dbPath);
   } catch {
     return tally.usage;
   }
+
   for (const row of rows) {
     const message = parsed<OpencodeMessage>(row.data);
     if (!message) continue;
@@ -205,6 +227,7 @@ export function readOpencode(
       cost: typeof message.cost === "number" ? message.cost : null,
     });
   }
+
   return tally.usage;
 }
 
@@ -231,6 +254,7 @@ interface CopilotEvent {
 function copilotTokens(usage: CopilotModelMetrics["usage"] = {}): Tokens {
   const cacheRead = usage.cacheReadTokens ?? 0;
   const cacheWrite = usage.cacheWriteTokens ?? 0;
+
   return {
     input: (usage.inputTokens ?? 0) - cacheRead - cacheWrite,
     output: usage.outputTokens ?? 0,
@@ -241,14 +265,22 @@ function copilotTokens(usage: CopilotModelMetrics["usage"] = {}): Tokens {
 }
 
 /** Each shutdown carries the totals of its own run, so a resumed session adds, not repeats. */
-function recordCopilotSession(filepath: string, tally: UsageTally): void {
-  let project = "unknown";
+function recordCopilotSession(
+  filepath: string,
+  tally: UsageTally,
+  projectOf: ProjectResolver
+): void {
+  let project = projectOf(undefined);
+
   for (const line of linesOf(filepath)) {
     if (!line.includes('"session.')) continue;
     const event = parsed<CopilotEvent>(line);
     if (!event?.data) continue;
+
     if (event.data.context?.cwd) project = projectOf(event.data.context.cwd);
+
     if (event.type !== "session.shutdown" || !event.timestamp) continue;
+
     for (const [model, metrics] of Object.entries(event.data.modelMetrics ?? {})) {
       tally.record({
         ts: event.timestamp,
@@ -265,13 +297,16 @@ function recordCopilotSession(filepath: string, tally: UsageTally): void {
 export function readCopilot(
   copilotDir: string,
   projectFilter?: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  projectOf: ProjectResolver = projectResolver([], {})
 ): AgentUsage {
   const tally = usageTally(projectFilter, now);
   const sessionsDir = resolve(copilotDir, "session-state");
   if (!existsSync(sessionsDir)) return tally.usage;
+
   for (const session of readdirSync(sessionsDir)) {
-    recordCopilotSession(resolve(sessionsDir, session, "events.jsonl"), tally);
+    recordCopilotSession(resolve(sessionsDir, session, "events.jsonl"), tally, projectOf);
   }
+
   return tally.usage;
 }

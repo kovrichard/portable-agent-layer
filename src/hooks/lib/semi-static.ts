@@ -48,6 +48,7 @@ export function antigravityRule(description: string, content: string): string {
 export function readFileSafe(path: string): string {
   try {
     if (!existsSync(path)) return "";
+
     return readFileSync(path, "utf-8").trim();
   } catch {
     return "";
@@ -68,6 +69,7 @@ export function loadSteeringRules(): string {
  */
 export function getSemiStaticSources(): SemiStaticSource[] {
   const memory = paths.memory();
+
   return [
     {
       path: resolve(memory, "relationship", "opinions-context.md"),

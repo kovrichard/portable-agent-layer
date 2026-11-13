@@ -30,11 +30,13 @@ function storedSlug(name: string, kind: ResearchTarget["kind"]): string {
   const domain = kind === "person" ? "People" : "Companies";
   const { entities, exact } = lookupName(name, loadNameIndex(loadKnownEntities()));
   const matches = entities.filter((e) => e.domain === domain);
+
   return exact && matches.length === 1 ? matches[0].slug : "";
 }
 
 function targetFrom(name: string, values: ResearchValues): ResearchTarget {
   const kind = values.person ? "person" : "company";
+
   return {
     kind,
     name,
@@ -58,18 +60,22 @@ export async function researchFromCli(
   const outcome = await researchEntity(target, deps);
   if (!outcome.found) {
     console.error(`Nothing kept for "${target.name}": ${outcome.reason}`);
+
     return 1;
   }
+
   console.log(
     values.json
       ? JSON.stringify(outcome.profile, null, 2)
       : renderProfile(outcome.profile)
   );
+
   if (values.queue) {
     const item = researchItem(target, outcome.profile);
     queueForReview([item]);
     console.log(`\nQueued for review: pal cli knowledge review accept ${item.id}`);
   }
+
   return 0;
 }
 

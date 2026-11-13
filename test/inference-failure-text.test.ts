@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { agentFailureText } from "../src/hooks/lib/inference";
+import { agentFailureText } from "../src/hooks/lib/inference-prompt";
 
 const CLAUDE_ERROR_REPLY = JSON.stringify({
   duration_api_ms: 0,

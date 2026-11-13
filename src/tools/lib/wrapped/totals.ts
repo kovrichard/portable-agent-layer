@@ -21,6 +21,7 @@ const TOKEN_FIELDS = [
 
 function tokensOf(call: LoggedEvent): number | null {
   const known = TOKEN_FIELDS.map((f) => numberOf(call[f])).filter((n) => n !== null);
+
   return known.length === 0 ? null : known.reduce((sum, n) => sum + n, 0);
 }
 
@@ -37,13 +38,16 @@ const showsTheUser = (e: LoggedEvent) =>
 /** PAL's own background inference runs as SDK sessions nobody typed into. */
 function sessionsOfTheUser(events: LoggedEvent[]): number {
   const spawned = new Set(events.filter(isSpawnedCall).map((e) => e.session));
+
   for (const e of events.filter(showsTheUser)) spawned.delete(e.session);
+
   return distinct(events.map((e) => e.session).filter((s) => !spawned.has(s)));
 }
 
 export function wrappedTotals(events: LoggedEvent[]): WrappedTotals {
   const calls = ofType(events, "model_call");
   const tokens = calls.map(tokensOf);
+
   return {
     projects: distinct(events.map((e) => e.project)),
     sessions: sessionsOfTheUser(events),

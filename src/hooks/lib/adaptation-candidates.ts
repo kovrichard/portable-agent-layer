@@ -43,6 +43,7 @@ function candidatesPath(): string {
 function parseLine(line: string): Candidate | null {
   try {
     const parsed = JSON.parse(line) as Candidate;
+
     return typeof parsed.createdAt === "string" ? parsed : null;
   } catch {
     return null;
@@ -52,6 +53,7 @@ function parseLine(line: string): Candidate | null {
 export function readCandidates(): Candidate[] {
   const path = candidatesPath();
   if (!existsSync(path)) return [];
+
   return readFileSync(path, "utf-8")
     .split("\n")
     .map(parseLine)
@@ -69,16 +71,19 @@ function prove(candidate: Candidate, turns: RequestedTurn[]): Candidate {
   if (!candidate.trigger) return { ...candidate, verdict: "untriggered" };
   const proof = proveTrigger(candidate.trigger, turns);
   const verdict = candidate.widens ? widenedProofVerdict(proof) : proofVerdict(proof);
+
   return { ...candidate, proof, verdict };
 }
 
 function canOnlyBeOpinion(candidate: Candidate): boolean {
   const unproven = candidate.verdict === "failed" || candidate.verdict === "untriggered";
+
   return unproven && !candidate.widens;
 }
 
 function gateFor(candidate: Candidate, turns: RequestedTurn[]): OpinionGate | undefined {
   if (!candidate.kind || candidate.widens) return undefined;
+
   return opinionGate(candidate.kind, readRules(), turns);
 }
 
@@ -86,8 +91,11 @@ function draftOf(candidate: Candidate, turns: RequestedTurn[]): DraftInput | nul
   const { id: _id, createdAt: _createdAt, verdict: _verdict, ...draft } = candidate;
   const gate = gateFor(candidate, turns);
   const gated = gate ? { ...draft, opinionGate: gate } : draft;
+
   if (!canOnlyBeOpinion(candidate)) return gated;
+
   if (!candidate.kind || (gate && "corrections" in gate)) return null;
+
   return { ...gated, offer: "opinion-only" };
 }
 
@@ -110,6 +118,7 @@ export function recordCandidate(
   const candidate = prove(fresh, turns);
   writeCandidates([...readCandidates(), candidate]);
   promoteIfDecided(candidate, turns);
+
   return candidate;
 }
 
@@ -118,6 +127,7 @@ export function reproveWaiting(turns: RequestedTurn[]): void {
   if (!candidates.some((c) => c.verdict === "waiting")) return;
   const updated = candidates.map((c) => (c.verdict === "waiting" ? prove(c, turns) : c));
   writeCandidates(updated);
+
   for (const candidate of updated.filter((_c, i) => candidates[i].verdict === "waiting"))
     promoteIfDecided(candidate, turns);
 }

@@ -1,11 +1,6 @@
 #!/usr/bin/env bun
-// create-pdf skill tool: Markdown -> HTML (marked, GFM) -> PDF (Playwright).
-// Self-contained HTML: all CSS inlined, no CDN at render time.
-//
-// Usage:
-//   pal cli skill run create-pdf md-to-html-pdf <input.md> \
-//     [--html <out.html>] [--pdf <out.pdf>] [--margin <css>] [--header <html|file>] [--footer <html|file>]
-//   --margin defaults to 25mm (all sides). --header/--footer accept inline HTML or a file path.
+// Markdown to self-contained HTML (marked, GFM, CSS inlined) to PDF (Playwright).
+// Usage: pal cli skill run create-pdf md-to-html-pdf <input.md> [flags]; the flags are in SKILL.md.
 
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, resolve } from "node:path";
@@ -27,6 +22,7 @@ let pdfOut = "";
 let margin = "25mm";
 let headerArg = "";
 let footerArg = "";
+
 for (let i = 1; i < args.length; i++) {
   if (args[i] === "--html") htmlOut = resolve(args[++i]);
   else if (args[i] === "--pdf") pdfOut = resolve(args[++i]);
@@ -34,16 +30,17 @@ for (let i = 1; i < args.length; i++) {
   else if (args[i] === "--header") headerArg = args[++i];
   else if (args[i] === "--footer") footerArg = args[++i];
 }
+
 const stem = basename(input, extname(input));
 const dir = dirname(input);
 htmlOut ||= resolve(dir, `${stem}.html`);
 pdfOut ||= resolve(dir, `${stem}.pdf`);
 
-// --header/--footer take inline HTML or a path to an HTML file. Playwright renders
-// them inside the page margin, so widen --margin when you use them. Templates may use
-// Playwright's injected classes: pageNumber, totalPages, date, title, url.
+// Playwright renders headers and footers inside the page margin and fills its
+// pageNumber, totalPages, date, title and url classes.
 async function resolveTemplate(value: string): Promise<string> {
   if (!value) return "";
+
   try {
     return await readFile(resolve(value), "utf8");
   } catch {
@@ -98,6 +95,7 @@ ${body}
 await writeFile(htmlOut, html, "utf8");
 
 const browser = await chromium.launch();
+
 try {
   const page = await browser.newPage();
   await page.goto(pathToFileURL(htmlOut).href, { waitUntil: "networkidle" });

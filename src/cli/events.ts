@@ -8,6 +8,7 @@ function secondsFrom(raw: string | undefined): number | null {
   if (!Number.isFinite(seconds) || seconds < 0) {
     throw new UsageError(`--after-sec must be a number of seconds, got "${raw}"`);
   }
+
   return Math.round(seconds);
 }
 
@@ -19,10 +20,12 @@ function recordDiscordNag(
   if (!isNagStage(stage)) {
     throw new UsageError(`the stage is one of ${NAG_STAGES.join(", ")}`);
   }
+
   const responseSec = secondsFrom(afterSec);
   if (stage === "answered" && responseSec === null) {
     throw new UsageError("an answered nag needs --after-sec");
   }
+
   const id = logDiscordNag(stage, kind ?? null, responseSec);
   console.log(id ? `Recorded ${id}` : "The event log is off; nothing recorded.");
 }
@@ -31,13 +34,17 @@ function reportCollected(): undefined {
   const emitted = collectEvents();
   if (emitted === null) {
     console.log("Another collect is running; nothing collected.");
+
     return;
   }
+
   const sources = Object.entries(emitted);
   if (sources.length === 0) {
     console.log("The event log is off; nothing collected.");
+
     return;
   }
+
   for (const [source, count] of sources) console.log(`${source}: ${count}`);
 }
 
@@ -47,8 +54,10 @@ async function reportBackfilled(since: string | undefined): Promise<undefined> {
   const sources = Object.entries(appended);
   if (sources.length === 0) {
     console.log("The event log is off; nothing backfilled.");
+
     return;
   }
+
   for (const [source, count] of sources) console.log(`${source}: ${count}`);
 }
 

@@ -37,6 +37,7 @@ function LogoSlot({
       />
     );
   }
+
   return (
     <span
       className={`font-sans text-sm font-bold uppercase tracking-widest text-foreground ${

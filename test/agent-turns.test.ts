@@ -29,6 +29,7 @@ startEachTestInACleanHome(import.meta.file);
 /** Short, quick turns that change the session's picture and so earn a hint. */
 function hintEarningTurns(session: string): void {
   observeTurn("start the work", session);
+
   for (let i = 0; i < 4; i++) {
     recordReply(session, "short answer");
     observeTurn("yes pls", session);
@@ -171,6 +172,7 @@ describe("opencode", () => {
 
   function debugLog(): string {
     const path = resolve(paths.home, "debug", "debug.log");
+
     return existsSync(path) ? readFileSync(path, "utf-8") : "";
   }
 
@@ -179,6 +181,7 @@ describe("opencode", () => {
     writeFileSync(resolve(paths.home, "memory", "state", "debug-enabled"), "");
     const hooks = await plugin();
     const events = ["message.part.delta", "message.part.updated", "session.status"];
+
     for (const type of events) {
       await asAgent("opencode", () => hooks.event({ event: { type, properties: {} } }));
     }

@@ -26,6 +26,7 @@ const stopAt = (note: Partial<typeof NOTE> = {}) =>
 const onlyNode = () => {
   const nodes = [...tree().nodes.values()];
   expect(nodes).toHaveLength(1);
+
   return nodes[0];
 };
 

@@ -19,6 +19,7 @@ beforeEach(() => {
 
 function at(): Date {
   clock += 1000;
+
   return new Date(clock);
 }
 
@@ -74,6 +75,7 @@ describe("session context", () => {
       open(`n${i}`, `Node ${i} with a fairly long descriptive title`, null);
       appendEvent("pal", `n${i}`, "follow-up", { text: "x".repeat(80) }, file, at());
     }
+
     expect(renderSessionContext(tree()).length).toBeLessThanOrEqual(2_000);
   });
 });

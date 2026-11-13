@@ -16,6 +16,7 @@ let repo: string;
 function git(...args: string[]): string {
   const result = spawnSync("git", ["-C", repo, ...args], { encoding: "utf-8" });
   if (result.status !== 0) throw new Error(result.stderr);
+
   return result.stdout.trim();
 }
 
@@ -28,6 +29,7 @@ function commit(subject: string) {
 function transcriptWithoutCommands(): string {
   const path = resolve(repo, "..", "transcript.jsonl");
   writeFileSync(path, JSON.stringify({ type: "user", message: { content: "go" } }));
+
   return path;
 }
 

@@ -63,8 +63,10 @@ function shouldRun(force: boolean): boolean {
   if (force) return true;
   const p = synthesisPath();
   if (!existsSync(p)) return true;
+
   try {
     const data = JSON.parse(readFileSync(p, "utf-8")) as { timestamp: string };
+
     return Date.now() - new Date(data.timestamp).getTime() > SYNTHESIS_TTL_MS;
   } catch {
     return true;
@@ -81,6 +83,7 @@ function formatDate(iso: string): string {
 
 function readJsonl<T>(path: string): T[] {
   if (!existsSync(path)) return [];
+
   try {
     return readFileSync(path, "utf-8")
       .split("\n")
@@ -177,6 +180,7 @@ function getRatingStats(since: Date): SynthesisState["ratings"] {
       trend: "stable",
     };
   }
+
   const firstHalf = ratings.slice(0, mid);
   const secondHalf = ratings.slice(mid);
   const firstAvg = firstHalf.reduce((s, r) => s + r.rating, 0) / firstHalf.length;
@@ -204,6 +208,7 @@ export function writeSynthesis(state: SynthesisState): string {
   const sp = synthesisPath();
   writeFileSync(sp, JSON.stringify(state, null, 2), "utf-8");
   writeSignalCache();
+
   return sp;
 }
 
@@ -224,6 +229,7 @@ function writeSignalCache(): void {
     const recent = all.slice(-20);
     const mid = Math.floor(recent.length / 2);
     let trend: "up" | "down" | "stable" = "stable";
+
     if (mid >= 3) {
       const a = avg(recent.slice(0, mid)) ?? 0;
       const b = avg(recent.slice(mid)) ?? 0;
@@ -284,6 +290,7 @@ export function run(argv: string[] = scriptArgs()): Promise<number> {
 function lookbackDays(raw: string): number {
   const days = parseInt(raw, 10);
   if (Number.isNaN(days)) throw new UsageError(`--days must be a number of days: ${raw}`);
+
   return days;
 }
 
@@ -295,6 +302,7 @@ function synthesizeUnlessFresh(days: number, force: boolean): undefined {
         message: "Last synthesis < 24h ago. Use --force to override.",
       })
     );
+
     return;
   }
 

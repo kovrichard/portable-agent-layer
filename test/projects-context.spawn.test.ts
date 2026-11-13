@@ -29,19 +29,27 @@ beforeEach(() => {
 
 async function freshLib() {
   const t = Date.now();
-  const mod = await import(`../src/hooks/lib/projects.ts?t=${t}`);
-  return mod as typeof import("../src/hooks/lib/projects");
+  const projects = (await import(
+    `../src/hooks/lib/projects.ts?t=${t}`
+  )) as typeof import("../src/hooks/lib/projects");
+  const context = (await import(
+    `../src/hooks/lib/projects-context.ts?t=${t}`
+  )) as typeof import("../src/hooks/lib/projects-context");
+
+  return { ...projects, ...context };
 }
 
 function fixtureRepoDir(slug: string): string {
   const dir = resolve(TEST_HOME, "fixtures", slug);
   mkdirSync(resolve(dir, ".git"), { recursive: true });
+
   return dir;
 }
 
 function fixturePlainDir(slug: string): string {
   const dir = resolve(TEST_HOME, "fixtures", slug);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -237,6 +245,7 @@ describe("loadActiveProjectsContext", () => {
 
   test("stale projects (>14d) collapse into one line of names", async () => {
     const lib = await freshLib();
+
     for (const name of ["rusty", "dusty"]) {
       lib.writeProject({
         name,
@@ -247,6 +256,7 @@ describe("loadActiveProjectsContext", () => {
         next: ["a"],
       });
     }
+
     const out = lib.loadActiveProjectsContext(fixturePlainDir("notes"));
     expect(out).toMatch(/^- Quiet for 14\+ days: (rusty, dusty|dusty, rusty)$/m);
     expect(out).not.toContain("**rusty**");

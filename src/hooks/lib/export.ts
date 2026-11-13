@@ -20,16 +20,22 @@ import { palHome } from "./paths";
 const EXPORT_DIRS = ["telos", "memory", "skills", "agents"];
 
 /** Subdirectories/files to skip during export. */
-const SKIP_PATTERNS = ["memory/downloads", "memory/content"];
+const SKIP_PATTERNS = [
+  "memory/downloads",
+  "memory/content",
+  "memory/state/transcript-handoff",
+];
 
 function shouldSkip(relPath: string): boolean {
   const normalized = relPath.replaceAll("\\", "/");
+
   return SKIP_PATTERNS.some((p) => normalized.startsWith(p));
 }
 
 /** Recursively collect all files under a directory, returning paths relative to root. */
 function walkDir(dir: string, root: string): string[] {
   const files: string[] = [];
+
   if (!existsSync(dir)) return files;
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -38,15 +44,15 @@ function walkDir(dir: string, root: string): string[] {
 
     if (shouldSkip(relPath)) continue;
 
-    // Symlinks report neither isDirectory nor isFile, so they are skipped —
-    // this is what keeps shipped-skill symlinks (skills/<name> → repo) out of
-    // the export. Do not switch to stat()-based following.
+    // A Dirent symlink is neither a directory nor a file, which keeps shipped-skill
+    // symlinks out of the export; stat()-based following would pull them in.
     if (entry.isDirectory()) {
       files.push(...walkDir(fullPath, root));
     } else if (entry.isFile()) {
       files.push(relPath.replaceAll("\\", "/"));
     }
   }
+
   return files;
 }
 
@@ -78,17 +84,20 @@ export function exportZip(outputPath: string): number {
   if (files.length === 0) return 0;
 
   const zip = new AdmZip();
+
   for (const file of files) {
     const fullPath = resolve(root, file);
     const dir = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
     zip.addLocalFile(fullPath, dir);
   }
+
   zip.addFile(
     MANIFEST_NAME,
     Buffer.from(`${JSON.stringify(buildManifest(identity, files.length), null, 2)}\n`)
   );
 
   zip.writeZip(outputPath);
+
   return files.length;
 }
 

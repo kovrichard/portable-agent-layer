@@ -117,10 +117,17 @@ describe("model pricing table", () => {
     });
   });
 
-  test("every entry prices all five token categories above zero", () => {
-    for (const p of Object.values(MODEL_PRICING)) {
-      expect(Object.values(p).every((rate) => rate > 0)).toBe(true);
+  test("every entry prices all five token categories above zero, except jev-1.14.0's free output", () => {
+    for (const [model, p] of Object.entries(MODEL_PRICING)) {
       expect(Object.keys(p).sort()).toEqual(Object.keys(OPUS_5_RATES).sort());
+
+      for (const [category, rate] of Object.entries(p)) {
+        if (model === "jev-1.14.0" && category === "output") {
+          expect(rate).toBe(0);
+        } else {
+          expect(rate).toBeGreaterThan(0);
+        }
+      }
     }
   });
 });
@@ -228,5 +235,24 @@ describe("costOfUsage", () => {
         cacheRead: 0,
       })
     ).toBe(0);
+  });
+});
+
+describe("jev-1.14.0 cost table", () => {
+  const usage = { input: 0, output: 0, cacheWrite5m: 0, cacheWrite1h: 0, cacheRead: 0 };
+
+  test("1 000 000 input tokens and nothing else cost 0.042", () => {
+    expect(costOfUsage("jev-1.14.0", { ...usage, input: 1_000_000 })).toBeCloseTo(
+      0.042,
+      9
+    );
+  });
+
+  test("5 000 000 output tokens cost 0, since output is free", () => {
+    expect(costOfUsage("jev-1.14.0", { ...usage, output: 5_000_000 })).toBe(0);
+  });
+
+  test("1000 input tokens cost 0.000042", () => {
+    expect(costOfUsage("jev-1.14.0", { ...usage, input: 1000 })).toBeCloseTo(0.000042, 9);
   });
 });

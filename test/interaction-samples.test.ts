@@ -63,6 +63,7 @@ describe("sampling messages for the rule audit", () => {
 
   test("frequent approvals never push out the rarer corrections", () => {
     sample("corrected", 0);
+
     for (let i = 1; i <= 30; i++) sample("approved", i);
 
     const kept = readSamples();

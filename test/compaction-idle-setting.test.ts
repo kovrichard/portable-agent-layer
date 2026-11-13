@@ -28,6 +28,7 @@ function transcriptWith(name: string, tokens: number): string {
   const path = resolve(home, name);
   const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
   writeFileSync(path, `${JSON.stringify({ message: { usage } })}\n`);
+
   return path;
 }
 
