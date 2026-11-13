@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { v4PathsToBindings } from "../src/cli/migrations/v4-paths-to-bindings";
 import { v5AttributionKeys } from "../src/cli/migrations/v5-attribution-keys";
 import { v6HistorySlugs } from "../src/cli/migrations/v6-history-slugs";
@@ -63,7 +64,7 @@ describe("v4-paths-to-bindings", () => {
     expect(result.migrated).toBe(2);
     expect(result.results.sort()).toEqual([
       "blank: would move (no path) to a binding",
-      "old: would move /nowhere/old to a binding",
+      `old: would move ${resolve("/nowhere/old")} to a binding`,
     ]);
     expect(readFileSync(isaFile("old"), "utf-8")).toBe(before);
   });

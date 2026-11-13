@@ -7,7 +7,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import * as readline from "node:readline";
 import AdmZip from "adm-zip";
 import { exportState, importState } from "../src/cli/export-import";
@@ -220,9 +220,8 @@ describe("importState with an explicit archive", () => {
     expect(readFileSync(resolve(home, "telos/GOALS.md"), "utf-8")).toBe("local");
     const [entry] = importLog();
     const quarantine = entry.quarantineDir as string;
-    expect(quarantine).toMatch(
-      new RegExp(`^${resolve(home, "backups")}/import-conflicts-\\d{14}$`)
-    );
+    expect(dirname(quarantine)).toBe(resolve(home, "backups"));
+    expect(basename(quarantine)).toMatch(/^import-conflicts-\d{14}$/);
     expect(readFileSync(resolve(quarantine, "telos/GOALS.md"), "utf-8")).toBe("incoming");
     expect(entry).toMatchObject({ merged: 1, identical: 1, conflicts: 1, linesAdded: 1 });
     expect(output()).toContain(
