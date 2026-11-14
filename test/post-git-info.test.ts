@@ -126,6 +126,11 @@ test("parseStatus names each file and whether it is staged", () => {
   ]);
 });
 
+test("parseStatus keeps the commit the checkout is on, and none before the first commit", () => {
+  expect(parseStatus("# branch.oid abc\n# branch.head main").oid).toBe("abc");
+  expect(parseStatus("# branch.oid (initial)\n# branch.head main").oid).toBeNull();
+});
+
 describe("postGitInfoResponse", () => {
   test("stays silent for a command that runs no git", () => {
     expect(postGitInfoResponse(bash("ls"), fakeGit(repo("/r/main")), NOW)).toBeNull();

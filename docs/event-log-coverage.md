@@ -17,6 +17,7 @@ missing hook is recorded here, never synthesised from another event.
 | Event | Claude Code | opencode | Cursor | Copilot | Codex | Antigravity |
 | ----- | ----------- | -------- | ------ | ------- | ----- | ----------- |
 | `turn` | ✅ UserPromptSubmit | ✅ chat.message | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
+| `repo_state` | ✅ UserPromptSubmit | ✅ chat.message | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
 | `reply` | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
 | `session_start` | ✅ SessionStart | ✅ session.created | ✅ sessionStart | ✅ sessionStart | ✅ SessionStart | ⛔ |
 | `session_end` | ✅ SessionEnd | ⛔ | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
@@ -63,6 +64,7 @@ These come from PAL code, not from a runtime hook, so every runtime has them.
 | `commitment` | An ISC is kept, dropped, reopened or snoozed, from the CLI or the control room |
 | `entity_first_seen` | A person, company, idea or research topic first enters the knowledge store |
 | `discord_nag` | The Discord bot reports a nag or its answer through `pal cli events discord-nag` |
+| `repo_state` | Every prompt in a git checkout: the commit, branch and count of uncommitted files the prompt starts from |
 
 ## Signals carried as fields, not events
 

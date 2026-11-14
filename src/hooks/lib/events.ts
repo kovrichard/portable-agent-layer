@@ -188,6 +188,7 @@ export const EVENT_FIELDS = {
   worktree_pruned: ["branch"],
   git_state_injected: ["trigger", "source", "changed", "committedFiles", "chars"],
   hook_run: ["hook", "event", "durationMs", "exitCode"],
+  repo_state: ["head", "branch", "changed", "ahead", "behind"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;
