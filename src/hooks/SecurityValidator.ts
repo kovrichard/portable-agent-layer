@@ -7,12 +7,12 @@
  * The decision itself is in lib/security-gate.ts, where a test can import it.
  */
 
-import { blockResponse } from "./lib/agent";
+import { blockResponse } from "../core/agent";
+import { logError } from "../core/log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { recordBlocked } from "./lib/ledger";
-import { logError } from "./lib/log";
 import { decideRefusal, type SecurityInput } from "./lib/security-gate";
 import { readStdinJSON } from "./lib/stdin";
 

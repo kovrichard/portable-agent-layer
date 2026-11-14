@@ -4,9 +4,9 @@
  */
 
 import { spawn } from "node:child_process";
-import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
-import { palHome, palPkg } from "../hooks/lib/paths";
-import { raw as readSettings } from "../hooks/lib/settings";
+import { AGENT_REGISTRY, type AgentName } from "../core/agent-registry";
+import { palHome, palPkg } from "../core/paths";
+import { raw as readSettings } from "../core/settings";
 import { capturingLog, type LogLevel, narrateSteps } from "../targets/log";
 import { agentInventory, detectAgents } from "./doctor/agents";
 import {
@@ -151,7 +151,7 @@ async function askSetupQuestions(): Promise<boolean> {
     await promptAutoUpdate(),
     await noticeTelemetry(),
   ];
-  const { ensureActorRegistered } = await import("../hooks/lib/actor");
+  const { ensureActorRegistered } = await import("../core/actor");
   ensureActorRegistered();
 
   return asked.some(Boolean);
@@ -192,7 +192,7 @@ async function installAll(plan: InstallPlan): Promise<Done> {
 async function prepareShared(): Promise<number> {
   const { copyPalDocs } = await import("../targets/pal-docs");
   const { regenerateIfNeeded } = await import("../hooks/lib/claude-md");
-  const { refreshEnvironment } = await import("../hooks/lib/environment");
+  const { refreshEnvironment } = await import("../core/environment");
   const docs = copyPalDocs();
   refreshEnvironment();
   regenerateIfNeeded();

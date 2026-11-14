@@ -6,7 +6,7 @@
  * their own lane; the rest share one, as every session did before.
  */
 
-import { type AgentType, getActiveAgent } from "./agent";
+import { type AgentType, getActiveAgent } from "../../core/agent";
 
 const SHELL_SESSION_ENV: Partial<Record<AgentType, string>> = {
   claude: "CLAUDE_CODE_SESSION_ID",

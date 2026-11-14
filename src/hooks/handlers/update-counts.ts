@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { assets, ensureDir, paths } from "../lib/paths";
+import { assets, ensureDir, paths } from "../../core/paths";
 
 interface Counts {
   signals: number;

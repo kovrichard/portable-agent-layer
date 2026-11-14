@@ -6,8 +6,8 @@
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets, palHome, palPkg, platform } from "../../hooks/lib/paths";
-import { identity, raw as readPalSettings } from "../../hooks/lib/settings";
+import { assets, palHome, palPkg, platform } from "../../core/paths";
+import { identity, raw as readPalSettings } from "../../core/settings";
 import { replaceJsonConfig } from "../config-backups";
 import { readJson } from "../json-file";
 import { log } from "../log";

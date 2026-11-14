@@ -47,7 +47,7 @@ beforeAll(async () => {
   );
 
   process.env.PAL_HOME = TEST_HOME;
-  const { reload } = await import("../src/hooks/lib/settings");
+  const { reload } = await import("../src/core/settings");
   reload();
 });
 

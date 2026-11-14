@@ -2,7 +2,8 @@
  * A PR the session opened with `gh pr create`, a dark-factory build it started, and an artifact it published land on its active node without being recorded by hand.
  */
 
-import { normalizeToolUse } from "./agent";
+import { normalizeToolUse } from "../../core/agent";
+import { sessionDir } from "../../core/session-dir";
 import { hookSessionId } from "./hook-turn";
 import { unappliedVerdictOf } from "./ledger-hook";
 import { progressSession } from "./progress-session";
@@ -14,7 +15,6 @@ import {
   type WorkNode,
 } from "./progress-tree";
 import { openSessionNode } from "./progress-tree-session-node";
-import { sessionDir } from "./session-dir";
 import { COMMAND_KEYS, resultOf, stringIn } from "./tool-events";
 
 const GH_PR_CREATE_RE = /\bgh\s+pr\s+create\b/;

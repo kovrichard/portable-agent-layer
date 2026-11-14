@@ -4,11 +4,15 @@
  */
 
 import { basename, extname } from "node:path";
-import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "./agent";
+import {
+  FILE_TARGET_KEYS,
+  normalizeToolUse,
+  type ToolUseRequest,
+} from "../../core/agent";
+import { isPalSpawnedInference } from "../../core/spawn-guard";
 import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
 import { unappliedVerdictOf } from "./ledger-hook";
-import { isPalSpawnedInference } from "./spawn-guard";
 import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];

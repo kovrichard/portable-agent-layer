@@ -28,7 +28,7 @@ export function injectRetrievalHome(file: string): string {
     removeOnceReleased(resolve(home, "memory", "pal-settings.json"));
     // Bust the in-memory settings cache so a test that disabled the flag
     // doesn't poison the next test that wants the default-true behavior.
-    const settings = await import("../../src/hooks/lib/settings");
+    const settings = await import("../../src/core/settings");
     settings.reload();
   });
 
@@ -37,7 +37,7 @@ export function injectRetrievalHome(file: string): string {
 
 export async function setSettings(data: Record<string, unknown>) {
   writeFileSync(resolve(home, "memory", "pal-settings.json"), JSON.stringify(data));
-  const settings = await import("../../src/hooks/lib/settings");
+  const settings = await import("../../src/core/settings");
   settings.reload();
 }
 

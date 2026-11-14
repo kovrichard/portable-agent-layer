@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { extractSessionEntities } from "../src/hooks/handlers/entity-extraction";
 import { loadKnownEntities, loadNameIndex } from "../src/hooks/lib/entity-cards";
 import {
@@ -18,7 +19,6 @@ import {
   type NamedEntity,
   type NameIndex,
 } from "../src/hooks/lib/entity-names";
-import { reload } from "../src/hooks/lib/settings";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { load } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";

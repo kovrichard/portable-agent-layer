@@ -1,9 +1,9 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution, type RecordAttribution } from "./actor";
+import { currentAttribution, type RecordAttribution } from "../../core/actor";
+import { paths } from "../../core/paths";
+import { now } from "../../core/time";
 import { type AppendOptions, appendEvent } from "./events";
-import { paths } from "./paths";
-import { now } from "./time";
 
 interface Signal {
   ts: string;

@@ -1,5 +1,5 @@
-import { AGENT_REGISTRY, LAUNCH_PRIORITY } from "../hooks/lib/agent-registry";
-import { findBinaryOnPath } from "../hooks/lib/which";
+import { AGENT_REGISTRY, LAUNCH_PRIORITY } from "../core/agent-registry";
+import { findBinaryOnPath } from "../core/which";
 
 export type SessionAgent =
   (typeof AGENT_REGISTRY)[(typeof LAUNCH_PRIORITY)[number]]["binary"];

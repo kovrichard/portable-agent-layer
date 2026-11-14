@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { logPromptSnapshot } from "../src/core/log";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import { canInfer, hasApiKey, inference } from "../src/hooks/lib/inference";
 import {
   buildClaudeArgs,
@@ -14,8 +16,6 @@ import {
   parseJsonFromOutput,
   schemaInstruction,
 } from "../src/hooks/lib/inference-prompt";
-import { logPromptSnapshot } from "../src/hooks/lib/log";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { restoreEnv, savedEnv } from "./lib/inference-dispatch-fixture";
 import { removeOnceReleased } from "./lib/remove-once-released";

@@ -6,7 +6,7 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets, palPkg, platform } from "../../hooks/lib/paths";
+import { assets, palPkg, platform } from "../../core/paths";
 import { replaceJsonConfig } from "../config-backups";
 import { removePalContextFiles } from "../context-files";
 import { readJson } from "../json-file";

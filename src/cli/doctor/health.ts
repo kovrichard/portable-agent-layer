@@ -1,9 +1,9 @@
 import { resolve } from "node:path";
+import { type HookErrorGroup, recentHookErrors } from "../../core/log";
+import { palEnvPath } from "../../core/pal-env";
+import { palHome } from "../../core/paths";
 import { cachedStatus, type UpdateCache } from "../../hooks/handlers/update-check";
 import { loggedClaudeAuthMode } from "../../hooks/lib/inference-agents";
-import { type HookErrorGroup, recentHookErrors } from "../../hooks/lib/log";
-import { palEnvPath } from "../../hooks/lib/pal-env";
-import { palHome } from "../../hooks/lib/paths";
 import { checkPendingMigrations } from "../migrate";
 import { type Finding, failing, passed, warning } from "./finding";
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import {
   COMPACTION_MARGIN_FRACTION,
   compactionPoint,
@@ -11,7 +12,6 @@ import {
 } from "../src/hooks/lib/compaction-near";
 import { EVENT_FIELDS, eventsSince } from "../src/hooks/lib/events";
 import { logCompaction } from "../src/hooks/lib/session-events";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const WINDOW_ENV = "CLAUDE_CODE_AUTO_COMPACT_WINDOW";

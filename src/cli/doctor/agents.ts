@@ -6,8 +6,8 @@ import {
   type AgentName,
   AGENT_NAMES as REGISTERED_AGENTS,
   skillsDirOf,
-} from "../../hooks/lib/agent-registry";
-import { palPkg, platform } from "../../hooks/lib/paths";
+} from "../../core/agent-registry";
+import { palPkg, platform } from "../../core/paths";
 import {
   installedShippedAgentCount,
   nativeAgentsDir,

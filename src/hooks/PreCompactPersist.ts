@@ -14,13 +14,13 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { logDebug, logError } from "../core/log";
+import { paths } from "../core/paths";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { logDebug, logError } from "./lib/log";
-import { paths } from "./lib/paths";
 import { logCompaction } from "./lib/session-events";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { readTranscriptFile } from "./lib/transcript";
 

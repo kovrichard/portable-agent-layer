@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsCommand } from "../src/cli/events";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 

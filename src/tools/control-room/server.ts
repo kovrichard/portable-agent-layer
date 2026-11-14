@@ -6,8 +6,8 @@
  * `pal cli server start|stop|status` owns the process; this file only serves.
  */
 
+import { loadMachine } from "../../core/machine";
 import { autoUpdateStatus, spawnAutoUpdate } from "../../hooks/lib/auto-update";
-import { loadMachine } from "../../hooks/lib/machine";
 import { readAllProjects } from "../../hooks/lib/projects";
 import { isServesKind, setServes } from "../../hooks/lib/serves";
 import { PAGE_OUTCOMES } from "../ledger/outcomes";

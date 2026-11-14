@@ -6,9 +6,9 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { paths } from "../../core/paths";
 import type { RuleTrigger } from "./adaptation-rules";
 import type { Turn } from "./adaptation-turns";
-import { paths } from "./paths";
 
 const WINDOW_DAYS = 30;
 const DAY_MS = 86_400_000;

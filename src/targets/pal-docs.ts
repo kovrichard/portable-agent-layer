@@ -7,7 +7,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { assets, palHome } from "../hooks/lib/paths";
+import { assets, palHome } from "../core/paths";
 import { log } from "./log";
 import { ensureSymlink } from "./symlink";
 

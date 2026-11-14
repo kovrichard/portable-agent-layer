@@ -20,7 +20,7 @@ beforeEach(async () => {
   ROOT = realpathSync(freshTestDir(import.meta.file));
   process.env.PAL_HOME = resolve(ROOT, "pal");
   mkdirSync(resolve(ROOT, "pal", "memory"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 function git(dir: string, ...args: string[]): string {

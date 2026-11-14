@@ -6,8 +6,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { paths } from "../../../core/paths";
 import { appendEvent } from "../../../hooks/lib/events";
-import { paths } from "../../../hooks/lib/paths";
 import { emitUnseen } from "./rows";
 
 interface StoredPromise {

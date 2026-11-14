@@ -7,8 +7,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { AGENT_REGISTRY, type AgentName } from "../hooks/lib/agent-registry";
-import { assets } from "../hooks/lib/paths";
+import { AGENT_REGISTRY, type AgentName } from "../core/agent-registry";
+import { assets } from "../core/paths";
 import { agentFileName, renderAgentForPlatform } from "./agent-render";
 import { reportOnlyOnFailure } from "./bulk-install";
 import { log } from "./log";

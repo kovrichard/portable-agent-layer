@@ -6,9 +6,9 @@
 
 import { readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
-import { exportZip, timestamp } from "../lib/export";
-import { logDebug } from "../lib/log";
-import { paths } from "../lib/paths";
+import { exportZip, timestamp } from "../../core/export";
+import { logDebug } from "../../core/log";
+import { paths } from "../../core/paths";
 
 const BACKUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 

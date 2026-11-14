@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { promptAutoUpdate } from "../src/cli/setup-auto-update";
-import { raw as rawSettings, reload, write } from "../src/hooks/lib/settings";
+import { raw as rawSettings, reload, write } from "../src/core/settings";
 import { freshTestDir } from "./lib/test-home";
 
 // The install question must be silent wherever nobody can answer it. That is not

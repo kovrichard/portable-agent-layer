@@ -6,8 +6,8 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { logDebug } from "../lib/log";
-import { paths } from "../lib/paths";
+import { logDebug } from "../../core/log";
+import { paths } from "../../core/paths";
 
 const SYNTHESIS_TTL_MS = 24 * 60 * 60 * 1000;
 

@@ -7,7 +7,7 @@
  * their directory as parameters here, which is what makes them assertable.
  */
 
-import { currentAttribution, type RecordAttribution } from "../../hooks/lib/actor";
+import { currentAttribution, type RecordAttribution } from "../../core/actor";
 import { encodeAnchor } from "../../hooks/lib/anchor";
 
 const MIN_SENTIMENT = 1;

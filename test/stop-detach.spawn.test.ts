@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets } from "../src/hooks/lib/paths";
+import { assets } from "../src/core/paths";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { freshTestDir } from "./lib/test-home";

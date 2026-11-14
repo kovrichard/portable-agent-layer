@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { telemetryCommand } from "../src/cli/telemetry";
-import { raw, reload, write } from "../src/hooks/lib/settings";
+import { raw, reload, write } from "../src/core/settings";
 import {
   heartbeatDue,
   heartbeatEndpoint,

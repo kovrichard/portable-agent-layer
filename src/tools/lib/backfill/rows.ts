@@ -1,4 +1,4 @@
-import type { RecordAttribution } from "../../../hooks/lib/actor";
+import type { RecordAttribution } from "../../../core/actor";
 
 export type AttributedRow = Partial<RecordAttribution> & { ts: string };
 

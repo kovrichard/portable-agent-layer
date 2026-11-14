@@ -6,19 +6,19 @@
  * any error produces empty output, never blocks the prompt.
  */
 
+import { promptContextResponse } from "../../core/agent";
+import { logDebug, logError } from "../../core/log";
+import { isSystemText } from "../../core/prompt-text";
+import { isEnabled } from "../../core/settings";
 import { promptRulesReminder } from "../lib/adaptation-steering";
-import { promptContextResponse } from "../lib/agent";
 import { dueNudgeReminder } from "../lib/daily-nudge";
 import { getEntityReminder } from "../lib/entity-cards";
 import { observeTurn } from "../lib/interaction";
-import { logDebug, logError } from "../lib/log";
 import { parkPromptContext } from "../lib/parked-context";
 import { progressTreePromptLine } from "../lib/progress-tree-context";
-import { isSystemText } from "../lib/prompt-text";
 import { observeRepoState } from "../lib/repo-state";
 import { runModePromptLine } from "../lib/run-mode-gate";
 import { scheduledPromptsReminder } from "../lib/scheduled-prompts";
-import { isEnabled } from "../lib/settings";
 import { getSkillReminder } from "../lib/skill-match";
 import { getSteeringReminder } from "../lib/steering";
 import { getWallClockReminder } from "../lib/wall-clock";

@@ -57,6 +57,7 @@ export default {
   // src/hooks/*.ts), an OS/network/TTY boundary that is stubbed away before a mutant
   // could ever be observed, or a file a test reads as text, which instrumenting breaks.
   mutate: [
+    "src/core/**/*.ts",
     "src/hooks/lib/**/*.ts",
     "src/hooks/handlers/*.ts",
     "src/tools/**/*.ts",
@@ -88,9 +89,9 @@ export default {
     "src/targets/vscode-settings.ts",
     "src/targets/opencode/permission.ts",
     "!src/hooks/lib/inference.ts",
-    "!src/hooks/lib/notify.ts",
+    "!src/core/notify.ts",
     "!src/hooks/lib/stdin.ts",
-    "!src/hooks/lib/which.ts",
+    "!src/core/which.ts",
     "!src/cli/index.ts",
     "!src/cli/server.ts",
     "!src/cli/setup-attribution.ts",

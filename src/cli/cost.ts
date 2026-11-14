@@ -1,4 +1,4 @@
-import { labelOfRuntime } from "../hooks/lib/agent-registry";
+import { labelOfRuntime } from "../core/agent-registry";
 import { allEventsSince } from "../hooks/lib/events";
 import { leaf } from "../tools/lib/command";
 import { efficiency } from "../tools/lib/cost/efficiency";

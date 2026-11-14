@@ -7,7 +7,7 @@
  * is the question the agent keeps getting wrong.
  */
 
-import { identity, isEnabled } from "./settings";
+import { identity, isEnabled } from "../../core/settings";
 
 const FIELDS = {
   weekday: "short",

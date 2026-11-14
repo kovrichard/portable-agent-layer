@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { palHome, paths } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import { claimChecksSince } from "../src/hooks/lib/claim-log";
 import { eventsSince } from "../src/hooks/lib/events";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
-import { palHome, paths } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
 import {
   CONVERSATION,
   DANGEROUS,

@@ -2,13 +2,13 @@
  * TypeSafe's System One API (https://docs.typesafe.ai/api/system-one.md): one POST with every question, retried on 429 and 529.
  */
 
+import { logError } from "../../core/log";
 import {
   type JudgeAdapter,
   type JudgeAnswers,
   type SystemOneAsk,
   SystemOneError,
 } from "./judgment";
-import { logError } from "./log";
 
 export const TYPESAFE_DEFAULT_MODEL = "jev-1.14.0";
 const TYPESAFE_ENDPOINT = "https://api.typesafe.ai/v1/systemone";

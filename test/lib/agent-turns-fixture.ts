@@ -1,11 +1,11 @@
 import { beforeEach } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../../src/core/settings";
 import { injectPromptContext } from "../../src/hooks/handlers/inject-retrieval";
 import { type HookTurnPayload, hookSessionId } from "../../src/hooks/lib/hook-turn";
 import { observeTurn, type TurnEvent } from "../../src/hooks/lib/interaction";
 import type { TransformedPromptPayload } from "../../src/hooks/lib/parked-context";
-import { reload } from "../../src/hooks/lib/settings";
 import { sandboxContextRuleDirs } from "./context-rule-dirs";
 import { removeOnceReleased } from "./remove-once-released";
 import { testHome } from "./test-home";

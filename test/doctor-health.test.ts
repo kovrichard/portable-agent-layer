@@ -12,7 +12,7 @@ import {
   oauthTokenFindings,
   routeFinding,
 } from "../src/cli/doctor/inference";
-import { palEnvPath } from "../src/hooks/lib/pal-env";
+import { palEnvPath } from "../src/core/pal-env";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");

@@ -13,9 +13,9 @@
 
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { parseAgentDefinition } from "../hooks/lib/agent-definition";
-import { AGENT_NAMES, type AgentName } from "../hooks/lib/agent-registry";
-import { assets, isDirectChild, namesAPath, palHome, toPath } from "../hooks/lib/paths";
+import { parseAgentDefinition } from "../core/agent-definition";
+import { AGENT_NAMES, type AgentName } from "../core/agent-registry";
+import { assets, isDirectChild, namesAPath, palHome, toPath } from "../core/paths";
 import {
   type AddFinding,
   checkAntigravityBlock,

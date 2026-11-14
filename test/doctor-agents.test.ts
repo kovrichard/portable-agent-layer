@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { agentFindings, agentsWithPal, rosterFindings } from "../src/cli/doctor/agents";
-import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
+import { AGENT_NAMES } from "../src/core/agent-registry";
 import { copyAgents } from "../src/targets/claude/agents";
 import {
   copyAgentsForAntigravity,

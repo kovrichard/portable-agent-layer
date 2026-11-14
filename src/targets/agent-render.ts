@@ -3,11 +3,8 @@
  * Markdown with that platform's frontmatter, or a Codex agent-role TOML.
  */
 
-import {
-  type AgentDefinition,
-  parseAgentDefinition,
-} from "../hooks/lib/agent-definition";
-import type { AgentName } from "../hooks/lib/agent-registry";
+import { type AgentDefinition, parseAgentDefinition } from "../core/agent-definition";
+import type { AgentName } from "../core/agent-registry";
 
 const CODEX_OWNED_KEYS = new Set(["name", "description", "developer_instructions"]);
 

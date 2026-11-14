@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "./paths";
+import { ensureDir, paths } from "../../core/paths";
 
 const MAX_WAIT_SEC = 30 * 60;
 

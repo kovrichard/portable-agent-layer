@@ -43,8 +43,8 @@ describe("detectStatus", () => {
 
 describe("extractArtifacts", () => {
   test("extracts absolute file paths from assistant messages", () => {
-    const msgs = [{ role: "assistant", content: "Updated /src/hooks/lib/agent.ts" }];
-    expect(extractArtifacts(msgs)).toContain("/src/hooks/lib/agent.ts");
+    const msgs = [{ role: "assistant", content: "Updated /src/core/agent.ts" }];
+    expect(extractArtifacts(msgs)).toContain("/src/core/agent.ts");
   });
 
   test("extracts relative file paths", () => {

@@ -10,6 +10,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { paths } from "../../core/paths";
 import {
   addDraft,
   type DraftInput,
@@ -19,7 +20,6 @@ import {
 } from "./adaptation-rules";
 import type { RequestedTurn } from "./adaptation-turns";
 import { opinionGate } from "./opinion-gate";
-import { paths } from "./paths";
 import {
   type ProofVerdict,
   proofVerdict,

@@ -1,7 +1,7 @@
 import { chmodSync, copyFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import type { AgentName } from "../hooks/lib/agent-registry";
-import { assets, platform } from "../hooks/lib/paths";
+import type { AgentName } from "../core/agent-registry";
+import { assets, platform } from "../core/paths";
 import { log } from "./log";
 
 export type StatuslineTarget = Extract<AgentName, "claude" | "cursor" | "antigravity">;

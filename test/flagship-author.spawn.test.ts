@@ -2,7 +2,7 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
+import { AGENT_NAMES } from "../src/core/agent-registry";
 import { FABLE_MODEL, flagshipAuthorModel } from "../src/hooks/lib/models";
 import { renderAgentForPlatform } from "../src/targets/agent-render";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";

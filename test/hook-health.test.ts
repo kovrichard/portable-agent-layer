@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logError, recentHookErrors } from "../src/hooks/lib/log";
+import { logError, recentHookErrors } from "../src/core/log";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-09-23T12:00:00Z");

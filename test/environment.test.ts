@@ -17,8 +17,8 @@ import {
   renderEnvironment,
   versionIn,
   windowsName,
-} from "../src/hooks/lib/environment";
-import { platform as palPlatform } from "../src/hooks/lib/paths";
+} from "../src/core/environment";
+import { platform as palPlatform } from "../src/core/paths";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { turnsSince } from "../src/hooks/lib/interaction";
-import { reload } from "../src/hooks/lib/settings";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";
 

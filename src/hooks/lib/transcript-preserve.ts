@@ -15,8 +15,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { logDebug, logError } from "./log";
-import { assets, ensureDir, paths, platform } from "./paths";
+import { logDebug, logError } from "../../core/log";
+import { assets, ensureDir, paths, platform } from "../../core/paths";
 
 const STALE_LOCK_MS = 30 * 60 * 1000;
 

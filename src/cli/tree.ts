@@ -4,7 +4,7 @@
  * never be imported by a test that walks this tree.
  */
 
-import { AGENT_NAMES, AGENT_REGISTRY } from "../hooks/lib/agent-registry";
+import { AGENT_NAMES, AGENT_REGISTRY } from "../core/agent-registry";
 import {
   type Group,
   group,

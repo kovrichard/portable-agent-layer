@@ -33,13 +33,13 @@ beforeAll(async () => {
   );
 
   process.env.PAL_HOME = TEST_HOME;
-  const { reload } = await import("../src/hooks/lib/settings");
+  const { reload } = await import("../src/core/settings");
   reload();
 });
 
 describe("identity", () => {
   test("parses AI and principal identity from pal-settings.json", async () => {
-    const { identity, reload } = await import("../src/hooks/lib/settings");
+    const { identity, reload } = await import("../src/core/settings");
     reload();
     const id = identity();
 
@@ -53,7 +53,7 @@ describe("identity", () => {
     const origHome = process.env.PAL_HOME;
     process.env.PAL_HOME = "/nonexistent";
 
-    const { identity, reload } = await import("../src/hooks/lib/settings");
+    const { identity, reload } = await import("../src/core/settings");
     reload();
     const id = identity();
 
@@ -68,32 +68,32 @@ describe("identity", () => {
 
 describe("isEnabled", () => {
   test("returns false when explicitly disabled", async () => {
-    const { isEnabled, reload } = await import("../src/hooks/lib/settings");
+    const { isEnabled, reload } = await import("../src/core/settings");
     reload();
     expect(isEnabled("projects")).toBe(false);
   });
 
   test("returns true when explicitly enabled", async () => {
-    const { isEnabled } = await import("../src/hooks/lib/settings");
+    const { isEnabled } = await import("../src/core/settings");
     expect(isEnabled("opinions")).toBe(true);
   });
 
   test("defaults to true for unset keys", async () => {
-    const { isEnabled } = await import("../src/hooks/lib/settings");
+    const { isEnabled } = await import("../src/core/settings");
     expect(isEnabled("nonexistentKey")).toBe(true);
   });
 });
 
 describe("startupFiles", () => {
   test("returns empty when no files configured", async () => {
-    const { startupFiles } = await import("../src/hooks/lib/settings");
+    const { startupFiles } = await import("../src/core/settings");
     expect(startupFiles()).toEqual([]);
   });
 });
 
 describe("cache", () => {
   test("a different PAL_HOME reads its own settings, not the cached ones", async () => {
-    const { isEnabled, reload } = await import("../src/hooks/lib/settings");
+    const { isEnabled, reload } = await import("../src/core/settings");
     reload();
     expect(isEnabled("projects")).toBe(false);
     const otherHome = testHome(import.meta.file, "other");

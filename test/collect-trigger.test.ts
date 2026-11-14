@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { agentDirOverrides } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import { collectDue, markCollected } from "../src/hooks/lib/collect-trigger";
-import { agentDirOverrides } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
 import { freshTestDir } from "./lib/test-home";
 

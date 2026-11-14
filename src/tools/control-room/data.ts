@@ -6,13 +6,13 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { paths } from "../../core/paths";
 import { type AgendaMove, readAgenda } from "../../hooks/lib/agenda-store";
 import {
   isMaintainerEnv,
   loadAlgorithmReviewNudge,
 } from "../../hooks/lib/algorithm-review";
 import { loadAnalyzeNudge } from "../../hooks/lib/analyze-nudge";
-import { paths } from "../../hooks/lib/paths";
 import {
   isStale,
   PROJECT_STALE_DAYS_DEFAULT,

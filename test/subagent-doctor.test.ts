@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { assets } from "../src/hooks/lib/paths";
+import { assets } from "../src/core/paths";
 import { lintSubagent, resolveSubagentFile } from "../src/tools/subagent-doctor";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
+import { reload } from "../src/core/settings";
 import { loadKnownEntities, loadNameIndex } from "../src/hooks/lib/entity-cards";
 import {
   type ExtractedEntity,
@@ -13,7 +14,6 @@ import {
   pendingReviews,
   rejectReview,
 } from "../src/hooks/lib/entity-review";
-import { reload } from "../src/hooks/lib/settings";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { load } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";

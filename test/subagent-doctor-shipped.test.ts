@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { assets } from "../src/hooks/lib/paths";
+import { assets } from "../src/core/paths";
 import { lintSubagent } from "../src/tools/subagent-doctor";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";

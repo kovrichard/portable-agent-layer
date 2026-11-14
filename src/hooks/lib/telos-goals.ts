@@ -9,7 +9,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { palHome } from "./paths";
+import { palHome } from "../../core/paths";
 
 export interface TelosGoal {
   id: string;

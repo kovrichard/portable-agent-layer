@@ -5,7 +5,7 @@ import {
   gitInstallHint,
   versionControlFindings,
 } from "../src/cli/doctor/version-control";
-import { detectRemote } from "../src/hooks/lib/remote";
+import { detectRemote } from "../src/core/remote";
 import { writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";

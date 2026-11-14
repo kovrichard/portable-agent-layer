@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { palPkg } from "../hooks/lib/paths";
+import { palPkg } from "../core/paths";
 
 function latestTranscript(projectsDir: string): string {
   let latestFile = "";

@@ -10,7 +10,7 @@
 
 import { existsSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { ensureDir, platform } from "../lib/paths";
+import { ensureDir, platform } from "../../core/paths";
 import {
   antigravityFilename,
   antigravityRule,

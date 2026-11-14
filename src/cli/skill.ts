@@ -7,10 +7,10 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { getActiveAgent } from "../hooks/lib/agent";
+import { getActiveAgent } from "../core/agent";
+import { withPalEnv } from "../core/pal-env";
+import { isInside, palHome, palPkg } from "../core/paths";
 import { flagshipAuthorModel } from "../hooks/lib/models";
-import { withPalEnv } from "../hooks/lib/pal-env";
-import { isInside, palHome, palPkg } from "../hooks/lib/paths";
 import { log } from "../targets/log";
 import { linkPersonalSkill } from "../targets/skills";
 import { group, leaf, UsageError } from "../tools/lib/command";

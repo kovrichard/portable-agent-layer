@@ -7,15 +7,15 @@
  *  - session-name: generate 4-word session headline on first prompt
  */
 
+import { logDebug, logPromptSnapshot } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import { injectPromptContext } from "./handlers/inject-retrieval";
 import { compactionWarningReminder, recordCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { startHookTiming } from "./lib/hook-timing";
 import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
-import { logDebug, logPromptSnapshot } from "./lib/log";
 import { capturePrompt } from "./lib/prompt-capture";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

@@ -7,7 +7,9 @@
  */
 
 import { readFile, unlink } from "node:fs/promises";
-import { isCursor } from "./lib/agent";
+import { isCursor } from "../core/agent";
+import { logDebug, logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import {
   buildRecall,
   findSavedExchange,
@@ -17,9 +19,7 @@ import {
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
-import { logDebug, logError } from "./lib/log";
 import { runModeRecall } from "./lib/run-mode-gate";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

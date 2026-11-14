@@ -67,7 +67,7 @@ function envPath(name: string, fallback: string): string {
  * In package mode: the global node_modules package directory.
  */
 export function palPkg(): string {
-  return envPath("PAL_PKG", resolve(import.meta.dir, "..", "..", ".."));
+  return envPath("PAL_PKG", resolve(import.meta.dir, "..", ".."));
 }
 
 /**
@@ -76,7 +76,7 @@ export function palPkg(): string {
  * Power users who want memory/telos versioned in a repo can override via PAL_HOME.
  */
 function sandboxPalHome(): string {
-  return resolve(import.meta.dir, "..", "..", "..", ".test", "pal-home");
+  return resolve(import.meta.dir, "..", "..", ".test", "pal-home");
 }
 
 function defaultPalHome(): string {

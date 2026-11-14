@@ -10,11 +10,11 @@
  *    answer to "what now" is rarely "open a repository".
  */
 
+import { logDebug, logError } from "../../core/log";
 import { matrix } from "../../tools/control-room/matrix";
 import { type AgendaMove, readAgenda, writeAgenda } from "../lib/agenda-store";
 import { linkInputs, readGoalLinks, writeGoalLinks } from "../lib/goal-links";
 import { canInfer, inference } from "../lib/inference";
-import { logDebug, logError } from "../lib/log";
 import { readAllProjects } from "../lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../lib/serves";
 import { readTelosGoals } from "../lib/telos-goals";

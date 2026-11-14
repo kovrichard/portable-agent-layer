@@ -10,11 +10,11 @@
  * that could block an edit would be a worse thing than a ledger with a gap.
  */
 
+import { logDebug } from "../core/log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
 import { ledgeredCalls, snapshotCall } from "./lib/ledger-hook";
-import { logDebug } from "./lib/log";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

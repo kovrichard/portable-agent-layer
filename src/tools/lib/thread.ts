@@ -5,8 +5,8 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { RecordAttribution } from "../../hooks/lib/actor";
-import { ensureDir, paths } from "../../hooks/lib/paths";
+import type { RecordAttribution } from "../../core/actor";
+import { ensureDir, paths } from "../../core/paths";
 
 export interface Thread extends RecordAttribution {
   id: string;

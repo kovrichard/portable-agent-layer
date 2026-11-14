@@ -5,8 +5,8 @@
  * unreadable turn is never unbacked.
  */
 
+import { isSystemText } from "../../core/prompt-text";
 import { toolCallsOf, typedRequest } from "./antigravity-transcript";
-import { isSystemText } from "./prompt-text";
 import { isCodexInjectedContext } from "./transcript";
 
 const CLAIM_RE =

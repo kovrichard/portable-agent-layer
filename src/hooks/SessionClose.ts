@@ -10,12 +10,12 @@
  * rewrite the config of a session still in use, and opening PAL costs nothing.
  */
 
+import { logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import { autoUpdateOnClose } from "./lib/auto-update";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { logError } from "./lib/log";
 import { logSessionEnd } from "./lib/session-events";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { spawnTranscriptPreserve } from "./lib/transcript-preserve";
 

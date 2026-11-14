@@ -1,4 +1,4 @@
-import { labelOfRuntime } from "../../../hooks/lib/agent-registry";
+import { labelOfRuntime } from "../../../core/agent-registry";
 import type { CostTotals } from "../cost-report";
 import { count, days, row, tallyLabel } from "../report-rows";
 import { fmtDuration } from "../session-usage";

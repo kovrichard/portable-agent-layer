@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { ensureDir, paths } from "./paths";
+import { ensureDir, paths } from "../../core/paths";
 import { defaultSlug, readAllProjects, resolveProjectFromCwd } from "./projects";
 
 // ── Session Records ──────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { run } from "../src/tools/agent/project";
 import { setSnooze } from "../src/tools/control-room/snooze";
 import { setIscStatus } from "../src/tools/control-room/writes";

@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
-import { splitFrontmatter } from "../../hooks/lib/frontmatter";
+import { splitFrontmatter } from "../../core/frontmatter";
 import { declaredTriggers } from "../../hooks/lib/skill-triggers";
 
 export interface ParsedSkill {

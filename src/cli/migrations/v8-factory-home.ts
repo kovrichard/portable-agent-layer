@@ -10,8 +10,8 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
+import { palHome } from "../../core/paths";
 import { foldHistoryInto } from "../../hooks/lib/parked-history";
-import { palHome } from "../../hooks/lib/paths";
 import { discardEmptyFolder, type Migration, type MigrationResult } from "./migration";
 
 /**

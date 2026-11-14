@@ -6,16 +6,14 @@ import {
   mergeArchive,
   readManifest,
   summarize,
-} from "../hooks/lib/import-merge";
-import { logDebug } from "../hooks/lib/log";
-import { ensureRegistered, writeRegistryEntry } from "../hooks/lib/machine";
-import { palHome, toPath } from "../hooks/lib/paths";
+} from "../core/import-merge";
+import { logDebug } from "../core/log";
+import { ensureRegistered, writeRegistryEntry } from "../core/machine";
+import { palHome, toPath } from "../core/paths";
 import { log } from "../targets/log";
 
 export async function exportState(args: string[]) {
-  const { collectExportFiles, exportZip, timestamp } = await import(
-    "../hooks/lib/export"
-  );
+  const { collectExportFiles, exportZip, timestamp } = await import("../core/export");
 
   const dryRun = args.includes("--dry-run");
   const outputPath = exportOutputPath(args, `pal-export-${timestamp()}.zip`);

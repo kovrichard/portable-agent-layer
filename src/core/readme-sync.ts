@@ -17,7 +17,7 @@ interface SyncResult {
 /** Files that, when changed, should trigger a README check. */
 export const WATCHED_PATHS = [
   "src/cli",
-  "src/hooks/lib/paths.ts",
+  "src/core/paths.ts",
   "src/hooks/lib/inference.ts",
   "src/tools/youtube-analyze.ts",
   "assets/skills",
@@ -30,7 +30,7 @@ function extractEnvVars(): string[] {
   const vars: Set<string> = new Set();
 
   // PAL_* from paths.ts
-  const pathsFile = resolve(pkg, "src", "hooks", "lib", "paths.ts");
+  const pathsFile = resolve(pkg, "src", "core", "paths.ts");
   if (existsSync(pathsFile)) {
     const content = readFileSync(pathsFile, "utf-8");
 

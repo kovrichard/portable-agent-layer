@@ -11,7 +11,7 @@ beforeEach(async () => {
   WORK = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   process.env.PAL_AGENT = "opencode";
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 async function hook() {

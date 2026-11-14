@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { normalizeToolUse } from "../src/hooks/lib/agent";
+import { normalizeToolUse } from "../src/core/agent";
 import { ledgeredCalls, unappliedVerdictOf } from "../src/hooks/lib/ledger-hook";
 
 // Every payload below was captured from GitHub Copilot CLI 1.0.17 by registering

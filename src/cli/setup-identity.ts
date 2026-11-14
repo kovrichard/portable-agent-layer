@@ -8,7 +8,7 @@ import {
   type PalSettingsData,
   raw as readSettings,
   write as writeSettings,
-} from "../hooks/lib/settings";
+} from "../core/settings";
 import { isValidTimeZone } from "../hooks/lib/wall-clock";
 
 /**
