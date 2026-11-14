@@ -4,7 +4,7 @@
  * pal cli usage prices it, so the two never disagree about the same data.
  */
 
-import type { LoggedEvent } from "../../hooks/lib/events";
+import type { LoggedEvent } from "../../bronze/events";
 import { costOfUsage } from "../../hooks/lib/models";
 import { planPriceFor } from "./plan-prices";
 import { fmtCost } from "./token-report";

@@ -72,7 +72,7 @@ describe("auditBindings", () => {
 
   test("never writes anything", async () => {
     const { auditBindings } = await lib();
-    const { bindingsFilePath } = await import("../src/hooks/lib/bindings");
+    const { bindingsFilePath } = await import("../src/core/project-bindings");
     auditBindings([project("alpha", checkout("alpha"))], {});
     expect(require("node:fs").existsSync(bindingsFilePath(HOME))).toBe(false);
   });
@@ -121,7 +121,7 @@ describe("proposeBinding", () => {
 
   test("only ever suggests a command, never performs the binding", async () => {
     const { proposeBinding } = await lib();
-    const { readBindings } = await import("../src/hooks/lib/bindings");
+    const { readBindings } = await import("../src/core/project-bindings");
     proposeBinding(project("orbit"), checkout("orbit"));
     expect(readBindings(HOME)).toEqual({});
   });

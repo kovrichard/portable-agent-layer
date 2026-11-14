@@ -14,11 +14,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { appendEvent, logQuietly } from "../../bronze/events";
 import { logDebug, logError } from "../../core/log";
 import { assets, palPkg, paths } from "../../core/paths";
 import { raw as rawSettings } from "../../core/settings";
 import { cachedStatus, getInstalledVersion, isRepoMode } from "../handlers/update-check";
-import { appendEvent, logQuietly } from "./events";
 
 export interface AutoUpdateLedger {
   attemptedAt?: string;

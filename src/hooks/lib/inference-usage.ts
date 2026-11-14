@@ -15,16 +15,6 @@ export interface InferenceUsage {
   costUsd?: number;
 }
 
-export const USAGE_FIELDS = [
-  "inputTokens",
-  "outputTokens",
-  "cacheWrite5m",
-  "cacheWrite1h",
-  "cacheRead",
-  "thinkingTokens",
-  "costUsd",
-] as const satisfies readonly (keyof InferenceUsage)[];
-
 export function jsonLines(raw: string): Record<string, unknown>[] {
   return raw.split("\n").flatMap((line) => {
     try {

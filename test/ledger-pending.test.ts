@@ -16,7 +16,7 @@ beforeEach(async () => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/ledger");
+  return await import("../src/bronze/ledger");
 }
 
 const SNAPSHOT = {

@@ -19,5 +19,5 @@ export async function freshLedgerHome(file: string): Promise<string> {
 }
 
 export async function ledgerLib() {
-  return await import("../../src/hooks/lib/ledger");
+  return await import("../../src/bronze/ledger");
 }

@@ -5,7 +5,7 @@ import {
   forget,
   unforget,
   userTurnsSince,
-} from "../hooks/lib/evidence";
+} from "../bronze/evidence";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import { windowDays } from "./correction";
 

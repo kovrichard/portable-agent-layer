@@ -1,4 +1,4 @@
-import type { LoggedEvent } from "../../../hooks/lib/events";
+import type { LoggedEvent } from "../../../bronze/events";
 import type { SkillIndex } from "../../../hooks/lib/skill-match";
 import { dayOf, numberOf, ofType, type Tally, tally } from "./year";
 

@@ -6,7 +6,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent } from "./events";
+import { appendEvent } from "../../bronze/events";
 
 const GIT_TIMEOUT_MS = 1000;
 

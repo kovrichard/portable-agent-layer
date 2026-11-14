@@ -3,7 +3,7 @@
  * store. The name stays in the content store; the event carries only its kind.
  */
 
-import { type AppendOptions, appendEvent, logQuietly } from "./events";
+import { type AppendOptions, appendEvent, logQuietly } from "../../bronze/events";
 
 export interface SeenEntity {
   domain: string;

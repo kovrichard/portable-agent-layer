@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { LoggedEvent } from "../src/hooks/lib/events";
+import type { LoggedEvent } from "../src/bronze/events";
 import { costOfUsage, OPUS_MODEL } from "../src/hooks/lib/models";
 import { runStats } from "../src/tools/lib/run-stats";
 

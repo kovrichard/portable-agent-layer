@@ -1,6 +1,6 @@
 import { beforeEach, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { runCompaction } from "../src/cli/compaction";
-import { appendEvent } from "../src/hooks/lib/events";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];

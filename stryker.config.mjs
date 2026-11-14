@@ -58,6 +58,7 @@ export default {
   // could ever be observed, or a file a test reads as text, which instrumenting breaks.
   mutate: [
     "src/core/**/*.ts",
+    "src/bronze/**/*.ts",
     "src/hooks/lib/**/*.ts",
     "src/hooks/handlers/*.ts",
     "src/tools/**/*.ts",

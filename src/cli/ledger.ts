@@ -6,7 +6,7 @@
  * there.
  */
 
-import type { LedgerEntry } from "../hooks/lib/ledger";
+import type { LedgerEntry } from "../bronze/ledger";
 import {
   type ChainVerdict,
   chainVerdict,

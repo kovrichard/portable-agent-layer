@@ -5,7 +5,7 @@ import {
   ledgeredCalls,
   ledgeredTarget,
   unappliedVerdictOf,
-} from "../src/hooks/lib/ledger-hook";
+} from "../src/bronze/ledger-hook";
 
 const CURSOR_WRITE = {
   hook_event_name: "preToolUse",

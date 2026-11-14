@@ -2,7 +2,7 @@
  * How long a hook and each of its handlers took, logged as one event per run.
  */
 
-import { appendEvent, logQuietly } from "./events";
+import { appendEvent, logQuietly } from "../../bronze/events";
 
 function elapsedMs(since: number): number {
   return Math.round((performance.now() - since) * 10) / 10;

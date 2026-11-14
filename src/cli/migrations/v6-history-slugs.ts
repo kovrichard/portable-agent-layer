@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { paths } from "../../core/paths";
-import { readBindings } from "../../hooks/lib/bindings";
+import { readBindings } from "../../core/project-bindings";
 import { foldHistoryInto } from "../../hooks/lib/parked-history";
 import { projectPathOnThisMachine, readAllProjects } from "../../hooks/lib/projects";
 import { discardEmptyFolder, type Migration, type MigrationResult } from "./migration";

@@ -4,13 +4,13 @@
  * API-price cost.
  */
 
-import { eventLogEnabled } from "../../core/settings";
 import {
   allEventsSince,
   type EventType,
   type LoggedEvent,
   loggedEventIds,
-} from "../../hooks/lib/events";
+} from "../../bronze/events";
+import { eventLogEnabled } from "../../core/settings";
 import { scopeOf } from "../../hooks/lib/progress-tree";
 import { backfillGit } from "./backfill/git";
 import { collectEvents } from "./collectors";

@@ -2,7 +2,7 @@
  * One event per judgment: the mode, the route that answered, and what System One and the fallback each said.
  */
 
-import { appendEvent, logQuietly } from "./events";
+import { appendEvent, logQuietly } from "../../bronze/events";
 import type { JudgeAnswers, JudgeMode, JudgeRoute, SystemOneFailure } from "./judgment";
 
 interface JudgeCallEntry {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, posix, win32 } from "node:path";
-import type { Bindings } from "../src/hooks/lib/bindings";
+import type { Bindings } from "../src/core/project-bindings";
 import { PRICE_HISTORY } from "../src/hooks/lib/models";
 import type { ProjectProgress } from "../src/hooks/lib/projects";
 import {

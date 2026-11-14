@@ -1,4 +1,4 @@
-import { preserveTranscriptsOnce } from "../hooks/lib/transcript-preserve";
+import { preserveTranscriptsOnce } from "../bronze/transcript-preserve";
 import { group, leaf } from "../tools/lib/command";
 
 function printPreserve(): undefined {

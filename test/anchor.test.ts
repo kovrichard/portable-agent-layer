@@ -1,13 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import type { ProjectProgress } from "../src/hooks/lib/projects";
-
-function project(name: string, path: string): ProjectProgress {
-  return { name, path, status: "active", created: "2026-01-01", updated: "2026-01-01" };
-}
 
 async function lib() {
-  return await import("../src/hooks/lib/anchor");
+  return await import("../src/core/anchor");
 }
 
 describe("isAnchor", () => {
@@ -41,10 +36,10 @@ describe("isAnchor", () => {
 });
 
 describe("encodeAnchor", () => {
-  const projects = [
-    project("widget", "/home/dev/git/widget"),
-    project("widget-docs", "/home/dev/git/widget-docs"),
-  ];
+  const projects = {
+    widget: "/home/dev/git/widget",
+    "widget-docs": "/home/dev/git/widget-docs",
+  };
 
   test("rewrites a path inside a registered project", async () => {
     const { encodeAnchor } = await lib();
@@ -75,15 +70,15 @@ describe("encodeAnchor", () => {
   test("does not treat a same-prefix sibling directory as a match", async () => {
     const { encodeAnchor } = await lib();
     // "widget-docs" must not be matched as if it were inside "widget".
-    const result = encodeAnchor("/home/dev/git/widget-docs/README.md", [
-      project("widget", "/home/dev/git/widget"),
-    ]);
+    const result = encodeAnchor("/home/dev/git/widget-docs/README.md", {
+      widget: "/home/dev/git/widget",
+    });
     expect(result).toBe("/home/dev/git/widget-docs/README.md");
   });
 });
 
 describe("resolveAnchor", () => {
-  const projects = [project("widget", "/home/dev/git/widget")];
+  const projects = { widget: "/home/dev/git/widget" };
 
   test("resolves a known anchor to a local absolute path", async () => {
     const { resolveAnchor } = await lib();
@@ -106,6 +101,14 @@ describe("resolveAnchor", () => {
     expect(r).toEqual({ state: "unresolvable", slug: "gizmo" });
   });
 
+  test("a slug naming a built-in object property is not bound", async () => {
+    const { resolveAnchor } = await lib();
+    expect(resolveAnchor("{proj:constructor}/x", projects)).toEqual({
+      state: "unresolvable",
+      slug: "constructor",
+    });
+  });
+
   test("passes a plain non-anchor value through unchanged", async () => {
     const { resolveAnchor } = await lib();
     const r = resolveAnchor("/some/random/path", projects);
@@ -122,7 +125,7 @@ describe("resolveAnchor", () => {
 });
 
 describe("anchorMatchesCwd", () => {
-  const projects = [project("widget", "/home/dev/git/widget")];
+  const projects = { widget: "/home/dev/git/widget" };
 
   test("matches when the anchor resolves to the given cwd", async () => {
     const { anchorMatchesCwd } = await lib();
@@ -147,7 +150,7 @@ describe("anchorMatchesCwd", () => {
 
   test("a plain absolute path still matches by direct equality", async () => {
     const { anchorMatchesCwd } = await lib();
-    expect(anchorMatchesCwd("/home/dev/git/widget", "/home/dev/git/widget", [])).toBe(
+    expect(anchorMatchesCwd("/home/dev/git/widget", "/home/dev/git/widget", {})).toBe(
       true
     );
   });
@@ -156,11 +159,11 @@ describe("anchorMatchesCwd", () => {
 describe("relocation — the actual payoff", () => {
   test("changing a project's registered path re-resolves every anchor referencing it", async () => {
     const { encodeAnchor, resolveAnchor } = await lib();
-    const before = [project("widget", "/home/dev/git/widget")];
+    const before = { widget: "/home/dev/git/widget" };
     const anchor = encodeAnchor("/home/dev/git/widget/src/foo.ts", before);
 
     // The project moves — same slug, new path. No anchor is rewritten.
-    const after = [project("widget", "/mnt/data/widget")];
+    const after = { widget: "/mnt/data/widget" };
     const resolved = resolveAnchor(anchor, after);
 
     expect(resolved).toEqual({

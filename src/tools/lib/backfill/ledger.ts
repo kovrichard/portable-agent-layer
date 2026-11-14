@@ -3,11 +3,7 @@
  * test suite leaked into the real ledger before it was sandboxed are left out.
  */
 
-import {
-  actionEventId,
-  type LedgerEntry,
-  logActionEvent,
-} from "../../../hooks/lib/ledger";
+import { actionEventId, type LedgerEntry, logActionEvent } from "../../../bronze/ledger";
 import { readLedger } from "../../ledger/query";
 import { emitUnseen, recordedAttribution } from "./rows";
 

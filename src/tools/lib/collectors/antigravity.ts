@@ -8,7 +8,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appendEvent } from "../../../hooks/lib/events";
+import { appendEvent } from "../../../bronze/events";
 import { readCursor, writeCursor } from "./cursors";
 import { type AllowList, selectAllowed } from "./sqlite";
 

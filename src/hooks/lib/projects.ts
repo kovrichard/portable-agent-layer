@@ -20,11 +20,14 @@ import * as hostPath from "node:path";
 import { basename, resolve } from "node:path";
 import { parse, stringify } from "../../core/frontmatter";
 import { palHome, paths } from "../../core/paths";
+import {
+  type Bindings,
+  type PlatformPath,
+  projectRootContaining,
+  readBindings,
+} from "../../core/project-bindings";
 import { detectRemote } from "../../core/remote";
-import { type Bindings, readBindings, writeBinding, writeBindings } from "./bindings";
-
-/** The path functions of one platform: the host's, or `path.win32` / `path.posix` in tests. */
-export type PlatformPath = typeof hostPath.posix;
+import { writeBinding, writeBindings } from "./bindings";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
@@ -309,23 +312,28 @@ export function resolveProjectFromCwd(
   bindings: Bindings = readBindings(),
   paths: PlatformPath = hostPath
 ): ProjectProgress | null {
-  // Windows paths are case-insensitive, so both sides are folded before comparing.
-  const fold = (p: string) => (paths.sep === "\\" ? p.toLowerCase() : p);
-  const cwdAbs = fold(paths.resolve(cwd));
-  const matches: { project: ProjectProgress; path: string }[] = [];
+  const position = projectRootContaining(
+    cwd,
+    rootsByListPosition(projects, bindings, paths),
+    paths
+  );
 
-  for (const project of projects) {
-    const projAbs = projectPathOnThisMachine(project, bindings, paths);
-    if (!projAbs) continue;
-    const key = fold(projAbs);
-    if (cwdAbs === key || cwdAbs.startsWith(key + paths.sep))
-      matches.push({ project, path: key });
-  }
+  return position === null ? null : projects[Number(position)];
+}
 
-  if (matches.length === 0) return null;
-  matches.sort((a, b) => b.path.length - a.path.length);
+function rootsByListPosition(
+  projects: ProjectProgress[],
+  bindings: Bindings,
+  paths: PlatformPath
+): Bindings {
+  const roots: Bindings = {};
 
-  return matches[0].project;
+  projects.forEach((project, position) => {
+    const root = projectPathOnThisMachine(project, bindings, paths);
+    if (root) roots[position] = root;
+  });
+
+  return roots;
 }
 
 export function isStale(

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { appendEvent } from "../src/bronze/events";
 import { reload } from "../src/core/settings";
-import { appendEvent } from "../src/hooks/lib/events";
 import {
   contextTokensOf,
   gitBranchOf,

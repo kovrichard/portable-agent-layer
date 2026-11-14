@@ -4,7 +4,7 @@
  * holds other machines' rows too.
  */
 
-import { appendEvent } from "../../../hooks/lib/events";
+import { appendEvent } from "../../../bronze/events";
 import {
   legacyTurnId,
   legacyTurns,

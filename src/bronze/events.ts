@@ -6,18 +6,27 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution, type RecordAttribution } from "../../core/actor";
-import type { AgentType } from "../../core/agent";
-import { logError } from "../../core/log";
-import { ensureDir, paths } from "../../core/paths";
-import { eventLogEnabled } from "../../core/settings";
+import { currentAttribution, type RecordAttribution } from "../core/actor";
+import type { AgentType } from "../core/agent";
+import { logError } from "../core/log";
+import { ensureDir, paths } from "../core/paths";
+import { boundProjectAt } from "../core/project-bindings";
+import { eventLogEnabled } from "../core/settings";
 import { currentChannel } from "./channel";
-import { USAGE_FIELDS } from "./inference-usage";
-import { readAllProjects, resolveProjectFromCwd } from "./projects";
 
 export const EVENT_SCHEMA_VERSION = 1;
 const MAX_STRING = 64;
 const MAX_ARRAY = 50;
+
+export const USAGE_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cacheWrite5m",
+  "cacheWrite1h",
+  "cacheRead",
+  "thinkingTokens",
+  "costUsd",
+] as const;
 
 export const EVENT_FIELDS = {
   turn: [
@@ -271,7 +280,7 @@ const projectByCwd = new Map<string, string | null>();
 
 function projectOf(cwd: string): string | null {
   if (!projectByCwd.has(cwd)) {
-    projectByCwd.set(cwd, resolveProjectFromCwd(cwd, readAllProjects())?.name ?? null);
+    projectByCwd.set(cwd, boundProjectAt(cwd));
   }
 
   return projectByCwd.get(cwd) ?? null;

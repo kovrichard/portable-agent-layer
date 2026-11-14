@@ -15,11 +15,11 @@ beforeEach(async () => {
 });
 
 async function hook() {
-  return await import("../src/hooks/lib/ledger-hook");
+  return await import("../src/bronze/ledger-hook");
 }
 
 async function entries() {
-  const { ledgerPath } = await import("../src/hooks/lib/ledger");
+  const { ledgerPath } = await import("../src/bronze/ledger");
 
   return readFileSync(ledgerPath(), "utf-8")
     .trim()

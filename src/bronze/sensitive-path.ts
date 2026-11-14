@@ -7,7 +7,7 @@
  * something it did not need to.
  */
 
-import { raw } from "../../core/settings";
+import { raw } from "../core/settings";
 
 const ENV_TEMPLATE_SUFFIXES = [".sample", ".example", ".template", ".dist", ".defaults"];
 

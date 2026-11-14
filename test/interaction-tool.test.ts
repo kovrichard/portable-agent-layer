@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent } from "../src/hooks/lib/events";
+import { appendEvent } from "../src/bronze/events";
 import { turnsSince } from "../src/hooks/lib/interaction";
 import { run } from "../src/tools/agent/interaction";
 import { freshTestDir } from "./lib/test-home";

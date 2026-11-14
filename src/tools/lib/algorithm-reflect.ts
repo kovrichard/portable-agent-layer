@@ -8,7 +8,7 @@
  */
 
 import { currentAttribution, type RecordAttribution } from "../../core/actor";
-import { encodeAnchor } from "../../hooks/lib/anchor";
+import { encodeAnchor } from "../../core/anchor";
 
 const MIN_SENTIMENT = 1;
 const MAX_SENTIMENT = 10;

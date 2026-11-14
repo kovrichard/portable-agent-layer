@@ -3,9 +3,9 @@
  * store in a process of its own, so no session waits on the gzip.
  */
 
+import { preserveTranscriptsOnce } from "../bronze/transcript-preserve";
 import { logError } from "../core/log";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { preserveTranscriptsOnce } from "./lib/transcript-preserve";
 
 recordHookRunOnExit();
 

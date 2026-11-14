@@ -5,7 +5,7 @@
  * content store.
  */
 
-import { appendEvent, eventsSince } from "../../../hooks/lib/events";
+import { appendEvent, eventsSince } from "../../../bronze/events";
 import { readSessionHistory, type SessionRecord } from "../../../hooks/lib/work-tracking";
 
 const sessionEventId = (sessionId: string) => `session:${sessionId}`;

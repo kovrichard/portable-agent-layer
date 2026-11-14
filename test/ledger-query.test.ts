@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { writeBinding } from "../src/hooks/lib/bindings";
 import { freshTestDir } from "./lib/test-home";
 
 // The read side is only worth as much as the questions it can answer without
@@ -30,6 +31,7 @@ function registerProject(slug: string, path: string): void {
     `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: 2026-09-01T00:00:00.000Z\npath: ${path}\n---\n\n## Goal\n\nnone\n`,
     "utf-8"
   );
+  writeBinding(slug, path, HOME);
 }
 
 type EntryOverrides = Record<string, unknown>;

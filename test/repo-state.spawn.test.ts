@@ -75,7 +75,7 @@ async function registerProject(name: string, path: string) {
 }
 
 async function repoStateEvents() {
-  const { eventsSince } = await import("../src/hooks/lib/events");
+  const { eventsSince } = await import("../src/bronze/events");
 
   return eventsSince("repo_state", new Date(Date.now() - 60_000));
 }

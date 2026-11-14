@@ -4,7 +4,7 @@ import {
   ledgeredTarget,
   toolUseIdOf,
   unappliedVerdictOf,
-} from "../src/hooks/lib/ledger-hook";
+} from "../src/bronze/ledger-hook";
 
 // Both hooks ask these two questions of every payload, and they must answer
 // identically: a snapshot taken for a call the commit half ignores is a

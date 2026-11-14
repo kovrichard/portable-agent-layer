@@ -4,15 +4,15 @@
  */
 
 import { basename, extname } from "node:path";
+import { appendEvent, logQuietly } from "../../bronze/events";
+import { unappliedVerdictOf } from "../../bronze/ledger-hook";
 import {
   FILE_TARGET_KEYS,
   normalizeToolUse,
   type ToolUseRequest,
 } from "../../core/agent";
 import { isPalSpawnedInference } from "../../core/spawn-guard";
-import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
-import { unappliedVerdictOf } from "./ledger-hook";
 import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];

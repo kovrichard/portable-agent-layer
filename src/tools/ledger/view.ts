@@ -5,6 +5,7 @@
  * the browser, so the numbers on the page are the numbers the tests check.
  */
 
+import type { LedgerEntry } from "../../bronze/ledger";
 import {
   type ActorRegistryEntry,
   actorDisplayName,
@@ -17,7 +18,6 @@ import {
   type RegistryEntry,
   readRegistry as readMachineRegistry,
 } from "../../core/machine";
-import type { LedgerEntry } from "../../hooks/lib/ledger";
 import { PAGE_OUTCOMES, type PageOutcome } from "./outcomes";
 import { anchorSlugOf, changedLines, type LedgerFilter, queryLedger } from "./query";
 

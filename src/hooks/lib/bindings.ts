@@ -21,14 +21,12 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome, toPath } from "../../core/paths";
+import {
+  type Bindings,
+  bindingsFilePath,
+  readBindings,
+} from "../../core/project-bindings";
 import { adoptParkedHistory } from "./parked-history";
-
-/** Project name → absolute path on this machine. */
-export type Bindings = Record<string, string>;
-
-export function bindingsFilePath(home: string = palHome()): string {
-  return resolve(home, "bindings.json");
-}
 
 /**
  * Where the previous bindings are kept.
@@ -41,31 +39,6 @@ export function bindingsFilePath(home: string = palHome()): string {
  */
 export function bindingsBackupPath(home: string = palHome()): string {
   return resolve(home, "bindings.backup.json");
-}
-
-function isBindingMap(value: unknown): value is Bindings {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-
-  return Object.values(value).every((v) => typeof v === "string");
-}
-
-/**
- * A malformed or unreadable file reads as empty rather than throwing. Bindings
- * are a lookup aid, so a corrupt one degrades to "nothing is bound here" — the
- * same state a fresh machine starts in — instead of breaking every caller.
- */
-export function readBindings(home: string = palHome()): Bindings {
-  const file = bindingsFilePath(home);
-  if (!existsSync(file)) return {};
-
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(file, "utf-8"));
-    if (!isBindingMap(parsed)) return {};
-
-    return parsed;
-  } catch {
-    return {};
-  }
 }
 
 /**
@@ -100,11 +73,6 @@ export function writeBindings(bindings: Bindings, home: string = palHome()): voi
   for (const key of Object.keys(bindings).sort()) sorted[key] = bindings[key];
   writeFileSync(bindingsFilePath(home), `${JSON.stringify(sorted, null, 2)}\n`);
   adoptParkedHistory(sorted, home);
-}
-
-/** The absolute path this machine has for `project`, or null when unbound. */
-export function bindingFor(project: string, home: string = palHome()): string | null {
-  return readBindings(home)[project] ?? null;
 }
 
 /** Bind `project` to `path`, replacing any existing binding for it. */

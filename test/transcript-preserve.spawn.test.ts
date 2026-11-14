@@ -5,7 +5,7 @@ import {
   preserveTranscripts,
   preserveTranscriptsOnce,
   transcriptArchive,
-} from "../src/hooks/lib/transcript-preserve";
+} from "../src/bronze/transcript-preserve";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";

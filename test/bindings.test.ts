@@ -17,7 +17,10 @@ beforeEach(() => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/bindings");
+  return {
+    ...(await import("../src/core/project-bindings")),
+    ...(await import("../src/hooks/lib/bindings")),
+  };
 }
 
 /**
