@@ -15,7 +15,7 @@ import { logDebug, logError } from "../lib/log";
 import { parkPromptContext } from "../lib/parked-context";
 import { progressTreePromptLine } from "../lib/progress-tree-context";
 import { isSystemText } from "../lib/prompt-text";
-import { getRepoStateReminder } from "../lib/repo-state";
+import { observeRepoState } from "../lib/repo-state";
 import { runModePromptLine } from "../lib/run-mode-gate";
 import { scheduledPromptsReminder } from "../lib/scheduled-prompts";
 import { isEnabled } from "../lib/settings";
@@ -71,7 +71,7 @@ export async function getPromptContext(
     userText &&
       withinBudget(() => scheduledPromptsReminder(process.cwd(), sessionId), BUDGET_MS),
     userText && withinBudget(() => promptRulesReminder(userText, sessionId), BUDGET_MS),
-    withinBudget(() => getRepoStateReminder(), BUDGET_MS),
+    withinBudget(() => observeRepoState(process.cwd(), sessionId ?? null), BUDGET_MS),
     withinBudget(() => progressTreePromptLine(userText, undefined, sessionId), BUDGET_MS),
     userText && withinBudget(() => observeTurn(userText, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
