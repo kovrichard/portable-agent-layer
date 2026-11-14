@@ -1,4 +1,4 @@
-import type { LoggedEvent } from "../../../hooks/lib/events";
+import type { LoggedEvent } from "../../../bronze/events";
 import { apiPriceOf } from "../cost-report";
 import { dayOf, daysBetween, isUserActivity, numberOf, ofType } from "./year";
 

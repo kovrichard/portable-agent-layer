@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import { eventsSince } from "../src/bronze/events";
 import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
-import { eventsSince } from "../src/hooks/lib/events";
 import { inference } from "../src/hooks/lib/inference";
 import { buildCopilotArgs } from "../src/hooks/lib/inference-agents";
 import { buildCliPrompt } from "../src/hooks/lib/inference-prompt";

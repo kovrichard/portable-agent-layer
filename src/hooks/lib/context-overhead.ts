@@ -1,5 +1,5 @@
+import { appendEvent, logQuietly } from "../../bronze/events";
 import { buildClaudeMd } from "./claude-md";
-import { appendEvent, logQuietly } from "./events";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { getSemiStaticSources, readFileSafe } from "./semi-static";
 

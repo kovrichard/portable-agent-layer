@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { reload } from "../src/core/settings";
-import { appendEvent } from "../src/hooks/lib/events";
 import { palInferenceEvents } from "../src/tools/token-cost";
 import { freshTestDir } from "./lib/test-home";
 

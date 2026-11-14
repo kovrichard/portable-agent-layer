@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { appendEvent, logQuietly } from "../../bronze/events";
 import { isClaude } from "../../core/agent";
 import { platform } from "../../core/paths";
 import { isPalSpawnedInference } from "../../core/spawn-guard";
 import { claudeConfigFile } from "../../tools/lib/collectors/billing";
-import { appendEvent, logQuietly } from "./events";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { modelLimitsFor } from "./models";
 import { contextModelOf, contextTokensOf, lastCompactionAt } from "./session-events";

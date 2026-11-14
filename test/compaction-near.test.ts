@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { EVENT_FIELDS, eventsSince } from "../src/bronze/events";
 import { reload } from "../src/core/settings";
 import {
   COMPACTION_MARGIN_FRACTION,
@@ -10,7 +11,6 @@ import {
   recordIdleCompactionNear,
   resolveCompactionWindow,
 } from "../src/hooks/lib/compaction-near";
-import { EVENT_FIELDS, eventsSince } from "../src/hooks/lib/events";
 import { logCompaction } from "../src/hooks/lib/session-events";
 import { freshTestDir } from "./lib/test-home";
 

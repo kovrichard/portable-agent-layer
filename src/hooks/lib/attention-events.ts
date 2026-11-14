@@ -3,8 +3,8 @@
  * it needs them.
  */
 
+import { appendEvent, logQuietly } from "../../bronze/events";
 import { normalizeToolUse } from "../../core/agent";
-import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
 import { markWaiting } from "./waiting-on-user";
 

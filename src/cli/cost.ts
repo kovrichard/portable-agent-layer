@@ -1,5 +1,5 @@
+import { allEventsSince } from "../bronze/events";
 import { labelOfRuntime } from "../core/agent-registry";
-import { allEventsSince } from "../hooks/lib/events";
 import { leaf } from "../tools/lib/command";
 import { efficiency } from "../tools/lib/cost/efficiency";
 import { leaderboards } from "../tools/lib/cost/leaderboards";

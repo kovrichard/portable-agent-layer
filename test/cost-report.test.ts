@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { eventsSince, type LoggedEvent } from "../src/bronze/events";
 import { reload } from "../src/core/settings";
-import { eventsSince, type LoggedEvent } from "../src/hooks/lib/events";
 import { collectClaude } from "../src/tools/lib/collectors/claude";
 import { costLines, costMonths } from "../src/tools/lib/cost-report";
 import { readClaudeCode } from "../src/tools/lib/usage-buckets";

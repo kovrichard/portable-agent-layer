@@ -21,7 +21,7 @@ rules:
     no-unguarded-json-parse: error
     no-sync-in-async:
       severity: error
-      include: ["src/hooks/**", "src/core/**"]
+      include: ["src/hooks/**", "src/core/**", "src/bronze/**"]
     no-nested-template-literals: error
     no-consecutive-array-push: error
     no-string-match: error
@@ -33,7 +33,7 @@ rules:
 
 arch:
   layers:
-    core: ["src/core/**", "src/hooks/lib/**", "src/tools/**"]
+    core: ["src/core/**", "src/bronze/**", "src/hooks/lib/**", "src/tools/**"]
     skills: ["assets/skills/**"]
     targets: ["src/targets/**"]
     cli: ["src/cli/**"]
@@ -54,6 +54,10 @@ arch:
     - from: ["src/core/**"]
       allow: ["src/core/**"]
       message: "src/core/ is the bottom layer — it imports only other src/core/ modules and packages, never another src/ folder."
+
+    - from: ["src/bronze/**"]
+      allow: ["src/bronze/**", "src/core/**"]
+      message: "src/bronze/ holds the append-only stores — it imports only src/bronze/ and src/core/ modules and packages, never another src/ folder."
 
   maxCommentDensity:
     - limit: 5
@@ -85,7 +89,7 @@ arch:
 
   forbidden:
     - pattern: "process.exit("
-      in: ["src/hooks/lib/**", "src/core/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
     # cmd.exe never expands "~" and PowerShell hands it to native commands
@@ -177,5 +181,5 @@ arch:
 
     - pattern: "resolve(import.meta.dir"
       only: "src/core/paths.ts"
-      in: ["src/hooks/lib/**", "src/core/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**"]
       message: "Package-relative path resolution in hook lib must go through the paths module — import getPalPkg() instead of navigating from import.meta.dir."

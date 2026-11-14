@@ -6,12 +6,12 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution, type RecordAttribution } from "../../core/actor";
-import type { AgentType } from "../../core/agent";
-import { logError } from "../../core/log";
-import { ensureDir, paths } from "../../core/paths";
-import { boundProjectAt } from "../../core/project-bindings";
-import { eventLogEnabled } from "../../core/settings";
+import { currentAttribution, type RecordAttribution } from "../core/actor";
+import type { AgentType } from "../core/agent";
+import { logError } from "../core/log";
+import { ensureDir, paths } from "../core/paths";
+import { boundProjectAt } from "../core/project-bindings";
+import { eventLogEnabled } from "../core/settings";
 import { currentChannel } from "./channel";
 
 export const EVENT_SCHEMA_VERSION = 1;

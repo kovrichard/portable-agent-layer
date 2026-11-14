@@ -14,14 +14,14 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { resolveAnchor } from "../../core/anchor";
-import { paths } from "../../core/paths";
 import {
   applyDelta,
   type LedgerDelta,
   type LedgerEntry,
   ledgerPath,
-} from "../../hooks/lib/ledger";
+} from "../../bronze/ledger";
+import { resolveAnchor } from "../../core/anchor";
+import { paths } from "../../core/paths";
 
 const ARCHIVE_RE = /^actions-.*\.jsonl$/;
 

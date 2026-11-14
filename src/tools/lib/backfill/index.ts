@@ -3,8 +3,8 @@
  * comes from its source's own id, so a second run appends nothing.
  */
 
+import { loggedEventIds } from "../../../bronze/events";
 import { eventLogEnabled } from "../../../core/settings";
-import { loggedEventIds } from "../../../hooks/lib/events";
 import { readAllProjects } from "../../../hooks/lib/projects";
 import { backfillEntities } from "./entities";
 import { backfillGit } from "./git";

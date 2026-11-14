@@ -8,8 +8,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { ledgerPath, recordAction, recordBlocked } from "../src/bronze/ledger";
 import { reload } from "../src/core/settings";
-import { ledgerPath, recordAction, recordBlocked } from "../src/hooks/lib/ledger";
 import { writeProject } from "../src/hooks/lib/projects";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";

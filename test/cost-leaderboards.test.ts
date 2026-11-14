@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { costCommand } from "../src/cli/cost";
-import { appendEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { leaderboards } from "../src/tools/lib/cost/leaderboards";
 import { leaderboardLines } from "../src/tools/lib/cost/render";

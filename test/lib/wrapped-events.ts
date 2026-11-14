@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { EventType, LoggedEvent } from "../../src/bronze/events";
 import { reload } from "../../src/core/settings";
-import type { EventType, LoggedEvent } from "../../src/hooks/lib/events";
 import { freshTestDir } from "./test-home";
 
 export function budapestHome(testFile: string): string {

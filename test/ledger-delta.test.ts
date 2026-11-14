@@ -17,7 +17,7 @@ beforeEach(async () => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/ledger");
+  return await import("../src/bronze/ledger");
 }
 
 /** A small deterministic generator, so a failure names a seed that reproduces it. */

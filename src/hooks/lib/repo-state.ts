@@ -5,8 +5,8 @@
 
 import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
+import { appendEvent, logQuietly } from "../../bronze/events";
 import { isEnabled } from "../../core/settings";
-import { appendEvent, logQuietly } from "./events";
 import { mergedWorktrees } from "./merged-worktrees";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
 

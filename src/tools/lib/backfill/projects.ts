@@ -4,7 +4,7 @@
  * streamed live as a commitment is not logged twice.
  */
 
-import { eventsSince } from "../../../hooks/lib/events";
+import { eventsSince } from "../../../bronze/events";
 import { readAllProjects } from "../../../hooks/lib/projects";
 import {
   closedIscRows,

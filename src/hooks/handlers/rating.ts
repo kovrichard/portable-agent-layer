@@ -8,6 +8,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { emitRating } from "../../bronze/signals";
 import { logDebug } from "../../core/log";
 import { paths } from "../../core/paths";
 import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
@@ -46,7 +47,6 @@ import {
   parseDraft,
 } from "../lib/rule-drafter";
 import { ruleRecurringJudgment } from "../lib/shadow-judgments";
-import { emitRating } from "../lib/signals";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */
 function getLastResponse(sessionId?: string): string {

@@ -18,11 +18,11 @@ beforeEach(async () => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/ledger-hook");
+  return await import("../src/bronze/ledger-hook");
 }
 
 async function ledger() {
-  return await import("../src/hooks/lib/ledger");
+  return await import("../src/bronze/ledger");
 }
 
 const CALL = {

@@ -5,6 +5,7 @@
  *   backtest [--margin <f>[,...]] [--days N] [--window <tokens>[@<until>]]... [--json]
  */
 
+import { eventsSince } from "../bronze/events";
 import {
   type BacktestLabels,
   type BacktestRow,
@@ -16,7 +17,6 @@ import {
   COMPACTION_MARGIN_FRACTION,
   currentCompactionWindow,
 } from "../hooks/lib/compaction-near";
-import { eventsSince } from "../hooks/lib/events";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 import { windowDays } from "./correction";
 

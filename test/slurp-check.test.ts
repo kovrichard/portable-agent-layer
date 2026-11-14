@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { eventsSince } from "../src/bronze/events";
 import { reload } from "../src/core/settings";
-import { eventsSince } from "../src/hooks/lib/events";
 import {
   NOTEWORTHY_BYTES,
   recordSlurpCheck,

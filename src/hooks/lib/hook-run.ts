@@ -4,7 +4,7 @@
  */
 
 import { basename } from "node:path";
-import { appendEvent, logQuietly } from "./events";
+import { appendEvent, logQuietly } from "../../bronze/events";
 
 const run: { event: string | null; session: string | null } = {
   event: null,

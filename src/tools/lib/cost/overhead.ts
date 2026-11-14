@@ -1,4 +1,4 @@
-import type { LoggedEvent } from "../../../hooks/lib/events";
+import type { LoggedEvent } from "../../../bronze/events";
 import { dayOf, numberOf, ofType } from "../wrapped/year";
 
 type Tier = "instructionsChars" | "semiStaticChars" | "dynamicChars";

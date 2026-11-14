@@ -6,7 +6,7 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent } from "../../../hooks/lib/events";
+import { appendEvent } from "../../../bronze/events";
 import { COPILOT_BILLING } from "./billing";
 import { readCursor, writeCursor } from "./cursors";
 import { type AllowList, selectAllowed } from "./sqlite";

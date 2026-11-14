@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ledgeredCalls, unappliedVerdictOf } from "../src/bronze/ledger-hook";
 import { normalizeToolUse } from "../src/core/agent";
-import { ledgeredCalls, unappliedVerdictOf } from "../src/hooks/lib/ledger-hook";
 
 // Every payload below was captured from GitHub Copilot CLI 1.0.17 by registering
 // a hook that wrote its stdin to disk. An invented fixture here proves only that

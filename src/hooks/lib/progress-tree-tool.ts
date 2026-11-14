@@ -2,10 +2,10 @@
  * A PR the session opened with `gh pr create`, a dark-factory build it started, and an artifact it published land on its active node without being recorded by hand.
  */
 
+import { unappliedVerdictOf } from "../../bronze/ledger-hook";
 import { normalizeToolUse } from "../../core/agent";
 import { sessionDir } from "../../core/session-dir";
 import { hookSessionId } from "./hook-turn";
-import { unappliedVerdictOf } from "./ledger-hook";
 import { progressSession } from "./progress-session";
 import {
   type ArtifactKind,

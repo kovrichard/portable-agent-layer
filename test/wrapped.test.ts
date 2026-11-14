@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { appendEvent, type LoggedEvent } from "../src/bronze/events";
 import { wrappedCommand } from "../src/cli/wrapped";
-import { appendEvent, type LoggedEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { totalsLines } from "../src/tools/lib/wrapped/render";
 import { type WrappedTotals, wrappedTotals } from "../src/tools/lib/wrapped/totals";

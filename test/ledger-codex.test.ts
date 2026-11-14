@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ledgeredCalls } from "../src/hooks/lib/ledger-hook";
+import { ledgeredCalls } from "../src/bronze/ledger-hook";
 import { loadCodexHooksTemplate, mergeCodexHooks } from "../src/targets/codex/hooks";
 
 const TEMPLATE = resolve(import.meta.dir, "../assets/templates/hooks.codex.json");

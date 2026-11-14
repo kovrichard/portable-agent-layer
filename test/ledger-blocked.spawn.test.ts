@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { LedgerEntry } from "../src/hooks/lib/ledger";
+import type { LedgerEntry } from "../src/bronze/ledger";
 import { ledgerView } from "../src/tools/ledger/view";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";

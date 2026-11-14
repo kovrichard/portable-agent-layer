@@ -1,4 +1,4 @@
-import type { LoggedEvent } from "../../../hooks/lib/events";
+import type { LoggedEvent } from "../../../bronze/events";
 import { dayOf, isUserActivity } from "../wrapped/year";
 
 export interface Activity {

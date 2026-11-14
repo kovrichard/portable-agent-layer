@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/core/settings";
 import {
   admittedFields,
   appendEvent,
   EVENT_FIELDS,
   EVENT_SCHEMA_VERSION,
   eventsSince,
-} from "../src/hooks/lib/events";
+} from "../src/bronze/events";
+import { reload } from "../src/core/settings";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { eventsSince } from "../src/bronze/events";
 import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
-import { eventsSince } from "../src/hooks/lib/events";
 import { hasOpenAiKey, inference } from "../src/hooks/lib/inference";
 import { buildCodexArgs } from "../src/hooks/lib/inference-agents";
 import { buildCliPrompt } from "../src/hooks/lib/inference-prompt";

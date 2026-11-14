@@ -12,7 +12,7 @@ import {
   ANTIGRAVITY_WRITE_TOOLS,
   FILE_TARGET_KEYS,
   normalizeToolUse,
-} from "../../core/agent";
+} from "../core/agent";
 import {
   claimPending,
   type LedgerEntry,

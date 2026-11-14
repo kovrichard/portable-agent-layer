@@ -5,13 +5,13 @@
 
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import { allEventsSince, type LoggedEvent } from "../bronze/events";
+import { transcriptArchive } from "../bronze/transcript-preserve";
 import { AGENT_REGISTRY, type AgentName } from "../core/agent-registry";
 import { platform } from "../core/paths";
 import { readBindings } from "../core/project-bindings";
 import { findBinaryOnPath } from "../core/which";
-import { allEventsSince, type LoggedEvent } from "../hooks/lib/events";
 import { readAllProjects } from "../hooks/lib/projects";
-import { transcriptArchive } from "../hooks/lib/transcript-preserve";
 import {
   opencodeDatabase,
   readCodex,

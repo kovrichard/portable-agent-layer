@@ -23,6 +23,10 @@ async function core<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "core", mod));
 }
 
+async function bronze<T>(mod: string): Promise<T> {
+  return await import(resolve(PAL_DIR, "src", "bronze", mod));
+}
+
 type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
@@ -86,7 +90,7 @@ async function loadLoggingLibs() {
   const { logAttention } =
     await lib<typeof import("../../hooks/lib/attention-events")>("attention-events.ts");
   const { commitApplied, ledgeredTarget, snapshotCall } =
-    await lib<typeof import("../../hooks/lib/ledger-hook")>("ledger-hook.ts");
+    await bronze<typeof import("../../bronze/ledger-hook")>("ledger-hook.ts");
 
   return {
     attachProgressFromToolCall,

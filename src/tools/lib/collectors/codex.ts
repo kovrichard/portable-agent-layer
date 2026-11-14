@@ -6,7 +6,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
-import { appendEvent } from "../../../hooks/lib/events";
+import { appendEvent } from "../../../bronze/events";
 import { codexRollouts } from "../agent-usage";
 import { type Billing, codexBilling } from "./billing";
 import { readCursor, writeCursor } from "./cursors";

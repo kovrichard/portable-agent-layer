@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { patternsCommand } from "../src/cli/patterns";
-import { appendEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { projectActivity } from "../src/tools/lib/patterns/activity";
 import { contextSwitches, dayShape } from "../src/tools/lib/patterns/days";
