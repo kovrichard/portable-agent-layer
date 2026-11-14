@@ -10,6 +10,11 @@
       "name": "dark-factory",
       "source": "./assets/plugins/dark-factory",
       "description": "A software factory of agents that turns a request into a green, reviewed pull request."
+    },
+    {
+      "name": "pal-review",
+      "source": "./assets/plugins/pal-review",
+      "description": "A pane to approve or deny PAL rule drafts and close open ISCs, every action through pal cli."
     }
   ]
 }
