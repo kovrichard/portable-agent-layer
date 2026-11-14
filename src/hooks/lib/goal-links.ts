@@ -11,7 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { paths } from "./paths";
+import { paths } from "../../core/paths";
 
 interface GoalLink {
   goalId: string;

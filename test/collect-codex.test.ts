@@ -7,7 +7,7 @@ import {
   readFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { collectCodex } from "../src/tools/lib/collectors/codex";
 import { freshTestDir } from "./lib/test-home";
 

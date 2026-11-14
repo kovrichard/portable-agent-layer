@@ -6,13 +6,9 @@
  * write surface over ~/.pal.
  */
 
+import { raw as rawSettings, reload, write as writeSettings } from "../../core/settings";
 import { logCommitment } from "../../hooks/lib/commitment-events";
 import { readProject, writeProject } from "../../hooks/lib/projects";
-import {
-  raw as rawSettings,
-  reload,
-  write as writeSettings,
-} from "../../hooks/lib/settings";
 import { completeIsc, type IscSections, reopenIsc } from "../lib/project-isc";
 
 export type WriteOutcome =

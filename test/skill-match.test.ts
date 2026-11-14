@@ -33,7 +33,7 @@ function writeIndex(index: SkillIndex) {
 
 async function setSettings(data: Record<string, unknown>) {
   writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 async function loadMatcher() {
@@ -51,7 +51,7 @@ beforeAll(() => {
 beforeEach(async () => {
   const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
   removeOnceReleased(settingsPath);
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
   writeIndex(INDEX);
 });
 

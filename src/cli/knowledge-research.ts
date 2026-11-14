@@ -3,6 +3,7 @@
  * the active agent, print the profile, and optionally queue it for review.
  */
 
+import { identity } from "../core/settings";
 import { lookupCompanyRegister } from "../hooks/lib/company-register-router";
 import { loadKnownEntities, loadNameIndex } from "../hooks/lib/entity-cards";
 import { queueForReview } from "../hooks/lib/entity-extraction";
@@ -15,7 +16,6 @@ import {
   researchItem,
 } from "../hooks/lib/entity-research";
 import { inference } from "../hooks/lib/inference";
-import { identity } from "../hooks/lib/settings";
 import { leaf, UsageError } from "../tools/lib/command";
 
 interface ResearchValues {

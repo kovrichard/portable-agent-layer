@@ -8,7 +8,9 @@
  * Which agent gets what, in which envelope, is in lib/session-context.ts.
  */
 
-import { getActiveAgent } from "./lib/agent";
+import { getActiveAgent } from "../core/agent";
+import { logContextSnapshot, logDebug, logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import { autoUpdateOnStart } from "./lib/auto-update";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { buildSystemReminder } from "./lib/context";
@@ -16,7 +18,6 @@ import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { hookSessionId } from "./lib/hook-turn";
-import { logContextSnapshot, logDebug, logError } from "./lib/log";
 import {
   contextEnvelope,
   contextForSource,
@@ -26,7 +27,6 @@ import {
   writeCopilotInstructions,
 } from "./lib/session-context";
 import { logSessionStart, type SessionStartPayload } from "./lib/session-events";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { heartbeatOnStart } from "./lib/telemetry";
 

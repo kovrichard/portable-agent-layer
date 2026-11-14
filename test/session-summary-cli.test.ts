@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import * as childProcess from "node:child_process";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { palPkg } from "../src/hooks/lib/paths";
+import { palPkg } from "../src/core/paths";
 import { freshTestDir } from "./lib/test-home";
 
 const guardedSpawnSync = childProcess.spawnSync;

@@ -6,11 +6,7 @@
  * answered/unanswered rule in prose would drift from the code that decides it.
  */
 
-import {
-  identity,
-  raw as readSettings,
-  write as writeSettings,
-} from "../hooks/lib/settings";
+import { identity, raw as readSettings, write as writeSettings } from "../core/settings";
 import { telosStatus } from "../hooks/lib/telos-topics";
 import { canonicalTimeZone } from "../hooks/lib/wall-clock";
 import { log } from "../targets/log";

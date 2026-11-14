@@ -8,7 +8,11 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import { ANTIGRAVITY_WRITE_TOOLS, FILE_TARGET_KEYS, normalizeToolUse } from "./agent";
+import {
+  ANTIGRAVITY_WRITE_TOOLS,
+  FILE_TARGET_KEYS,
+  normalizeToolUse,
+} from "../../core/agent";
 import {
   claimPending,
   type LedgerEntry,

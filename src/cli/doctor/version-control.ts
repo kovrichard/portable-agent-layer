@@ -3,7 +3,7 @@
  * matching by remote and the update checks skip; without gh, nothing does yet.
  */
 
-import { findBinaryOnPath } from "../../hooks/lib/which";
+import { findBinaryOnPath } from "../../core/which";
 import { type Finding, type Fix, optional, passed, warning } from "./finding";
 import { type LinuxFamily, linuxFamily, readOsRelease } from "./os-release";
 

@@ -4,6 +4,7 @@
  * API-price cost.
  */
 
+import { eventLogEnabled } from "../../core/settings";
 import {
   allEventsSince,
   type EventType,
@@ -11,7 +12,6 @@ import {
   loggedEventIds,
 } from "../../hooks/lib/events";
 import { scopeOf } from "../../hooks/lib/progress-tree";
-import { eventLogEnabled } from "../../hooks/lib/settings";
 import { backfillGit } from "./backfill/git";
 import { collectEvents } from "./collectors";
 import { apiPriceOf } from "./cost-report";

@@ -1,7 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import { assets } from "../src/hooks/lib/paths";
+import { assets } from "../src/core/paths";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { agentDirOverrides } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import {
   logOpencodeCompaction,
   logOpencodePermissionReply,
@@ -8,8 +10,6 @@ import {
   logOpencodeToolFailure,
   rememberAskedTool,
 } from "../src/hooks/lib/opencode-events";
-import { agentDirOverrides } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 // Shapes from @opencode-ai/sdk's generated Event types (v1, which the plugin

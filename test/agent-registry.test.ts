@@ -5,7 +5,7 @@ import {
   INFERENCE_PRIORITY,
   isAgentName,
   LAUNCH_PRIORITY,
-} from "../src/hooks/lib/agent-registry";
+} from "../src/core/agent-registry";
 
 const sorted = (names: readonly string[]) => [...names].sort();
 

@@ -19,6 +19,10 @@ async function lib<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "hooks", "lib", mod));
 }
 
+async function core<T>(mod: string): Promise<T> {
+  return await import(resolve(PAL_DIR, "src", "core", mod));
+}
+
 type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
@@ -56,10 +60,9 @@ async function loadGuardLibs() {
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
     await lib<typeof import("../../hooks/lib/security")>("security.ts");
-  const { findBinaryOnPath } =
-    await lib<typeof import("../../hooks/lib/which")>("which.ts");
+  const { findBinaryOnPath } = await core<typeof import("../../core/which")>("which.ts");
   const { isPalSpawnedInference } =
-    await lib<typeof import("../../hooks/lib/spawn-guard")>("spawn-guard.ts");
+    await core<typeof import("../../core/spawn-guard")>("spawn-guard.ts");
 
   return {
     buildSystemReminder,
@@ -72,7 +75,7 @@ async function loadGuardLibs() {
 
 async function loadLoggingLibs() {
   const { logDebug, logError, logPromptSnapshot } =
-    await lib<typeof import("../../hooks/lib/log")>("log.ts");
+    await core<typeof import("../../core/log")>("log.ts");
   const { logToolCall } =
     await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
   const { recordSlurpCheck } =

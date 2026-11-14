@@ -16,7 +16,7 @@ beforeEach(() => {
 
 async function setSettings(data: Record<string, unknown>) {
   writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 async function load() {

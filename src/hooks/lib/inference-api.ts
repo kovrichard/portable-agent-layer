@@ -1,9 +1,9 @@
+import { logError } from "../../core/log";
+import { withPalEnv } from "../../core/pal-env";
 import type { TranscriptUsage } from "../../tools/lib/transcript-usage";
 import { type InferenceOptions, type InferenceResult, modelFor } from "./inference-types";
 import { anthropicUsage, type OpenAiUsage, openAiUsage } from "./inference-usage";
-import { logError } from "./log";
 import { inferenceEffort } from "./models";
-import { withPalEnv } from "./pal-env";
 
 // ── Anthropic API path: no claude binary, or the active agent is not claude ──
 

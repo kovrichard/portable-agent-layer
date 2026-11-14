@@ -27,11 +27,11 @@ beforeEach(async () => {
 
   for (const key of AGENT_SIGNALS) delete process.env[key];
   // settings caches per process and bun shares one across test files.
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/actor");
+  return await import("../src/core/actor");
 }
 
 describe("loadActor", () => {
@@ -155,16 +155,16 @@ describe("actor registry", () => {
 describe("actor identity is distinct from machine identity", () => {
   test("the actor id is not the machine id", async () => {
     const { loadActor } = await lib();
-    const { loadMachine } = await import("../src/hooks/lib/machine");
+    const { loadMachine } = await import("../src/core/machine");
     expect(loadActor(HOME).id).not.toBe(loadMachine(HOME).id);
   });
 
   test("actor.json TRAVELS in an export, unlike machine.json", async () => {
     const { loadActor } = await lib();
-    const { loadMachine } = await import("../src/hooks/lib/machine");
+    const { loadMachine } = await import("../src/core/machine");
     loadActor(HOME);
     loadMachine(HOME);
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files).toContain("memory/actor.json");
     expect(files.some((f) => f.endsWith("machine.json"))).toBe(false);
@@ -173,12 +173,12 @@ describe("actor identity is distinct from machine identity", () => {
   test("actor registry entries travel too, so a peer's label resolves", async () => {
     const { ensureActorRegistered } = await lib();
     const a = ensureActorRegistered(HOME);
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     expect(collectExportFiles()).toContain(`memory/actors/${a.id}.md`);
   });
 
   test("actor.json is ALLOWED at the import boundary where machine.json is not", async () => {
-    const { isNeverImport } = await import("../src/hooks/lib/import-merge");
+    const { isNeverImport } = await import("../src/core/import-merge");
     expect(isNeverImport("memory/actor.json")).toBe(false);
     expect(isNeverImport("machine.json")).toBe(true);
   });
@@ -187,7 +187,7 @@ describe("actor identity is distinct from machine identity", () => {
 describe("currentAttribution", () => {
   test("stamps machine, actor, runtime and authority", async () => {
     const { currentAttribution } = await lib();
-    const { loadMachine } = await import("../src/hooks/lib/machine");
+    const { loadMachine } = await import("../src/core/machine");
     process.env.PAL_AGENT = "codex";
     const stamp = currentAttribution();
     expect(stamp.machine).toBe(loadMachine(HOME).id);
@@ -225,7 +225,7 @@ describe("currentAttribution", () => {
 
   test("behaviour routing still assumes claude while the stamp says unknown", async () => {
     const { currentAttribution } = await lib();
-    const { getActiveAgent } = await import("../src/hooks/lib/agent");
+    const { getActiveAgent } = await import("../src/core/agent");
     expect(getActiveAgent()).toBe("claude");
     expect(currentAttribution().runtime).toBe("unknown");
   });

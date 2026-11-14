@@ -5,8 +5,8 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { PAL_REPO_URL } from "../../../core/remote";
 import { appendEvent } from "../../../hooks/lib/events";
-import { PAL_REPO_URL } from "../../../hooks/lib/remote";
 
 const RECORD = "\x1e";
 const FIELD = "\x1f";

@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { PAL_REPO_URL } from "../src/core/remote";
+import { reload } from "../src/core/settings";
 import { writeProject } from "../src/hooks/lib/projects";
-import { PAL_REPO_URL } from "../src/hooks/lib/remote";
-import { reload } from "../src/hooks/lib/settings";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";

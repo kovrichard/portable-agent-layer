@@ -8,8 +8,8 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ensureDir, paths } from "../../core/paths";
 import { logCommitment } from "../../hooks/lib/commitment-events";
-import { ensureDir, paths } from "../../hooks/lib/paths";
 
 const DAY_MS = 86_400_000;
 export const MAX_SNOOZE_DAYS = 90;

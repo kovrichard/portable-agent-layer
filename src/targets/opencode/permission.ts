@@ -1,4 +1,4 @@
-import { palHome } from "../../hooks/lib/paths";
+import { palHome } from "../../core/paths";
 
 type OpencodeConfig = Record<string, unknown>;
 type Rules = Record<string, string>;

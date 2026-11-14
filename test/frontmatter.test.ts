@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { hasFrontmatter, parse, stringify } from "../src/hooks/lib/frontmatter";
+import { hasFrontmatter, parse, stringify } from "../src/core/frontmatter";
 
 describe("parse", () => {
   test("parses frontmatter with string values", () => {

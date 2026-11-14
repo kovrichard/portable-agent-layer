@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
 import {
   DEFAULT_BASELINE,
@@ -9,7 +10,6 @@ import {
   readMood,
 } from "../src/hooks/lib/interaction-mood";
 import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;

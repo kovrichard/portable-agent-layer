@@ -9,9 +9,9 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { AgentName } from "./agent-registry";
+import type { AgentName } from "../../core/agent-registry";
+import { platform } from "../../core/paths";
 import type { AgentTarget } from "./context";
-import { platform } from "./paths";
 
 export interface ContextEnvelope {
   /** Whether the agent parses stdout as JSON or reads it as raw text. */

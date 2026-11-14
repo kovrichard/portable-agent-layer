@@ -18,13 +18,13 @@ beforeAll(() => {
 beforeEach(async () => {
   const p = resolve(TEST_HOME, "memory", "pal-settings.json");
   removeOnceReleased(p);
-  const settings = await import("../src/hooks/lib/settings");
+  const settings = await import("../src/core/settings");
   settings.reload();
 });
 
 async function setSettings(data: Record<string, unknown>) {
   writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  const settings = await import("../src/hooks/lib/settings");
+  const settings = await import("../src/core/settings");
   settings.reload();
 }
 

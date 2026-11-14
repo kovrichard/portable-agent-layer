@@ -406,7 +406,7 @@ PAL's background inference (session naming, summaries, correction checks, etc.) 
 
 ### Routing Table
 
-The active agent is detected via `getActiveAgent()` in `src/hooks/lib/agent.ts` (driven by the `PAL_AGENT` env var set per-target). The dispatcher in `src/hooks/lib/inference.ts` then routes to the matching CLI:
+The active agent is detected via `getActiveAgent()` in `src/core/agent.ts` (driven by the `PAL_AGENT` env var set per-target). The dispatcher in `src/hooks/lib/inference.ts` then routes to the matching CLI:
 
 | Active agent | CLI invoked | Notes |
 |--------------|-------------|-------|
@@ -507,7 +507,7 @@ All five targets install hooks, skills, and AGENTS.md. Codex does not yet suppor
 
 ### Path Resolution
 
-All paths resolve through `src/hooks/lib/paths.ts`:
+All paths resolve through `src/core/paths.ts`:
 
 | Path | Default | Override |
 |------|---------|----------|

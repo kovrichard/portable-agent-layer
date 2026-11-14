@@ -1,7 +1,7 @@
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { agentDirOverrides, ensureDir, paths } from "../../src/hooks/lib/paths";
-import { reload } from "../../src/hooks/lib/settings";
+import { agentDirOverrides, ensureDir, paths } from "../../src/core/paths";
+import { reload } from "../../src/core/settings";
 import { freshTestDir } from "./test-home";
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook

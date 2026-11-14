@@ -5,7 +5,9 @@ import {
   declaredAgent,
   normalizeToolUse,
   stopBlockResponse,
-} from "../src/hooks/lib/agent";
+} from "../src/core/agent";
+import { paths } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import {
   isSideStop,
   latestUserRequest,
@@ -17,10 +19,8 @@ import { eventsSince } from "../src/hooks/lib/events";
 import { enterHookWorkspace } from "../src/hooks/lib/hook-turn";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
 import { landedCalls, ledgeredCalls } from "../src/hooks/lib/ledger-hook";
-import { paths } from "../src/hooks/lib/paths";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
 import { alreadySentBack, rememberSendBack } from "../src/hooks/lib/send-back-guard";
-import { reload } from "../src/hooks/lib/settings";
 import { readTranscriptFile } from "../src/hooks/lib/transcript";
 import {
   agyPayload,

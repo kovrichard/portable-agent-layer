@@ -3,7 +3,7 @@ import { adminCommandNames } from "../src/cli/tree";
 import {
   shippedSkillNames,
   validateReadmeSync as validateAgainst,
-} from "../src/hooks/lib/readme-sync";
+} from "../src/core/readme-sync";
 
 const validateReadmeSync = () => validateAgainst(adminCommandNames());
 

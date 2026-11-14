@@ -9,8 +9,8 @@
  */
 
 import * as clack from "@clack/prompts";
+import { raw as readSettings, write as writeSettings } from "../core/settings";
 import { isRepoMode } from "../hooks/handlers/update-check";
-import { raw as readSettings, write as writeSettings } from "../hooks/lib/settings";
 
 /** Only a git clone can be mid-change; a global package install has no such state. */
 function whatItDoes(): string {

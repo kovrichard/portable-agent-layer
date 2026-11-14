@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { palHome } from "../hooks/lib/paths";
+import { palHome } from "../core/paths";
 import { declaredTriggers } from "../hooks/lib/skill-triggers";
 import { writeJson } from "./json-file";
 import { palSkillsDir } from "./skills";

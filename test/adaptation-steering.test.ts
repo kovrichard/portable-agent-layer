@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { addDraft, type DraftInput, decideRule } from "../src/hooks/lib/adaptation-rules";
 import {
   promptRulesReminder,
   watchReplyRules,
 } from "../src/hooks/lib/adaptation-steering";
 import { rememberSendBack } from "../src/hooks/lib/send-back-guard";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;

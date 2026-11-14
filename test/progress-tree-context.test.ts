@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { appendEvent } from "../src/hooks/lib/progress-tree";
 import {
   loadProgressTreeContext,
   progressTreePromptLine,
 } from "../src/hooks/lib/progress-tree-context";
 import type { GhRunner } from "../src/hooks/lib/progress-tree-prs";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;

@@ -5,6 +5,8 @@
  * Writes: project history, and the stopped-at of the session's progress-tree node.
  */
 
+import { logDebug, logError } from "../../core/log";
+import { sessionDir } from "../../core/session-dir";
 import {
   claimHandoffSummary,
   isHandoffStale,
@@ -14,10 +16,8 @@ import {
 } from "../lib/capture-store";
 import { canInfer } from "../lib/inference";
 import { judge } from "../lib/judge";
-import { logDebug, logError } from "../lib/log";
 import { progressSession } from "../lib/progress-session";
 import { recordWhereSessionStopped } from "../lib/progress-tree-session-end";
-import { sessionDir } from "../lib/session-dir";
 import { sessionStatusJudgment } from "../lib/shadow-judgments";
 import {
   extractContent,

@@ -7,8 +7,8 @@ import {
   unlinkSync,
 } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
-import { AGENT_NAMES, AGENT_REGISTRY, skillsDirOf } from "../hooks/lib/agent-registry";
-import { assets, palHome, platform } from "../hooks/lib/paths";
+import { AGENT_NAMES, AGENT_REGISTRY, skillsDirOf } from "../core/agent-registry";
+import { assets, palHome, platform } from "../core/paths";
 import { reportOnlyOnFailure } from "./bulk-install";
 import { log } from "./log";
 import { ensureSymlink } from "./symlink";

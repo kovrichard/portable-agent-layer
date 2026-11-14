@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { now } from "../src/hooks/lib/time";
+import { now } from "../src/core/time";
 
 describe("now", () => {
   test("returns ISO 8601 UTC string", () => {

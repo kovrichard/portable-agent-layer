@@ -7,7 +7,7 @@
 
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets, palPkg, platform } from "../../hooks/lib/paths";
+import { assets, palPkg, platform } from "../../core/paths";
 import { log } from "../log";
 import { copyAgentsForCopilot } from "../shipped-agents";
 import { copySkills, countSkills } from "../skills";

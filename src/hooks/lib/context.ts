@@ -4,15 +4,15 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import type { AgentName } from "../../core/agent-registry";
+import { toPath } from "../../core/paths";
+import { sessionDir } from "../../core/session-dir";
+import * as settings from "../../core/settings";
 import { opinionsContext } from "./adaptation-rules";
-import type { AgentName } from "./agent-registry";
 import { dueNudgeSections } from "./daily-nudge";
-import { toPath } from "./paths";
 import { loadProgressTreeContext } from "./progress-tree-context";
 import { loadActiveProjectsContext } from "./projects-context";
 import { loadSteeringRules } from "./semi-static";
-import { sessionDir } from "./session-dir";
-import * as settings from "./settings";
 import { lastSessionTitle } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */

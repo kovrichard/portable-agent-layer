@@ -2,6 +2,9 @@
  * judge(): typed questions answered by the configured System One model, the small tier as fallback, every call logged as judge_call.
  */
 
+import { logError } from "../../core/log";
+import { withPalEnv } from "../../core/pal-env";
+import { systemOneSettings } from "../../core/settings";
 import { inference } from "./inference";
 import { logJudgeCall } from "./judge-events";
 import { fallbackFor } from "./judge-fallback";
@@ -17,10 +20,7 @@ import {
   SystemOneError,
   type SystemOneFailure,
 } from "./judgment";
-import { logError } from "./log";
 import { costOfUsage } from "./models";
-import { withPalEnv } from "./pal-env";
-import { systemOneSettings } from "./settings";
 import { typesafeAdapter } from "./system-one-typesafe";
 
 export type { JudgeAdapter } from "./judgment";

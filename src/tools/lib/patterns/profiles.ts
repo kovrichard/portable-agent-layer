@@ -1,4 +1,4 @@
-import { labelOfRuntime } from "../../../hooks/lib/agent-registry";
+import { labelOfRuntime } from "../../../core/agent-registry";
 import { localClock } from "../../../hooks/lib/wall-clock";
 import { channelOf } from "../wrapped/habits";
 import { type Tally, tally } from "../wrapped/year";

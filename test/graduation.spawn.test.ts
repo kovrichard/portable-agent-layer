@@ -8,7 +8,7 @@ import {
 } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";

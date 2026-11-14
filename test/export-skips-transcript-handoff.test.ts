@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { collectExportFiles } from "../src/hooks/lib/export";
+import { collectExportFiles } from "../src/core/export";
 import { testHome } from "./lib/test-home";
 
 let home: string;

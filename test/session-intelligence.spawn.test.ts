@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import {
   captureSessionIntelligence,
   openingAndClosing,
@@ -12,7 +13,6 @@ import {
   readCapture,
 } from "../src/hooks/lib/capture-store";
 import { readTree, scopeOf } from "../src/hooks/lib/progress-tree";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
 import { readProjectHistory } from "../src/hooks/lib/work-tracking";
 import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";

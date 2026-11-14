@@ -6,7 +6,7 @@
 
 import { copyFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { platform } from "../../hooks/lib/paths";
+import { platform } from "../../core/paths";
 import { removePalContextFiles } from "../context-files";
 import { readJson, writeJson } from "../json-file";
 import { log } from "../log";

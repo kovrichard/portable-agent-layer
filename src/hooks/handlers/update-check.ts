@@ -9,9 +9,9 @@
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logDebug } from "../lib/log";
-import { ensureDir, palPkg, paths } from "../lib/paths";
-import { raw as rawSettings, write as writeSettings } from "../lib/settings";
+import { logDebug } from "../../core/log";
+import { ensureDir, palPkg, paths } from "../../core/paths";
+import { raw as rawSettings, write as writeSettings } from "../../core/settings";
 
 export interface UpdateCache {
   checkedAt: string;

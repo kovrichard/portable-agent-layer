@@ -5,6 +5,8 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../../src/core/settings";
+import { SPAWN_GUARD_ENV } from "../../src/core/spawn-guard";
 import { JUDGE_ADAPTERS } from "../../src/hooks/lib/judge";
 import type {
   JudgeAdapter,
@@ -12,8 +14,6 @@ import type {
   JudgeQuestions,
   JudgeState,
 } from "../../src/hooks/lib/judgment";
-import { reload } from "../../src/hooks/lib/settings";
-import { SPAWN_GUARD_ENV } from "../../src/hooks/lib/spawn-guard";
 import { claudeReplying, prependPath, writeFakeBin } from "../fixtures/fake-bin";
 import { freshTestDir } from "./test-home";
 

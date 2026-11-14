@@ -9,9 +9,9 @@
  * This avoids the 1-5s inference latency that previously blocked every first prompt.
  */
 
+import { logDebug, logError } from "../../core/log";
 import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer, inference } from "../lib/inference";
-import { logDebug, logError } from "../lib/log";
 import {
   extractFallbackName,
   labelFromModel,

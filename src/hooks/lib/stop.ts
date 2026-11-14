@@ -15,6 +15,8 @@ import {
 } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { logDebug, logError } from "../../core/log";
+import { assets, ensureDir, paths } from "../../core/paths";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
@@ -35,8 +37,6 @@ import {
   hookSessionId,
 } from "./hook-turn";
 import { recordReply } from "./interaction";
-import { logDebug, logError } from "./log";
-import { assets, ensureDir, paths } from "./paths";
 import {
   extractContent,
   extractLastAssistant,

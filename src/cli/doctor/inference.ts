@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import { palEnvPath, readPalEnvFile } from "../../core/pal-env";
+import { platform } from "../../core/paths";
 import { previewInferenceRoute } from "../../hooks/lib/inference";
 import { opencodeBackgroundModel } from "../../hooks/lib/opencode-config";
-import { palEnvPath, readPalEnvFile } from "../../hooks/lib/pal-env";
-import { platform } from "../../hooks/lib/paths";
 import type { AgentName } from "./agents";
 import { type Finding, failing, optional, passed, warning } from "./finding";
 

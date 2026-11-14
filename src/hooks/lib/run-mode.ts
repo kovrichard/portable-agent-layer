@@ -8,7 +8,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "./paths";
+import { ensureDir, paths } from "../../core/paths";
 import { localHourMinute, localMinuteOfDay } from "./wall-clock";
 
 export type RunKind = "timebox" | "unattended";

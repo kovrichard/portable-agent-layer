@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { researchFromCli } from "../src/cli/knowledge-research";
+import { reload } from "../src/core/settings";
 import type { RegisterEntry } from "../src/hooks/lib/company-register";
 import type { ResearchProfile } from "../src/hooks/lib/entity-extraction";
 import {
@@ -16,7 +17,6 @@ import {
 } from "../src/hooks/lib/entity-research";
 import { acceptReview, pendingReviews } from "../src/hooks/lib/entity-review";
 import type { inference } from "../src/hooks/lib/inference";
-import { reload } from "../src/hooks/lib/settings";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { load } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";

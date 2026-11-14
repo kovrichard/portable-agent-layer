@@ -18,10 +18,10 @@ import {
 } from "node:fs";
 import * as hostPath from "node:path";
 import { basename, resolve } from "node:path";
+import { parse, stringify } from "../../core/frontmatter";
+import { palHome, paths } from "../../core/paths";
+import { detectRemote } from "../../core/remote";
 import { type Bindings, readBindings, writeBinding, writeBindings } from "./bindings";
-import { parse, stringify } from "./frontmatter";
-import { palHome, paths } from "./paths";
-import { detectRemote } from "./remote";
 
 /** The path functions of one platform: the host's, or `path.win32` / `path.posix` in tests. */
 export type PlatformPath = typeof hostPath.posix;

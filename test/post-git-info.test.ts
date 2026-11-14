@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { eventsSince } from "../src/hooks/lib/events";
 import {
   literalCommandDir,
@@ -11,7 +12,6 @@ import {
 import { postGitInfoResponse } from "../src/hooks/lib/post-git-info";
 import type { Git } from "../src/hooks/lib/repo-state";
 import { parseStatus } from "../src/hooks/lib/repo-state";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-11-12T10:00:00Z");
@@ -124,6 +124,11 @@ test("parseStatus names each file and whether it is staged", () => {
     { path: "e.ts", state: "conflicted" },
     { path: "f.ts", state: "untracked" },
   ]);
+});
+
+test("parseStatus keeps the commit the checkout is on, and none before the first commit", () => {
+  expect(parseStatus("# branch.oid abc\n# branch.head main").oid).toBe("abc");
+  expect(parseStatus("# branch.oid (initial)\n# branch.head main").oid).toBeNull();
 });
 
 describe("postGitInfoResponse", () => {

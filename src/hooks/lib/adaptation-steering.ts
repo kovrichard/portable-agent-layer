@@ -5,6 +5,7 @@
  */
 
 import { appendFileSync } from "node:fs";
+import { isEnabled } from "../../core/settings";
 import {
   type AdaptationRule,
   isTriggerRule,
@@ -15,7 +16,6 @@ import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { replyEnd } from "./interaction-samples";
 import { ruleEventsPath } from "./rule-effect";
 import { alreadySentBack } from "./send-back-guard";
-import { isEnabled } from "./settings";
 import type { StopTurnPayload } from "./stop";
 
 const REMINDER_MAX = 1500;

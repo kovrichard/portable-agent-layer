@@ -9,8 +9,8 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ensureDir, paths } from "../../core/paths";
 import { readRules } from "../../hooks/lib/adaptation-rules";
-import { ensureDir, paths } from "../../hooks/lib/paths";
 import { readAllProjects } from "../../hooks/lib/projects";
 import { queryLedger } from "../ledger/query";
 import { displayTarget } from "../ledger/view";

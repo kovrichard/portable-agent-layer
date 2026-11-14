@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { withPalEnv } from "../../core/pal-env";
+import { platform } from "../../core/paths";
 import {
   extractAntigravityText,
   INFERENCE_AGENT,
@@ -26,8 +28,6 @@ import {
 } from "./inference-usage";
 import { inferenceEffort } from "./models";
 import { opencodeTierModel, writeInstructionFreeConfig } from "./opencode-config";
-import { withPalEnv } from "./pal-env";
-import { platform } from "./paths";
 
 /**
  * Build the argv for `claude --print …`. Pure.

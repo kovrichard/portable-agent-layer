@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { resolve } from "node:path";
-import { palHome } from "../../hooks/lib/paths";
+import { palHome } from "../../core/paths";
 import { appendSourceLog } from "../../tools/knowledge/ingest";
 import {
   type Entity,

@@ -516,6 +516,6 @@ describe("checkFilePath", () => {
   test("allows normal file paths", () => {
     expect(checkFilePath("/home/user/project/src/index.ts")).toBeNull();
     expect(checkFilePath("/tmp/foo.txt")).toBeNull();
-    expect(checkFilePath("./src/hooks/lib/paths.ts")).toBeNull();
+    expect(checkFilePath("./src/core/paths.ts")).toBeNull();
   });
 });

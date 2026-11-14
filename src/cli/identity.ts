@@ -12,14 +12,14 @@ import {
   ensureActorRegistered,
   loadActor,
   setActorLabel,
-} from "../hooks/lib/actor";
-import { shortId } from "../hooks/lib/identity-store";
+} from "../core/actor";
+import { shortId } from "../core/identity-store";
 import {
   ensureRegistered,
   loadMachine,
   machineFilePath,
   setLabel,
-} from "../hooks/lib/machine";
+} from "../core/machine";
 import { log } from "../targets/log";
 import { type Group, group, leaf, runCommand, UsageError } from "../tools/lib/command";
 

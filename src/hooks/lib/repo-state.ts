@@ -5,9 +5,10 @@
 
 import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
+import { isEnabled } from "../../core/settings";
+import { appendEvent, logQuietly } from "./events";
 import { mergedWorktrees } from "./merged-worktrees";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
-import { isEnabled } from "./settings";
 
 const GIT_TIMEOUT_MS = 1000;
 
@@ -17,6 +18,7 @@ export interface ChangedFile {
 }
 
 export interface Status {
+  oid: string | null;
   head: string;
   hasCommits: boolean;
   upstream: string | null;
@@ -69,10 +71,12 @@ export function parseStatus(porcelain: string): Status {
     .split(" ")
     .map((n) => Math.abs(Number(n)));
   const files = lines.filter((l) => !l.startsWith("#")).map(changedFile);
+  const oid = header(lines, "oid");
 
   return {
+    oid: oid === "(initial)" ? null : oid,
     head: header(lines, "head") ?? "(detached)",
-    hasCommits: header(lines, "oid") !== "(initial)",
+    hasCommits: oid !== "(initial)",
     upstream: header(lines, "upstream"),
     ahead,
     behind,
@@ -129,15 +133,34 @@ export function repoStatusParts(toplevel: string, status: Status): string[] {
   ];
 }
 
-function gitLine(cwd: string, toplevel: string): string | null {
+function readStatus(cwd: string): Status | null {
   const porcelain = gitOutput(cwd, "status", "--porcelain=v2", "--branch");
-  if (porcelain === null) return null;
 
+  return porcelain === null ? null : parseStatus(porcelain);
+}
+
+function gitLine(cwd: string, toplevel: string, status: Status): string {
   return [
-    ...repoStatusParts(toplevel, parseStatus(porcelain)),
+    ...repoStatusParts(toplevel, status),
     ...releaseState(cwd),
     ...mergedWorktreeState(cwd),
   ].join(" · ");
+}
+
+function logRepoState(status: Status, session: string | null, cwd: string): void {
+  logQuietly("repo_state", () =>
+    appendEvent(
+      "repo_state",
+      {
+        head: status.oid,
+        branch: status.head,
+        changed: status.files.length,
+        ahead: status.ahead,
+        behind: status.behind,
+      },
+      { session, cwd }
+    )
+  );
 }
 
 function unversionedProjectLine(cwd: string): string | null {
@@ -147,10 +170,27 @@ function unversionedProjectLine(cwd: string): string | null {
   return `Repo: ${project.name} is not under git — nothing in it is committed, pushed or released; the files on disk are its whole state`;
 }
 
-export function getRepoStateReminder(cwd: string = process.cwd()): string | null {
-  if (!isEnabled("repoState")) return null;
+function repoLine(
+  cwd: string,
+  toplevel: string | null,
+  status: Status | null
+): string | null {
+  if (!toplevel) return unversionedProjectLine(cwd);
+
+  return status ? gitLine(cwd, toplevel, status) : null;
+}
+
+/** Records the commit this prompt starts from and returns the per-prompt Repo line. */
+export function observeRepoState(
+  cwd: string = process.cwd(),
+  session: string | null = null
+): string | null {
   const toplevel = gitOutput(cwd, "rev-parse", "--show-toplevel");
-  const line = toplevel ? gitLine(cwd, toplevel) : unversionedProjectLine(cwd);
+  const status = toplevel ? readStatus(cwd) : null;
+  if (status) logRepoState(status, session, cwd);
+
+  if (!isEnabled("repoState")) return null;
+  const line = repoLine(cwd, toplevel, status);
 
   return line ? `<system-reminder>${line}</system-reminder>` : null;
 }

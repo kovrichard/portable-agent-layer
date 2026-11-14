@@ -6,8 +6,8 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { agentFromArgv, inCursorAgent } from "./agent";
-import { platform } from "./paths";
+import { agentFromArgv, inCursorAgent } from "../../core/agent";
+import { platform } from "../../core/paths";
 
 const PAL_HOOK = /\/src\/hooks\/\w+\.ts\b/;
 

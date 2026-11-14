@@ -1,5 +1,5 @@
 import * as clack from "@clack/prompts";
-import { raw as readSettings, write as writeSettings } from "../hooks/lib/settings";
+import { raw as readSettings, write as writeSettings } from "../core/settings";
 
 const WHAT_IS_SENT =
   "Once a day PAL sends an anonymous heartbeat so we can count how many people use it:\na random install id, the PAL version and channel, your OS and CPU type, and which agents PAL is installed into.\nNothing else, ever. See every send with `pal cli telemetry show`.";

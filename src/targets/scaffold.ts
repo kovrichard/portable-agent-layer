@@ -1,6 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets, palHome } from "../hooks/lib/paths";
+import { assets, palHome } from "../core/paths";
 import { log } from "./log";
 
 /** Copy template files into telos/ without overwriting existing ones */

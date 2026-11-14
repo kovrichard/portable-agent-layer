@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from "node:fs";
 import { extname } from "node:path";
-import { toPath } from "./paths";
+import { toPath } from "../../core/paths";
 
 export interface SlurpHit {
   path: string;

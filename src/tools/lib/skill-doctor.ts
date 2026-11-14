@@ -12,7 +12,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import { palHome, toPath } from "../../hooks/lib/paths";
+import { palHome, toPath } from "../../core/paths";
 import {
   findAbsolutePaths,
   leadTriggers,

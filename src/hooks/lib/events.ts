@@ -6,14 +6,14 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution, type RecordAttribution } from "./actor";
-import type { AgentType } from "./agent";
+import { currentAttribution, type RecordAttribution } from "../../core/actor";
+import type { AgentType } from "../../core/agent";
+import { logError } from "../../core/log";
+import { ensureDir, paths } from "../../core/paths";
+import { eventLogEnabled } from "../../core/settings";
 import { currentChannel } from "./channel";
 import { USAGE_FIELDS } from "./inference-usage";
-import { logError } from "./log";
-import { ensureDir, paths } from "./paths";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
-import { eventLogEnabled } from "./settings";
 
 export const EVENT_SCHEMA_VERSION = 1;
 const MAX_STRING = 64;
@@ -188,6 +188,7 @@ export const EVENT_FIELDS = {
   worktree_pruned: ["branch"],
   git_state_injected: ["trigger", "source", "changed", "committedFiles", "chars"],
   hook_run: ["hook", "event", "durationMs", "exitCode"],
+  repo_state: ["head", "branch", "changed", "ahead", "behind"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type EventType = keyof typeof EVENT_FIELDS;

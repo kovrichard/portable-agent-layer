@@ -2,9 +2,9 @@
  * pal cli judge: one judgment for programs outside PAL. The request is JSON from a file or stdin; routing, fallback and logging all live in judge().
  */
 
+import { toPath } from "../core/paths";
 import { judge } from "../hooks/lib/judge";
 import { judgeRequestJson } from "../hooks/lib/judgment";
-import { toPath } from "../hooks/lib/paths";
 import { leaf } from "../tools/lib/command";
 
 async function readRequestText(path: string | undefined): Promise<string> {

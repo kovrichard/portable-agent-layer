@@ -6,7 +6,7 @@ import {
   getInferenceDepth,
   isPalSpawnedInference,
   SPAWN_GUARD_ENV,
-} from "../src/hooks/lib/spawn-guard";
+} from "../src/core/spawn-guard";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 
 setDefaultTimeout(SPAWN_HEAVY_TEST_MS);

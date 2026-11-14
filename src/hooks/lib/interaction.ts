@@ -12,7 +12,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { hearsPromptContext } from "./agent";
+import { hearsPromptContext } from "../../core/agent";
+import { ensureDir, paths } from "../../core/paths";
+import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
+import { isEnabled } from "../../core/settings";
 import { currentChannel } from "./channel";
 import {
   appendEvent,
@@ -39,9 +42,6 @@ import {
   reactionTo,
 } from "./interaction-reaction";
 import { keepSample, replyEnd } from "./interaction-samples";
-import { ensureDir, paths } from "./paths";
-import { isSystemText, stripInjectedTags } from "./prompt-text";
-import { isEnabled } from "./settings";
 import { responseModeOf, turnExtras } from "./turn-extras";
 import { backAfterNotificationSec } from "./waiting-on-user";
 import { localClock } from "./wall-clock";

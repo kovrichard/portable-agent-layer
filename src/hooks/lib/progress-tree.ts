@@ -7,7 +7,7 @@
 
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "./paths";
+import { ensureDir, paths } from "../../core/paths";
 import { sameArtifact } from "./progress-artifact-match";
 import { progressSession } from "./progress-session";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";

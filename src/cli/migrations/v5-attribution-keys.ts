@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { palHome, paths } from "../../hooks/lib/paths";
+import { palHome, paths } from "../../core/paths";
 import type { Migration, MigrationResult } from "./migration";
 
 /**

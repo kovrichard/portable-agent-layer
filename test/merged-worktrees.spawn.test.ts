@@ -20,7 +20,7 @@ beforeEach(async () => {
   ROOT = realpathSync(freshTestDir(import.meta.file));
   process.env.PAL_HOME = resolve(ROOT, "pal");
   mkdirSync(resolve(ROOT, "pal", "memory"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 function git(dir: string, ...args: string[]): string {
@@ -321,18 +321,16 @@ describe("the repo line", () => {
     const dir = checkout();
     pushedWorktree(dir, "feat/done");
     mergeAndDeleteOnRemote(dir, "feat/done");
-    const { getRepoStateReminder } = await import("../src/hooks/lib/repo-state");
+    const { observeRepoState } = await import("../src/hooks/lib/repo-state");
 
-    expect(getRepoStateReminder(dir)).toContain(
-      "1 merged worktree: pal cli worktree prune"
-    );
+    expect(observeRepoState(dir)).toContain("1 merged worktree: pal cli worktree prune");
   });
 
   test("says nothing about worktrees when none is merged", async () => {
     const dir = checkout();
     pushedWorktree(dir, "feat/open");
-    const { getRepoStateReminder } = await import("../src/hooks/lib/repo-state");
+    const { observeRepoState } = await import("../src/hooks/lib/repo-state");
 
-    expect(getRepoStateReminder(dir)).not.toContain("worktree");
+    expect(observeRepoState(dir)).not.toContain("worktree");
   });
 });

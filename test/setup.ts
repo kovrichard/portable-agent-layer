@@ -11,7 +11,7 @@ import { afterAll, beforeEach } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { relative, resolve } from "node:path";
-import { agentDirOverrides } from "../src/hooks/lib/paths";
+import { agentDirOverrides } from "../src/core/paths";
 import { guardFile, sharedRepoConfig } from "./lib/repo-config-tripwire";
 import { refuseSubprocessesOutsideSpawnFiles } from "./lib/subprocess-guard";
 import {
@@ -56,6 +56,12 @@ function detachFromHookRepository() {
 }
 
 detachFromHookRepository();
+
+function loadPluginModulesFromTheCheckoutUnderTest() {
+  delete process.env.PAL_DIR;
+}
+
+loadPluginModulesFromTheCheckoutUnderTest();
 
 function keepTestsOutOfTheRealHome() {
   const home = resolve(TEST_ROOT, "user-home");

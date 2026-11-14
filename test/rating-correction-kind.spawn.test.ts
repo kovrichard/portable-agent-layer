@@ -1,7 +1,7 @@
 import { expect, setDefaultTimeout, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import { claudeReplying, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";

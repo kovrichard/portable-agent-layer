@@ -88,7 +88,7 @@ beforeAll(() => {
 
 describe("collectExportFiles", () => {
   test("collects telos and memory files", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
 
     expect(files).toContain("telos/MISSION.md");
@@ -98,41 +98,41 @@ describe("collectExportFiles", () => {
   });
 
   test("skips memory/downloads", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     const downloads = files.filter((f) => f.startsWith("memory/downloads"));
     expect(downloads).toHaveLength(0);
   });
 
   test("keeps the content store on its machine", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files.filter((f) => f.startsWith("memory/content"))).toHaveLength(0);
   });
 
   test("collects user-authored personal skills and subagents", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files).toContain("skills/my-skill/SKILL.md");
     expect(files).toContain("agents/my-helper.md");
   });
 
   test("excludes shipped-skill symlinks — only real user files travel", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     const shipped = files.filter((f) => f.startsWith("skills/shipped-skill"));
     expect(shipped).toHaveLength(0);
   });
 
   test("leaves the dark-factory folder on its machine but carries the progress tree", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files.filter((f) => f.startsWith("dark-factory"))).toEqual([]);
     expect(files).toContain("memory/progress-tree/events.jsonl");
   });
 
   test("never collects the credentials in ~/.pal/.env", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     expect(collectExportFiles().filter((f) => f.endsWith(".env"))).toEqual([]);
   });
 });
@@ -141,7 +141,7 @@ describe("exportZip", () => {
   const zipPath = resolve(TEST_HOME, "test-export.zip");
 
   async function writeZip() {
-    const { exportZip } = await import("../src/hooks/lib/export");
+    const { exportZip } = await import("../src/core/export");
 
     return exportZip(zipPath);
   }
@@ -165,7 +165,7 @@ describe("exportZip", () => {
 
 describe("timestamp", () => {
   test("returns 14-char timestamp string", async () => {
-    const { timestamp } = await import("../src/hooks/lib/export");
+    const { timestamp } = await import("../src/core/export");
     const ts = timestamp();
     expect(ts).toHaveLength(14);
     expect(/^\d{14}$/.test(ts)).toBe(true);

@@ -4,7 +4,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "./paths";
+import { paths } from "../../core/paths";
 
 interface SessionNames {
   [sessionId: string]: string;

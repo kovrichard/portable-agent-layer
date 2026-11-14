@@ -1,7 +1,7 @@
 import { lstatSync, rmSync, symlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve, sep } from "node:path";
-import { agentDirOverrides } from "../hooks/lib/paths";
+import { agentDirOverrides } from "../core/paths";
 
 /**
  * The agent config trees PAL writes into when no env override is set. These are

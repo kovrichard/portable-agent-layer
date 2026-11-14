@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { AGENT_NAMES } from "../src/hooks/lib/agent-registry";
+import { AGENT_NAMES } from "../src/core/agent-registry";
 import { agentFileName, renderAgentForPlatform } from "../src/targets/agent-render";
 
 const SHIPPED = resolve(import.meta.dir, "../assets/agents");

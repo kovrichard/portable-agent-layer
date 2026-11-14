@@ -6,7 +6,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "./paths";
+import { ensureDir, paths } from "../../core/paths";
 import { newNodeId, scopeOf } from "./progress-tree";
 import { localClock, localDay, localMinuteOfDay } from "./wall-clock";
 

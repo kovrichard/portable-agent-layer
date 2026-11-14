@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import type { AgentName } from "../../../../hooks/lib/agent-registry";
+import type { AgentName } from "../../../../core/agent-registry";
 import { PAGE_OUTCOMES, type PageOutcome } from "../../../ledger/outcomes";
 import type { LedgerView, LedgerViewRow } from "../../../ledger/view";
 import { Badge } from "../components/badge";

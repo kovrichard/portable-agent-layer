@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { answerGitAsNotACheckout } from "./lib/fake-git";
 import {
   captureStdout,
   injectRetrievalHome,
@@ -9,6 +10,7 @@ import {
 } from "./lib/inject-retrieval-fixture";
 
 const TEST_HOME = injectRetrievalHome(import.meta.file);
+answerGitAsNotACheckout(import.meta.path);
 
 function seedCapture(slug: string, ctx: string, principle: string) {
   const dir = resolve(TEST_HOME, "memory", "learning", "failures", "2026", "04", slug);

@@ -4,7 +4,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { parse } from "./frontmatter";
+import { parse } from "../../core/frontmatter";
 
 export interface FailureEntry {
   slug: string;

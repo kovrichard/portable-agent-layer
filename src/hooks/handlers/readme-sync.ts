@@ -6,9 +6,9 @@
  */
 
 import { execSync } from "node:child_process";
-import { logDebug } from "../lib/log";
-import { palPkg } from "../lib/paths";
-import { validateReadmeSync, WATCHED_PATHS } from "../lib/readme-sync";
+import { logDebug } from "../../core/log";
+import { palPkg } from "../../core/paths";
+import { validateReadmeSync, WATCHED_PATHS } from "../../core/readme-sync";
 
 /** Check if any watched files have uncommitted changes. */
 function hasDocumentableChanges(): boolean {

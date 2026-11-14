@@ -29,7 +29,10 @@ import {
   isCopilot,
   isCursor,
   isOpencode,
-} from "./agent";
+} from "../../core/agent";
+import { logDebug, logError } from "../../core/log";
+import { withPalEnv } from "../../core/pal-env";
+import { getInferenceDepth, SPAWN_GUARD_ENV } from "../../core/spawn-guard";
 import {
   buildCodexArgs,
   buildCursorArgs,
@@ -58,7 +61,6 @@ import { logInferenceCall, SCHEMA_MISMATCH } from "./inference-events";
 import { buildCliPrompt, parseJsonFromOutput } from "./inference-prompt";
 import { inferenceViaCliSpawn } from "./inference-spawn";
 import { type InferenceOptions, type InferenceResult, modelFor } from "./inference-types";
-import { logDebug, logError } from "./log";
 import {
   type FixedModelRoute,
   type InferenceTier,
@@ -66,8 +68,6 @@ import {
   isFixedModelRoute,
 } from "./models";
 import { opencodeTierModel } from "./opencode-config";
-import { withPalEnv } from "./pal-env";
-import { getInferenceDepth, SPAWN_GUARD_ENV } from "./spawn-guard";
 
 export function hasApiKey(): boolean {
   return !!withPalEnv().PAL_ANTHROPIC_API_KEY;

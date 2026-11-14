@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../hooks/lib/paths";
+import { paths } from "../../core/paths";
 import { readProject, writeProject } from "../../hooks/lib/projects";
 import type { Migration, MigrationResult } from "./migration";
 

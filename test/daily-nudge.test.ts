@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import {
   acknowledgeMentioned,
   dueNudgeReminder,
   pendingToday,
 } from "../src/hooks/lib/daily-nudge";
 import { queueForReview } from "../src/hooks/lib/entity-extraction";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;

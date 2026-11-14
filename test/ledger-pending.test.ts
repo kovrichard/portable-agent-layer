@@ -12,7 +12,7 @@ let HOME: string;
 beforeEach(async () => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 async function lib() {

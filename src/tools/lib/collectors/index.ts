@@ -6,10 +6,10 @@
 
 import { rmSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { logError } from "../../../core/log";
+import { paths, platform } from "../../../core/paths";
+import { eventLogEnabled } from "../../../core/settings";
 import { markCollected } from "../../../hooks/lib/collect-trigger";
-import { logError } from "../../../hooks/lib/log";
-import { paths, platform } from "../../../hooks/lib/paths";
-import { eventLogEnabled } from "../../../hooks/lib/settings";
 import { opencodeDatabase } from "../agent-usage";
 import { antigravityDatabase, collectAntigravity } from "./antigravity";
 import { claudeBilling, claudeConfigFile } from "./billing";
