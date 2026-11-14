@@ -9,9 +9,10 @@ Working notes for any AI agent contributing to this repository.
 These rank above every other rule in this file. Every new feature is designed against them, and a change that breaks one says which one and why. Some already hold, some are in progress, some are not followed yet; that is a reason to move code toward them, not to treat them as optional.
 
 1. **Every decision is audited, denials and failures most of all.** The audit trail is how PAL builds its in-house ontology. Log the actor wherever it can be known.
-   - **Bronze** is one append-only log of events plus the text they point to. It is always written; no setting turns it off. Nothing in it is edited or deleted; a correction is a newer event.
-   - **Silver and gold** are every system built from bronze, filtered by forget and similar rules. Any of them can be deleted and rebuilt by replaying bronze; a store holding something bronze lacks breaks this principle.
-   - **Redaction** is the one exception: on the user's approval, an event's text is blanked and a new event records who redacted it and when. The event itself stays.
+   - **Raw** is what an agent recorded itself: its session transcripts, copied as they are, in the agent's own format. PAL keeps a copy for every agent that writes one, and keeps it after the agent deletes its own. Raw sits below bronze: bronze is filled from it, never the other way round.
+   - **Bronze** is one append-only log of events plus the text they point to, in PAL's own format, the same for every agent. It is always written; no setting turns it off. Nothing in it is edited or deleted; a correction is a newer event.
+   - **Silver and gold** are every system built from bronze, filtered by forget and similar rules. Any of them can be deleted and rebuilt by replaying bronze; a store holding something bronze lacks breaks this principle. A system that needs something only raw holds brings it into bronze first.
+   - **Redaction** is the one exception, in raw and in bronze: on the user's approval, an event's text is blanked, the matching text in raw with it, and a new event records who redacted it and when. The event itself stays.
 2. **Deterministic checks over inference wherever possible.** Hooks and regex rules decide first; a model is asked only when code cannot decide. Every model verdict lands in bronze, so a later rule that agrees with it can take over.
 3. **`pal cli` for everything.** No per-model calls, no custom transcript saving, no custom anything. PAL writes the adapters; skills and background inference reach them through `pal cli` commands, one interface for all agents.
    - Adapters are the only code that knows an agent exists. Everything else goes through `pal cli`, including hook entry points and every inference call.
