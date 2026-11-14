@@ -57,6 +57,12 @@ function detachFromHookRepository() {
 
 detachFromHookRepository();
 
+function loadPluginModulesFromTheCheckoutUnderTest() {
+  delete process.env.PAL_DIR;
+}
+
+loadPluginModulesFromTheCheckoutUnderTest();
+
 function keepTestsOutOfTheRealHome() {
   const home = resolve(TEST_ROOT, "user-home");
   mkdirSync(home, { recursive: true });
