@@ -4,7 +4,8 @@
  * Informational only — any failure yields no output and never fails the call.
  */
 
-import { normalizeToolUse } from "./agent";
+import { normalizeToolUse } from "../../core/agent";
+import { isEnabled } from "../../core/settings";
 import { appendEvent, logQuietly } from "./events";
 import { chooseRepo, type RepoChoice, runsGit, runsGitCommit } from "./git-command-repo";
 import { hookSessionId } from "./hook-turn";
@@ -16,7 +17,6 @@ import {
   parseStatus,
   repoStatusParts,
 } from "./repo-state";
-import { isEnabled } from "./settings";
 import { COMMAND_KEYS, stringIn } from "./tool-events";
 
 const MAX_FILES = 10;

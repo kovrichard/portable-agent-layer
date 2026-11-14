@@ -20,8 +20,8 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { palHome, toPath } from "../../core/paths";
 import { adoptParkedHistory } from "./parked-history";
-import { palHome, toPath } from "./paths";
 
 /** Project name → absolute path on this machine. */
 export type Bindings = Record<string, string>;

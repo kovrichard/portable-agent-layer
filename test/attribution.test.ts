@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PAL_REPO_URL } from "../src/hooks/lib/remote";
+import { PAL_REPO_URL } from "../src/core/remote";
 import {
   applyAttribution,
   buildAttributionText,

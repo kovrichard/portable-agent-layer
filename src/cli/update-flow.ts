@@ -3,8 +3,8 @@
  * reinstalls and continues the same rail.
  */
 
+import { palPkg } from "../core/paths";
 import type { UpdateCache, UpdateChannel } from "../hooks/handlers/update-check";
-import { palPkg } from "../hooks/lib/paths";
 import { type Captured, runCaptured } from "./install-flow";
 import { type Done, LiveRail } from "./ui/live";
 import { mark, railGap, railTop } from "./ui/rail";

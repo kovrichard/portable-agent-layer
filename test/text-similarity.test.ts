@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  containment,
-  extractKeywords,
-  similarity,
-} from "../src/hooks/lib/text-similarity";
+import { containment, extractKeywords, similarity } from "../src/core/text-similarity";
 
 describe("similarity (Dice coefficient)", () => {
   test("identical strings return 1", () => {

@@ -5,6 +5,8 @@
  * names someone, and one web research call per new entry.
  */
 
+import { logDebug, logError } from "../../core/log";
+import { identity, isEnabled, isOptedIn } from "../../core/settings";
 import { ingestEntities } from "../../tools/knowledge/ingest";
 import { lookupCompanyRegister } from "../lib/company-register-router";
 import { excludedNames, loadKnownEntities, loadNameIndex } from "../lib/entity-cards";
@@ -23,8 +25,6 @@ import {
 import { newResearchTargets, researchNewEntities } from "../lib/entity-research";
 import { canInfer, inference } from "../lib/inference";
 import { judge } from "../lib/judge";
-import { logDebug, logError } from "../lib/log";
-import { identity, isEnabled, isOptedIn } from "../lib/settings";
 import { entityPrecheckJudgment } from "../lib/shadow-judgments";
 import { parseMessages } from "../lib/transcript";
 

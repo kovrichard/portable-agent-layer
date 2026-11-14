@@ -1,4 +1,4 @@
-import { PAL_REPO_URL } from "../../hooks/lib/remote";
+import { PAL_REPO_URL } from "../../core/remote";
 import type { Settings } from "../settings-merge";
 
 /**

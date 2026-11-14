@@ -7,7 +7,9 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { currentAttribution } from "./actor";
+import { currentAttribution } from "../../core/actor";
+import { ensureDir, paths } from "../../core/paths";
+import { isEnabled, isOptedIn } from "../../core/settings";
 import {
   type ClaimCheck,
   type ClaimVerdict,
@@ -17,9 +19,7 @@ import {
   isVersionControlClaim,
 } from "./claim-check";
 import { hookFinalReply, hookSessionId } from "./hook-turn";
-import { ensureDir, paths } from "./paths";
 import { alreadySentBack } from "./send-back-guard";
-import { isEnabled, isOptedIn } from "./settings";
 import type { StopTurnPayload } from "./stop";
 import { readTranscriptTail } from "./transcript";
 

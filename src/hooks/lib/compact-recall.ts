@@ -9,7 +9,7 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "./paths";
+import { paths } from "../../core/paths";
 
 /** Hook output is capped at 10,000 chars; the rest is headroom for the framing. */
 const MAX_OUTPUT = 9_000;

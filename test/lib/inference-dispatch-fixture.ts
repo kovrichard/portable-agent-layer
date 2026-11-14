@@ -1,4 +1,4 @@
-import { SPAWN_GUARD_ENV } from "../../src/hooks/lib/spawn-guard";
+import { SPAWN_GUARD_ENV } from "../../src/core/spawn-guard";
 
 const PRESERVED = [
   "PAL_AGENT",

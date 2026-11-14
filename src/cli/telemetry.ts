@@ -1,4 +1,4 @@
-import { raw as readSettings, write as writeSettings } from "../hooks/lib/settings";
+import { raw as readSettings, write as writeSettings } from "../core/settings";
 import {
   heartbeatEndpoint,
   optOutReason,

@@ -2,7 +2,7 @@
  * Single source of truth for model IDs and pricing.
  */
 
-import type { AgentType } from "./agent";
+import type { AgentType } from "../../core/agent";
 
 export const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 export const HAIKU_5_5_MODEL = "claude-haiku-5-5";

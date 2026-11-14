@@ -1,10 +1,10 @@
 import { basename } from "node:path";
+import { logDebug, logError } from "../../core/log";
+import { withPalEnv } from "../../core/pal-env";
+import { buildSpawnGuardEnv } from "../../core/spawn-guard";
 import { agentFailureText, parseJsonFromOutput } from "./inference-prompt";
 import type { InferenceOptions, InferenceResult } from "./inference-types";
 import type { InferenceUsage } from "./inference-usage";
-import { logDebug, logError } from "./log";
-import { withPalEnv } from "./pal-env";
-import { buildSpawnGuardEnv } from "./spawn-guard";
 
 function firstLine(text: string): string | undefined {
   return text

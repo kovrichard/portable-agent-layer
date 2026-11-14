@@ -102,7 +102,7 @@ writeFileSync(${JSON.stringify(markerFile)}, process.argv.slice(2).join(" "));
       childScript,
       `import { writeFileSync } from "node:fs";
 delete process.env.PAL_AGENT;
-const { getActiveAgent } = await import(${JSON.stringify(resolve(import.meta.dir, "../src/hooks/lib/agent.ts"))});
+const { getActiveAgent } = await import(${JSON.stringify(resolve(import.meta.dir, "../src/core/agent.ts"))});
 writeFileSync(${JSON.stringify(markerFile)}, getActiveAgent());
 `,
       "utf-8"

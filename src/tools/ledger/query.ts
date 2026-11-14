@@ -14,6 +14,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { paths } from "../../core/paths";
 import { resolveAnchor } from "../../hooks/lib/anchor";
 import {
   applyDelta,
@@ -21,7 +22,6 @@ import {
   type LedgerEntry,
   ledgerPath,
 } from "../../hooks/lib/ledger";
-import { paths } from "../../hooks/lib/paths";
 
 const ARCHIVE_RE = /^actions-.*\.jsonl$/;
 

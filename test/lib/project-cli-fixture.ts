@@ -1,8 +1,8 @@
 import { beforeEach, spyOn } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../../src/core/settings";
 import { type ProjectProgress, writeProject } from "../../src/hooks/lib/projects";
-import { reload } from "../../src/hooks/lib/settings";
 import { run } from "../../src/tools/agent/project";
 import { fakeProject } from "./projects-lib-fixture";
 import { freshTestDir } from "./test-home";

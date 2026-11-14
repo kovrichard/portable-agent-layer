@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ArchiveEntry } from "../src/hooks/lib/import-merge";
+import type { ArchiveEntry } from "../src/core/import-merge";
 import {
   appendImportLog,
   isNeverImport,
@@ -9,7 +9,7 @@ import {
   mergeJsonlLines,
   readManifest,
   summarize,
-} from "../src/hooks/lib/import-merge";
+} from "../src/core/import-merge";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;

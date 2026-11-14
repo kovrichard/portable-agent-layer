@@ -14,7 +14,7 @@ beforeEach(async () => {
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   mkdirSync(resolve(HOME, "telos"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 function answer(file: string) {
@@ -158,7 +158,7 @@ describe("pal cli timezone", () => {
         dynamicContext: { x: false },
       })
     );
-    (await import("../src/hooks/lib/settings")).reload();
+    (await import("../src/core/settings")).reload();
     const { runTimezone } = await cli();
     await capture(() => runTimezone(["Asia/Tokyo"]));
 

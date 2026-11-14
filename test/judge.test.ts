@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { correctionKindRequest } from "../src/hooks/lib/correction-kind";
 import type { inference } from "../src/hooks/lib/inference";
 import {
@@ -28,7 +29,6 @@ import {
   correctionCheckRequest,
   reactionRequest,
 } from "../src/hooks/lib/reaction-rating";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 type Infer = typeof inference;

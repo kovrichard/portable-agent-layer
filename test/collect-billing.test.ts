@@ -9,8 +9,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { agentDirOverrides } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
+import { agentDirOverrides } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
 import {
   claudeBilling,

@@ -5,7 +5,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "./paths";
+import { paths } from "../../core/paths";
 
 const MAX_DAYS = 7;
 const DAY_MS = 86_400_000;

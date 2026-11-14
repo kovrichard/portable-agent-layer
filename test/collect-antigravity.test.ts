@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import {
   ANTIGRAVITY_ALLOW_LIST,
   collectAntigravity,

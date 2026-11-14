@@ -8,7 +8,7 @@
  * "you were just working in this project" auto-bump.
  */
 
-import { logDebug, logError } from "../lib/log";
+import { logDebug, logError } from "../../core/log";
 import { readAllProjects, resolveProjectFromCwd, writeProject } from "../lib/projects";
 
 export async function projectTouch(): Promise<void> {

@@ -10,14 +10,14 @@ import {
   actorDisplayName,
   loadActor,
   readActorRegistry,
-} from "../../hooks/lib/actor";
-import type { LedgerEntry } from "../../hooks/lib/ledger";
+} from "../../core/actor";
 import {
   loadMachine,
   displayName as machineDisplayName,
   type RegistryEntry,
   readRegistry as readMachineRegistry,
-} from "../../hooks/lib/machine";
+} from "../../core/machine";
+import type { LedgerEntry } from "../../hooks/lib/ledger";
 import { PAGE_OUTCOMES, type PageOutcome } from "./outcomes";
 import { anchorSlugOf, changedLines, type LedgerFilter, queryLedger } from "./query";
 

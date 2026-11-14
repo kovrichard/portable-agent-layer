@@ -3,7 +3,7 @@
  * it needs them.
  */
 
-import { normalizeToolUse } from "./agent";
+import { normalizeToolUse } from "../../core/agent";
 import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
 import { markWaiting } from "./waiting-on-user";

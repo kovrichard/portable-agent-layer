@@ -21,7 +21,7 @@ rules:
     no-unguarded-json-parse: error
     no-sync-in-async:
       severity: error
-      include: ["src/hooks/**"]
+      include: ["src/hooks/**", "src/core/**"]
     no-nested-template-literals: error
     no-consecutive-array-push: error
     no-string-match: error
@@ -33,7 +33,7 @@ rules:
 
 arch:
   layers:
-    core: ["src/hooks/lib/**", "src/tools/**"]
+    core: ["src/core/**", "src/hooks/lib/**", "src/tools/**"]
     skills: ["assets/skills/**"]
     targets: ["src/targets/**"]
     cli: ["src/cli/**"]
@@ -50,6 +50,10 @@ arch:
     - from: core
       deny: cli
       message: "Core library modules must not import from the CLI layer — the CLI depends on core, not the other way around."
+
+    - from: ["src/core/**"]
+      allow: ["src/core/**"]
+      message: "src/core/ is the bottom layer — it imports only other src/core/ modules and packages, never another src/ folder."
 
   maxCommentDensity:
     - limit: 5
@@ -81,7 +85,7 @@ arch:
 
   forbidden:
     - pattern: "process.exit("
-      in: ["src/hooks/lib/**"]
+      in: ["src/hooks/lib/**", "src/core/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
     # cmd.exe never expands "~" and PowerShell hands it to native commands
@@ -107,8 +111,8 @@ arch:
     - pattern: 're:(startsWith\(.~|replace\(.~|replace\(/\^~)'
       in:
         - "src/**"
-        - "!src/hooks/lib/paths.ts"
-      message: "Hand-rolled tilde expansion — import toPath() from src/hooks/lib/paths.ts, which anchors on the leading segment and rejects ~user."
+        - "!src/core/paths.ts"
+      message: "Hand-rolled tilde expansion — import toPath() from src/core/paths.ts, which anchors on the leading segment and rejects ~user."
 
     # A path that came from argv or a flag has not been through a shell on
     # Windows, so resolve() reads its leading "~" as a literal directory under
@@ -121,7 +125,7 @@ arch:
     - pattern: 're:resolve\((values\.|argv\[|positionals\[|args\[|rest\b|\w*[Aa]rg\))'
       in:
         - "src/**"
-      message: "Foreign path string resolved directly — use toPath() from src/hooks/lib/paths.ts so a leading tilde survives Windows."
+      message: "Foreign path string resolved directly — use toPath() from src/core/paths.ts so a leading tilde survives Windows."
 
     # The page's libraries belong to the @pal/control-room-ui workspace and are
     # bundled into ui/dist, so they are absent from what a PAL user installs.
@@ -157,9 +161,9 @@ arch:
 
   singleton:
     - pattern: "process.env.PAL_HOME"
-      only: "src/hooks/lib/paths.ts"
+      only: "src/core/paths.ts"
       in: ["src/**"]
-      message: "PAL home path accessed directly — use the paths module (src/hooks/lib/paths.ts) instead."
+      message: "PAL home path accessed directly — use the paths module (src/core/paths.ts) instead."
 
     - pattern: "process.env.PAL_ANTHROPIC_API_KEY"
       only: "src/hooks/lib/inference.ts"
@@ -167,11 +171,11 @@ arch:
       message: "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead."
 
     - pattern: "process.env.PAL_PKG"
-      only: "src/hooks/lib/paths.ts"
+      only: "src/core/paths.ts"
       in: ["src/**"]
       message: "Package root path accessed directly — use getPalPkg() from the paths module instead."
 
     - pattern: "resolve(import.meta.dir"
-      only: "src/hooks/lib/paths.ts"
-      in: ["src/hooks/lib/**"]
+      only: "src/core/paths.ts"
+      in: ["src/hooks/lib/**", "src/core/**"]
       message: "Package-relative path resolution in hook lib must go through the paths module — import getPalPkg() instead of navigating from import.meta.dir."

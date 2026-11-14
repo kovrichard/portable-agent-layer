@@ -6,6 +6,8 @@
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { paths } from "../../core/paths";
+import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
 import type {
   CompanyInput,
   IngestInput,
@@ -21,8 +23,6 @@ import {
   type NameIndex,
   proseOnly,
 } from "./entity-names";
-import { paths } from "./paths";
-import { isSystemText, stripInjectedTags } from "./prompt-text";
 import { type Message, messagesAfter } from "./transcript";
 
 type Cursor = string | number;

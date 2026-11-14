@@ -3,13 +3,13 @@
  * compacted session starts with, and the line every prompt carries.
  */
 
+import { sessionDir } from "../../core/session-dir";
 import { reactionTo } from "./interaction-reaction";
 import { progressSession } from "./progress-session";
 import { readTree, scopeOf } from "./progress-tree";
 import { attachFactoryPrs } from "./progress-tree-factory";
 import { type GhRunner, ghPrView, settleAttachedPrs } from "./progress-tree-prs";
 import { renderPromptLine, renderSessionContext } from "./progress-tree-render";
-import { sessionDir } from "./session-dir";
 
 function sessionTree(cwd: string, hookSession: string | undefined) {
   return readTree(scopeOf(cwd), undefined, progressSession(hookSession));

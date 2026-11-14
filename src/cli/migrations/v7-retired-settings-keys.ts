@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../hooks/lib/paths";
+import { paths } from "../../core/paths";
 import type { Migration, MigrationResult } from "./migration";
 
 const RETIRED_SETTINGS_KEYS: Record<string, string[]> = {

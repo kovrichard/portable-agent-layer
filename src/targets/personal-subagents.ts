@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { AGENT_NAMES, type AgentName } from "../hooks/lib/agent-registry";
-import { palHome } from "../hooks/lib/paths";
+import { AGENT_NAMES, type AgentName } from "../core/agent-registry";
+import { palHome } from "../core/paths";
 import { agentFileName, renderAgentForPlatform } from "./agent-render";
 import { nativeAgentsDir, shippedAgentNames } from "./shipped-agents";
 

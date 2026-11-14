@@ -14,7 +14,7 @@ beforeEach(async () => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 async function sensitive() {
@@ -27,7 +27,7 @@ async function withUserPatterns(patterns: unknown) {
     JSON.stringify({ ledger: { redactPaths: patterns } }),
     "utf-8"
   );
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 function entries(file: string): Record<string, unknown>[] {

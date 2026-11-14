@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import * as clack from "@clack/prompts";
 import { noticeTelemetry } from "../src/cli/setup-telemetry";
-import { raw as rawSettings, reload, write } from "../src/hooks/lib/settings";
+import { raw as rawSettings, reload, write } from "../src/core/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const originalIsTTY = process.stdin.isTTY;

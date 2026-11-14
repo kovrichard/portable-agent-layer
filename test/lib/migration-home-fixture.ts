@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { palHome } from "../../src/hooks/lib/paths";
+import { palHome } from "../../src/core/paths";
 import { writeProject } from "../../src/hooks/lib/projects";
 
 export const STAMP = "2026-01-02T03:04:05.000Z";

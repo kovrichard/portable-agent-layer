@@ -7,8 +7,8 @@
 
 import { existsSync, lstatSync, readdirSync, rmSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { skillsDirOf } from "../../hooks/lib/agent-registry";
-import { assets, palPkg, platform } from "../../hooks/lib/paths";
+import { skillsDirOf } from "../../core/agent-registry";
+import { assets, palPkg, platform } from "../../core/paths";
 import { replaceJsonConfig } from "../config-backups";
 import { readJson } from "../json-file";
 import { log } from "../log";

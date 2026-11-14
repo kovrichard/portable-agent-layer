@@ -12,7 +12,7 @@ import {
   isOpencode,
   normalizeToolUse,
   stopBlockResponse,
-} from "../src/hooks/lib/agent";
+} from "../src/core/agent";
 import { writeFakeBin } from "./fixtures/fake-bin";
 import { freshTestDir } from "./lib/test-home";
 

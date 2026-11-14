@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
 import { loadProgressTreeContext } from "../src/hooks/lib/progress-tree-context";
 import { ghPrView } from "../src/hooks/lib/progress-tree-prs";
-import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 

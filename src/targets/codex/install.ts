@@ -6,7 +6,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets, palPkg, platform } from "../../hooks/lib/paths";
+import { assets, palPkg, platform } from "../../core/paths";
 import { replaceConfig, replaceJsonConfig } from "../config-backups";
 import { readJson } from "../json-file";
 import { log } from "../log";

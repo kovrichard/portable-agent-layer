@@ -5,8 +5,10 @@
  * stdin: JSON object with { session_id, transcript_path, last_assistant_message, ... }
  */
 
+import { stopBlockResponse } from "../core/agent";
+import { logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import { checkReadmeSync } from "./handlers/readme-sync";
-import { stopBlockResponse } from "./lib/agent";
 import {
   type AntigravityStopFields,
   isSideStop,
@@ -16,11 +18,9 @@ import { recordIdleCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { enterHookWorkspace } from "./lib/hook-turn";
-import { logError } from "./lib/log";
 import { stopProgressTree } from "./lib/progress-tree-stop";
 import { replySendBack } from "./lib/reply-checks";
 import { unattendedStopReason } from "./lib/run-mode-gate";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 import { type StopTurnPayload, stopTurn } from "./lib/stop";
 

@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../hooks/lib/paths";
+import { paths } from "../../core/paths";
 import { leaf } from "../lib/command";
 import { taskSlug } from "../lib/project-isc";
 import { fail, joined, nonBlank, ok } from "./project-io";

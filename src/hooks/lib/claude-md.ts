@@ -20,8 +20,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { environmentFile, readEnvironment, renderEnvironment } from "./environment";
-import { assets, ensureDir, paths, platform } from "./paths";
+import {
+  environmentFile,
+  readEnvironment,
+  renderEnvironment,
+} from "../../core/environment";
+import { assets, ensureDir, paths, platform } from "../../core/paths";
 import { antigravityRule, getSemiStaticSources } from "./semi-static";
 
 const TEMPLATE_PATH = assets.agentsMdTemplate();
@@ -119,7 +123,7 @@ export function needsRebuild(): boolean {
   return latestMtime(...sources) > outputMtime;
 }
 
-import { identity } from "./settings";
+import { identity } from "../../core/settings";
 
 /** Render AGENTS.md from the template using current state */
 export function buildClaudeMd(): string {

@@ -8,6 +8,9 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { logDebug } from "../../core/log";
+import { paths } from "../../core/paths";
+import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
 import {
   readCandidates,
   recordCandidate,
@@ -20,9 +23,6 @@ import { spawnDetachedInference } from "../lib/detached-inference";
 import { canInfer } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
 import { judge } from "../lib/judge";
-import { logDebug } from "../lib/log";
-import { paths } from "../lib/paths";
-import { isSystemText, stripInjectedTags } from "../lib/prompt-text";
 import {
   correctionCheckJudgment,
   correctionCheckOf,
@@ -273,7 +273,7 @@ async function runReactionRatingAndStore(
 
     if (turn?.confirmed) await draftRuleCandidate(sessionId);
   } catch (err) {
-    const { logError } = await import("../lib/log");
+    const { logError } = await import("../../core/log");
     logError("rating:reaction-child", err);
   }
 }

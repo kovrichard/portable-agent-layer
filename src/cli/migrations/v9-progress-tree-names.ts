@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { mergeJsonlLines } from "../../hooks/lib/import-merge";
-import { paths } from "../../hooks/lib/paths";
+import { mergeJsonlLines } from "../../core/import-merge";
+import { paths } from "../../core/paths";
 import { discardEmptyFolder, type Migration, type MigrationResult } from "./migration";
 
 export const EVENTS_FILE = "events.jsonl";

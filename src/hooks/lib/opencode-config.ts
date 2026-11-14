@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { platform } from "../../core/paths";
 import type { InferenceTier } from "./models";
-import { platform } from "./paths";
 
 const GLOBAL_CONFIG_FILES = ["config.json", "opencode.json", "opencode.jsonc"];
 

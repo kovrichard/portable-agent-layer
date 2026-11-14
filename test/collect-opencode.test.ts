@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import {
   collectOpencode,
   OPENCODE_ALLOW_LIST,

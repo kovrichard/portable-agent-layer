@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { getOrCreate, save } from "../src/tools/knowledge/lib";
 import { freshTestDir } from "./lib/test-home";
 

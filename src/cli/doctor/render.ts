@@ -1,4 +1,4 @@
-import { AGENT_REGISTRY, type AgentName } from "../../hooks/lib/agent-registry";
+import { AGENT_REGISTRY, type AgentName } from "../../core/agent-registry";
 import { healthBadge, mark, seconds } from "../ui/rail";
 import { homeShortened, type Style, visibleWidth } from "../ui/style";
 import { wrapWords } from "../ui/wrap";

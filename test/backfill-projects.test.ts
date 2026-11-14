@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { logCommitment } from "../src/hooks/lib/commitment-events";
 import { writeProject } from "../src/hooks/lib/projects";
-import { reload } from "../src/hooks/lib/settings";
 import { run } from "../src/tools/agent/project";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";

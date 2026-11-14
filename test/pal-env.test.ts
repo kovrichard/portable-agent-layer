@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { palEnvPath, parsePalEnv, withPalEnv } from "../src/hooks/lib/pal-env";
+import { palEnvPath, parsePalEnv, withPalEnv } from "../src/core/pal-env";
 import { freshTestDir } from "./lib/test-home";
 
 describe("parsePalEnv", () => {

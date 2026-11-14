@@ -8,9 +8,9 @@
 
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { skillsDirOf } from "../../hooks/lib/agent-registry";
+import { skillsDirOf } from "../../core/agent-registry";
+import { assets, palPkg, platform } from "../../core/paths";
 import { ensureAntigravityRule } from "../../hooks/lib/claude-md";
-import { assets, palPkg, platform } from "../../hooks/lib/paths";
 import { replaceJsonConfig } from "../config-backups";
 import { loadHooksTemplate } from "../hooks-template";
 import { readJson, writeJson } from "../json-file";

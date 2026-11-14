@@ -6,6 +6,7 @@ import { LiveRail } from "../src/cli/ui/live";
 import { createStyle } from "../src/cli/ui/style";
 import type { Terminal } from "../src/cli/ui/terminal";
 import { downloadCommand, runUpdate } from "../src/cli/update-flow";
+import { paths } from "../src/core/paths";
 import {
   checkForUpdate,
   checkNpm,
@@ -15,7 +16,6 @@ import {
   isNewerRelease,
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
-import { paths } from "../src/hooks/lib/paths";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 

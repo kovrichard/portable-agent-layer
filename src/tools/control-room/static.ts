@@ -7,7 +7,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { isInside } from "../../hooks/lib/paths";
+import { isInside } from "../../core/paths";
 
 const REPO_ROOT = resolve(import.meta.dir, "..", "..", "..");
 const UI_ROOT = resolve(import.meta.dir, "ui");

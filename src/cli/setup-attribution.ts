@@ -8,11 +8,7 @@
  */
 
 import * as clack from "@clack/prompts";
-import {
-  identity,
-  raw as readSettings,
-  write as writeSettings,
-} from "../hooks/lib/settings";
+import { identity, raw as readSettings, write as writeSettings } from "../core/settings";
 import { buildAttributionText } from "../targets/claude/attribution";
 
 /** Prompt once for git attribution opt-in; true when it asked. */

@@ -14,7 +14,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "../../hooks/lib/paths";
+import { ensureDir, paths } from "../../core/paths";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 

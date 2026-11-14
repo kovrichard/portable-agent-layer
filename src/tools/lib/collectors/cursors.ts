@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../../hooks/lib/paths";
+import { paths } from "../../../core/paths";
 
 export type SourceCursor = Record<string, number | string>;
 

@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { isClaude } from "../../core/agent";
+import { platform } from "../../core/paths";
+import { isPalSpawnedInference } from "../../core/spawn-guard";
 import { claudeConfigFile } from "../../tools/lib/collectors/billing";
-import { isClaude } from "./agent";
 import { appendEvent, logQuietly } from "./events";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { modelLimitsFor } from "./models";
-import { platform } from "./paths";
 import { contextModelOf, contextTokensOf, lastCompactionAt } from "./session-events";
-import { isPalSpawnedInference } from "./spawn-guard";
 
 const MAX_OUTPUT_CAP = 20_000;
 const SUMMARY_BUFFER = 13_000;

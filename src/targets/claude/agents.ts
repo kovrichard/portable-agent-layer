@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets } from "../../hooks/lib/paths";
+import { assets } from "../../core/paths";
 import { log } from "../log";
 import { installAgents, nativeAgentsDir } from "../shipped-agents";
 

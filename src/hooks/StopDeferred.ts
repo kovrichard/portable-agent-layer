@@ -3,8 +3,8 @@
  * to the transcript. argv: the deferred payload's path.
  */
 
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { finishDeferredStop } from "./lib/stop";
 
 recordHookRunOnExit();

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * algorithm-synthesize — surface the Q2 field ("what a smarter algorithm would
  * have done") across algorithm reflections, pre-sorted into candidate areas, to
@@ -17,8 +18,8 @@
  * Script:   pal cli algorithm-synthesize [--since <ISO>] [--json]
  */
 
+import { paths } from "../../core/paths";
 import { readReflections } from "../../hooks/lib/learning-store";
-import { paths } from "../../hooks/lib/paths";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 

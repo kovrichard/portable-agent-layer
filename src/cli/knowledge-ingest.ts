@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { toPath } from "../hooks/lib/paths";
+import { toPath } from "../core/paths";
 import {
   type CompanyInput,
   ingestEntities,

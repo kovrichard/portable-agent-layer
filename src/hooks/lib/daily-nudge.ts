@@ -1,11 +1,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ensureDir, paths } from "../../core/paths";
+import { isEnabled, isOptedIn } from "../../core/settings";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
 import { loadEntityReviewNudge } from "./entity-review";
-import { ensureDir, paths } from "./paths";
 import { loadReactionAuditNudge } from "./reaction-audit";
-import { isEnabled, isOptedIn } from "./settings";
 import { localDay } from "./wall-clock";
 
 type ShownOn = Record<string, string>;

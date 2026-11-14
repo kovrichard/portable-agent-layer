@@ -21,7 +21,7 @@
  */
 
 import { relative } from "node:path";
-import { palHome } from "../../hooks/lib/paths";
+import { palHome } from "../../core/paths";
 
 function isVerbose(): boolean {
   if (process.env.PAL_QUIET === "1") return false;

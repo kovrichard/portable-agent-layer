@@ -20,7 +20,7 @@ async function setSettings(data: Record<string, unknown>) {
     resolve(ROOT, "pal", "memory", "pal-settings.json"),
     JSON.stringify(data)
   );
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 async function repoStateReminder(cwd: string) {

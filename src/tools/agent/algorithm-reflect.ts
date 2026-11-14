@@ -10,7 +10,7 @@
  */
 
 import { appendFileSync } from "node:fs";
-import { paths } from "../../hooks/lib/paths";
+import { paths } from "../../core/paths";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { emit } from "../lib/emit";

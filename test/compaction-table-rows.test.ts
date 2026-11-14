@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import type { WindowEntry } from "../src/hooks/lib/compaction-backtest";
 import { appendEvent, eventsSince, type LoggedEvent } from "../src/hooks/lib/events";
-import { reload } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const nearLib = () => import("../src/hooks/lib/compaction-near");

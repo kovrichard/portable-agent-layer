@@ -1,10 +1,10 @@
 import { totalmem } from "node:os";
-import { normalizeToolUse } from "./agent";
+import { normalizeToolUse } from "../../core/agent";
+import { isPalSpawnedInference } from "../../core/spawn-guard";
 import { appendEvent, logQuietly } from "./events";
 import { hookSessionId } from "./hook-turn";
 import { unappliedVerdictOf } from "./ledger-hook";
 import { commandSlurps, diskProbe, type FileProbe, type SlurpHit } from "./slurp-detect";
-import { isPalSpawnedInference } from "./spawn-guard";
 import { COMMAND_KEYS, resultOf, stringIn } from "./tool-events";
 
 export const NOTEWORTHY_BYTES = 64 * 1024 * 1024;

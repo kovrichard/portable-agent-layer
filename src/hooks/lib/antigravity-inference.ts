@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logError } from "./log";
-import { platform } from "./paths";
+import { logError } from "../../core/log";
+import { platform } from "../../core/paths";
 
 export const INFERENCE_AGENT = "pal-inference";
 

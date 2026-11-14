@@ -4,9 +4,9 @@
  * and never stops the other.
  */
 
+import { logError } from "../../core/log";
 import { captureRating } from "../handlers/rating";
 import { captureSessionName } from "../handlers/session-name";
-import { logError } from "./log";
 
 const HANDLER_NAMES = ["rating", "session-name"];
 

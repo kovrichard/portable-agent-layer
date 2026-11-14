@@ -8,8 +8,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { palHome, paths } from "../../core/paths";
 import { opinionsContext } from "./adaptation-rules";
-import { palHome, paths } from "./paths";
 
 /** A single semi-static context source — built at session stop, loaded natively at session start. */
 interface SemiStaticSource {

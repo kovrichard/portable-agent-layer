@@ -12,9 +12,9 @@ import {
   statSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { palPkg } from "../../core/paths";
 import { appendEvent, eventsSince, type LoggedEvent, logQuietly } from "./events";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
-import { palPkg } from "./paths";
 
 const SESSION_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 const TRANSCRIPT_TAIL_BYTES = 256 * 1024;

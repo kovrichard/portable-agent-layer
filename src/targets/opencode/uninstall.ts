@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { platform } from "../../hooks/lib/paths";
+import { platform } from "../../core/paths";
 import { getSemiStaticSources } from "../../hooks/lib/semi-static";
 import { log } from "../log";
 import { removePalDocs } from "../pal-docs";

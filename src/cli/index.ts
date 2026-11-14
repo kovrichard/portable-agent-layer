@@ -20,9 +20,9 @@ import {
   AGENT_REGISTRY,
   type AgentName,
   INFERENCE_PRIORITY,
-} from "../hooks/lib/agent-registry";
+} from "../core/agent-registry";
+import { palHome, palPkg, paths, platform } from "../core/paths";
 import { inference, previewInferenceRoute } from "../hooks/lib/inference";
-import { palHome, palPkg, paths, platform } from "../hooks/lib/paths";
 import { log, narrateSteps } from "../targets/log";
 import { helpText, runCommand } from "../tools/lib/command";
 import { type DoctorResult, detectAgents } from "./doctor/agents";

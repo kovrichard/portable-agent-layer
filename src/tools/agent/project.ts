@@ -9,8 +9,8 @@
  */
 
 import { existsSync } from "node:fs";
+import { toPath } from "../../core/paths";
 import { writeBinding } from "../../hooks/lib/bindings";
-import { toPath } from "../../hooks/lib/paths";
 import {
   defaultSlug,
   deleteProject,

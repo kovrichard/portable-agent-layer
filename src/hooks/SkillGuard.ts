@@ -9,7 +9,7 @@
  * Fail-open: on any error, the skill is allowed through.
  */
 
-import { blockResponse, normalizeToolUse } from "./lib/agent";
+import { blockResponse, normalizeToolUse } from "../core/agent";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { readStdinJSON } from "./lib/stdin";

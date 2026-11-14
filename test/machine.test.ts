@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/machine");
+  return await import("../src/core/machine");
 }
 
 describe("loadMachine", () => {
@@ -290,14 +290,14 @@ describe("machine.json never leaves the machine", () => {
     mkdirSync(resolve(HOME, "telos"), { recursive: true });
     writeFileSync(resolve(HOME, "telos", "GOALS.md"), "# Goals\n");
 
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files.length).toBeGreaterThan(0);
     expect(files.some((f) => f.endsWith("machine.json"))).toBe(false);
   });
 
   test("is denied at the import boundary", async () => {
-    const { isNeverImport } = await import("../src/hooks/lib/import-merge");
+    const { isNeverImport } = await import("../src/core/import-merge");
     expect(isNeverImport("machine.json")).toBe(true);
     expect(isNeverImport("export-manifest.json")).toBe(true);
   });
@@ -305,14 +305,14 @@ describe("machine.json never leaves the machine", () => {
   test("registry entries DO travel, so labels can cross", async () => {
     const { ensureRegistered } = await lib();
     const m = ensureRegistered(HOME);
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     expect(collectExportFiles()).toContain(`memory/machines/${m.id}.md`);
   });
 });
 
 describe("export manifest", () => {
   test("names the producing machine and the file count", async () => {
-    const { buildManifest } = await import("../src/hooks/lib/export-manifest");
+    const { buildManifest } = await import("../src/core/export-manifest");
     const mf = buildManifest({ id: "id-a", label: "macbook", os: "darwin" }, 7);
     expect(mf.machineId).toBe("id-a");
     expect(mf.label).toBe("macbook");
@@ -321,10 +321,8 @@ describe("export manifest", () => {
   });
 
   test("readManifest round-trips what buildManifest produced", async () => {
-    const { buildManifest, MANIFEST_NAME } = await import(
-      "../src/hooks/lib/export-manifest"
-    );
-    const { readManifest } = await import("../src/hooks/lib/import-merge");
+    const { buildManifest, MANIFEST_NAME } = await import("../src/core/export-manifest");
+    const { readManifest } = await import("../src/core/import-merge");
     const mf = buildManifest({ id: "id-a", label: "macbook", os: "darwin" }, 7);
     const got = readManifest([
       { path: MANIFEST_NAME, data: () => Buffer.from(JSON.stringify(mf)) },
@@ -334,15 +332,15 @@ describe("export manifest", () => {
   });
 
   test("returns null for an archive with no manifest", async () => {
-    const { readManifest } = await import("../src/hooks/lib/import-merge");
+    const { readManifest } = await import("../src/core/import-merge");
     expect(
       readManifest([{ path: "telos/GOALS.md", data: () => Buffer.from("x") }])
     ).toBeNull();
   });
 
   test("returns null for a corrupt or id-less manifest", async () => {
-    const { MANIFEST_NAME } = await import("../src/hooks/lib/export-manifest");
-    const { readManifest } = await import("../src/hooks/lib/import-merge");
+    const { MANIFEST_NAME } = await import("../src/core/export-manifest");
+    const { readManifest } = await import("../src/core/import-merge");
     expect(
       readManifest([{ path: MANIFEST_NAME, data: () => Buffer.from("{{{") }])
     ).toBeNull();

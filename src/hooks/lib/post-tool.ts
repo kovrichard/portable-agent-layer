@@ -9,6 +9,7 @@
  * ledger.ts claims the snapshots those leave behind.
  */
 
+import { logDebug } from "../../core/log";
 import { reapStalePending } from "./ledger";
 import {
   commitApplied,
@@ -18,7 +19,6 @@ import {
   type UnappliedVerdict,
   unappliedVerdictOf,
 } from "./ledger-hook";
-import { logDebug } from "./log";
 import { attachProgressFromToolCall } from "./progress-tree-tool";
 import { recordSlurpCheck } from "./slurp-check";
 import { logToolCall } from "./tool-events";

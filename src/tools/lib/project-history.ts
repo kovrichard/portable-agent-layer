@@ -4,7 +4,7 @@
  * commands and the backfill build the same rows, so both give one id.
  */
 
-import type { RecordAttribution } from "../../hooks/lib/actor";
+import type { RecordAttribution } from "../../core/actor";
 import { appendEvent } from "../../hooks/lib/events";
 import type { ProjectProgress } from "../../hooks/lib/projects";
 import { parseIscs } from "./project-isc";

@@ -6,11 +6,11 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { logDebug, logError } from "../../core/log";
+import { palHome, palPkg } from "../../core/paths";
+import { telemetryEnabled } from "../../core/settings";
 import { getInstalledVersion, updateChannel } from "../handlers/update-check";
 import { appendEvent, eventsSince, type LoggedEvent, logQuietly } from "./events";
-import { logDebug, logError } from "./log";
-import { palHome, palPkg } from "./paths";
-import { telemetryEnabled } from "./settings";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SEND_TIMEOUT_MS = 3000;

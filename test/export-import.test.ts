@@ -11,7 +11,7 @@ import { basename, dirname, resolve } from "node:path";
 import * as readline from "node:readline";
 import AdmZip from "adm-zip";
 import { exportState, importState } from "../src/cli/export-import";
-import { readRegistry } from "../src/hooks/lib/machine";
+import { readRegistry } from "../src/core/machine";
 import { narrateSteps } from "../src/targets/log";
 import { freshTestDir } from "./lib/test-home";
 

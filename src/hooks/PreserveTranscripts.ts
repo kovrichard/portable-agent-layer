@@ -3,8 +3,8 @@
  * store in a process of its own, so no session waits on the gzip.
  */
 
+import { logError } from "../core/log";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { logError } from "./lib/log";
 import { preserveTranscriptsOnce } from "./lib/transcript-preserve";
 
 recordHookRunOnExit();

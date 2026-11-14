@@ -6,9 +6,9 @@
 import { spawn } from "node:child_process";
 import { statSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logDebug, logError } from "./log";
-import { palPkg, paths } from "./paths";
-import { eventLogEnabled } from "./settings";
+import { logDebug, logError } from "../../core/log";
+import { palPkg, paths } from "../../core/paths";
+import { eventLogEnabled } from "../../core/settings";
 
 const COLLECT_INTERVAL_MS = 15 * 60_000;
 

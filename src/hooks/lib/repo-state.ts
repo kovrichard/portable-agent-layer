@@ -5,10 +5,10 @@
 
 import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
+import { isEnabled } from "../../core/settings";
 import { appendEvent, logQuietly } from "./events";
 import { mergedWorktrees } from "./merged-worktrees";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
-import { isEnabled } from "./settings";
 
 const GIT_TIMEOUT_MS = 1000;
 
