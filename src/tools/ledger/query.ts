@@ -14,8 +14,8 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { resolveAnchor } from "../../core/anchor";
 import { paths } from "../../core/paths";
-import { resolveAnchor } from "../../hooks/lib/anchor";
 import {
   applyDelta,
   type LedgerDelta,

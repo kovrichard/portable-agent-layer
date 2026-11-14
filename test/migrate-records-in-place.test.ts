@@ -5,7 +5,7 @@ import { v4PathsToBindings } from "../src/cli/migrations/v4-paths-to-bindings";
 import { v5AttributionKeys } from "../src/cli/migrations/v5-attribution-keys";
 import { v6HistorySlugs } from "../src/cli/migrations/v6-history-slugs";
 import { v7RetiredSettingsKeys } from "../src/cli/migrations/v7-retired-settings-keys";
-import { readBindings } from "../src/hooks/lib/bindings";
+import { readBindings } from "../src/core/project-bindings";
 import {
   boundProject,
   homeFile,

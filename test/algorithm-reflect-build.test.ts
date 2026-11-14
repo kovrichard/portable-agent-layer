@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { writeBinding } from "../src/hooks/lib/bindings";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -27,6 +28,7 @@ function registerProject(slug: string, path: string): void {
     resolve(dir, "ISA.md"),
     `---\nname: "${slug}"\npath: "${path}"\nstatus: "active"\ncreated: "2026-01-01"\nupdated: "2026-01-01"\n---\n\n## Goal\n`
   );
+  writeBinding(slug, path, HOME);
 }
 
 describe("intOr", () => {

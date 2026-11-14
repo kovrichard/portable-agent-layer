@@ -55,7 +55,7 @@ describe("v4 paths-to-bindings", () => {
     const dir = checkout("alpha");
     const file = legacyRecord("alpha", dir);
     const { runMigrate } = await import("../src/cli/migrate");
-    const { bindingFor } = await import("../src/hooks/lib/bindings");
+    const { bindingFor } = await import("../src/core/project-bindings");
 
     runMigrate([]);
 
@@ -105,7 +105,7 @@ describe("v4 paths-to-bindings", () => {
     const file = legacyRecord("alpha", checkout("alpha"));
     const before = readFileSync(file, "utf-8");
     const { runMigrate } = await import("../src/cli/migrate");
-    const { bindingsFilePath } = await import("../src/hooks/lib/bindings");
+    const { bindingsFilePath } = await import("../src/core/project-bindings");
 
     runMigrate(["--dry-run"]);
 

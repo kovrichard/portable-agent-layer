@@ -7,7 +7,7 @@ import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 async function lib() {
-  return await import("../src/hooks/lib/bindings");
+  return await import("../src/core/project-bindings");
 }
 
 let HOME: string;

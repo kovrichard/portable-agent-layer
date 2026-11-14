@@ -33,8 +33,8 @@ import {
 import { dirname, extname, resolve } from "node:path";
 import { calcPatch } from "fast-myers-diff";
 import { currentAttribution, type RecordAttribution } from "../../core/actor";
+import { encodeAnchor, resolveAnchor } from "../../core/anchor";
 import { ensureDir, paths } from "../../core/paths";
-import { encodeAnchor, resolveAnchor } from "./anchor";
 import { appendEvent } from "./events";
 import { isSensitivePath } from "./sensitive-path";
 

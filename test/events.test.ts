@@ -62,6 +62,22 @@ describe("the event envelope", () => {
     expect(typeof event?.actor).toBe("string");
   });
 
+  test("the project is the binding whose folder holds the cwd, and null outside every binding", () => {
+    const gizmo = resolve(home, "checkouts", "gizmo");
+    writeFileSync(resolve(home, "bindings.json"), JSON.stringify({ gizmo }));
+    appendEvent(
+      "turn",
+      {},
+      { ts: "2026-09-10T10:00:00.000Z", cwd: resolve(gizmo, "src") }
+    );
+    appendEvent(
+      "turn",
+      {},
+      { ts: "2026-09-10T10:00:01.000Z", cwd: resolve(home, "checkouts", "loose") }
+    );
+    expect(streamLines("2026-09").map((e) => e.project)).toEqual(["gizmo", null]);
+  });
+
   test("the channel comes from PAL_CHANNEL unless the caller names one", () => {
     process.env.PAL_CHANNEL = "discord-mobile";
     appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" });
