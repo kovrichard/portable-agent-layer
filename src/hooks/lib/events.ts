@@ -13,11 +13,20 @@ import { ensureDir, paths } from "../../core/paths";
 import { boundProjectAt } from "../../core/project-bindings";
 import { eventLogEnabled } from "../../core/settings";
 import { currentChannel } from "./channel";
-import { USAGE_FIELDS } from "./inference-usage";
 
 export const EVENT_SCHEMA_VERSION = 1;
 const MAX_STRING = 64;
 const MAX_ARRAY = 50;
+
+export const USAGE_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cacheWrite5m",
+  "cacheWrite1h",
+  "cacheRead",
+  "thinkingTokens",
+  "costUsd",
+] as const;
 
 export const EVENT_FIELDS = {
   turn: [

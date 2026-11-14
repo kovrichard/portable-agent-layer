@@ -3,8 +3,8 @@
  * model answered, how long it took and how it ended.
  */
 
-import { appendEvent, logQuietly } from "./events";
-import { type InferenceUsage, USAGE_FIELDS } from "./inference-usage";
+import { appendEvent, logQuietly, USAGE_FIELDS } from "./events";
+import type { InferenceUsage } from "./inference-usage";
 
 interface InferenceCall {
   caller?: string;
