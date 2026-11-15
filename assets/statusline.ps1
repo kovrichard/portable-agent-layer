@@ -48,21 +48,6 @@ $GIT_INDICATOR = if ($BRANCH) { "  (git: $BRANCH)" } else { "" }
 # Format cost
 $COST_STR = '$' + ([math]::Round($COST, 2)).ToString("0.00")
 
-# PAL: Hook health - count ERROR lines in debug.log from last 24h
-$HOOK_ERRORS = 0
-$debugLog = Join-Path $env:USERPROFILE ".pal\debug\debug.log"
-if (Test-Path $debugLog) {
-  $cutoff = (Get-Date).AddHours(-24)
-  try {
-    $HOOK_ERRORS = (Get-Content $debugLog -ErrorAction SilentlyContinue |
-      Where-Object { $_ -match '\] ERROR ' } |
-      Where-Object {
-        $m = [regex]::Match($_, '^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]')
-        if ($m.Success) { [datetime]$m.Groups[1].Value -gt $cutoff } else { $false }
-      }).Count
-  } catch { $HOOK_ERRORS = 0 }
-}
-
 # PAL: Open ISC count - find project matching current directory
 $OPEN_ISCS = 0
 $PROJECT_NAME = ""
@@ -179,27 +164,47 @@ if (Test-Path $updateCache) {
   } catch {}
 }
 
-# PAL: Claude login expiry (reads the cache PAL refreshes at session start)
-$LOGIN_LINE = ""
-$LOGIN_COLOR = $YELLOW
-$LOGIN_KEY = [char]::ConvertFromUtf32(0x1F511)
-$loginCache = Join-Path $env:USERPROFILE ".pal\cache\claude-login.json"
-if (Test-Path $loginCache) {
+# PAL: Health - what the doctor (health.json) and a rejected Claude call (login-rejected.json) left
+$palCache = Join-Path $env:USERPROFILE ".pal\cache"
+$healthFailing = 0
+$healthWarnings = 0
+$healthWorst = ""
+$isCount = { param($v) ($v -is [int] -or $v -is [long] -or $v -is [double] -or $v -is [decimal]) -and $v -gt 0 }
+$healthCache = Join-Path $palCache "health.json"
+if (Test-Path $healthCache) {
   try {
-    $loginEpoch = (Get-Content $loginCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).expiresAtEpoch
-    if (($loginEpoch -is [int] -or $loginEpoch -is [long] -or $loginEpoch -is [double] -or $loginEpoch -is [decimal]) -and $loginEpoch -ge 0) {
-      $loginLeft = [long][math]::Floor([double]$loginEpoch) - [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-      if ($loginLeft -le 0) {
-        $LOGIN_LINE = "$LOGIN_KEY Claude login expired $([char]0x2014) run: claude auth login"
-        $LOGIN_COLOR = $RED
-      } elseif ($loginLeft -lt 86400) {
-        $LOGIN_LINE = "$LOGIN_KEY Claude login expires in $([math]::Floor($loginLeft / 3600))h"
-      } elseif ($loginLeft -le 604800) {
-        $LOGIN_LINE = "$LOGIN_KEY Claude login expires in $([math]::Floor($loginLeft / 86400))d"
-      }
-    }
+    $health = Get-Content $healthCache -Raw -ErrorAction Stop | ConvertFrom-Json
+    if (& $isCount $health.failing) { $healthFailing = [long][math]::Floor([double]$health.failing) }
+    if (& $isCount $health.warnings) { $healthWarnings = [long][math]::Floor([double]$health.warnings) }
+    if ($health.worst -is [string]) { $healthWorst = $health.worst }
   } catch {}
 }
+
+$rejectedLabel = ""
+$rejectedCache = Join-Path $palCache "login-rejected.json"
+if (Test-Path $rejectedCache) {
+  $rejectedLabel = "Claude login rejected"
+  try {
+    if ((Get-Content $rejectedCache -Raw -ErrorAction Stop | ConvertFrom-Json).auth -eq "token") { $rejectedLabel = "Claude token rejected" }
+  } catch {}
+}
+
+$HEALTH_LINE = ""
+$HEALTH_COLOR = $RED
+$healthLabel = ""
+$healthMore = 0
+if ($rejectedLabel) {
+  $healthLabel = $rejectedLabel
+  $healthMore = $healthFailing
+} elseif ($healthFailing -gt 0) {
+  $healthLabel = if ($healthWorst) { $healthWorst } else { "Doctor found a failure" }
+  $healthMore = $healthFailing - 1
+} elseif ($healthWarnings -gt 0) {
+  $healthLabel = if ($healthWarnings -eq 1) { "1 warning" } else { "$healthWarnings warnings" }
+  $HEALTH_COLOR = $YELLOW
+}
+if ($healthMore -gt 0) { $healthLabel += " (+$healthMore more)" }
+if ($healthLabel) { $HEALTH_LINE = "! $healthLabel $([char]0x2014) pal cli doctor" }
 
 # Dark factory: one line per task that is building or waiting on the user.
 # Reads the tail of each task's own event log, so it stays fast as logs grow.
@@ -236,11 +241,10 @@ if (Test-Path $factoryTasks) {
 }
 
 # Build PAL indicators
-$HOOK_STR = if ($HOOK_ERRORS -gt 0) { "  " + $RED + "! $HOOK_ERRORS hook err" + $RESET } else { "" }
 $ISC_STR  = if ($OPEN_ISCS -gt 0)   { "  " + $DIM + "$OPEN_ISCS open ISCs" + $RESET }  else { "" }
 
-# Line 1: Model, Directory, Git Branch, Hook Health, Open ISCs
-Write-Host ($CYAN + "[$MODEL]" + $RESET + " folder: $DIR_DISPLAY" + $DIM + $GIT_INDICATOR + $RESET + $HOOK_STR + $ISC_STR + $SIGNAL_STR)
+# Line 1: Model, Directory, Git Branch, Open ISCs
+Write-Host ($CYAN + "[$MODEL]" + $RESET + " folder: $DIR_DISPLAY" + $DIM + $GIT_INDICATOR + $RESET + $ISC_STR + $SIGNAL_STR)
 
 # Line 2: Context bar with usage percentage, cost, and rate limits
 $CTX_STR = "$USED% - $COST_STR - ${REM}% free"
@@ -249,8 +253,8 @@ Write-Host ($BAR_COLOR + $BAR + $RESET + " " + $CTX_STR + $DIM + $RATE_STR + $RE
 # Line 3: Update available (only when cache says available AND versions differ)
 if ($UPDATE_LINE) { Write-Host ($YELLOW + $UPDATE_LINE + $RESET) }
 
-# Line 3a: Claude login close to expiring or expired
-if ($LOGIN_LINE) { Write-Host ($LOGIN_COLOR + $LOGIN_LINE + $RESET) }
+# Line 3a: Health - the worst failure or the warning count, pointing to the doctor
+if ($HEALTH_LINE) { Write-Host ($HEALTH_COLOR + $HEALTH_LINE + $RESET) }
 
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 foreach ($factoryLine in $FACTORY_LINES) { Write-Host ($CYAN + $factoryLine + $RESET) }

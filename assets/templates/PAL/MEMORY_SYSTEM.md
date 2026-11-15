@@ -37,7 +37,11 @@ memory/
     └── <slug>/                         # Per-project history, progress
 ```
 
-`~/.pal/cache/` sits beside `memory/` and holds machine-local state that is rebuilt on the next read, such as `claude-login.json` (when the Claude login expires). Any file in it may be deleted at any time; nothing in it is a record, so export skips it.
+`~/.pal/cache/` sits beside `memory/` and holds machine-local state that is rebuilt on the next read. Any file in it may be deleted at any time; nothing in it is a record, so export skips it.
+
+- `claude-login.json`: when the Claude login expires.
+- `health.json`: how many doctor findings fail and warn, and the worst one, written by every doctor report.
+- `login-rejected.json`: when a background Claude call was last rejected and in which auth mode; the next call that succeeds deletes it.
 
 ## Where to write
 

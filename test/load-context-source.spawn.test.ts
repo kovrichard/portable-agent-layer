@@ -17,6 +17,7 @@ function runLoadContext(source: string, agent = "claude") {
     env: {
       ...process.env,
       PAL_HOME: resolve(sandbox, "home"),
+      PAL_SKIP_DOCTOR: "1",
       PAL_CLAUDE_DIR: resolve(sandbox, "claude"),
       PAL_COPILOT_DIR: resolve(sandbox, "copilot"),
       PAL_OPENCODE_DIR: resolve(sandbox, "opencode"),
