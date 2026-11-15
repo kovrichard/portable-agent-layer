@@ -11,11 +11,11 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ratingsFile } from "../../bronze/signals";
-import { logDebug } from "../../core/log";
-import { ensureDir, paths } from "../../core/paths";
-import { extractKeywords, similarity } from "../../core/text-similarity";
-import { canInfer, inference } from "../../inference/inference";
+import { ratingsFile } from "../bronze/signals";
+import { logDebug } from "../core/log";
+import { ensureDir, paths } from "../core/paths";
+import { extractKeywords, similarity } from "../core/text-similarity";
+import { canInfer, inference } from "../inference/inference";
 import { type FailureEntry, readFailures } from "./learning-store";
 
 // ── Types ──

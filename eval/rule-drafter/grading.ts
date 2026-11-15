@@ -4,16 +4,16 @@
  * is an opinion unless its optional trigger proves, which is graded apart. A
  * widening must fire on the newest correction and pass the proof.
  */
-import type { CandidateInput } from "../../src/hooks/lib/adaptation-candidates";
-import type { RuleTrigger } from "../../src/hooks/lib/adaptation-rules";
-import type { RequestedTurn } from "../../src/hooks/lib/adaptation-turns";
-import { parseDraft } from "../../src/hooks/lib/rule-drafter";
+import type { CandidateInput } from "../../src/opinions/adaptation-candidates";
+import type { RuleTrigger } from "../../src/opinions/adaptation-rules";
+import type { RequestedTurn } from "../../src/opinions/adaptation-turns";
+import { parseDraft } from "../../src/opinions/rule-drafter";
 import {
   firesOn,
   proofVerdict,
   proveTrigger,
   widenedProofVerdict,
-} from "../../src/hooks/lib/rule-proof";
+} from "../../src/opinions/rule-proof";
 import { asTurns, type DrafterCase } from "./cases";
 
 export interface Grade {

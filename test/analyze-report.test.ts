@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AnalysisResult } from "../src/hooks/lib/graduation";
+import type { AnalysisResult } from "../src/opinions/graduation";
 import { reportLines } from "../src/tools/lib/analyze-report";
 
 // The report `pal cli analyze` prints. It was written straight into console.log

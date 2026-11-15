@@ -13,8 +13,8 @@ import {
   readRules,
   retireRule,
   rulesPath,
-} from "../src/hooks/lib/adaptation-rules";
-import { CORRECTION_KINDS } from "../src/hooks/lib/correction-kind";
+} from "../src/opinions/adaptation-rules";
+import { CORRECTION_KINDS } from "../src/opinions/correction-kind";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;

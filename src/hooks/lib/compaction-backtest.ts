@@ -1,4 +1,5 @@
 import type { LoggedEvent } from "../../bronze/events";
+import { median } from "../../opinions/interaction-mood";
 import {
   compactionInput,
   compactionMarginTokens,
@@ -6,7 +7,6 @@ import {
   compactionPredicted,
   IDLE_COMPACT_AFTER_MS,
 } from "./compaction-near";
-import { median } from "./interaction-mood";
 
 const THRESHOLD_SLACK_TOKENS = 8_000;
 const MINUTE_MS = 60_000;

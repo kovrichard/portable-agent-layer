@@ -30,6 +30,7 @@ import {
 import { logDebug, logError } from "../../core/log";
 import { assets, ensureDir, paths } from "../../core/paths";
 import { spawnDetachedInference } from "../../inference/detached-inference";
+import { recordReply } from "../../opinions/interaction";
 import { startHookTiming } from "../../usage/hook-timing";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
@@ -44,7 +45,6 @@ import { recordAlgorithmTurnQuietly, turnTexts } from "./algorithm-runs";
 import { spawnCollectIfDue } from "./collect-trigger";
 import { acknowledgeMentioned } from "./daily-nudge";
 import { fileFinalReply } from "./hook-turn";
-import { recordReply } from "./interaction";
 
 type Transcript = Message[];
 

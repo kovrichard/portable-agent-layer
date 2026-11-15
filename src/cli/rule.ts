@@ -19,15 +19,15 @@ import {
   readRules,
   retireRule,
   type TriggerProof,
-} from "../hooks/lib/adaptation-rules";
-import { readTurns, type Turn } from "../hooks/lib/adaptation-turns";
-import { CORRECTION_KINDS, type CorrectionKindName } from "../hooks/lib/correction-kind";
+} from "../opinions/adaptation-rules";
+import { readTurns, type Turn } from "../opinions/adaptation-turns";
+import { CORRECTION_KINDS, type CorrectionKindName } from "../opinions/correction-kind";
 import {
   EFFECT_WINDOW_DAYS,
   type OpinionEffect,
   opinionEffectOf,
-} from "../hooks/lib/correction-rates";
-import { gateAdvice } from "../hooks/lib/opinion-gate";
+} from "../opinions/correction-rates";
+import { gateAdvice } from "../opinions/opinion-gate";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 import {
   legacyOpinionLine,

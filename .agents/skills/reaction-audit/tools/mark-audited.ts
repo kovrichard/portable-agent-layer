@@ -4,7 +4,7 @@
  * and audited samples are not offered again. Called at the end of an audit.
  */
 
-import { writeAuditMark } from "../../../../src/hooks/lib/reaction-audit";
+import { writeAuditMark } from "../../../../src/opinions/reaction-audit";
 
 const now = new Date();
 writeAuditMark(now);

@@ -1,6 +1,6 @@
 # PAL correction kind evaluation
 #
-# Evaluates the prompt in src/hooks/lib/correction-kind.ts, which names the kind
+# Evaluates the prompt in src/opinions/correction-kind.ts, which names the kind
 # of mistake behind a confirmed correction. Opinions are measured by the rate of
 # their kind before and after approval, so a wrong kind moves the wrong rate.
 # build-prompt.ts writes the system prompt and the schema from src/ before each

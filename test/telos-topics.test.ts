@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { hasRealContent, telosStatus } from "../src/hooks/lib/telos-topics";
+import { hasRealContent, telosStatus } from "../src/opinions/telos-topics";
 import { freshTestDir } from "./lib/test-home";
 
 // One definition of "answered" serves the doctor, `pal cli telos` and the

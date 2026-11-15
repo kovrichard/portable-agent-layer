@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { observeTurn } from "../src/hooks/lib/interaction";
+import { observeTurn } from "../src/opinions/interaction";
 import { logAttention } from "../src/usage/attention-events";
 import { logToolCall } from "../src/usage/tool-events";
 import { permissionWaitSec } from "../src/usage/waiting-on-user";

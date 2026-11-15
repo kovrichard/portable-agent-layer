@@ -1,9 +1,6 @@
 import { useState } from "react";
-import type {
-  AdaptationRule,
-  TriggerProof,
-} from "../../../../hooks/lib/adaptation-rules";
-import type { OpinionEffect } from "../../../../hooks/lib/correction-rates";
+import type { AdaptationRule, TriggerProof } from "../../../../opinions/adaptation-rules";
+import type { OpinionEffect } from "../../../../opinions/correction-rates";
 import type {
   ActiveRule,
   DraftRule,

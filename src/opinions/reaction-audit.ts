@@ -6,7 +6,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { paths } from "../core/paths";
 import { isMaintainerEnv } from "./algorithm-review";
 import type { Reaction } from "./interaction-reaction";
 import { type ReactionSample, readSamples } from "./interaction-samples";

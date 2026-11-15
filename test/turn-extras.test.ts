@@ -5,7 +5,7 @@ import {
   pastedChars,
   responseModeOf,
   slashCommandOf,
-} from "../src/hooks/lib/turn-extras";
+} from "../src/opinions/turn-extras";
 
 describe("languageOf", () => {
   test("names English and Hungarian by their common words", () => {

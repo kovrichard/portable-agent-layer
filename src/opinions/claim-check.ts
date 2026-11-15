@@ -5,9 +5,9 @@
  * unreadable turn is never unbacked.
  */
 
-import { toolCallsOf, typedRequest } from "../../bronze/antigravity-transcript";
-import { isCodexInjectedContext } from "../../bronze/transcript";
-import { isSystemText } from "../../core/prompt-text";
+import { toolCallsOf, typedRequest } from "../bronze/antigravity-transcript";
+import { isCodexInjectedContext } from "../bronze/transcript";
+import { isSystemText } from "../core/prompt-text";
 
 const CLAIM_RE =
   /\b(?:tests?|suite|ci|checks?|builds?|gates?|pipeline)\b.*\b(?:pass(?:es|ed)?|green|succeed(?:s|ed)?)\b|\bverified\b|\b(?:works|working) now\b|\bnow works\b/i;

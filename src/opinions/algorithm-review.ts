@@ -11,7 +11,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { palPkg, paths } from "../../core/paths";
+import { palPkg, paths } from "../core/paths";
 import { readReflections } from "./learning-store";
 
 const NUDGE_MIN_COUNT = 25;

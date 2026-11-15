@@ -9,7 +9,7 @@ import type {
   JudgeRequest,
   JudgeResult,
   JudgeState,
-} from "../../inference/judgment";
+} from "../inference/judgment";
 import {
   type CorrectionKind,
   correctionKindRequest,

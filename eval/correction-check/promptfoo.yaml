@@ -1,6 +1,6 @@
 # PAL correction check evaluation
 #
-# Evaluates the prompt in src/hooks/lib/reaction-rating.ts that checks a
+# Evaluates the prompt in src/opinions/reaction-rating.ts that checks a
 # possible correction: a "corrected", "repeated" or "follow-up" from the
 # labelling prompt is asked again as one narrow question, was the reply itself
 # wrong? Asking the labelling prompt twice repeats its own mistakes; this question

@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { palHome, palPkg } from "../../core/paths";
 import { auditBindings, type BindingIssue } from "../../hooks/lib/projects";
-import { telosStatus } from "../../hooks/lib/telos-topics";
+import { telosStatus } from "../../opinions/telos-topics";
 import {
   type LegacyOpinions,
   opinionCount,

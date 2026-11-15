@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import type { TurnEvent } from "../src/hooks/lib/interaction";
+import type { TurnEvent } from "../src/opinions/interaction";
 import {
   isEvidence,
   type Split,
   shorterApprovedMore,
   splits,
-} from "../src/hooks/lib/interaction-preferences";
-import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
+} from "../src/opinions/interaction-preferences";
+import { REACTION_RULES } from "../src/opinions/interaction-reaction";
 
 interface Shape {
   words?: number;

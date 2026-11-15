@@ -8,7 +8,7 @@ import {
   loadAlgorithmReviewNudge,
   readReviewMark,
   writeReviewMark,
-} from "../src/hooks/lib/algorithm-review";
+} from "../src/opinions/algorithm-review";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

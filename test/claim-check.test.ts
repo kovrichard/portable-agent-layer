@@ -4,7 +4,7 @@ import {
   commandsThisTurn,
   resultClaims,
   statusClaims,
-} from "../src/hooks/lib/claim-check";
+} from "../src/opinions/claim-check";
 
 function claude(entries: unknown[]): string[] {
   return entries.map((e) => JSON.stringify(e));

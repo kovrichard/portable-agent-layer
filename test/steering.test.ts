@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { classifyPrompt, getSteeringReminder } from "../src/hooks/lib/steering";
+import { classifyPrompt, getSteeringReminder } from "../src/opinions/steering";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

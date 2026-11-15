@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { paths } from "../core/paths";
-import { OPINION_CAP, OPINION_CHARS } from "../hooks/lib/adaptation-rules";
+import { OPINION_CAP, OPINION_CHARS } from "../opinions/adaptation-rules";
 
 export interface LegacyOpinion {
   statement: string;

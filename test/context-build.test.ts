@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { reload } from "../src/core/settings";
-import { addOpinion } from "../src/hooks/lib/adaptation-rules";
 import { buildSystemReminder } from "../src/hooks/lib/context";
 import { appendProjectHistory } from "../src/hooks/lib/work-tracking";
+import { addOpinion } from "../src/opinions/adaptation-rules";
 import { freshPalHomeEachTest } from "./lib/context-build-fixture";
 
 const { write } = freshPalHomeEachTest(import.meta.file);

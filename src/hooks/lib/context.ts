@@ -8,7 +8,7 @@ import type { AgentName } from "../../core/agent-registry";
 import { toPath } from "../../core/paths";
 import { sessionDir } from "../../core/session-dir";
 import * as settings from "../../core/settings";
-import { opinionsContext } from "./adaptation-rules";
+import { opinionsContext } from "../../opinions/adaptation-rules";
 import { dueNudgeSections } from "./daily-nudge";
 import { loadProgressTreeContext } from "./progress-tree-context";
 import { loadActiveProjectsContext } from "./projects-context";

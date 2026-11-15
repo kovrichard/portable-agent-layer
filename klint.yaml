@@ -21,7 +21,7 @@ rules:
     no-unguarded-json-parse: error
     no-sync-in-async:
       severity: error
-      include: ["src/hooks/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**"]
+      include: ["src/hooks/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**"]
     no-nested-template-literals: error
     no-consecutive-array-push: error
     no-string-match: error
@@ -33,7 +33,7 @@ rules:
 
 arch:
   layers:
-    core: ["src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/hooks/lib/**", "src/tools/**"]
+    core: ["src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/hooks/lib/**", "src/tools/**"]
     skills: ["assets/skills/**"]
     targets: ["src/targets/**"]
     cli: ["src/cli/**"]
@@ -72,6 +72,10 @@ arch:
       allow: ["src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
       message: "src/knowledge/ sits above src/inference/ — it imports only src/knowledge/, src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
 
+    - from: ["src/opinions/**"]
+      allow: ["src/opinions/**", "src/usage/**", "src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/opinions/ sits above src/usage/ and src/knowledge/ — it imports only those, src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
+
   maxCommentDensity:
     - limit: 5
       in: ["src/**", "assets/skills/**", "!assets/skills/consulting-report/template/**"]
@@ -102,7 +106,7 @@ arch:
 
   forbidden:
     - pattern: "process.exit("
-      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
     # cmd.exe never expands "~" and PowerShell hands it to native commands
@@ -184,7 +188,7 @@ arch:
 
     - pattern: "process.env.PAL_ANTHROPIC_API_KEY"
       only: "src/inference/inference.ts"
-      in: ["src/hooks/**", "src/tools/**", "src/inference/**", "src/usage/**", "src/knowledge/**"]
+      in: ["src/hooks/**", "src/tools/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**"]
       message: "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead."
 
     - pattern: "process.env.PAL_PKG"
@@ -194,5 +198,5 @@ arch:
 
     - pattern: "resolve(import.meta.dir"
       only: "src/core/paths.ts"
-      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**"]
       message: "Package-relative path resolution in hook lib must go through the paths module — import getPalPkg() instead of navigating from import.meta.dir."

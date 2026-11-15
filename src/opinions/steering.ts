@@ -12,7 +12,7 @@
  * only when the prompt matches that task type.
  */
 
-import { isEnabled, raw } from "../../core/settings";
+import { isEnabled, raw } from "../core/settings";
 
 /** The tags shipped as built-in defaults. Users may add their own tags via
  *  pal-settings.json `steering.rules`, so the effective tag set is open-ended. */

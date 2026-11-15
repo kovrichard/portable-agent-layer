@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { Turn } from "../src/hooks/lib/adaptation-turns";
+import type { Turn } from "../src/opinions/adaptation-turns";
 import {
   CORRECTION_KINDS_VERSION,
   type CorrectionKindName,
-} from "../src/hooks/lib/correction-kind";
+} from "../src/opinions/correction-kind";
 import {
   canRepeat,
   canWiden,
@@ -12,7 +12,7 @@ import {
   drafterRequest,
   type KnownRule,
   parseDraft,
-} from "../src/hooks/lib/rule-drafter";
+} from "../src/opinions/rule-drafter";
 
 const turn = (over: Partial<Turn>): Turn => ({
   ts: "2026-10-07T08:00:00.000Z",

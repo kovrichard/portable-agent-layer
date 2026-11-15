@@ -23,7 +23,7 @@ import {
   type ServesKind,
 } from "../../hooks/lib/projects";
 import { isImportant, SERVES_MEANING } from "../../hooks/lib/serves";
-import { dueFrom, readTelosGoals, type TelosGoal } from "../../hooks/lib/telos-goals";
+import { dueFrom, readTelosGoals, type TelosGoal } from "../../opinions/telos-goals";
 import { parseIscs } from "../lib/project-isc";
 import { type ControlRoomPrefs, readPrefs } from "./prefs";
 import { readSnoozes, snoozedUntil } from "./snooze";

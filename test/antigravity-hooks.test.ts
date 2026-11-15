@@ -17,11 +17,11 @@ import {
 import { enterHookWorkspace } from "../src/core/hook-payload";
 import { paths } from "../src/core/paths";
 import { reload } from "../src/core/settings";
-import { commandsThisTurn } from "../src/hooks/lib/claim-check";
-import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
-import { alreadySentBack, rememberSendBack } from "../src/hooks/lib/send-back-guard";
+import { commandsThisTurn } from "../src/opinions/claim-check";
+import { claimChecksSince, watchClaims } from "../src/opinions/claim-log";
+import { alreadySentBack, rememberSendBack } from "../src/opinions/send-back-guard";
 import {
   agyPayload,
   CONVERSATION,

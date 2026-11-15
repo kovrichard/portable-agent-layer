@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { readCandidates } from "../src/hooks/lib/adaptation-candidates";
-import { appendTurn } from "../src/hooks/lib/adaptation-turns";
+import { readCandidates } from "../src/opinions/adaptation-candidates";
+import { appendTurn } from "../src/opinions/adaptation-turns";
 import {
   eventsOf,
   fakeAdapter,

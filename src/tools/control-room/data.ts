@@ -10,11 +10,6 @@ import { ratingsFile } from "../../bronze/signals";
 import { paths } from "../../core/paths";
 import { type AgendaMove, readAgenda } from "../../hooks/lib/agenda-store";
 import {
-  isMaintainerEnv,
-  loadAlgorithmReviewNudge,
-} from "../../hooks/lib/algorithm-review";
-import { loadAnalyzeNudge } from "../../hooks/lib/analyze-nudge";
-import {
   isStale,
   PROJECT_STALE_DAYS_DEFAULT,
   type ProjectProgress,
@@ -23,6 +18,11 @@ import {
   type ServesKind,
 } from "../../hooks/lib/projects";
 import { readProjectHistory } from "../../hooks/lib/work-tracking";
+import {
+  isMaintainerEnv,
+  loadAlgorithmReviewNudge,
+} from "../../opinions/algorithm-review";
+import { loadAnalyzeNudge } from "../../opinions/analyze-nudge";
 import { anchorSlugOf, type LedgerFilter, queryLedger } from "../ledger/query";
 import { viewStats } from "../ledger/view";
 import { parseIscs } from "../lib/project-isc";

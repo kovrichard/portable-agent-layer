@@ -8,7 +8,7 @@
 
 import { identity, raw as readSettings, write as writeSettings } from "../core/settings";
 import { canonicalTimeZone } from "../core/wall-clock";
-import { telosStatus } from "../hooks/lib/telos-topics";
+import { telosStatus } from "../opinions/telos-topics";
 import { log } from "../targets/log";
 import { leaf } from "../tools/lib/command";
 

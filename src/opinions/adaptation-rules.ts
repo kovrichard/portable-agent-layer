@@ -9,7 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { paths } from "../core/paths";
 
 type RuleStatus = "draft" | "approved" | "denied" | "retired";
 type Decision = "approved" | "denied" | "opinion";

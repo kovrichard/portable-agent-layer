@@ -2,20 +2,20 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "../src/core/paths";
-import type { AdaptationRule } from "../src/hooks/lib/adaptation-rules";
-import { appendTurn, readTurns, type Turn } from "../src/hooks/lib/adaptation-turns";
+import type { AdaptationRule } from "../src/opinions/adaptation-rules";
+import { appendTurn, readTurns, type Turn } from "../src/opinions/adaptation-turns";
 import {
   backfillCorrectionKinds,
   correctionsToLabel,
-} from "../src/hooks/lib/correction-backfill";
-import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
+} from "../src/opinions/correction-backfill";
+import { CORRECTION_KINDS_VERSION } from "../src/opinions/correction-kind";
 import {
   EFFECT_WINDOW_DAYS,
   kindRates,
   opinionEffect,
   opinionEffectOf,
   splitRates,
-} from "../src/hooks/lib/correction-rates";
+} from "../src/opinions/correction-rates";
 import { freshTestDir } from "./lib/test-home";
 
 function turn(ts: string, extra: Partial<Turn> = {}): Turn {

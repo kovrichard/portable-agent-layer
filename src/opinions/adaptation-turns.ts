@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { storeDir } from "../../bronze/bronze";
+import { storeDir } from "../bronze/bronze";
 
 const turnsDir = () => storeDir("labelled-turns");
 

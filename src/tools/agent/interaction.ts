@@ -6,8 +6,8 @@
  * Usage: pal cli interaction report [--days N]
  */
 
-import { claimChecksSince } from "../../hooks/lib/claim-log";
-import { turnsSince } from "../../hooks/lib/interaction";
+import { claimChecksSince } from "../../opinions/claim-log";
+import { turnsSince } from "../../opinions/interaction";
 import { group, leaf, runCommand, UsageError } from "../lib/command";
 import { claimCheckLines, reportLines, summarize } from "../lib/interaction-report";
 import { scriptArgs } from "../lib/script-args";

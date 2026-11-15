@@ -4,9 +4,9 @@ import { ensureDir, paths } from "../../core/paths";
 import { isEnabled, isOptedIn } from "../../core/settings";
 import { localDay } from "../../core/wall-clock";
 import { loadEntityReviewNudge } from "../../knowledge/entity-review";
-import { loadAlgorithmReviewNudge } from "./algorithm-review";
-import { loadAnalyzeNudge } from "./analyze-nudge";
-import { loadReactionAuditNudge } from "./reaction-audit";
+import { loadAlgorithmReviewNudge } from "../../opinions/algorithm-review";
+import { loadAnalyzeNudge } from "../../opinions/analyze-nudge";
+import { loadReactionAuditNudge } from "../../opinions/reaction-audit";
 
 type ShownOn = Record<string, string>;
 

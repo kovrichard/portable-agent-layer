@@ -9,8 +9,8 @@ import {
   hookFinalReply,
   hookSessionId,
   type StopTurnPayload,
-} from "../../core/hook-payload";
-import { isEnabled } from "../../core/settings";
+} from "../core/hook-payload";
+import { isEnabled } from "../core/settings";
 import {
   type AdaptationRule,
   isTriggerRule,

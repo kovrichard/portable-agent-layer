@@ -3,15 +3,15 @@ import { writeFileSync } from "node:fs";
 import {
   type CandidateInput,
   recordCandidate,
-} from "../src/hooks/lib/adaptation-candidates";
+} from "../src/opinions/adaptation-candidates";
 import {
   addDraft,
   type DraftInput,
   decideRule,
   readRules,
-} from "../src/hooks/lib/adaptation-rules";
-import { appendTurn, type TurnInput } from "../src/hooks/lib/adaptation-turns";
-import { ruleEventsPath } from "../src/hooks/lib/rule-effect";
+} from "../src/opinions/adaptation-rules";
+import { appendTurn, type TurnInput } from "../src/opinions/adaptation-turns";
+import { ruleEventsPath } from "../src/opinions/rule-effect";
 import { decideFromPage, relationship } from "../src/tools/control-room/relationship";
 import { freshTestDir } from "./lib/test-home";
 

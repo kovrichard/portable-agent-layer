@@ -2,9 +2,9 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { observeTurn } from "../src/hooks/lib/interaction";
 import { transformedPromptResponse } from "../src/hooks/lib/parked-context";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
+import { observeTurn } from "../src/opinions/interaction";
 import {
   asAgent,
   copilotPrompt,

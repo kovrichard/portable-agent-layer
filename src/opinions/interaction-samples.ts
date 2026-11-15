@@ -6,8 +6,8 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
-import { isEnabled } from "../../core/settings";
+import { paths } from "../core/paths";
+import { isEnabled } from "../core/settings";
 import type { Reaction } from "./interaction-reaction";
 
 export interface ReactionSample {

@@ -6,7 +6,7 @@ import { mkdir } from "node:fs/promises";
 import {
   CORRECTION_KIND_SYSTEM,
   correctionKindSchema,
-} from "../../src/hooks/lib/correction-kind";
+} from "../../src/opinions/correction-kind";
 
 const generated = new URL("generated/", import.meta.url).pathname;
 await mkdir(generated, { recursive: true });

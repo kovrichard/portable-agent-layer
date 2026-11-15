@@ -10,8 +10,8 @@
  * Usage: pal cli analyze [--actionable]
  */
 
-import { writeLastAnalyzeDate } from "../../hooks/lib/analyze-nudge";
-import { analyze } from "../../hooks/lib/graduation";
+import { writeLastAnalyzeDate } from "../../opinions/analyze-nudge";
+import { analyze } from "../../opinions/graduation";
 import { reportLines } from "../lib/analyze-report";
 import { leaf, runCommand } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";

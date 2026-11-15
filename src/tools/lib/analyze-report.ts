@@ -7,7 +7,7 @@
  * console.log and could not be read back by a test.
  */
 
-import type { AnalysisResult } from "../../hooks/lib/graduation";
+import type { AnalysisResult } from "../../opinions/graduation";
 
 type PatternGroup = AnalysisResult["candidates"][number];
 type AnalysisEntry = PatternGroup["entries"][number];

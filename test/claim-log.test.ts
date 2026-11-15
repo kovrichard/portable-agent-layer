@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { commandsThisTurn } from "../src/hooks/lib/claim-check";
+import { commandsThisTurn } from "../src/opinions/claim-check";
 import {
   claimChecksSince,
   transcriptLines,
   watchClaims,
-} from "../src/hooks/lib/claim-log";
-import { rememberSendBack } from "../src/hooks/lib/send-back-guard";
+} from "../src/opinions/claim-log";
+import { rememberSendBack } from "../src/opinions/send-back-guard";
 import { claimCheckLines } from "../src/tools/lib/interaction-report";
 import { freshTestDir } from "./lib/test-home";
 
