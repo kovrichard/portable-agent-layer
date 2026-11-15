@@ -1,8 +1,8 @@
 import { relative } from "node:path";
 import { appendEvent, logQuietly } from "../../bronze/events";
+import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
 import { palHome } from "../../core/paths";
 import { buildClaudeMd } from "./claude-md";
-import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { getSemiStaticSources, readFileSafe } from "./semi-static";
 
 interface InjectedFile {

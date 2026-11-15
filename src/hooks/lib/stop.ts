@@ -15,6 +15,18 @@ import {
 } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+  extractContent,
+  extractLastAssistant,
+  type Message,
+  recentMessages,
+  withFinalReply,
+} from "../../bronze/transcript";
+import {
+  hookFinalReply,
+  hookSessionId,
+  type StopTurnPayload,
+} from "../../core/hook-payload";
 import { logDebug, logError } from "../../core/log";
 import { assets, ensureDir, paths } from "../../core/paths";
 import { autoBackup } from "../handlers/backup";
@@ -31,28 +43,8 @@ import { spawnCollectIfDue } from "./collect-trigger";
 import { acknowledgeMentioned } from "./daily-nudge";
 import { spawnDetachedInference } from "./detached-inference";
 import { startHookTiming } from "./hook-timing";
-import {
-  fileFinalReply,
-  type HookTurnPayload,
-  hookFinalReply,
-  hookSessionId,
-} from "./hook-turn";
+import { fileFinalReply } from "./hook-turn";
 import { recordReply } from "./interaction";
-import {
-  extractContent,
-  extractLastAssistant,
-  type Message,
-  recentMessages,
-  withFinalReply,
-} from "./transcript";
-
-export interface StopTurnPayload extends HookTurnPayload {
-  transcript_path?: string | null;
-  transcriptPath?: string | null;
-  stop_hook_active?: boolean;
-  loop_count?: number;
-  executionNum?: number;
-}
 
 type Transcript = Message[];
 

@@ -1,5 +1,5 @@
 import { allEventsSince } from "../bronze/events";
-import { localDay } from "../hooks/lib/wall-clock";
+import { localDay } from "../core/wall-clock";
 import { leaf } from "../tools/lib/command";
 import { projectActivity } from "../tools/lib/patterns/activity";
 import { contextSwitches, dayShape } from "../tools/lib/patterns/days";

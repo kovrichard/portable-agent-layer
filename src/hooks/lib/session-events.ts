@@ -18,8 +18,8 @@ import {
   type LoggedEvent,
   logQuietly,
 } from "../../bronze/events";
+import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
 import { palPkg } from "../../core/paths";
-import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 
 const SESSION_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 const TRANSCRIPT_TAIL_BYTES = 256 * 1024;

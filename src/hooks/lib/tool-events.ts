@@ -13,8 +13,8 @@ import {
   normalizeToolUse,
   type ToolUseRequest,
 } from "../../core/agent";
+import { hookSessionId } from "../../core/hook-payload";
 import { isPalSpawnedInference } from "../../core/spawn-guard";
-import { hookSessionId } from "./hook-turn";
 import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];

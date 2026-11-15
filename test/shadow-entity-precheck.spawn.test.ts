@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { parseMessages } from "../src/bronze/transcript";
 import { extractSessionEntities } from "../src/hooks/handlers/entity-extraction";
 import { unseenUserText } from "../src/hooks/lib/entity-extraction";
-import { parseMessages } from "../src/hooks/lib/transcript";
 import {
   eventsOf,
   fakeAdapter,

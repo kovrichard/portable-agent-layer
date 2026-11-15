@@ -7,6 +7,7 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "../../bronze/bronze";
+import { type Message, messagesAfter } from "../../bronze/transcript";
 import { paths } from "../../core/paths";
 import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
 import type {
@@ -24,7 +25,6 @@ import {
   type NameIndex,
   proseOnly,
 } from "./entity-names";
-import { type Message, messagesAfter } from "./transcript";
 
 type Cursor = string | number;
 

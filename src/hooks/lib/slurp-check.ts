@@ -2,8 +2,8 @@ import { totalmem } from "node:os";
 import { appendEvent, logQuietly } from "../../bronze/events";
 import { unappliedVerdictOf } from "../../bronze/ledger-hook";
 import { normalizeToolUse } from "../../core/agent";
+import { hookSessionId } from "../../core/hook-payload";
 import { isPalSpawnedInference } from "../../core/spawn-guard";
-import { hookSessionId } from "./hook-turn";
 import { commandSlurps, diskProbe, type FileProbe, type SlurpHit } from "./slurp-detect";
 import { COMMAND_KEYS, resultOf, stringIn } from "./tool-events";
 

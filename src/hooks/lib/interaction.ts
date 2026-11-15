@@ -24,6 +24,7 @@ import { hearsPromptContext } from "../../core/agent";
 import { ensureDir, paths } from "../../core/paths";
 import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
 import { isEnabled } from "../../core/settings";
+import { localClock } from "../../core/wall-clock";
 import { asksForLess, followedHint, ignoredHintReminder } from "./interaction-hint-check";
 import {
   type Baseline,
@@ -44,7 +45,6 @@ import {
 import { keepSample, replyEnd } from "./interaction-samples";
 import { responseModeOf, turnExtras } from "./turn-extras";
 import { backAfterNotificationSec } from "./waiting-on-user";
-import { localClock } from "./wall-clock";
 
 interface ReplyShape {
   at: string;

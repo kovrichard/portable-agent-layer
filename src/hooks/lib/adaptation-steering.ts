@@ -5,6 +5,11 @@
  */
 
 import { appendFileSync } from "node:fs";
+import {
+  hookFinalReply,
+  hookSessionId,
+  type StopTurnPayload,
+} from "../../core/hook-payload";
 import { isEnabled } from "../../core/settings";
 import {
   type AdaptationRule,
@@ -12,11 +17,9 @@ import {
   type RuleTrigger,
   readRules,
 } from "./adaptation-rules";
-import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { replyEnd } from "./interaction-samples";
 import { ruleEventsPath } from "./rule-effect";
 import { alreadySentBack } from "./send-back-guard";
-import type { StopTurnPayload } from "./stop";
 
 const REMINDER_MAX = 1500;
 const REMINDER_HEADER =

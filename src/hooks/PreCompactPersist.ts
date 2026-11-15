@@ -14,6 +14,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { readTranscriptFile } from "../bronze/transcript";
 import { logDebug, logError } from "../core/log";
 import { paths } from "../core/paths";
 import { isPalSpawnedInference } from "../core/spawn-guard";
@@ -22,7 +23,6 @@ import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { logCompaction } from "./lib/session-events";
 import { readStdinJSON } from "./lib/stdin";
-import { readTranscriptFile } from "./lib/transcript";
 
 recordHookRunOnExit();
 

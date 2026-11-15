@@ -4,8 +4,8 @@
 
 import { unappliedVerdictOf } from "../../bronze/ledger-hook";
 import { normalizeToolUse } from "../../core/agent";
+import { hookSessionId } from "../../core/hook-payload";
 import { sessionDir } from "../../core/session-dir";
-import { hookSessionId } from "./hook-turn";
 import { progressSession } from "./progress-session";
 import {
   type ArtifactKind,

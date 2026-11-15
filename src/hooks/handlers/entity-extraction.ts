@@ -5,6 +5,7 @@
  * names someone, and one web research call per new entry.
  */
 
+import { parseMessages } from "../../bronze/transcript";
 import { logDebug, logError } from "../../core/log";
 import { identity, isEnabled, isOptedIn } from "../../core/settings";
 import { ingestEntities } from "../../tools/knowledge/ingest";
@@ -26,7 +27,6 @@ import { newResearchTargets, researchNewEntities } from "../lib/entity-research"
 import { canInfer, inference } from "../lib/inference";
 import { judge } from "../lib/judge";
 import { entityPrecheckJudgment } from "../lib/shadow-judgments";
-import { parseMessages } from "../lib/transcript";
 
 function sourceId(sessionId: string, lastId: string | undefined): string {
   const turn = lastId ? ` #${lastId.slice(0, 8)}` : "";

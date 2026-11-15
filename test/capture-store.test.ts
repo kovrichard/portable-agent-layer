@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runningCount } from "../src/bronze/transcript";
 import {
   type CaptureEntry,
   capturedPath,
@@ -9,7 +10,6 @@ import {
   markCaptured,
   readCapture,
 } from "../src/hooks/lib/capture-store";
-import { runningCount } from "../src/hooks/lib/transcript";
 import { freshTestDir } from "./lib/test-home";
 
 // Stop fires after every response, so one session reaches the capture handler

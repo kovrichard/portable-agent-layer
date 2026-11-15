@@ -1,8 +1,8 @@
+import type { StopTurnPayload } from "../../core/hook-payload";
 import { logError } from "../../core/log";
 import { watchReplyRules } from "./adaptation-steering";
 import { watchClaims } from "./claim-log";
 import { rememberSendBack } from "./send-back-guard";
-import type { StopTurnPayload } from "./stop";
 
 function skippedOnError(label: string, check: () => string | null): string | null {
   try {

@@ -6,6 +6,7 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendEvent, eventsSince, logQuietly } from "../../bronze/events";
+import { extractContent, type Message } from "../../bronze/transcript";
 import { paths } from "../../core/paths";
 import { sessionDir } from "../../core/session-dir";
 import { eventLogEnabled } from "../../core/settings";
@@ -21,7 +22,6 @@ import {
 import { lastTurnIdOf } from "./interaction";
 import { progressSession } from "./progress-session";
 import { activePath, readTree, scopeOf } from "./progress-tree";
-import { extractContent, type Message } from "./transcript";
 
 export type TurnSource = "transcript" | "final-reply";
 

@@ -4,11 +4,11 @@
  * always exits 0.
  */
 
+import { enterHookWorkspace } from "../core/hook-payload";
 import { isPalSpawnedInference } from "../core/spawn-guard";
 import { logAttention } from "./lib/attention-events";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();
