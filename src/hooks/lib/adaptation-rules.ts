@@ -14,8 +14,8 @@ import { paths } from "../../core/paths";
 type RuleStatus = "draft" | "approved" | "denied" | "retired";
 type Decision = "approved" | "denied" | "opinion";
 
-const OPINION_CAP = 8;
-const OPINION_CHARS = 1500;
+export const OPINION_CAP = 8;
+export const OPINION_CHARS = 1500;
 
 export interface RuleTrigger {
   /** Whether the pattern is matched against the user's prompt or the assistant's reply. */

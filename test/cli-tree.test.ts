@@ -62,6 +62,7 @@ describe("every pal cli command", () => {
     for (const expected of [
       "pal cli install",
       "pal cli rule list",
+      "pal cli rule legacy-opinions",
       "pal cli skill run",
       "pal cli knowledge search",
       "pal cli project add-next",
