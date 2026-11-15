@@ -39,6 +39,18 @@ describe("captureRating non-blocking contract", () => {
       "sess-praise",
     ]);
   });
+
+  test("praise is stored as an implicit 8 that quotes the message", () => {
+    captureRating("nice work", "sess-praise");
+
+    expect(readRatings()).toEqual([
+      expect.objectContaining({
+        rating: 8,
+        context: 'Direct praise: "nice work"',
+        source: "implicit",
+      }),
+    ]);
+  });
 });
 
 describe("parseExplicitRating", () => {
