@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { logAttention } from "../src/hooks/lib/attention-events";
 import { observeTurn } from "../src/hooks/lib/interaction";
-import { logToolCall } from "../src/hooks/lib/tool-events";
-import { permissionWaitSec } from "../src/hooks/lib/waiting-on-user";
+import { logAttention } from "../src/usage/attention-events";
+import { logToolCall } from "../src/usage/tool-events";
+import { permissionWaitSec } from "../src/usage/waiting-on-user";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 

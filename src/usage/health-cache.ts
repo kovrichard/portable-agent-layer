@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logDebug, logError } from "../../core/log";
-import { assets, paths } from "../../core/paths";
+import { logDebug, logError } from "../core/log";
+import { assets, paths } from "../core/paths";
 
 export interface HealthSummary {
   checkedAt: string;

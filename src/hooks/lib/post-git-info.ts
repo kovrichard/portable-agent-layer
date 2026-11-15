@@ -8,6 +8,7 @@ import { appendEvent, logQuietly } from "../../bronze/events";
 import { normalizeToolUse } from "../../core/agent";
 import { hookSessionId } from "../../core/hook-payload";
 import { isEnabled } from "../../core/settings";
+import { COMMAND_KEYS, stringIn } from "../../usage/tool-events";
 import { chooseRepo, type RepoChoice, runsGit, runsGitCommit } from "./git-command-repo";
 import {
   type ChangedFile,
@@ -17,7 +18,6 @@ import {
   parseStatus,
   repoStatusParts,
 } from "./repo-state";
-import { COMMAND_KEYS, stringIn } from "./tool-events";
 
 const MAX_FILES = 10;
 const MAX_SUBJECT = 72;

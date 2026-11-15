@@ -6,9 +6,9 @@
 
 import { enterHookWorkspace } from "../core/hook-payload";
 import { isPalSpawnedInference } from "../core/spawn-guard";
-import { logAttention } from "./lib/attention-events";
+import { logAttention } from "../usage/attention-events";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

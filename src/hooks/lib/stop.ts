@@ -30,6 +30,7 @@ import {
 import { logDebug, logError } from "../../core/log";
 import { assets, ensureDir, paths } from "../../core/paths";
 import { spawnDetachedInference } from "../../inference/detached-inference";
+import { startHookTiming } from "../../usage/hook-timing";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
@@ -42,7 +43,6 @@ import { captureWorkSession } from "../handlers/work-session";
 import { recordAlgorithmTurnQuietly, turnTexts } from "./algorithm-runs";
 import { spawnCollectIfDue } from "./collect-trigger";
 import { acknowledgeMentioned } from "./daily-nudge";
-import { startHookTiming } from "./hook-timing";
 import { fileFinalReply } from "./hook-turn";
 import { recordReply } from "./interaction";
 

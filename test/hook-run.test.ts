@@ -7,7 +7,7 @@ import {
   noteHookPayload,
   noteHookPayloadText,
   recordHookRunOnExit,
-} from "../src/hooks/lib/hook-run";
+} from "../src/usage/hook-run";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;

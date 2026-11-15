@@ -13,10 +13,10 @@
 import { spawnTranscriptPreserve } from "../bronze/transcript-preserve";
 import { logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { logSessionEnd } from "../usage/session-events";
 import { autoUpdateOnClose } from "./lib/auto-update";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { logSessionEnd } from "./lib/session-events";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

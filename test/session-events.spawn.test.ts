@@ -9,7 +9,7 @@ import {
   logCompaction,
   logSessionEnd,
   logSessionStart,
-} from "../src/hooks/lib/session-events";
+} from "../src/usage/session-events";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 

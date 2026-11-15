@@ -19,9 +19,9 @@ import {
   unappliedVerdictOf,
 } from "../../bronze/ledger-hook";
 import { logDebug } from "../../core/log";
+import { logToolCall } from "../../usage/tool-events";
 import { attachProgressFromToolCall } from "./progress-tree-tool";
 import { recordSlurpCheck } from "./slurp-check";
-import { logToolCall } from "./tool-events";
 
 type Payload = Record<string, unknown>;
 

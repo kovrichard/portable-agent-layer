@@ -18,10 +18,10 @@ import { readTranscriptFile } from "../bronze/transcript";
 import { logDebug, logError } from "../core/log";
 import { paths } from "../core/paths";
 import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { logCompaction } from "../usage/session-events";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { logCompaction } from "./lib/session-events";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

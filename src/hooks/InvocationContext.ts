@@ -9,7 +9,7 @@
 import { enterHookWorkspace } from "../core/hook-payload";
 import { logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
-import { recordHookRunOnExit } from "./lib/hook-run";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { type InvocationPayload, invocationContext } from "./lib/invocation-context";
 import { readStdinJSON } from "./lib/stdin";
 

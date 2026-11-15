@@ -11,7 +11,7 @@ import {
   recordIdleCompactionNear,
   resolveCompactionWindow,
 } from "../src/hooks/lib/compaction-near";
-import { logCompaction } from "../src/hooks/lib/session-events";
+import { logCompaction } from "../src/usage/session-events";
 import { freshTestDir } from "./lib/test-home";
 
 const WINDOW_ENV = "CLAUDE_CODE_AUTO_COMPACT_WINDOW";

@@ -5,7 +5,7 @@
 
 import { preserveTranscriptsOnce } from "../bronze/transcript-preserve";
 import { logError } from "../core/log";
-import { recordHookRunOnExit } from "./lib/hook-run";
+import { recordHookRunOnExit } from "../usage/hook-run";
 
 recordHookRunOnExit();
 

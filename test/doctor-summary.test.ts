@@ -7,7 +7,7 @@ import {
   healthSummary,
   saveHealthSummary,
 } from "../src/cli/doctor/summary";
-import { healthFile, writeHealthSummary } from "../src/hooks/lib/health-cache";
+import { healthFile, writeHealthSummary } from "../src/usage/health-cache";
 import { debugHome } from "./lib/fake-spawn";
 
 const NOW = new Date("2026-11-15T11:00:00.000Z");

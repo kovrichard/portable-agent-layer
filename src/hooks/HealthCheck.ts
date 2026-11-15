@@ -5,7 +5,7 @@
 
 import { runBackgroundDoctor } from "../cli/doctor/run";
 import { logError } from "../core/log";
-import { recordHookRunOnExit } from "./lib/hook-run";
+import { recordHookRunOnExit } from "../usage/hook-run";
 
 recordHookRunOnExit();
 

@@ -21,7 +21,7 @@ rules:
     no-unguarded-json-parse: error
     no-sync-in-async:
       severity: error
-      include: ["src/hooks/**", "src/core/**", "src/bronze/**", "src/inference/**"]
+      include: ["src/hooks/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**"]
     no-nested-template-literals: error
     no-consecutive-array-push: error
     no-string-match: error
@@ -33,7 +33,7 @@ rules:
 
 arch:
   layers:
-    core: ["src/core/**", "src/bronze/**", "src/inference/**", "src/hooks/lib/**", "src/tools/**"]
+    core: ["src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/hooks/lib/**", "src/tools/**"]
     skills: ["assets/skills/**"]
     targets: ["src/targets/**"]
     cli: ["src/cli/**"]
@@ -63,6 +63,10 @@ arch:
     - from: ["src/inference/**"]
       allow: ["src/inference/**", "src/bronze/**", "src/core/**"]
       message: "src/inference/ sits above src/bronze/ — it imports only src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
+
+    - from: ["src/usage/**"]
+      allow: ["src/usage/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/usage/ sits above src/inference/ — it imports only src/usage/, src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
 
   maxCommentDensity:
     - limit: 5
@@ -94,7 +98,7 @@ arch:
 
   forbidden:
     - pattern: "process.exit("
-      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
     # cmd.exe never expands "~" and PowerShell hands it to native commands
@@ -176,7 +180,7 @@ arch:
 
     - pattern: "process.env.PAL_ANTHROPIC_API_KEY"
       only: "src/inference/inference.ts"
-      in: ["src/hooks/**", "src/tools/**", "src/inference/**"]
+      in: ["src/hooks/**", "src/tools/**", "src/inference/**", "src/usage/**"]
       message: "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead."
 
     - pattern: "process.env.PAL_PKG"
@@ -186,5 +190,5 @@ arch:
 
     - pattern: "resolve(import.meta.dir"
       only: "src/core/paths.ts"
-      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**"]
       message: "Package-relative path resolution in hook lib must go through the paths module — import getPalPkg() instead of navigating from import.meta.dir."

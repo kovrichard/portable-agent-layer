@@ -1,5 +1,5 @@
 import { getInstalledVersion } from "../../hooks/handlers/update-check";
-import { releaseHealthMarker } from "../../hooks/lib/health-cache";
+import { releaseHealthMarker } from "../../usage/health-cache";
 import { createStyle } from "../ui/style";
 import {
   agentFindings,

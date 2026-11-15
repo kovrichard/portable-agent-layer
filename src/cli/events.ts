@@ -1,6 +1,6 @@
-import { isNagStage, logDiscordNag, NAG_STAGES } from "../hooks/lib/discord-events";
 import { collectEvents } from "../tools/lib/collectors";
 import { group, leaf, UsageError } from "../tools/lib/command";
+import { isNagStage, logDiscordNag, NAG_STAGES } from "../usage/discord-events";
 
 function secondsFrom(raw: string | undefined): number | null {
   if (raw === undefined) return null;

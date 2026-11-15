@@ -6,6 +6,7 @@ import { unappliedVerdictOf } from "../../bronze/ledger-hook";
 import { normalizeToolUse } from "../../core/agent";
 import { hookSessionId } from "../../core/hook-payload";
 import { sessionDir } from "../../core/session-dir";
+import { COMMAND_KEYS, resultOf, stringIn } from "../../usage/tool-events";
 import { progressSession } from "./progress-session";
 import {
   type ArtifactKind,
@@ -15,7 +16,6 @@ import {
   type WorkNode,
 } from "./progress-tree";
 import { openSessionNode } from "./progress-tree-session-node";
-import { COMMAND_KEYS, resultOf, stringIn } from "./tool-events";
 
 const GH_PR_CREATE_RE = /\bgh\s+pr\s+create\b/;
 const PR_URL_RE = /https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/g;

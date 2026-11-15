@@ -7,7 +7,11 @@ import { platform } from "../../core/paths";
 import { isPalSpawnedInference } from "../../core/spawn-guard";
 import { modelLimitsFor } from "../../inference/models";
 import { claudeConfigFile } from "../../tools/lib/collectors/billing";
-import { contextModelOf, contextTokensOf, lastCompactionAt } from "./session-events";
+import {
+  contextModelOf,
+  contextTokensOf,
+  lastCompactionAt,
+} from "../../usage/session-events";
 
 const MAX_OUTPUT_CAP = 20_000;
 const SUMMARY_BUFFER = 13_000;

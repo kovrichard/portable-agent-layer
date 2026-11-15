@@ -1,5 +1,5 @@
 import { logError } from "../../core/log";
-import { type HealthSummary, writeHealthSummary } from "../../hooks/lib/health-cache";
+import { type HealthSummary, writeHealthSummary } from "../../usage/health-cache";
 import type { Finding, Severity } from "./finding";
 
 const LABEL_MAX = 60;

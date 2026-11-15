@@ -3,7 +3,7 @@
  * runs outside PAL, so it reports both through `pal cli events discord-nag`.
  */
 
-import { appendEvent } from "../../bronze/events";
+import { appendEvent } from "../bronze/events";
 
 export const NAG_STAGES = ["sent", "answered"] as const;
 export type NagStage = (typeof NAG_STAGES)[number];
