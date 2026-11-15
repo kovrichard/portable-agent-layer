@@ -13,6 +13,7 @@ import {
   type OptionSpec,
   type OptionSpecs,
 } from "../tools/lib/command";
+import { authCommand } from "./auth";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { compactionCommand } from "./compaction";
 import { contentCommand } from "./content";
@@ -203,6 +204,7 @@ export function cliTree(admin: AdminHandlers): Group {
       cost: costCommand,
       wrapped: wrappedCommand,
       env: envCommand,
+      auth: authCommand,
       patterns: patternsCommand,
       content: contentCommand,
       events: eventsCommand,

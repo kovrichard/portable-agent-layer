@@ -179,6 +179,28 @@ if (Test-Path $updateCache) {
   } catch {}
 }
 
+# PAL: Claude login expiry (reads the cache PAL refreshes at session start)
+$LOGIN_LINE = ""
+$LOGIN_COLOR = $YELLOW
+$LOGIN_KEY = [char]::ConvertFromUtf32(0x1F511)
+$loginCache = Join-Path $env:USERPROFILE ".pal\cache\claude-login.json"
+if (Test-Path $loginCache) {
+  try {
+    $loginEpoch = (Get-Content $loginCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json).expiresAtEpoch
+    if (($loginEpoch -is [int] -or $loginEpoch -is [long] -or $loginEpoch -is [double] -or $loginEpoch -is [decimal]) -and $loginEpoch -ge 0) {
+      $loginLeft = [long][math]::Floor([double]$loginEpoch) - [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+      if ($loginLeft -le 0) {
+        $LOGIN_LINE = "$LOGIN_KEY Claude login expired $([char]0x2014) run: claude auth login"
+        $LOGIN_COLOR = $RED
+      } elseif ($loginLeft -lt 86400) {
+        $LOGIN_LINE = "$LOGIN_KEY Claude login expires in $([math]::Floor($loginLeft / 3600))h"
+      } elseif ($loginLeft -le 604800) {
+        $LOGIN_LINE = "$LOGIN_KEY Claude login expires in $([math]::Floor($loginLeft / 86400))d"
+      }
+    }
+  } catch {}
+}
+
 # Dark factory: one line per task that is building or waiting on the user.
 # Reads the tail of each task's own event log, so it stays fast as logs grow.
 $FACTORY_LINES = @()
@@ -226,6 +248,9 @@ Write-Host ($BAR_COLOR + $BAR + $RESET + " " + $CTX_STR + $DIM + $RATE_STR + $RE
 
 # Line 3: Update available (only when cache says available AND versions differ)
 if ($UPDATE_LINE) { Write-Host ($YELLOW + $UPDATE_LINE + $RESET) }
+
+# Line 3a: Claude login close to expiring or expired
+if ($LOGIN_LINE) { Write-Host ($LOGIN_COLOR + $LOGIN_LINE + $RESET) }
 
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 foreach ($factoryLine in $FACTORY_LINES) { Write-Host ($CYAN + $factoryLine + $RESET) }

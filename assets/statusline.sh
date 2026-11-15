@@ -223,6 +223,25 @@ if [ -f "$UPDATE_CACHE" ]; then
   fi
 fi
 
+# PAL: Claude login expiry (reads the cache PAL refreshes at session start)
+LOGIN_LINE=""
+LOGIN_COLOR=$YELLOW
+LOGIN_CACHE="$HOME/.pal/cache/claude-login.json"
+if [ -f "$LOGIN_CACHE" ]; then
+  LOGIN_EPOCH=$(jq -r '.expiresAtEpoch // empty | floor' "$LOGIN_CACHE" 2>/dev/null)
+  if [[ "$LOGIN_EPOCH" =~ ^[0-9]+$ ]]; then
+    LOGIN_LEFT=$(( LOGIN_EPOCH - $(date +%s) ))
+    if [ "$LOGIN_LEFT" -le 0 ]; then
+      LOGIN_LINE="🔑 Claude login expired — run: claude auth login"
+      LOGIN_COLOR=$RED
+    elif [ "$LOGIN_LEFT" -lt 86400 ]; then
+      LOGIN_LINE="🔑 Claude login expires in $(( LOGIN_LEFT / 3600 ))h"
+    elif [ "$LOGIN_LEFT" -le 604800 ]; then
+      LOGIN_LINE="🔑 Claude login expires in $(( LOGIN_LEFT / 86400 ))d"
+    fi
+  fi
+fi
+
 # Dark factory: one line per task that is building or waiting on the user.
 # Reads the tail of each task's own event log, so it stays fast as logs grow.
 FACTORY_JQ='
@@ -277,6 +296,9 @@ fi
 
 # Line 3: Update available (only when cache says available AND versions differ)
 [ -n "$UPDATE_LINE" ] && echo -e "${YELLOW}${UPDATE_LINE}${RESET}"
+
+# Line 3a: Claude login close to expiring or expired
+[ -n "$LOGIN_LINE" ] && echo -e "${LOGIN_COLOR}${LOGIN_LINE}${RESET}"
 
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 for FACTORY_LINE in "${FACTORY_LINES[@]}"; do
