@@ -12,6 +12,7 @@ import { type StoreName, storeDir, storeNamed } from "../src/bronze/bronze";
 import { appendEvent } from "../src/bronze/events";
 import { recordAction } from "../src/bronze/ledger";
 import { emitRating } from "../src/bronze/signals";
+import { appendToolOutput } from "../src/bronze/tool-output";
 import { preserveTranscriptsOnce } from "../src/bronze/transcript-preserve";
 import { appendImportLog } from "../src/core/import-merge";
 import { palHome } from "../src/core/paths";
@@ -42,6 +43,7 @@ const LOCATION_TODAY: Record<StoreName, string> = {
   transcripts: "memory/content/claude",
   events: "memory/events",
   "event-text": "memory/content/events",
+  "tool-output": "memory/content/tool-output",
   ledger: "memory/ledger",
   ratings: "memory/signals",
   "claim-checks": "memory/signals/claim-checks",
@@ -140,6 +142,13 @@ const WRITE_ONE: Record<StoreName, () => unknown> = {
   events: () => appendEvent("turn", { words: 1 }, { cwd: HOME }),
   "event-text": () =>
     appendEvent("turn", { words: 1 }, { cwd: HOME, content: { prompt: "hello" } }),
+  "tool-output": () =>
+    appendToolOutput({
+      id: "e1",
+      ts: "2026-11-15T10:00:00.000Z",
+      tool: "Read",
+      output: "four",
+    }),
   ledger: () =>
     recordAction({
       tool: "Edit",

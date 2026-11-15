@@ -6,6 +6,8 @@
 import { basename, extname } from "node:path";
 import { appendEvent, logQuietly } from "../../bronze/events";
 import { unappliedVerdictOf } from "../../bronze/ledger-hook";
+import { isSensitivePath } from "../../bronze/sensitive-path";
+import { appendToolOutput, type ToolOutputRow } from "../../bronze/tool-output";
 import {
   FILE_TARGET_KEYS,
   normalizeToolUse,
@@ -98,6 +100,15 @@ function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) 
   };
 }
 
+function outputUnlessSensitive(
+  call: ToolUseRequest,
+  output: unknown
+): Pick<ToolOutputRow, "output" | "withheld"> {
+  const file = stringIn(call.toolInput, FILE_TARGET_KEYS);
+
+  return file && isSensitivePath(file) ? { output: null, withheld: true } : { output };
+}
+
 /** Logs the call a post-tool, failure or denial payload describes; ignores anything else. */
 export function logToolCall(payload: Record<string, unknown> | null): void {
   if (isPalSpawnedInference()) return;
@@ -109,9 +120,19 @@ export function logToolCall(payload: Record<string, unknown> | null): void {
       ...toolCallFields(payload, call),
       promptWaitSec: permissionWaitSec(session, call.toolName),
     };
-    appendEvent("tool_call", fields, {
+    const ts = new Date().toISOString();
+    const id = appendEvent("tool_call", fields, {
+      ts,
       session,
       content: { tool: call.toolName, input: call.toolInput },
     });
+    const output = resultOf(payload);
+    if (id && output !== undefined)
+      appendToolOutput({
+        id,
+        ts,
+        tool: call.toolName,
+        ...outputUnlessSensitive(call, output),
+      });
   });
 }

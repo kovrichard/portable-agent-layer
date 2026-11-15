@@ -30,11 +30,11 @@ const groupOf = (stores: RecordedStore[]): StoreGroup[] => [
 ];
 
 describe("the store registry", () => {
-  test("lists 17 stores under unique names", () => {
+  test("lists 18 stores under unique names", () => {
     const names = everyStore().map((store) => store.name);
 
-    expect(names).toHaveLength(17);
-    expect(new Set(names).size).toBe(17);
+    expect(names).toHaveLength(18);
+    expect(new Set(names).size).toBe(18);
   });
 
   test("each group function returns only its own group", () => {
@@ -68,8 +68,22 @@ describe("the store registry", () => {
     }
   });
 
-  test("the bronze stores are the event log and its text", () => {
-    expect(bronzeStores().map((store) => store.name)).toEqual(["events", "event-text"]);
+  test("the bronze stores are the event log, its text and the tool output", () => {
+    expect(bronzeStores().map((store) => store.name)).toEqual([
+      "events",
+      "event-text",
+      "tool-output",
+    ]);
+  });
+
+  test("the tool output is an append-only monthly bronze store mirrored in the event log", () => {
+    expect(storeNamed("tool-output")).toMatchObject({
+      name: "tool-output",
+      group: "bronze",
+      files: "<YYYY-MM>.jsonl",
+      appendOnly: true,
+      alsoInEventLog: true,
+    });
   });
 
   test("only the ledger and ratings outside bronze are mirrored into the event log", () => {

@@ -1,13 +1,24 @@
+import { relative } from "node:path";
 import { appendEvent, logQuietly } from "../../bronze/events";
+import { palHome } from "../../core/paths";
 import { buildClaudeMd } from "./claude-md";
 import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 import { getSemiStaticSources, readFileSafe } from "./semi-static";
 
-function semiStaticChars(): number {
-  return getSemiStaticSources().reduce(
-    (sum, source) => sum + readFileSafe(source.path).length,
-    0
-  );
+interface InjectedFile {
+  path: string;
+  text: string;
+}
+
+function semiStaticTexts(): InjectedFile[] {
+  return getSemiStaticSources().map((source) => ({
+    path: relative(palHome(), source.path).replaceAll("\\", "/"),
+    text: readFileSafe(source.path),
+  }));
+}
+
+function charsIn(files: InjectedFile[]): number {
+  return files.reduce((sum, file) => sum + file.text.length, 0);
 }
 
 /** Chars, not tokens: no tokenizer runs at session start. */
@@ -16,15 +27,21 @@ export function logContextInjected(
   reminder: string,
   now: Date = new Date()
 ): void {
-  logQuietly("context_injected", () =>
+  logQuietly("context_injected", () => {
+    const instructions = buildClaudeMd();
+    const semiStatic = semiStaticTexts();
     appendEvent(
       "context_injected",
       {
-        instructionsChars: buildClaudeMd().length,
-        semiStaticChars: semiStaticChars(),
+        instructionsChars: instructions.length,
+        semiStaticChars: charsIn(semiStatic),
         dynamicChars: reminder.length,
       },
-      { ts: now.toISOString(), session: hookSessionId(payload) ?? null }
-    )
-  );
+      {
+        ts: now.toISOString(),
+        session: hookSessionId(payload) ?? null,
+        content: { instructions, semiStatic, dynamic: reminder },
+      }
+    );
+  });
 }
