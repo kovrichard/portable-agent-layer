@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { keepJqUnwrapped } from "../src/hooks/lib/rtk-jq";
+import { keepJqUnwrapped } from "../src/safety/rtk-jq";
 
 const claudeRewrite = (command: string) =>
   JSON.stringify({

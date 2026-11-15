@@ -18,10 +18,10 @@
 
 import { getActiveAgent } from "../core/agent";
 import { findBinaryOnPath } from "../core/which";
+import { keepJqUnwrapped } from "../safety/rtk-jq";
+import { isWorktreeAgentGitCall } from "../safety/rtk-worktree";
 import { noteHookPayloadText, recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { keepJqUnwrapped } from "./lib/rtk-jq";
-import { isWorktreeAgentGitCall } from "./lib/rtk-worktree";
 
 recordHookRunOnExit();
 

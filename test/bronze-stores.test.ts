@@ -17,7 +17,6 @@ import { preserveTranscriptsOnce } from "../src/bronze/transcript-preserve";
 import { appendImportLog } from "../src/core/import-merge";
 import { palHome } from "../src/core/paths";
 import { reload } from "../src/core/settings";
-import { recordRunEstimate } from "../src/hooks/lib/run-estimates";
 import { queueForReview } from "../src/knowledge/entity-extraction";
 import { recordCandidate } from "../src/opinions/adaptation-candidates";
 import { addDraft, decideRule } from "../src/opinions/adaptation-rules";
@@ -27,6 +26,7 @@ import { watchClaims } from "../src/opinions/claim-log";
 import { writeBinding } from "../src/progress/bindings";
 import { appendEvent as appendProgressEvent } from "../src/progress/progress-tree";
 import { appendProjectHistory, writeSession } from "../src/progress/work-tracking";
+import { recordRunEstimate } from "../src/safety/run-estimates";
 import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
 import { freshTestDir } from "./lib/test-home";
 

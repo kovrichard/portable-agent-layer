@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { checkBashCommand, checkFilePath } from "../src/hooks/lib/security";
+import { checkBashCommand, checkFilePath } from "../src/safety/security";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";

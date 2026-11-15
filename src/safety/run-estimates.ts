@@ -6,7 +6,7 @@
 
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { storeDir } from "../../bronze/bronze";
+import { storeDir } from "../bronze/bronze";
 import type { Run } from "./run-mode";
 
 const MINUTE_MS = 60_000;

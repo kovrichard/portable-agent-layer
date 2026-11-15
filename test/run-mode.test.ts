@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { scopeOf } from "../src/progress/progress-tree";
 import {
   deadlineFrom,
   newRun,
   type Run,
   readRun,
   writeRun,
-} from "../src/hooks/lib/run-mode";
+} from "../src/safety/run-mode";
 import {
   MAX_STOP_BLOCKS,
   runModePromptLine,
   runModeRecall,
   runModeRefusal,
   unattendedStopReason,
-} from "../src/hooks/lib/run-mode-gate";
-import { decideRefusal } from "../src/hooks/lib/security-gate";
-import { scopeOf } from "../src/progress/progress-tree";
+} from "../src/safety/run-mode-gate";
+import { decideRefusal } from "../src/safety/security-gate";
 import { freshTestDir } from "./lib/test-home";
 
 const CWD = "/work/run-app";

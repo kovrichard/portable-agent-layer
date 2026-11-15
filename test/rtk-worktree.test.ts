@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isWorktreeAgentGitCall } from "../src/hooks/lib/rtk-worktree";
+import { isWorktreeAgentGitCall } from "../src/safety/rtk-worktree";
 
 const WORKTREE = "/repo/.claude/worktrees/agent-abc";
 const call = (cwd: string, command: string) =>

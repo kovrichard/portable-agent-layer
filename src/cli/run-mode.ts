@@ -3,7 +3,9 @@
  * deadline for the current project or folder. The hooks enforce it.
  */
 
-import { recordRunEstimate } from "../hooks/lib/run-estimates";
+import { progressSession } from "../progress/progress-session";
+import { scopeOf } from "../progress/progress-tree";
+import { recordRunEstimate } from "../safety/run-estimates";
 import {
   clearRun,
   deadlineFrom,
@@ -16,9 +18,7 @@ import {
   unattendedRules,
   untilLabel,
   writeRun,
-} from "../hooks/lib/run-mode";
-import { progressSession } from "../progress/progress-session";
-import { scopeOf } from "../progress/progress-tree";
+} from "../safety/run-mode";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import { gatherRunStats } from "../tools/lib/run-stats";
 import { isInGitRepo } from "../usage/session-events";

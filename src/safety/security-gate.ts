@@ -11,8 +11,8 @@ import {
   ANTIGRAVITY_WRITE_TOOLS,
   FILE_TARGET_KEYS,
   normalizeToolUse,
-} from "../../core/agent";
-import { logDebug } from "../../core/log";
+} from "../core/agent";
+import { logDebug } from "../core/log";
 import { type RunToolCall, runModeRefusal } from "./run-mode-gate";
 import { checkBashCommand, checkFilePath } from "./security";
 

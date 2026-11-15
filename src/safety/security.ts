@@ -6,7 +6,7 @@
 import { lstatSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { palHome, platform } from "../../core/paths";
+import { palHome, platform } from "../core/paths";
 
 // PowerShell aliases rm, rmdir, del, erase, rd and ri all to Remove-Item, and
 // cmd ships its own rd and del — so the verb alone never says which shell ran it.

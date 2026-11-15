@@ -11,6 +11,7 @@ import { isCursor } from "../core/agent";
 import { enterHookWorkspace } from "../core/hook-payload";
 import { logDebug, logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
+import { runModeRecall } from "../safety/run-mode-gate";
 import { recordHookRunOnExit } from "../usage/hook-run";
 import {
   buildRecall,
@@ -19,7 +20,6 @@ import {
   type SavedExchange,
 } from "./lib/compact-recall";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { runModeRecall } from "./lib/run-mode-gate";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

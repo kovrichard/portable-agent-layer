@@ -1,10 +1,10 @@
 import { totalmem } from "node:os";
-import { appendEvent, logQuietly } from "../../bronze/events";
-import { unappliedVerdictOf } from "../../bronze/ledger-hook";
-import { normalizeToolUse } from "../../core/agent";
-import { hookSessionId } from "../../core/hook-payload";
-import { isPalSpawnedInference } from "../../core/spawn-guard";
-import { COMMAND_KEYS, resultOf, stringIn } from "../../usage/tool-events";
+import { appendEvent, logQuietly } from "../bronze/events";
+import { unappliedVerdictOf } from "../bronze/ledger-hook";
+import { normalizeToolUse } from "../core/agent";
+import { hookSessionId } from "../core/hook-payload";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { COMMAND_KEYS, resultOf, stringIn } from "../usage/tool-events";
 import { commandSlurps, diskProbe, type FileProbe, type SlurpHit } from "./slurp-detect";
 
 export const NOTEWORTHY_BYTES = 64 * 1024 * 1024;

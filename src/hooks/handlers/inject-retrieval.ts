@@ -18,9 +18,9 @@ import { getSteeringReminder } from "../../opinions/steering";
 import { parkPromptContext } from "../../progress/parked-context";
 import { progressTreePromptLine } from "../../progress/progress-tree-context";
 import { scheduledPromptsReminder } from "../../progress/scheduled-prompts";
+import { runModePromptLine } from "../../safety/run-mode-gate";
 import { dueNudgeReminder } from "../lib/daily-nudge";
 import { observeRepoState } from "../lib/repo-state";
-import { runModePromptLine } from "../lib/run-mode-gate";
 import { getSkillReminder } from "../lib/skill-match";
 
 const BUDGET_MS = 250;
