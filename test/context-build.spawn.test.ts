@@ -1,8 +1,8 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { buildSystemReminder } from "../src/context/context";
 import { reload } from "../src/core/settings";
-import { buildSystemReminder } from "../src/hooks/lib/context";
 import { appendEvent } from "../src/progress/progress-tree";
 import { writeProject } from "../src/progress/projects";
 import { freshPalHomeEachTest } from "./lib/context-build-fixture";

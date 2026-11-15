@@ -24,7 +24,7 @@ async function setSettings(data: Record<string, unknown>) {
 }
 
 async function repoStateReminder(cwd: string) {
-  const { observeRepoState } = await import("../src/hooks/lib/repo-state");
+  const { observeRepoState } = await import("../src/context/repo-state");
 
   return observeRepoState(cwd);
 }
@@ -87,7 +87,7 @@ function headOf(dir: string): string {
 }
 
 async function observe(cwd: string, session: string | null = "s1") {
-  const { observeRepoState } = await import("../src/hooks/lib/repo-state");
+  const { observeRepoState } = await import("../src/context/repo-state");
 
   return observeRepoState(cwd, session);
 }

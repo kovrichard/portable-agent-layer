@@ -2,23 +2,23 @@
  * Hook: SessionStart(compact) — re-injects the exchange that was in flight when
  * the window filled, since the summary may have collapsed it.
  *
- * What to inject and what may then be deleted is in lib/compact-recall.ts, where
+ * What to inject and what may then be deleted is in src/context/compact-recall.ts, where
  * a test can import it.
  */
 
 import { readFile, unlink } from "node:fs/promises";
+import {
+  buildRecall,
+  findSavedExchange,
+  isConsumable,
+  type SavedExchange,
+} from "../context/compact-recall";
 import { isCursor } from "../core/agent";
 import { enterHookWorkspace } from "../core/hook-payload";
 import { logDebug, logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
 import { runModeRecall } from "../safety/run-mode-gate";
 import { recordHookRunOnExit } from "../usage/hook-run";
-import {
-  buildRecall,
-  findSavedExchange,
-  isConsumable,
-  type SavedExchange,
-} from "./lib/compact-recall";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { readStdinJSON } from "./lib/stdin";
 

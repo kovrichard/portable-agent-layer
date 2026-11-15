@@ -22,6 +22,7 @@ import {
   recentMessages,
   withFinalReply,
 } from "../../bronze/transcript";
+import { acknowledgeMentioned } from "../../context/daily-nudge";
 import {
   hookFinalReply,
   hookSessionId,
@@ -43,7 +44,6 @@ import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
 import { spawnCollectIfDue } from "./collect-trigger";
-import { acknowledgeMentioned } from "./daily-nudge";
 import { fileFinalReply } from "./hook-turn";
 
 type Transcript = Message[];

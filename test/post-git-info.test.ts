@@ -2,16 +2,16 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
-import { reload } from "../src/core/settings";
 import {
   literalCommandDir,
   runsGit,
   runsGitCommit,
   worktreePaths,
-} from "../src/hooks/lib/git-command-repo";
-import { postGitInfoResponse } from "../src/hooks/lib/post-git-info";
-import type { Git } from "../src/hooks/lib/repo-state";
-import { parseStatus } from "../src/hooks/lib/repo-state";
+} from "../src/context/git-command-repo";
+import { postGitInfoResponse } from "../src/context/post-git-info";
+import type { Git } from "../src/context/repo-state";
+import { parseStatus } from "../src/context/repo-state";
+import { reload } from "../src/core/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-11-12T10:00:00Z");

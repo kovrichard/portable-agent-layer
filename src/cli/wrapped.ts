@@ -1,4 +1,4 @@
-import { readSkillIndex } from "../hooks/lib/skill-match";
+import { readSkillIndex } from "../context/skill-match";
 import { leaf, UsageError } from "../tools/lib/command";
 import { wrappedAgents } from "../tools/lib/wrapped/agents";
 import { wrappedHabits } from "../tools/lib/wrapped/habits";

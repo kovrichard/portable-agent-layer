@@ -184,7 +184,7 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 | **2 — Semi-static** | Opinions, steering | `@imports` (Claude Code), `instructions[]` (opencode), `.mdc` rules (Cursor), `.instructions.md` (Copilot), plugin `rules/` (Antigravity) | Written at session stop by `writeContextDigests()` |
 | **3 — Dynamic** | Progress tree, relationship notes, active projects | Hook stdout via `LoadContext` → `buildSystemReminder()` | Injected fresh each session |
 
-**Single registry.** All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, Antigravity plugin rule filenames, and the session-stop digest writer. No other files need touching.
+**Single registry.** All semi-static sources are defined in `src/context/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to: CLAUDE.md `@imports`, opencode `instructions[]`, Cursor `.mdc` filenames, Copilot `.instructions.md` filenames, Antigravity plugin rule filenames, and the session-stop digest writer. No other files need touching.
 
 ## Common workflows
 
@@ -195,5 +195,5 @@ PAL uses a 3-tier system to keep the hook's dynamic output small while ensuring 
 | Add a new tool | `src/tools/<area>/<tool>.ts` with `import.meta.main` guard so it stays testable. |
 | Look up an agent's hook events, settings, or how its pre-tool hook blocks | `assets/templates/PAL/AGENT_HOOKS.md` (installed as `~/.pal/docs/AGENT_HOOKS.md`) — links to every agent's hook and settings docs, where PAL installs, and each deny shape. Read it before searching the web. |
 | Add a runtime PAL hook | `src/hooks/<name>.ts`; the install routine in `src/targets/*/install.ts` wires it into the target agent's config. |
-| Add a semi-static context source | Add one entry to `getSemiStaticSources()` in `src/hooks/lib/semi-static.ts`. That's it. |
+| Add a semi-static context source | Add one entry to `getSemiStaticSources()` in `src/context/semi-static.ts`. That's it. |
 | Run only doctor on a deck | `bun assets/skills/presentation/tools/doctor.ts <deck-dir>` |

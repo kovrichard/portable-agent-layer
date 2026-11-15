@@ -1,7 +1,7 @@
 import { relative } from "node:path";
-import { appendEvent, logQuietly } from "../../bronze/events";
-import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
-import { palHome } from "../../core/paths";
+import { appendEvent, logQuietly } from "../bronze/events";
+import { type HookTurnPayload, hookSessionId } from "../core/hook-payload";
+import { palHome } from "../core/paths";
 import { buildClaudeMd } from "./claude-md";
 import { getSemiStaticSources, readFileSafe } from "./semi-static";
 

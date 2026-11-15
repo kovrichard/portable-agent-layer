@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { buildSystemReminder } from "../src/context/context";
 import { reload } from "../src/core/settings";
-import { buildSystemReminder } from "../src/hooks/lib/context";
 import { addOpinion } from "../src/opinions/adaptation-rules";
 import { appendProjectHistory } from "../src/progress/work-tracking";
 import { freshPalHomeEachTest } from "./lib/context-build-fixture";

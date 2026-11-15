@@ -9,8 +9,8 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { AgentName } from "../../core/agent-registry";
-import { platform } from "../../core/paths";
+import type { AgentName } from "../core/agent-registry";
+import { platform } from "../core/paths";
 import type { AgentTarget } from "./context";
 
 export interface ContextEnvelope {

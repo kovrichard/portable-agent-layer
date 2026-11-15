@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import { buildSystemReminder } from "../src/hooks/lib/context";
+import { buildSystemReminder } from "../src/context/context";
 import { freshTestDir } from "./lib/test-home";
 
 // These are type-only smoke tests, so they need no real corpus — and reading the

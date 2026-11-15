@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { contextForSource, reminderTarget } from "../src/hooks/lib/session-context";
+import { contextForSource, reminderTarget } from "../src/context/session-context";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
