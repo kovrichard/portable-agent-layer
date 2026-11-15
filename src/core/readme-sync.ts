@@ -14,50 +14,43 @@ interface SyncResult {
   issues: string[];
 }
 
+interface EnvVarSource {
+  file: string;
+  names: RegExp;
+}
+
+const ENV_VAR_SOURCES: EnvVarSource[] = [
+  { file: "src/core/paths.ts", names: /\bPAL_[A-Z0-9_]+\b/g },
+  { file: "src/inference/inference.ts", names: /\bPAL_[A-Z0-9_]+_API_KEY\b/g },
+  {
+    file: "src/cli/doctor/inference.ts",
+    names: /\bPAL_[A-Z0-9_]+_(?:API_KEY|BASE_URL)\b/g,
+  },
+];
+
 /** Files that, when changed, should trigger a README check. */
 export const WATCHED_PATHS = [
   "src/cli",
-  "src/core/paths.ts",
-  "src/inference/inference.ts",
-  "src/tools/youtube-analyze.ts",
+  ...ENV_VAR_SOURCES.map((source) => source.file),
   "assets/skills",
   "assets/agents",
 ];
 
-/** Extract PAL_* env var names from paths.ts + API keys from source */
-export function extractEnvVars(): string[] {
-  const pkg = palPkg();
-  const vars: Set<string> = new Set();
+export function missingEnvVarSources(pkg: string = palPkg()): string[] {
+  return ENV_VAR_SOURCES.map((source) => source.file).filter(
+    (file) => !existsSync(resolve(pkg, file))
+  );
+}
 
-  // PAL_* from paths.ts
-  const pathsFile = resolve(pkg, "src", "core", "paths.ts");
-  if (existsSync(pathsFile)) {
-    const content = readFileSync(pathsFile, "utf-8");
+function namesIn(source: EnvVarSource, pkg: string): string[] {
+  const path = resolve(pkg, source.file);
+  if (!existsSync(path)) return [];
 
-    for (const match of content.matchAll(/process\.env\.(PAL_\w+)/g)) {
-      vars.add(match[1]);
-    }
-  }
+  return readFileSync(path, "utf-8").match(source.names) ?? [];
+}
 
-  // PAL_ANTHROPIC_API_KEY from inference.ts
-  const inferenceFile = resolve(pkg, "src", "inference", "inference.ts");
-  if (existsSync(inferenceFile)) {
-    const content = readFileSync(inferenceFile, "utf-8");
-    if (content.includes("PAL_ANTHROPIC_API_KEY")) {
-      vars.add("PAL_ANTHROPIC_API_KEY");
-    }
-  }
-
-  // PAL_GEMINI_API_KEY from youtube-analyze.ts
-  const youtubeFile = resolve(pkg, "src", "tools", "youtube-analyze.ts");
-  if (existsSync(youtubeFile)) {
-    const content = readFileSync(youtubeFile, "utf-8");
-    if (content.includes("PAL_GEMINI_API_KEY")) {
-      vars.add("PAL_GEMINI_API_KEY");
-    }
-  }
-
-  return [...vars];
+export function extractEnvVars(pkg: string = palPkg()): string[] {
+  return [...new Set(ENV_VAR_SOURCES.flatMap((source) => namesIn(source, pkg)))];
 }
 
 /**
@@ -88,8 +81,10 @@ function documentedSkillNames(readme: string): string[] {
 }
 
 /** Validate that README.md documents all code surfaces. */
-export function validateReadmeSync(cliCommands: string[]): SyncResult {
-  const pkg = palPkg();
+export function validateReadmeSync(
+  cliCommands: string[],
+  pkg: string = palPkg()
+): SyncResult {
   const readmePath = resolve(pkg, "README.md");
 
   if (!existsSync(readmePath)) {
@@ -105,8 +100,11 @@ export function validateReadmeSync(cliCommands: string[]): SyncResult {
     }
   }
 
-  // Check environment variables
-  for (const envVar of extractEnvVars()) {
+  for (const file of missingEnvVarSources(pkg)) {
+    issues.push(`Environment variables cannot be checked: ${file} is missing`);
+  }
+
+  for (const envVar of extractEnvVars(pkg)) {
     if (!readme.includes(envVar)) {
       issues.push(
         `Environment variable "${envVar}" used in code but not documented in README`
