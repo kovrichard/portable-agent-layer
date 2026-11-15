@@ -3,7 +3,7 @@
  * route's own usage report. A field the route does not report stays undefined.
  */
 
-import { cacheWritesOf, type TranscriptUsage } from "../../tools/lib/transcript-usage";
+import { cacheWritesOf, type TranscriptUsage } from "./transcript-usage";
 
 export interface InferenceUsage {
   inputTokens?: number;

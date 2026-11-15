@@ -5,6 +5,7 @@
  */
 
 import { logDebug, logError } from "../../core/log";
+import type { inference } from "../../inference/inference";
 import type { IngestInput, IngestResult } from "../../tools/knowledge/ingest";
 import type { RegisterEntry } from "./company-register";
 import {
@@ -14,7 +15,6 @@ import {
   type ResearchProfile,
   type ReviewItem,
 } from "./entity-extraction";
-import type { inference } from "./inference";
 
 export interface ResearchTarget {
   kind: ExtractedEntity["kind"];

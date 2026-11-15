@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { refreshAgenda } from "../src/hooks/handlers/agenda";
 import { readAgenda } from "../src/hooks/lib/agenda-store";
-import { canInfer } from "../src/hooks/lib/inference";
+import { canInfer } from "../src/inference/inference";
 import { freshTestDir } from "./lib/test-home";
 
 // The only model call behind the morning screen. Both gates in front of it are

@@ -11,10 +11,10 @@
  */
 
 import { logDebug, logError } from "../../core/log";
+import { canInfer, inference } from "../../inference/inference";
 import { matrix } from "../../tools/control-room/matrix";
 import { type AgendaMove, readAgenda, writeAgenda } from "../lib/agenda-store";
 import { linkInputs, readGoalLinks, writeGoalLinks } from "../lib/goal-links";
-import { canInfer, inference } from "../lib/inference";
 import { readAllProjects } from "../lib/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../lib/serves";
 import { readTelosGoals } from "../lib/telos-goals";

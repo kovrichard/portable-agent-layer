@@ -3,19 +3,19 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logPromptSnapshot } from "../src/core/log";
 import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
-import { canInfer, hasApiKey, inference } from "../src/hooks/lib/inference";
+import { canInfer, hasApiKey, inference } from "../src/inference/inference";
 import {
   buildClaudeArgs,
   buildCodexArgs,
   buildCopilotArgs,
   buildCursorArgs,
   buildOpencodeArgs,
-} from "../src/hooks/lib/inference-agents";
+} from "../src/inference/inference-agents";
 import {
   injectJsonSchemaInstruction,
   parseJsonFromOutput,
   schemaInstruction,
-} from "../src/hooks/lib/inference-prompt";
+} from "../src/inference/inference-prompt";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { restoreEnv, savedEnv } from "./lib/inference-dispatch-fixture";
 import { removeOnceReleased } from "./lib/remove-once-released";

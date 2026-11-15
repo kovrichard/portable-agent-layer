@@ -1,7 +1,7 @@
 /**
  * Spawn-guard — prevents PAL inference recursion.
  *
- * When the inference dispatcher (see src/hooks/lib/inference.ts) spawns an
+ * When the inference dispatcher (see src/inference/inference.ts) spawns an
  * agent CLI (claude --print, codex exec, copilot -p, cursor-agent -p) for
  * one-shot subscription-billed inference, it sets PAL_SPAWNED_INFERENCE=1
  * and increments PAL_INFERENCE_DEPTH. PAL's own hooks check these on entry

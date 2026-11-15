@@ -1,4 +1,4 @@
-import type { AgentType } from "../../core/agent";
+import type { AgentType } from "../core/agent";
 import { getClaudeBinary } from "./inference-binaries";
 
 export interface AgentLogin {

@@ -10,7 +10,7 @@ import {
   jsonLines,
   openAiUsage,
   opencodeSpawnUsage,
-} from "../src/hooks/lib/inference-usage";
+} from "../src/inference/inference-usage";
 
 const lines = (...events: unknown[]) => events.map((e) => JSON.stringify(e)).join("\n");
 

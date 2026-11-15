@@ -7,13 +7,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { resolve } from "node:path";
 import { reload } from "../../src/core/settings";
 import { SPAWN_GUARD_ENV } from "../../src/core/spawn-guard";
-import { JUDGE_ADAPTERS } from "../../src/hooks/lib/judge";
+import { JUDGE_ADAPTERS } from "../../src/inference/judge";
 import type {
   JudgeAdapter,
   JudgeAnswers,
   JudgeQuestions,
   JudgeState,
-} from "../../src/hooks/lib/judgment";
+} from "../../src/inference/judgment";
 import { claudeReplying, prependPath, writeFakeBin } from "../fixtures/fake-bin";
 import { freshTestDir } from "./test-home";
 

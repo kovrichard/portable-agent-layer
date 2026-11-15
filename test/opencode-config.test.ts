@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import {
   opencodeBackgroundModel,
   writeInstructionFreeConfig,
-} from "../src/hooks/lib/opencode-config";
+} from "../src/inference/opencode-config";
 import { freshTestDir } from "./lib/test-home";
 
 let dir: string;

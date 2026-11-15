@@ -29,10 +29,10 @@ import {
   isCopilot,
   isCursor,
   isOpencode,
-} from "../../core/agent";
-import { logDebug, logError } from "../../core/log";
-import { withPalEnv } from "../../core/pal-env";
-import { getInferenceDepth, SPAWN_GUARD_ENV } from "../../core/spawn-guard";
+} from "../core/agent";
+import { logDebug, logError } from "../core/log";
+import { withPalEnv } from "../core/pal-env";
+import { getInferenceDepth, SPAWN_GUARD_ENV } from "../core/spawn-guard";
 import {
   buildCodexArgs,
   buildCursorArgs,

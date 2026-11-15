@@ -5,8 +5,8 @@ import { isClaude } from "../../core/agent";
 import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
 import { platform } from "../../core/paths";
 import { isPalSpawnedInference } from "../../core/spawn-guard";
+import { modelLimitsFor } from "../../inference/models";
 import { claudeConfigFile } from "../../tools/lib/collectors/billing";
-import { modelLimitsFor } from "./models";
 import { contextModelOf, contextTokensOf, lastCompactionAt } from "./session-events";
 
 const MAX_OUTPUT_CAP = 20_000;

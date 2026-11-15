@@ -3,8 +3,8 @@
  */
 
 import { toPath } from "../core/paths";
-import { judge } from "../hooks/lib/judge";
-import { judgeRequestJson } from "../hooks/lib/judgment";
+import { judge } from "../inference/judge";
+import { judgeRequestJson } from "../inference/judgment";
 import { leaf } from "../tools/lib/command";
 
 async function readRequestText(path: string | undefined): Promise<string> {

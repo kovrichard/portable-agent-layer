@@ -18,8 +18,8 @@
  */
 
 import { spawn } from "node:child_process";
-import { getActiveAgent } from "../../core/agent";
-import { logDebug, logError } from "../../core/log";
+import { getActiveAgent } from "../core/agent";
+import { logDebug, logError } from "../core/log";
 
 /**
  * A hook run by Cursor, Copilot or Codex knows its agent only from the

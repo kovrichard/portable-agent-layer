@@ -3,10 +3,10 @@ import { type HookErrorGroup, recentHookErrors } from "../../core/log";
 import { palEnvPath } from "../../core/pal-env";
 import { palHome } from "../../core/paths";
 import { cachedStatus, type UpdateCache } from "../../hooks/handlers/update-check";
-import type { AgentLogin } from "../../hooks/lib/agent-login";
-import { loggedClaudeAuthMode } from "../../hooks/lib/inference-agents";
-import { readLoginCache } from "../../hooks/lib/login-cache";
-import { CLAUDE_LOGIN_REJECTED } from "../../hooks/lib/login-rejected";
+import type { AgentLogin } from "../../inference/agent-login";
+import { loggedClaudeAuthMode } from "../../inference/inference-agents";
+import { readLoginCache } from "../../inference/login-cache";
+import { CLAUDE_LOGIN_REJECTED } from "../../inference/login-rejected";
 import { checkPendingMigrations } from "../migrate";
 import { type Finding, failing, passed, warning } from "./finding";
 

@@ -5,7 +5,7 @@
  */
 
 import type { LoggedEvent } from "../../bronze/events";
-import { costOfUsage } from "../../hooks/lib/models";
+import { costOfUsage } from "../../inference/models";
 import { planPriceFor } from "./plan-prices";
 import { fmtCost } from "./token-report";
 

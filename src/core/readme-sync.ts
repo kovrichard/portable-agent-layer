@@ -18,14 +18,14 @@ interface SyncResult {
 export const WATCHED_PATHS = [
   "src/cli",
   "src/core/paths.ts",
-  "src/hooks/lib/inference.ts",
+  "src/inference/inference.ts",
   "src/tools/youtube-analyze.ts",
   "assets/skills",
   "assets/agents",
 ];
 
 /** Extract PAL_* env var names from paths.ts + API keys from source */
-function extractEnvVars(): string[] {
+export function extractEnvVars(): string[] {
   const pkg = palPkg();
   const vars: Set<string> = new Set();
 
@@ -40,7 +40,7 @@ function extractEnvVars(): string[] {
   }
 
   // PAL_ANTHROPIC_API_KEY from inference.ts
-  const inferenceFile = resolve(pkg, "src", "hooks", "lib", "inference.ts");
+  const inferenceFile = resolve(pkg, "src", "inference", "inference.ts");
   if (existsSync(inferenceFile)) {
     const content = readFileSync(inferenceFile, "utf-8");
     if (content.includes("PAL_ANTHROPIC_API_KEY")) {

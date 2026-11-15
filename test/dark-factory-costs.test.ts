@@ -15,7 +15,7 @@ import {
 import { summarize, taskReport } from "../assets/plugins/dark-factory/scripts/stats.mjs";
 import { recordSubagentStop } from "../assets/plugins/dark-factory/scripts/subagent-stop.mjs";
 import { newTask, setStatus } from "../assets/plugins/dark-factory/scripts/task.mjs";
-import { MODEL_PRICING } from "../src/hooks/lib/models";
+import { MODEL_PRICING } from "../src/inference/models";
 import { jsonl, message, type Usage } from "./lib/dark-factory-cost-fixture";
 import {
   eventsNamedIn,

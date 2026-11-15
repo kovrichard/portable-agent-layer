@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { describeLogin, runAuth } from "../src/cli/auth";
-import { loginCacheFile, readLoginCache } from "../src/hooks/lib/login-cache";
+import { loginCacheFile, readLoginCache } from "../src/inference/login-cache";
 import { debugHome } from "./lib/fake-spawn";
 import {
   cachedLogin,

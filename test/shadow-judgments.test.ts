@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { RequestedTurn } from "../src/hooks/lib/adaptation-turns";
-import type { inference } from "../src/hooks/lib/inference";
-import type { JudgeQuestion } from "../src/hooks/lib/judgment";
 import {
   entityPrecheckJudgment,
   ruleRecurringJudgment,
   sessionStatusJudgment,
 } from "../src/hooks/lib/shadow-judgments";
+import type { inference } from "../src/inference/inference";
+import type { JudgeQuestion } from "../src/inference/judgment";
 
 type InferenceRequest = Parameters<typeof inference>[0];
 

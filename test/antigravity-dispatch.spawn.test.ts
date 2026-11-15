@@ -7,10 +7,10 @@ import {
   extractAntigravityText,
   INFERENCE_AGENT,
   streamJsonPrompt,
-} from "../src/hooks/lib/antigravity-inference";
-import { inference } from "../src/hooks/lib/inference";
-import { buildAntigravityArgs } from "../src/hooks/lib/inference-agents";
-import { inferenceModel } from "../src/hooks/lib/models";
+} from "../src/inference/antigravity-inference";
+import { inference } from "../src/inference/inference";
+import { buildAntigravityArgs } from "../src/inference/inference-agents";
+import { inferenceModel } from "../src/inference/models";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";

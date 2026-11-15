@@ -14,6 +14,8 @@ import {
 } from "../../bronze/transcript";
 import { logDebug, logError } from "../../core/log";
 import { sessionDir } from "../../core/session-dir";
+import { canInfer } from "../../inference/inference";
+import { judge } from "../../inference/judge";
 import {
   claimHandoffSummary,
   isHandoffStale,
@@ -21,8 +23,6 @@ import {
   markCaptured,
   readCapture,
 } from "../lib/capture-store";
-import { canInfer } from "../lib/inference";
-import { judge } from "../lib/judge";
 import { progressSession } from "../lib/progress-session";
 import { recordWhereSessionStopped } from "../lib/progress-tree-session-end";
 import { sessionStatusJudgment } from "../lib/shadow-judgments";

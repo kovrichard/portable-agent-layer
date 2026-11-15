@@ -3,14 +3,14 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { collectExportFiles } from "../src/core/export";
 import { paths } from "../src/core/paths";
-import { claudeLoginFrom, readAgentLogin } from "../src/hooks/lib/agent-login";
+import { claudeLoginFrom, readAgentLogin } from "../src/inference/agent-login";
 import {
   isLoginCacheStale,
   loginCacheFile,
   readLoginCache,
   refreshLogin,
   refreshLoginOnStart,
-} from "../src/hooks/lib/login-cache";
+} from "../src/inference/login-cache";
 import { debugHome } from "./lib/fake-spawn";
 import {
   cachedLogin,

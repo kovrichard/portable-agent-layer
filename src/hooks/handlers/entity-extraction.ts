@@ -8,6 +8,8 @@
 import { parseMessages } from "../../bronze/transcript";
 import { logDebug, logError } from "../../core/log";
 import { identity, isEnabled, isOptedIn } from "../../core/settings";
+import { canInfer, inference } from "../../inference/inference";
+import { judge } from "../../inference/judge";
 import { ingestEntities } from "../../tools/knowledge/ingest";
 import { lookupCompanyRegister } from "../lib/company-register-router";
 import { excludedNames, loadKnownEntities, loadNameIndex } from "../lib/entity-cards";
@@ -24,8 +26,6 @@ import {
   worthExtracting,
 } from "../lib/entity-extraction";
 import { newResearchTargets, researchNewEntities } from "../lib/entity-research";
-import { canInfer, inference } from "../lib/inference";
-import { judge } from "../lib/judge";
 import { entityPrecheckJudgment } from "../lib/shadow-judgments";
 
 function sourceId(sessionId: string, lastId: string | undefined): string {

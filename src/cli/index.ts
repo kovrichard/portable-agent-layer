@@ -22,7 +22,7 @@ import {
   INFERENCE_PRIORITY,
 } from "../core/agent-registry";
 import { palHome, palPkg, paths, platform } from "../core/paths";
-import { inference, previewInferenceRoute } from "../hooks/lib/inference";
+import { inference, previewInferenceRoute } from "../inference/inference";
 import { log, narrateSteps } from "../targets/log";
 import { helpText, runCommand } from "../tools/lib/command";
 import { type DoctorResult, detectAgents } from "./doctor/agents";

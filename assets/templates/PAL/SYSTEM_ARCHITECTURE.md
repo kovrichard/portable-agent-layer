@@ -408,7 +408,7 @@ PAL's background inference (session naming, summaries, correction checks, etc.) 
 
 ### Routing Table
 
-The active agent is detected via `getActiveAgent()` in `src/core/agent.ts` (driven by the `PAL_AGENT` env var set per-target). The dispatcher in `src/hooks/lib/inference.ts` then routes to the matching CLI:
+The active agent is detected via `getActiveAgent()` in `src/core/agent.ts` (driven by the `PAL_AGENT` env var set per-target). The dispatcher in `src/inference/inference.ts` then routes to the matching CLI:
 
 | Active agent | CLI invoked | Notes |
 |--------------|-------------|-------|

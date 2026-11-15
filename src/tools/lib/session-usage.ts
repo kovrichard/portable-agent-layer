@@ -9,8 +9,12 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { costOfUsage } from "../../hooks/lib/models";
-import { cacheWritesOf, finalPerMessage, type TranscriptUsage } from "./transcript-usage";
+import { costOfUsage } from "../../inference/models";
+import {
+  cacheWritesOf,
+  finalPerMessage,
+  type TranscriptUsage,
+} from "../../inference/transcript-usage";
 
 export interface SessionUsage {
   input: number;

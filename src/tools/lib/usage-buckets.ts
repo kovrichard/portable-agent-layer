@@ -7,9 +7,13 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import type { LoggedEvent } from "../../bronze/events";
-import { costOfUsage } from "../../hooks/lib/models";
+import { costOfUsage } from "../../inference/models";
+import {
+  cacheWritesOf,
+  finalPerMessage,
+  type TranscriptUsage,
+} from "../../inference/transcript-usage";
 import { type ProjectResolver, projectResolver } from "./project-resolver";
-import { cacheWritesOf, finalPerMessage, type TranscriptUsage } from "./transcript-usage";
 
 export interface Bucket {
   input: number;

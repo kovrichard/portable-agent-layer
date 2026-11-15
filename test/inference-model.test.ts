@@ -5,15 +5,15 @@ import {
   inference,
   plannedInferenceRoute,
   previewInferenceRoute,
-} from "../src/hooks/lib/inference";
+} from "../src/inference/inference";
 import {
   buildClaudeArgs,
   buildCodexArgs,
   buildCopilotArgs,
   buildCursorArgs,
   buildOpencodeArgs,
-} from "../src/hooks/lib/inference-agents";
-import { buildOpenAiBody } from "../src/hooks/lib/inference-api";
+} from "../src/inference/inference-agents";
+import { buildOpenAiBody } from "../src/inference/inference-api";
 import {
   FABLE_MODEL,
   HAIKU_5_5_MODEL,
@@ -23,8 +23,8 @@ import {
   isFixedModelRoute,
   OPUS_MODEL,
   SONNET_MODEL,
-} from "../src/hooks/lib/models";
-import { opencodeTierModel } from "../src/hooks/lib/opencode-config";
+} from "../src/inference/models";
+import { opencodeTierModel } from "../src/inference/opencode-config";
 import { freshTestDir } from "./lib/test-home";
 
 function flagValue(args: string[], flag: string): string | undefined {
