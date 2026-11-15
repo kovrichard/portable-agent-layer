@@ -13,6 +13,7 @@ import {
   type OptionSpec,
   type OptionSpecs,
 } from "../tools/lib/command";
+import { algorithmRunCommand } from "./algorithm-run";
 import { authCommand } from "./auth";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { compactionCommand } from "./compaction";
@@ -220,6 +221,7 @@ export function cliTree(admin: AdminHandlers): Group {
       rule: ruleCommand,
       correction: correctionCommand,
       compaction: compactionCommand,
+      "algorithm-run": algorithmRunCommand,
       progress: progressCommand,
       timebox: timeboxCommand,
       unattended: unattendedCommand,

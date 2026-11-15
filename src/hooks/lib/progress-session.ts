@@ -17,6 +17,10 @@ const SHELL_SESSION_ENV: Partial<Record<AgentType, string>> = {
   cursor: "CURSOR_CONVERSATION_ID",
 };
 
+export function shellKnowsSession(runtime: string): boolean {
+  return Object.hasOwn(SHELL_SESSION_ENV, runtime);
+}
+
 export function progressSession(
   hookSession?: string,
   env: NodeJS.ProcessEnv = process.env,
