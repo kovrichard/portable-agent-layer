@@ -16,7 +16,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { storeDir } from "../../bronze/bronze";
+
+const turnsDir = () => storeDir("labelled-turns");
 
 const WINDOW_DAYS = 30;
 const MESSAGE_MAX = 800;
@@ -80,7 +82,7 @@ function monthEnd(file: string): number | null {
 }
 
 function monthFiles(): string[] {
-  const dir = paths.adaptation();
+  const dir = turnsDir();
 
   return existsSync(dir)
     ? readdirSync(dir)
@@ -92,8 +94,7 @@ function monthFiles(): string[] {
 function pruneMonthsBefore(cutoff: number): void {
   for (const file of monthFiles()) {
     const end = monthEnd(file);
-    if (end !== null && end <= cutoff)
-      rmSync(resolve(paths.adaptation(), file), { force: true });
+    if (end !== null && end <= cutoff) rmSync(resolve(turnsDir(), file), { force: true });
   }
 }
 
@@ -104,10 +105,7 @@ export function appendTurn(turn: TurnInput, now: Date = new Date()): void {
     message: turn.message.slice(0, MESSAGE_MAX),
     replyEnd: turn.replyEnd.slice(-REPLY_END_MAX),
   };
-  appendFileSync(
-    resolve(paths.adaptation(), monthFile(now)),
-    `${JSON.stringify(record)}\n`
-  );
+  appendFileSync(resolve(turnsDir(), monthFile(now)), `${JSON.stringify(record)}\n`);
   pruneMonthsBefore(now.getTime() - WINDOW_DAYS * DAY_MS);
 }
 
@@ -139,7 +137,7 @@ function replacedLine(line: string, replacements: Map<string, Turn>): string {
  */
 export function replaceTurns(replacements: Map<string, Turn>): void {
   for (const file of monthFiles()) {
-    const path = resolve(paths.adaptation(), file);
+    const path = resolve(turnsDir(), file);
     const lines = readFileSync(path, "utf-8").split("\n");
     const rewritten = lines.map((line) => replacedLine(line, replacements));
     writeFileSync(`${path}.tmp`, rewritten.join("\n"));
@@ -151,9 +149,7 @@ export function readTurns(days: number = WINDOW_DAYS, now: Date = new Date()): T
   const cutoff = now.getTime() - days * DAY_MS;
 
   return monthFiles()
-    .flatMap((file) =>
-      readFileSync(resolve(paths.adaptation(), file), "utf-8").split("\n")
-    )
+    .flatMap((file) => readFileSync(resolve(turnsDir(), file), "utf-8").split("\n"))
     .map(parseLine)
     .filter((turn): turn is Turn => turn !== null && Date.parse(turn.ts) >= cutoff);
 }

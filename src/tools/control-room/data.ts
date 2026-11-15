@@ -6,6 +6,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ratingsFile } from "../../bronze/signals";
 import { paths } from "../../core/paths";
 import { type AgendaMove, readAgenda } from "../../hooks/lib/agenda-store";
 import {
@@ -253,7 +254,7 @@ export function dueBadges(now: Date = new Date(), maintainer = isMaintainerEnv()
 }
 
 export function ratingSeries(limit = SERIES_LENGTH): RatingPoint[] {
-  const file = resolve(paths.signals(), "ratings.jsonl");
+  const file = ratingsFile();
   if (!existsSync(file)) return [];
   const points: RatingPoint[] = [];
 

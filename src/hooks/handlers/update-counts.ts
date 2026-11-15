@@ -7,6 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { ratingsFile } from "../../bronze/signals";
 import { assets, ensureDir, paths } from "../../core/paths";
 
 interface Counts {
@@ -39,8 +40,7 @@ function countMdFiles(dir: string): number {
 }
 
 function getCounts(): Counts {
-  const signalsDir = paths.signals();
-  const signals = countJsonlLines(resolve(signalsDir, "ratings.jsonl"));
+  const signals = countJsonlLines(ratingsFile());
 
   const telos = countMdFiles(paths.telos());
 

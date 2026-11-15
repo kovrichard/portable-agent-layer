@@ -11,6 +11,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ratingsFile } from "../../bronze/signals";
 import { logDebug } from "../../core/log";
 import { ensureDir, paths } from "../../core/paths";
 import { extractKeywords, similarity } from "../../core/text-similarity";
@@ -146,7 +147,7 @@ interface RatingLine {
 
 function loadRatings(): RatingLine[] {
   try {
-    const file = resolve(paths.signals(), "ratings.jsonl");
+    const file = ratingsFile();
     if (!existsSync(file)) return [];
 
     return readFileSync(file, "utf-8")

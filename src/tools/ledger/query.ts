@@ -14,6 +14,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeDir } from "../../bronze/bronze";
 import {
   applyDelta,
   type LedgerDelta,
@@ -21,7 +22,6 @@ import {
   ledgerPath,
 } from "../../bronze/ledger";
 import { resolveAnchor } from "../../core/anchor";
-import { paths } from "../../core/paths";
 
 const ARCHIVE_RE = /^actions-.*\.jsonl$/;
 
@@ -47,7 +47,7 @@ export interface LedgerFilter {
  * lexicographically into chronological order.
  */
 export function ledgerFiles(): string[] {
-  const dir = paths.ledger();
+  const dir = storeDir("ledger");
   const archives = readdirSync(dir)
     .filter((name) => ARCHIVE_RE.test(name))
     .sort()

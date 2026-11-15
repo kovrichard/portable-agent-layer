@@ -9,9 +9,9 @@ import { resolve } from "node:path";
 import { currentAttribution, type RecordAttribution } from "../core/actor";
 import type { AgentType } from "../core/agent";
 import { logError } from "../core/log";
-import { ensureDir, paths } from "../core/paths";
 import { boundProjectAt } from "../core/project-bindings";
 import { eventLogEnabled } from "../core/settings";
+import { storeDir } from "./bronze";
 import { currentChannel } from "./channel";
 
 export const EVENT_SCHEMA_VERSION = 1;
@@ -290,12 +290,10 @@ function monthOf(ts: string): string {
   return ts.slice(0, 7);
 }
 
-function eventsDir(): string {
-  return ensureDir(resolve(paths.memory(), "events"));
-}
+const eventsDir = () => storeDir("events");
 
 export function contentDir(): string {
-  return ensureDir(resolve(paths.content(), "events"));
+  return storeDir("event-text");
 }
 
 function envelope(type: EventType, options: AppendOptions): EventEnvelope {

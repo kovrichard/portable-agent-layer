@@ -6,6 +6,7 @@
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeDir } from "../../bronze/bronze";
 import { paths } from "../../core/paths";
 import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
 import type {
@@ -380,7 +381,7 @@ export function markSeen(sessionId: string, lastId: string): void {
 }
 
 export function reviewQueueFile(): string {
-  return resolve(paths.knowledge(), "_review.jsonl");
+  return resolve(storeDir("review-queue"), "_review.jsonl");
 }
 
 export function queueForReview(items: ReviewItem[]): void {
