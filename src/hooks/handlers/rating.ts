@@ -168,7 +168,7 @@ function handleImplicitReaction(message: string, sentAt: Date, sessionId?: strin
   const reply = replyEnd(getLastResponse(sessionId));
 
   if (isPraise(trimmed)) {
-    emitRating(8, `Direct praise: "${trimmed}"`, "implicit", reply);
+    emitRating(8, `Direct praise: "${trimmed}"`, "implicit", reply, sessionId);
 
     return;
   }
@@ -257,7 +257,7 @@ async function runReactionRatingAndStore(
     const label = settledLabel(first, check);
     const rating = ratingFromLabels(label, check);
     if (label && rating !== null) {
-      emitRating(rating, ratingContext(label, message), "implicit", reply);
+      emitRating(rating, ratingContext(label, message), "implicit", reply, sessionId);
     }
 
     const turn = turnFromLabels(
@@ -295,7 +295,8 @@ export function captureRating(
       explicit.rating,
       explicit.comment || cleaned.slice(0, 200),
       "explicit",
-      getLastResponse(sessionId).slice(0, 500)
+      getLastResponse(sessionId).slice(0, 500),
+      sessionId
     );
 
     return;

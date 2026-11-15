@@ -94,6 +94,28 @@ describe("rating signals become rating events", () => {
     ]);
   });
 
+  test("a row from before sessions were recorded keeps its id and logs a null session", () => {
+    writeRatings(ratingRow("2026-09-10T06:55:09.577Z"));
+    backfillEvents();
+    expect(ratings()).toEqual([
+      expect.objectContaining({
+        id: "rating:other-machine:2026-09-10T06:55:09.577Z",
+        session: null,
+      }),
+    ]);
+  });
+
+  test("a row with a session keeps the same id and logs its session", () => {
+    writeRatings(ratingRow("2026-09-10T06:55:09.577Z", { session: "session-1" }));
+    backfillEvents();
+    expect(ratings()).toEqual([
+      expect.objectContaining({
+        id: "rating:other-machine:2026-09-10T06:55:09.577Z",
+        session: "session-1",
+      }),
+    ]);
+  });
+
   test("a second run appends nothing", () => {
     writeRatings(
       ratingRow("2026-09-10T06:55:09.577Z"),

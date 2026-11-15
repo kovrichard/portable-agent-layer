@@ -30,6 +30,7 @@ export interface RatingSignal extends Signal, Partial<RecordAttribution> {
   context: string;
   source: string;
   response_preview?: string;
+  session?: string;
 }
 
 export const ratingEventId = (row: RatingSignal) =>
@@ -46,7 +47,7 @@ export function logRatingEvent(
     {
       id: ratingEventId(row),
       ts: row.ts,
-      session: null,
+      session: row.session ?? null,
       channel: null,
       content: { context: row.context, responsePreview: row.response_preview ?? null },
       ...placement,
@@ -78,7 +79,8 @@ export function emitRating(
   rating: number,
   context: string,
   source: string = "explicit",
-  responsePreview?: string
+  responsePreview?: string,
+  session?: string
 ): void {
   const data = {
     type: "rating",
@@ -86,6 +88,7 @@ export function emitRating(
     context,
     source,
     ...(responsePreview ? { response_preview: responsePreview } : {}),
+    ...(session ? { session } : {}),
   };
   const signal = emitSignal(ratingsFile(), data) as RatingSignal;
   logRatingEvent(signal);

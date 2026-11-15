@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
+import { readRatings } from "../src/bronze/signals";
 import { captureRating, parseExplicitRating } from "../src/hooks/handlers/rating";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
@@ -27,6 +28,16 @@ describe("captureRating non-blocking contract", () => {
 
   test("explicit rating returns synchronously", () => {
     expect(captureRating("8 great", "sess-test")).not.toBeInstanceOf(Promise);
+  });
+
+  test("an explicit rating and praise both record the prompt's session", () => {
+    captureRating("8 great", "sess-explicit");
+    captureRating("nice work", "sess-praise");
+
+    expect(readRatings().map((row) => row.session)).toEqual([
+      "sess-explicit",
+      "sess-praise",
+    ]);
   });
 });
 
