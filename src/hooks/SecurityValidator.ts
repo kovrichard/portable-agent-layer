@@ -9,10 +9,10 @@
 
 import { recordBlocked } from "../bronze/ledger";
 import { blockResponse } from "../core/agent";
+import { enterHookWorkspace } from "../core/hook-payload";
 import { logError } from "../core/log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
 import { decideRefusal, type SecurityInput } from "./lib/security-gate";
 import { readStdinJSON } from "./lib/stdin";
 

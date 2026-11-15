@@ -1,5 +1,5 @@
 import type { LoggedEvent } from "../../../bronze/events";
-import { localClock } from "../../../hooks/lib/wall-clock";
+import { localClock } from "../../../core/wall-clock";
 import type { Best } from "./records";
 import { dayOf, isUserActivity, ofType, type Tally, tally } from "./year";
 

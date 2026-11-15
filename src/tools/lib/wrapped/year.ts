@@ -1,5 +1,5 @@
 import { allEventsSince, type EventType, type LoggedEvent } from "../../../bronze/events";
-import { localDay } from "../../../hooks/lib/wall-clock";
+import { localDay } from "../../../core/wall-clock";
 
 export function dayOf(event: LoggedEvent): string {
   return localDay(new Date(event.ts));

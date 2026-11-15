@@ -7,7 +7,7 @@ import {
   recentMessages,
   runningCount,
   withFinalReply,
-} from "../src/hooks/lib/transcript";
+} from "../src/bronze/transcript";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 

@@ -8,6 +8,7 @@
 
 import { readFile, unlink } from "node:fs/promises";
 import { isCursor } from "../core/agent";
+import { enterHookWorkspace } from "../core/hook-payload";
 import { logDebug, logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
 import {
@@ -18,7 +19,6 @@ import {
 } from "./lib/compact-recall";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
 import { runModeRecall } from "./lib/run-mode-gate";
 import { readStdinJSON } from "./lib/stdin";
 

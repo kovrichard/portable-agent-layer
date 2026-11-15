@@ -8,7 +8,13 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "../../bronze/bronze";
+import { readTranscriptTail } from "../../bronze/transcript";
 import { currentAttribution } from "../../core/actor";
+import {
+  hookFinalReply,
+  hookSessionId,
+  type StopTurnPayload,
+} from "../../core/hook-payload";
 import { isEnabled, isOptedIn } from "../../core/settings";
 import {
   type ClaimCheck,
@@ -18,10 +24,7 @@ import {
   isPromptLine,
   isVersionControlClaim,
 } from "./claim-check";
-import { hookFinalReply, hookSessionId } from "./hook-turn";
 import { alreadySentBack } from "./send-back-guard";
-import type { StopTurnPayload } from "./stop";
-import { readTranscriptTail } from "./transcript";
 
 const CLAIM_MAX = 200;
 const TURN_FIRST_READ_BYTES = 1 << 20;

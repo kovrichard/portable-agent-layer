@@ -6,9 +6,9 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
 import { logError } from "../../core/log";
 import { ensureDir, paths } from "../../core/paths";
-import { type HookTurnPayload, hookSessionId } from "./hook-turn";
 
 const MAX_AGE_MS = 2 * 60_000;
 

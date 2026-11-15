@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileFinalReply, hookSessionId } from "../src/hooks/lib/hook-turn";
+import { hookSessionId } from "../src/core/hook-payload";
+import { fileFinalReply } from "../src/hooks/lib/hook-turn";
 import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
 import {
   parkPromptContext,

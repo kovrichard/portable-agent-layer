@@ -3,12 +3,6 @@
  * Replaces the old work.ts handler.
  */
 
-import { now } from "../../core/time";
-import {
-  extractFallbackName,
-  readSessionNames,
-  writeSessionName,
-} from "../lib/session-names";
 import {
   extractContent,
   extractLastAssistant,
@@ -16,7 +10,13 @@ import {
   type Message,
   parseMessages,
   runningCount,
-} from "../lib/transcript";
+} from "../../bronze/transcript";
+import { now } from "../../core/time";
+import {
+  extractFallbackName,
+  readSessionNames,
+  writeSessionName,
+} from "../lib/session-names";
 import {
   detectStatus,
   extractArtifacts,

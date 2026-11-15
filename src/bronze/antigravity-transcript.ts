@@ -4,7 +4,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { type HookTurnPayload, hookFinalReply } from "./hook-turn";
+import { type HookTurnPayload, hookFinalReply } from "../core/hook-payload";
 
 interface AntigravityToolCall {
   name?: string;

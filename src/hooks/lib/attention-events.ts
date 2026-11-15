@@ -5,7 +5,7 @@
 
 import { appendEvent, logQuietly } from "../../bronze/events";
 import { normalizeToolUse } from "../../core/agent";
-import { hookSessionId } from "./hook-turn";
+import { hookSessionId } from "../../core/hook-payload";
 import { markWaiting } from "./waiting-on-user";
 
 function logPermissionPrompt(

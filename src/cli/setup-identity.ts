@@ -9,7 +9,7 @@ import {
   raw as readSettings,
   write as writeSettings,
 } from "../core/settings";
-import { isValidTimeZone } from "../hooks/lib/wall-clock";
+import { isValidTimeZone } from "../core/wall-clock";
 
 /**
  * Empty means the machine's guess, which clack substitutes after validation runs,

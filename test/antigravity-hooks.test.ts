@@ -1,27 +1,27 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
+import {
+  isSideStop,
+  latestUserRequest,
+  withTranscriptReply,
+} from "../src/bronze/antigravity-transcript";
 import { eventsSince } from "../src/bronze/events";
 import { landedCalls, ledgeredCalls } from "../src/bronze/ledger-hook";
+import { readTranscriptFile } from "../src/bronze/transcript";
 import {
   blockResponse,
   declaredAgent,
   normalizeToolUse,
   stopBlockResponse,
 } from "../src/core/agent";
+import { enterHookWorkspace } from "../src/core/hook-payload";
 import { paths } from "../src/core/paths";
 import { reload } from "../src/core/settings";
-import {
-  isSideStop,
-  latestUserRequest,
-  withTranscriptReply,
-} from "../src/hooks/lib/antigravity-transcript";
 import { commandsThisTurn } from "../src/hooks/lib/claim-check";
 import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
-import { enterHookWorkspace } from "../src/hooks/lib/hook-turn";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
 import { alreadySentBack, rememberSendBack } from "../src/hooks/lib/send-back-guard";
-import { readTranscriptFile } from "../src/hooks/lib/transcript";
 import {
   agyPayload,
   CONVERSATION,

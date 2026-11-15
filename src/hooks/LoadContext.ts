@@ -7,6 +7,7 @@
  */
 
 import { getActiveAgent } from "../core/agent";
+import { hookSessionId } from "../core/hook-payload";
 import { logContextSnapshot, logDebug, logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
 import { autoUpdateOnStart } from "./lib/auto-update";
@@ -15,7 +16,6 @@ import { buildSystemReminder } from "./lib/context";
 import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { hookSessionId } from "./lib/hook-turn";
 import {
   contextEnvelope,
   contextForSource,

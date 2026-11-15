@@ -6,9 +6,13 @@
 
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  extractContent,
+  extractLastAssistant,
+  extractLastUser,
+} from "../../bronze/transcript";
 import { logDebug, logError } from "../../core/log";
 import { ensureDir, paths } from "../../core/paths";
-import { extractContent, extractLastAssistant, extractLastUser } from "../lib/transcript";
 
 type ParsedMessage = { role: string; content: unknown };
 

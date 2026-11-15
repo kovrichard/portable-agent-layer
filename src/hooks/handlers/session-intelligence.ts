@@ -5,6 +5,13 @@
  * Writes: project history, and the stopped-at of the session's progress-tree node.
  */
 
+import {
+  extractContent,
+  extractLastAssistant,
+  extractLastUser,
+  parseMessages,
+  runningCount,
+} from "../../bronze/transcript";
 import { logDebug, logError } from "../../core/log";
 import { sessionDir } from "../../core/session-dir";
 import {
@@ -19,13 +26,6 @@ import { judge } from "../lib/judge";
 import { progressSession } from "../lib/progress-session";
 import { recordWhereSessionStopped } from "../lib/progress-tree-session-end";
 import { sessionStatusJudgment } from "../lib/shadow-judgments";
-import {
-  extractContent,
-  extractLastAssistant,
-  extractLastUser,
-  parseMessages,
-  runningCount,
-} from "../lib/transcript";
 import { appendProjectHistory } from "../lib/work-tracking";
 
 // ── JSON schema for merged Haiku call ──

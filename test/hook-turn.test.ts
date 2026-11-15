@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { hookSessionId } from "../src/hooks/lib/hook-turn";
+import { hookSessionId } from "../src/core/hook-payload";
 
 describe("the session a hook payload belongs to", () => {
   test.each([

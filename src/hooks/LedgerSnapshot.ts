@@ -11,10 +11,10 @@
  */
 
 import { ledgeredCalls, snapshotCall } from "../bronze/ledger-hook";
+import { enterHookWorkspace } from "../core/hook-payload";
 import { logDebug } from "../core/log";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();
