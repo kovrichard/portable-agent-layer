@@ -33,17 +33,13 @@ const AGENT_RESPONSE_HOOK = resolve(REPO, "src", "hooks", "AgentResponse.ts");
 
 startEachTestInACleanHome(import.meta.file);
 
-/** A reply filed by a detached child shows up in the session's track a moment later. */
-async function filedReply(session: string, timeoutMs = 4000) {
-  const deadline = Date.now() + timeoutMs;
-
-  while (Date.now() < deadline) {
+/** A reply filed by a detached child shows up in the session's track later; the test's timeout bounds the wait. */
+async function filedReply(session: string) {
+  for (;;) {
     const reply = trackedReply(session);
     if (reply) return reply;
     await Bun.sleep(50);
   }
-
-  return undefined;
 }
 
 describe("cursor's prompt hook, which documents no context field", () => {
