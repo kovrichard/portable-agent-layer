@@ -6,6 +6,7 @@
 
 import { rmSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeDir } from "../../../bronze/bronze";
 import { logError } from "../../../core/log";
 import { paths, platform } from "../../../core/paths";
 import { eventLogEnabled } from "../../../core/settings";
@@ -26,7 +27,7 @@ const COLLECTORS: Record<string, () => number> = {
       resolve(platform.claudeDir(), "projects"),
       new Date(),
       claudeBilling(claudeConfigFile()),
-      resolve(paths.content(), "claude")
+      storeDir("transcripts")
     ),
   opencode: () => collectOpencode(opencodeDatabase()),
   codex: () => collectCodex(platform.codexDir()),

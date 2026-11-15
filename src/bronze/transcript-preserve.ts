@@ -17,6 +17,7 @@ import {
 import { dirname, relative, resolve } from "node:path";
 import { logDebug, logError } from "../core/log";
 import { assets, ensureDir, paths, platform } from "../core/paths";
+import { storeDir } from "./bronze";
 
 const STALE_LOCK_MS = 30 * 60 * 1000;
 
@@ -34,7 +35,7 @@ interface PreserveLocations {
 
 type Manifest = Record<string, string>;
 
-export const transcriptArchive = () => resolve(paths.content(), "claude");
+export const transcriptArchive = () => storeDir("transcripts");
 
 function defaultLocations(): PreserveLocations {
   return {

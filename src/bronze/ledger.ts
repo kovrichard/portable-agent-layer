@@ -35,6 +35,7 @@ import { calcPatch } from "fast-myers-diff";
 import { currentAttribution, type RecordAttribution } from "../core/actor";
 import { encodeAnchor, resolveAnchor } from "../core/anchor";
 import { ensureDir, paths } from "../core/paths";
+import { storeDir } from "./bronze";
 import { appendEvent } from "./events";
 import { isSensitivePath } from "./sensitive-path";
 
@@ -150,7 +151,7 @@ const MAX_LEDGER_BYTES = 4 * 1024 * 1024;
 const ACTIVE = "actions.jsonl";
 
 export function ledgerPath(): string {
-  return resolve(paths.ledger(), ACTIVE);
+  return resolve(storeDir("ledger"), ACTIVE);
 }
 
 function hash(content: string): string {
@@ -250,7 +251,7 @@ function freeArchivePath(stamp: string): string {
   const nth = (n: number) => {
     const suffix = n ? `-${n}` : "";
 
-    return resolve(paths.ledger(), `actions-${stamp}${suffix}.jsonl`);
+    return resolve(storeDir("ledger"), `actions-${stamp}${suffix}.jsonl`);
   };
   let n = 0;
 

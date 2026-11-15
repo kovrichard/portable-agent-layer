@@ -6,7 +6,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { storeDir } from "../../bronze/bronze";
 import type { RuleTrigger } from "./adaptation-rules";
 import type { Turn } from "./adaptation-turns";
 
@@ -30,7 +30,7 @@ export interface RuleEffect {
 }
 
 export function ruleEventsPath(): string {
-  return resolve(paths.adaptation(), "rule-events.jsonl");
+  return resolve(storeDir("rule-events"), "rule-events.jsonl");
 }
 
 function parseLine(line: string): RuleEvent | null {

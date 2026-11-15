@@ -10,6 +10,7 @@
  */
 
 import { appendFileSync } from "node:fs";
+import { storeDir } from "../../bronze/bronze";
 import { paths } from "../../core/paths";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
 import { leaf, runCommand, UsageError } from "../lib/command";
@@ -90,7 +91,7 @@ function missingRequired(
 }
 
 function reflectionsPath(): string {
-  paths.reflections();
+  storeDir("reflections");
 
   return paths.reflectionsFile();
 }

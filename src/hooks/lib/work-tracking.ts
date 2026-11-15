@@ -11,6 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { storeDir } from "../../bronze/bronze";
 import { ensureDir, paths } from "../../core/paths";
 import { defaultSlug, readAllProjects, resolveProjectFromCwd } from "./projects";
 
@@ -50,9 +51,7 @@ function readSessions(): SessionRecord[] {
   }
 }
 
-function sessionArchiveDir(): string {
-  return ensureDir(resolve(paths.state(), "sessions-archive"));
-}
+const sessionArchiveDir = () => storeDir("sessions-archive");
 
 function sessionArchiveFile(record: SessionRecord): string {
   const month = Number.isNaN(Date.parse(record.ts)) ? "undated" : record.ts.slice(0, 7);
@@ -229,8 +228,12 @@ function historyFileFor(cwd: string): string {
   const project = resolveProjectFromCwd(cwd, readAllProjects());
 
   return project
-    ? resolve(paths.projectHistory(), project.name, "history.jsonl")
-    : resolve(paths.unboundHistory(), `${defaultSlug(cwd)}.jsonl`);
+    ? projectHistoryFile(project.name)
+    : resolve(storeDir("unbound-history"), `${defaultSlug(cwd)}.jsonl`);
+}
+
+function projectHistoryFile(project: string): string {
+  return resolve(storeDir("project-history"), project, "history.jsonl");
 }
 
 function withoutSession(lines: string[], session: string): string[] {
@@ -266,9 +269,7 @@ export function readProjectHistory(cwd: string, limit = 15): ProjectHistoryEntry
 }
 
 export function lastSessionTitle(project: string): string | undefined {
-  const historyPath = resolve(paths.projectHistory(), project, "history.jsonl");
-
-  return readHistoryFile(historyPath, 1)[0]?.title;
+  return readHistoryFile(projectHistoryFile(project), 1)[0]?.title;
 }
 
 function readHistoryFile(historyPath: string, limit: number): ProjectHistoryEntry[] {

@@ -7,8 +7,8 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeDir } from "../../bronze/bronze";
 import { currentAttribution } from "../../core/actor";
-import { ensureDir, paths } from "../../core/paths";
 import { isEnabled, isOptedIn } from "../../core/settings";
 import {
   type ClaimCheck,
@@ -36,9 +36,7 @@ export interface ClaimRecord {
   blocked?: true;
 }
 
-function claimsDir(): string {
-  return ensureDir(resolve(paths.signals(), "claim-checks"));
-}
+const claimsDir = () => storeDir("claim-checks");
 
 function monthFile(date: Date): string {
   return resolve(claimsDir(), `${date.toISOString().slice(0, 7)}.jsonl`);

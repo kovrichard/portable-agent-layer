@@ -14,6 +14,8 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeDir } from "../../bronze/bronze";
+import { ratingsFile } from "../../bronze/signals";
 import { ensureDir, paths } from "../../core/paths";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
@@ -108,11 +110,8 @@ interface Reflection {
 }
 
 function getAlgorithmStats(since: Date): SynthesisState["algorithm"] {
-  const p = resolve(
-    ensureDir(resolve(paths.learning(), "reflections")),
-    "algorithm-reflections.jsonl"
-  );
-  const reflections = readJsonl<Reflection>(p).filter(
+  storeDir("reflections");
+  const reflections = readJsonl<Reflection>(paths.reflectionsFile()).filter(
     (r) => new Date(r.timestamp) >= since
   );
 
@@ -157,8 +156,7 @@ interface Rating {
 }
 
 function getRatingStats(since: Date): SynthesisState["ratings"] {
-  const p = resolve(paths.signals(), "ratings.jsonl");
-  const ratings = readJsonl<Rating>(p).filter((r) => new Date(r.ts) >= since);
+  const ratings = readJsonl<Rating>(ratingsFile()).filter((r) => new Date(r.ts) >= since);
 
   if (ratings.length === 0) {
     return { count: 0, avg: 0, recentAvg: 0, lowCount: 0, trend: "stable" };
@@ -214,8 +212,7 @@ export function writeSynthesis(state: SynthesisState): string {
 
 function writeSignalCache(): void {
   try {
-    const p = resolve(paths.signals(), "ratings.jsonl");
-    const all = readJsonl<Rating>(p);
+    const all = readJsonl<Rating>(ratingsFile());
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
 

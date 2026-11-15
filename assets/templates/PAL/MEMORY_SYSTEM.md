@@ -4,7 +4,7 @@ PAL has its own memory system that persists across sessions AND across tools (Cl
 
 ## Layout
 
-All memory lives under `~/.pal/memory/`:
+All memory lives under `~/.pal/memory/`. Every store PAL records to, with its group and folder, is listed in `src/bronze/bronze.ts` in the PAL package.
 
 ```
 memory/

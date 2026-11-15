@@ -6,7 +6,7 @@
 
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { storeDir } from "../../bronze/bronze";
 import type { Run } from "./run-mode";
 
 const MINUTE_MS = 60_000;
@@ -28,7 +28,7 @@ export interface RunEstimateRecord {
 }
 
 export function runEstimatesFile(): string {
-  return resolve(paths.learning(), "run-estimates.jsonl");
+  return resolve(storeDir("run-estimates"), "run-estimates.jsonl");
 }
 
 function minutesBetween(from: string, to: Date): number {

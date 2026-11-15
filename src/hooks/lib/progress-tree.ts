@@ -7,7 +7,7 @@
 
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "../../core/paths";
+import { storeDir } from "../../bronze/bronze";
 import { sameArtifact } from "./progress-artifact-match";
 import { progressSession } from "./progress-session";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
@@ -143,7 +143,7 @@ export interface ScopeTree {
 const IDLE_AFTER_MS = 2 * 60 * 60 * 1000;
 
 function progressTreeFile(): string {
-  return resolve(ensureDir(resolve(paths.memory(), "progress-tree")), "events.jsonl");
+  return resolve(storeDir("progress-tree"), "events.jsonl");
 }
 
 /** A registered project is its own scope wherever in it the agent stands; anything else is its folder. */

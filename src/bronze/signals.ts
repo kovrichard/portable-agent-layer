@@ -1,8 +1,8 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { currentAttribution, type RecordAttribution } from "../core/actor";
-import { paths } from "../core/paths";
 import { now } from "../core/time";
+import { storeDir } from "./bronze";
 import { type AppendOptions, appendEvent } from "./events";
 
 interface Signal {
@@ -11,13 +11,15 @@ interface Signal {
   [key: string]: unknown;
 }
 
-/** Append a signal to a JSONL file in the signals directory */
+export function ratingsFile(): string {
+  return resolve(storeDir("ratings"), "ratings.jsonl");
+}
+
 function emitSignal(
-  filename: string,
+  filepath: string,
   data: { type: string; [key: string]: unknown }
 ): Signal {
   const signal: Signal = { ts: now(), ...currentAttribution(), ...data };
-  const filepath = resolve(paths.signals(), filename);
   appendFileSync(filepath, `${JSON.stringify(signal)}\n`);
 
   return signal;
@@ -61,7 +63,7 @@ function parseSignal(line: string): RatingSignal[] {
 }
 
 export function readRatings(): RatingSignal[] {
-  const filepath = resolve(paths.signals(), "ratings.jsonl");
+  const filepath = ratingsFile();
   if (!existsSync(filepath)) return [];
 
   return readFileSync(filepath, "utf-8")
@@ -85,6 +87,6 @@ export function emitRating(
     source,
     ...(responsePreview ? { response_preview: responsePreview } : {}),
   };
-  const signal = emitSignal("ratings.jsonl", data) as RatingSignal;
+  const signal = emitSignal(ratingsFile(), data) as RatingSignal;
   logRatingEvent(signal);
 }
