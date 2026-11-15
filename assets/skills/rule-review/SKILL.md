@@ -1,7 +1,7 @@
 ---
 name: rule-review
 license: MIT
-description: "Review the adaptation rule drafts PAL wrote from the user's corrections and record the user's approve-or-deny decision for each via the rule CLI. Use when the user asks what rule drafts are waiting, wants to review pending rules, or says to approve or deny a rule draft. Not for editing the shipped steering hints or for the opinion tracker."
+description: "Review the adaptation rule drafts PAL wrote from the user's corrections and record the user's approve-or-deny decision for each via the rule CLI. Use when the user asks what rule drafts are waiting, wants to review pending rules, or says to approve or deny a rule draft. Not for editing the shipped steering hints."
 argument-hint: "[list | approve <id> | deny <id>]"
 metadata:
   source: portable-agent-layer
@@ -110,6 +110,6 @@ After each decision, output the CLI's result line (or error reason) verbatim and
 ## Do NOT use
 
 - To change the shipped contextual-steering hints. Those live under the `steering` key in `pal-settings.json`, not in rules.
-- For the opinion tracker (confirming or contradicting a tracked preference). That is the `opinion` skill.
+- To write an opinion by hand or to end an approved rule or opinion. Those are `pal cli rule add-opinion` and `pal cli rule retire <id>`.
 - To edit, reword, or merge a draft. Editing is not supported; the only outcomes are approve or deny.
 - To approve or deny on the user's behalf because a draft "looks reasonable". Wait for the explicit decision.
