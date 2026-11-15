@@ -291,6 +291,8 @@ Hooks are registered in the agent's settings file during `pal cli install`. Each
 
 ### Directory Structure
 
+Every store PAL records to, with its group and folder, is listed in `src/bronze/bronze.ts`.
+
 ```
 memory/
 ├── state/                         # Runtime state
