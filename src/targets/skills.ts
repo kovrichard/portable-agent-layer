@@ -15,6 +15,10 @@ import { ensureSymlink } from "./symlink";
 
 export const palSkillsDir = () => resolve(palHome(), "skills");
 
+export const RETIRED_SKILLS: readonly string[] = ["opinion", "pal-reflect"];
+
+const isRetiredSkill = (name: string) => RETIRED_SKILLS.includes(name);
+
 /**
  * Install PAL skills by symlinking:
  *   ~/.pal/skills/<name> → <repo>/assets/skills/<name>  (source of truth)
@@ -39,7 +43,7 @@ export function copySkills(claudeSkillsDir: string): number {
 
   for (const name of readdirSync(skillsDir)) {
     const srcDir = resolve(skillsDir, name);
-    if (!existsSync(resolve(srcDir, "SKILL.md"))) continue;
+    if (isRetiredSkill(name) || !existsSync(resolve(srcDir, "SKILL.md"))) continue;
 
     const palLink = resolve(palSkillsDir(), name);
     const claudeLink = resolve(claudeSkillsDir, name);
@@ -85,7 +89,7 @@ function symlinkPointsInto(link: string, root: string): boolean {
  * a dead link has no SKILL.md to read, but its target path still says
  * whether PAL created it.
  *
- *   ~/.pal/skills/<name>   → pruned when dangling and pointing into assets/skills/
+ *   ~/.pal/skills/<name>   → pruned when dangling or retired, and pointing into assets/skills/
  *   <agent>/skills/<name>  → pruned when dangling and pointing into ~/.pal/skills/
  *
  * Personal skills are real directories, so they are never candidates, and a
@@ -93,17 +97,18 @@ function symlinkPointsInto(link: string, root: string): boolean {
  */
 function pruneStaleSkillLinks(agentSkillsDir: string): string[] {
   const ownedTrees = [
-    { dir: palSkillsDir(), root: assets.skills() },
-    { dir: agentSkillsDir, root: palSkillsDir() },
+    { dir: palSkillsDir(), root: assets.skills(), pruneRetired: true },
+    { dir: agentSkillsDir, root: palSkillsDir(), pruneRetired: false },
   ];
   const removed: string[] = [];
 
-  for (const { dir, root } of ownedTrees) {
+  for (const { dir, root, pruneRetired } of ownedTrees) {
     if (!existsSync(dir)) continue;
 
     for (const name of readdirSync(dir)) {
       const link = resolve(dir, name);
-      if (!isDanglingSymlink(link) || !symlinkPointsInto(link, root)) continue;
+      const stale = isDanglingSymlink(link) || (pruneRetired && isRetiredSkill(name));
+      if (!stale || !symlinkPointsInto(link, root)) continue;
       unlinkSync(link);
       removed.push(name);
     }
