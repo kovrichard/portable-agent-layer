@@ -18,6 +18,18 @@ function setSettings(data: Record<string, unknown>) {
   reload();
 }
 
+/** A shared runner can stall one append for hundreds of ms; the median ignores such a stall, a mean does not. */
+function medianAppendMs(runs: number): number {
+  const costs = Array.from({ length: runs }, (_, words) => {
+    const start = performance.now();
+    appendEvent("turn", { words }, {});
+
+    return performance.now() - start;
+  });
+
+  return costs.sort((a, b) => a - b)[Math.floor(runs / 2)] ?? Number.POSITIVE_INFINITY;
+}
+
 function streamLines(month: string): Record<string, unknown>[] {
   const file = resolve(home, "memory", "events", `${month}.jsonl`);
   if (!existsSync(file)) return [];
@@ -224,13 +236,10 @@ describe("reading events back", () => {
 });
 
 describe("cost", () => {
-  test("an append stays under 5 ms once the process is warm", () => {
+  test("the median append stays under 5 ms once the process is warm", () => {
     appendEvent("turn", { words: 1 }, { ts: "2026-09-10T10:00:00.000Z" });
-    const runs = 50;
-    const start = performance.now();
 
-    for (let i = 0; i < runs; i++) appendEvent("turn", { words: i }, {});
-    expect((performance.now() - start) / runs).toBeLessThan(5);
+    expect(medianAppendMs(51)).toBeLessThan(5);
   });
 });
 
