@@ -67,6 +67,7 @@ describe("every pal cli command", () => {
       "pal cli knowledge search",
       "pal cli project add-next",
       "pal cli interaction report",
+      "pal cli algorithm-run report",
       "pal cli debug on",
       "pal cli progress show",
       "pal cli progress follow-up",

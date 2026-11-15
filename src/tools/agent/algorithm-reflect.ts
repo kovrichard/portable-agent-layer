@@ -12,6 +12,7 @@
 import { appendFileSync } from "node:fs";
 import { storeDir } from "../../bronze/bronze";
 import { paths } from "../../core/paths";
+import { recordAlgorithmReflectionQuietly } from "../../hooks/lib/algorithm-runs";
 import { progressSession } from "../../hooks/lib/progress-session";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
 import { leaf, runCommand, UsageError } from "../lib/command";
@@ -101,6 +102,7 @@ function reflectionsPath(): string {
 function appendReflection(reflection: ReturnType<typeof buildReflection>): undefined {
   const path = reflectionsPath();
   appendFileSync(path, reflectionLine(reflection), "utf-8");
+  recordAlgorithmReflectionQuietly();
   emit.receipt(path, {
     passed: reflection.criteria_passed,
     of: reflection.criteria_count,

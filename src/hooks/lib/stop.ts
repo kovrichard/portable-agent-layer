@@ -26,6 +26,7 @@ import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
+import { recordAlgorithmTurnQuietly, turnTexts } from "./algorithm-runs";
 import { spawnCollectIfDue } from "./collect-trigger";
 import { acknowledgeMentioned } from "./daily-nudge";
 import { spawnDetachedInference } from "./detached-inference";
@@ -157,6 +158,8 @@ async function runTurnStop(
 
   logDebug("stopTurn", "No readable transcript; filing only the final reply");
   fileFinalReply(payload);
+  const finalReply = hookFinalReply(payload) ?? "";
+  recordAlgorithmTurnQuietly(hookSessionId(payload), [finalReply], "final-reply");
 }
 
 interface RunStopHandlersOptions {
@@ -181,6 +184,8 @@ export async function runStopHandlers(
   cacheLastResponse(messages, options.lastAssistantMessage, options.sessionId);
 
   if (options.sessionId) recordFinalReply(messages, options.sessionId);
+
+  recordAlgorithmTurnQuietly(options.sessionId, turnTexts(messages), "transcript");
 
   // Always persist last exchange — drives CompactRecover + "Pick Up Where You Left Off"
   if (options.sessionId) persistLastExchange(messages, options.sessionId);
