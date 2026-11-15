@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { adminCommandNames } from "../src/cli/tree";
+import { palPkg } from "../src/core/paths";
 import {
+  extractEnvVars,
   shippedSkillNames,
   validateReadmeSync as validateAgainst,
+  WATCHED_PATHS,
 } from "../src/core/readme-sync";
 
 const validateReadmeSync = () => validateAgainst(adminCommandNames());
@@ -48,6 +53,20 @@ describe("README sync", () => {
     }
 
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("environment variable extraction", () => {
+  test("finds the API key the inference dispatcher reads", () => {
+    expect(extractEnvVars()).toContain("PAL_ANTHROPIC_API_KEY");
+  });
+});
+
+describe("watched paths", () => {
+  test("a change to the inference dispatcher triggers the README check", () => {
+    const dispatcher = "src/inference/inference.ts";
+    expect(existsSync(resolve(palPkg(), dispatcher))).toBe(true);
+    expect(WATCHED_PATHS).toContain(dispatcher);
   });
 });
 

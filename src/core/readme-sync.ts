@@ -25,7 +25,7 @@ export const WATCHED_PATHS = [
 ];
 
 /** Extract PAL_* env var names from paths.ts + API keys from source */
-function extractEnvVars(): string[] {
+export function extractEnvVars(): string[] {
   const pkg = palPkg();
   const vars: Set<string> = new Set();
 
