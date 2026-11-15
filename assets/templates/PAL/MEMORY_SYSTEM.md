@@ -20,6 +20,9 @@ memory/
 │   ├── ratings.jsonl                   # Append-only rating signals (explicit + implicit)
 │   └── interaction/YYYY-MM.jsonl       # Measured features of each user turn (never the text)
 │
+├── content/tool-output/YYYY-MM.jsonl   # Whole result of each tool call, keyed by its tool_call event id
+│                                       # (withheld for a call on a sensitive path)
+│
 ├── relationship/
 │   └── opinions-context.md             # Approved opinions, rendered for native loading
 │

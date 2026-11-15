@@ -7,6 +7,7 @@ export type StoreName =
   | "transcripts"
   | "events"
   | "event-text"
+  | "tool-output"
   | "ledger"
   | "ratings"
   | "claim-checks"
@@ -52,6 +53,14 @@ const STORES: readonly RecordedStore[] = [
     name: "event-text",
     group: "bronze",
     dir: () => ensureDir(resolve(paths.content(), "events")),
+    files: "<YYYY-MM>.jsonl",
+    appendOnly: true,
+    alsoInEventLog: true,
+  },
+  {
+    name: "tool-output",
+    group: "bronze",
+    dir: () => ensureDir(resolve(paths.content(), "tool-output")),
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
