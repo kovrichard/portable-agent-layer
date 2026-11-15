@@ -25,7 +25,7 @@ const PASTED_RE = /<pasted_content\b[^>]*>([\s\S]*?)<\/pasted_content[^>]*>/gi;
 const IMAGE_RE = /\[Image #\d+\]/g;
 const COMMAND_TAG_RE = /<command-name>\s*\/?([\w:-]+)\s*<\/command-name>/;
 const SLASH_RE = /^\/([\w:-]+)(?:\s|$)/;
-const MODE_RE = /═+\s*PAL(?:\s*\|\s*([A-Z]+))?\s*═+/;
+export const MODE_RE = /═+\s*PAL(?:\s*\|\s*([A-Z]+))?\s*═+/;
 
 function tokens(text: string): string[] {
   return text.toLowerCase().match(/[\p{L}']+/gu) ?? [];

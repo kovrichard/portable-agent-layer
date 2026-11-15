@@ -310,6 +310,11 @@ function trackOf(session: string): SessionTrack {
   return readTracks()[session] ?? { updated: "", recent: [] };
 }
 
+/** The id of the session's latest `turn` event, or null when none was logged. */
+export function lastTurnIdOf(session: string): string | null {
+  return trackOf(session).lastTurnId ?? null;
+}
+
 /** Called when the agent finishes a reply, so the next turn can be measured against it. */
 export function recordReply(
   session: string,
