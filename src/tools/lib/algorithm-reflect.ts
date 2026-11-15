@@ -27,6 +27,7 @@ export interface AlgorithmReflection extends RecordAttribution {
   q3: string;
   /** general = the improvement ideas generalize to the algorithm; task-specific = bound to this task. */
   scope: "general" | "task-specific";
+  session?: string;
 }
 
 export interface ReflectionInput {
@@ -39,6 +40,7 @@ export interface ReflectionInput {
   criteria_failed?: number;
   sentiment?: number;
   scope?: string;
+  session?: string;
 }
 
 /** An absent flag reads as its default; a non-numeric one reads as NaN, not zero. */
@@ -76,6 +78,7 @@ export function buildReflection(
     q2: input.q2,
     q3: input.q3,
     scope: scopeOf(input.scope),
+    ...(input.session ? { session: input.session } : {}),
   };
 }
 

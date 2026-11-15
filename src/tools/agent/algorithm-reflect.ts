@@ -12,6 +12,7 @@
 import { appendFileSync } from "node:fs";
 import { storeDir } from "../../bronze/bronze";
 import { paths } from "../../core/paths";
+import { progressSession } from "../../hooks/lib/progress-session";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { emit } from "../lib/emit";
@@ -73,6 +74,7 @@ export const command = leaf({
         criteria_failed: intOr(values.failed, 0),
         sentiment: intOr(values.sentiment, 5),
         scope: values.scope,
+        session: progressSession(),
       })
     );
   },
