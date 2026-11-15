@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "../../core/paths";
-import { readProject, writeProject } from "../../hooks/lib/projects";
+import { readProject, writeProject } from "../../progress/projects";
 import type { Migration, MigrationResult } from "./migration";
 
 function rewriteSoTheWriterMovesThePathToABinding(

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { extractFallbackName, labelFromModel } from "../src/hooks/lib/session-names";
+import { extractFallbackName, labelFromModel } from "../src/progress/session-names";
 
 describe("labelFromModel", () => {
   test("a clean four-word answer becomes the label", () => {

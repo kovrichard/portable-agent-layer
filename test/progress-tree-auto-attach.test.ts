@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
-import { appendEvent, readEvents, readTree } from "../src/hooks/lib/progress-tree";
+import { appendEvent, readEvents, readTree } from "../src/progress/progress-tree";
 import {
   attach,
   attachments,

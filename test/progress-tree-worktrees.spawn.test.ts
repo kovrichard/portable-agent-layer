@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
-import { attachGitProgress } from "../src/hooks/lib/progress-tree-git";
-import { settleAttachedPrs } from "../src/hooks/lib/progress-tree-prs";
-import { cleanUpNodeWorktrees } from "../src/hooks/lib/progress-tree-worktrees";
+import { appendEvent, readTree } from "../src/progress/progress-tree";
+import { attachGitProgress } from "../src/progress/progress-tree-git";
+import { settleAttachedPrs } from "../src/progress/progress-tree-prs";
+import { cleanUpNodeWorktrees } from "../src/progress/progress-tree-worktrees";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 

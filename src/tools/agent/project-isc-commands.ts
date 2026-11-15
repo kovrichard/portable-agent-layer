@@ -1,5 +1,5 @@
-import { logCommitment } from "../../hooks/lib/commitment-events";
-import { type ProjectProgress, writeProject } from "../../hooks/lib/projects";
+import { logCommitment } from "../../progress/commitment-events";
+import { type ProjectProgress, writeProject } from "../../progress/projects";
 import { type Leaf, leaf, UsageError } from "../lib/command";
 import {
   archiveLine,

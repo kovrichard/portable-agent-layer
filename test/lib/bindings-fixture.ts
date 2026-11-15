@@ -12,7 +12,7 @@ export function freshBindingsHome(file: string): string {
 }
 
 export async function seedLib() {
-  return await import("../../src/hooks/lib/projects");
+  return await import("../../src/progress/projects");
 }
 
 export async function addProject(name: string, path: string) {

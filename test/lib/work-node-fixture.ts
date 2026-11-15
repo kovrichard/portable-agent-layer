@@ -1,4 +1,4 @@
-import { appendEvent } from "../../src/hooks/lib/progress-tree";
+import { appendEvent } from "../../src/progress/progress-tree";
 
 interface SeededNode {
   title?: string;

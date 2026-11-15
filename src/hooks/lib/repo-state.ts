@@ -7,8 +7,8 @@ import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
 import { appendEvent, logQuietly } from "../../bronze/events";
 import { isEnabled } from "../../core/settings";
-import { mergedWorktrees } from "./merged-worktrees";
-import { readAllProjects, resolveProjectFromCwd } from "./projects";
+import { mergedWorktrees } from "../../progress/merged-worktrees";
+import { readAllProjects, resolveProjectFromCwd } from "../../progress/projects";
 
 const GIT_TIMEOUT_MS = 1000;
 

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { captureWorkSession } from "../src/hooks/handlers/work-session";
-import { readSession } from "../src/hooks/lib/work-tracking";
+import { readSession } from "../src/progress/work-tracking";
 import { freshTestDir } from "./lib/test-home";
 
 beforeEach(() => {

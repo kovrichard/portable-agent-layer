@@ -8,7 +8,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { paths } from "../core/paths";
 
 export interface CaptureEntry {
   messageCount: number;

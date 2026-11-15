@@ -7,8 +7,8 @@
  */
 
 import { raw as rawSettings, reload, write as writeSettings } from "../../core/settings";
-import { logCommitment } from "../../hooks/lib/commitment-events";
-import { readProject, writeProject } from "../../hooks/lib/projects";
+import { logCommitment } from "../../progress/commitment-events";
+import { readProject, writeProject } from "../../progress/projects";
 import { completeIsc, type IscSections, reopenIsc } from "../lib/project-isc";
 
 export type WriteOutcome =

@@ -10,8 +10,8 @@ import {
   type NodeStatus,
   readEvents,
   type WorkEvent,
-} from "../../hooks/lib/progress-tree";
-import { readAllProjects } from "../../hooks/lib/projects";
+} from "../../progress/progress-tree";
+import { readAllProjects } from "../../progress/projects";
 
 const DAY_MS = 86_400_000;
 const FRESH_DAYS = 7;

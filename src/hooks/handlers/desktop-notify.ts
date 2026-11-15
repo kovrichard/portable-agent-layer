@@ -6,7 +6,7 @@
 import { basename } from "node:path";
 import { notify } from "../../core/notify";
 import { identity } from "../../core/settings";
-import { readSessionNames } from "../lib/session-names";
+import { readSessionNames } from "../../progress/session-names";
 
 export async function notifyDesktop(sessionId?: string): Promise<void> {
   await notify(identity().ai.name, resolveBody(sessionId));

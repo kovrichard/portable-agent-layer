@@ -83,7 +83,7 @@ describe("v4 paths-to-bindings", () => {
 
   test("a record already in canonical form comes back byte-identical apart from the path", async () => {
     const dir = checkout("beta");
-    const { writeProject, readProject } = await import("../src/hooks/lib/projects");
+    const { writeProject, readProject } = await import("../src/progress/projects");
     writeProject({
       name: "beta",
       path: dir,

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
 import {
   deadlineFrom,
   newRun,
@@ -15,6 +14,7 @@ import {
   unattendedStopReason,
 } from "../src/hooks/lib/run-mode-gate";
 import { decideRefusal } from "../src/hooks/lib/security-gate";
+import { scopeOf } from "../src/progress/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 const CWD = "/work/run-app";

@@ -9,7 +9,7 @@ import {
   type MergedWorktree,
   mergedWorktrees,
   pruneMergedWorktrees,
-} from "../hooks/lib/merged-worktrees";
+} from "../progress/merged-worktrees";
 import { log } from "../targets/log";
 import { group, leaf } from "../tools/lib/command";
 

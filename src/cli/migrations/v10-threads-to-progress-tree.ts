@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { resolveAnchor } from "../../core/anchor";
-import { appendEvent, scopeOf } from "../../hooks/lib/progress-tree";
+import { appendEvent, scopeOf } from "../../progress/progress-tree";
 import { readThreads, type Thread } from "../../tools/lib/thread";
 import type { Migration, MigrationResult } from "./migration";
 import { EVENTS_FILE, newProgressTreeFolder } from "./v9-progress-tree-names";

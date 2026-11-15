@@ -5,7 +5,7 @@
 
 import { loggedEventIds } from "../../../bronze/events";
 import { eventLogEnabled } from "../../../core/settings";
-import { readAllProjects } from "../../../hooks/lib/projects";
+import { readAllProjects } from "../../../progress/projects";
 import { backfillEntities } from "./entities";
 import { backfillGit } from "./git";
 import { backfillLedger } from "./ledger";

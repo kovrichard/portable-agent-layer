@@ -3,7 +3,7 @@
  * stopped, the decisions and artifacts of each piece of work.
  */
 
-import { progressSession } from "../hooks/lib/progress-session";
+import { progressSession } from "../progress/progress-session";
 import {
   ARTIFACT_KINDS,
   type ArtifactKind,
@@ -14,19 +14,19 @@ import {
   type ScopeTree,
   scopeOf,
   type WorkNode,
-} from "../hooks/lib/progress-tree";
+} from "../progress/progress-tree";
 import {
   renderNodeDetail,
   renderSessionContext,
   renderTreeList,
   suffix,
-} from "../hooks/lib/progress-tree-render";
-import { openSessionNode } from "../hooks/lib/progress-tree-session-node";
-import { similarNodes } from "../hooks/lib/progress-tree-tidy";
+} from "../progress/progress-tree-render";
+import { openSessionNode } from "../progress/progress-tree-session-node";
+import { similarNodes } from "../progress/progress-tree-tidy";
 import {
   cleanUpNodeWorktrees,
   type WorktreeCleanup,
-} from "../hooks/lib/progress-tree-worktrees";
+} from "../progress/progress-tree-worktrees";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 const SCOPE = {

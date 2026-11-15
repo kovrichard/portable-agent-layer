@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ProjectProgress } from "../src/hooks/lib/projects";
+import type { ProjectProgress } from "../src/progress/projects";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/projects");
+  return await import("../src/progress/projects");
 }
 
 function project(name: string, path?: string): ProjectProgress {

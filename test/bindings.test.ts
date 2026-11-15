@@ -19,7 +19,7 @@ beforeEach(() => {
 async function lib() {
   return {
     ...(await import("../src/core/project-bindings")),
-    ...(await import("../src/hooks/lib/bindings")),
+    ...(await import("../src/progress/bindings")),
   };
 }
 

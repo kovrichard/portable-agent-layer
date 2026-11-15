@@ -8,8 +8,8 @@
 
 import { loadMachine } from "../../core/machine";
 import { autoUpdateStatus, spawnAutoUpdate } from "../../hooks/lib/auto-update";
-import { readAllProjects } from "../../hooks/lib/projects";
-import { isServesKind, setServes } from "../../hooks/lib/serves";
+import { readAllProjects } from "../../progress/projects";
+import { isServesKind, setServes } from "../../progress/serves";
 import { PAGE_OUTCOMES } from "../ledger/outcomes";
 import { type LedgerFilter, ledgerFiles, parseSince } from "../ledger/query";
 import { ledgerView } from "../ledger/view";

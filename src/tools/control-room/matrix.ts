@@ -11,19 +11,15 @@
  * with the user instead of hiding from them.
  */
 
-import {
-  type GoalProgress,
-  progressFor,
-  readGoalLinks,
-} from "../../hooks/lib/goal-links";
+import { dueFrom, readTelosGoals, type TelosGoal } from "../../opinions/telos-goals";
+import { type GoalProgress, progressFor, readGoalLinks } from "../../progress/goal-links";
 import {
   type ProjectProgress,
   readAllProjects,
   type ServesAuthority,
   type ServesKind,
-} from "../../hooks/lib/projects";
-import { isImportant, SERVES_MEANING } from "../../hooks/lib/serves";
-import { dueFrom, readTelosGoals, type TelosGoal } from "../../opinions/telos-goals";
+} from "../../progress/projects";
+import { isImportant, SERVES_MEANING } from "../../progress/serves";
 import { parseIscs } from "../lib/project-isc";
 import { type ControlRoomPrefs, readPrefs } from "./prefs";
 import { readSnoozes, snoozedUntil } from "./snooze";

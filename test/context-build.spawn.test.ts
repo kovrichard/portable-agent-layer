@@ -3,8 +3,8 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
 import { buildSystemReminder } from "../src/hooks/lib/context";
-import { appendEvent } from "../src/hooks/lib/progress-tree";
-import { writeProject } from "../src/hooks/lib/projects";
+import { appendEvent } from "../src/progress/progress-tree";
+import { writeProject } from "../src/progress/projects";
 import { freshPalHomeEachTest } from "./lib/context-build-fixture";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 

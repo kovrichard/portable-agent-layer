@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { appendEvent, readEvents, readTree } from "../src/hooks/lib/progress-tree";
+import { appendEvent, readEvents, readTree } from "../src/progress/progress-tree";
 import {
   type GhRunner,
   ghPrView,
   settleAttachedPrs,
-} from "../src/hooks/lib/progress-tree-prs";
+} from "../src/progress/progress-tree-prs";
 import { freshTestDir } from "./lib/test-home";
 
 const MERGED = {

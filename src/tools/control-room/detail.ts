@@ -12,8 +12,8 @@ import {
   readProject,
   type ServesAuthority,
   type ServesKind,
-} from "../../hooks/lib/projects";
-import { SERVES_MEANING } from "../../hooks/lib/serves";
+} from "../../progress/projects";
+import { SERVES_MEANING } from "../../progress/serves";
 import { anchorSlugOf, queryLedger } from "../ledger/query";
 import { type LedgerViewRow, viewRows } from "../ledger/view";
 import { type Isc, parseIscs } from "../lib/project-isc";

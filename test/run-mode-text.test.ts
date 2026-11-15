@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
 import {
   clearRun,
   DEFAULT_UNATTENDED_RULES,
@@ -23,6 +22,7 @@ import {
   runModeRefusal,
   unattendedStopReason,
 } from "../src/hooks/lib/run-mode-gate";
+import { scopeOf } from "../src/progress/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 const CWD = "/work/run-text";

@@ -6,7 +6,7 @@ import {
   checkPendingMigrations,
   runMigrate,
 } from "../src/cli/migrate";
-import { appendEvent, buildTree, readEvents } from "../src/hooks/lib/progress-tree";
+import { appendEvent, buildTree, readEvents } from "../src/progress/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 const MIGRATION = "v10-threads-to-progress-tree";

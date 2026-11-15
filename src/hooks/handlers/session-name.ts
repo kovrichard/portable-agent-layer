@@ -17,7 +17,7 @@ import {
   labelFromModel,
   readSessionNames,
   writeSessionName,
-} from "../lib/session-names";
+} from "../../progress/session-names";
 
 const NAME_PROMPT =
   "You generate concise 4-word session titles for AI assistant sessions. " +

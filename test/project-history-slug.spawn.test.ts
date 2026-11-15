@@ -53,7 +53,7 @@ function folderInRegistry(slug: string): string {
 describe("history routing", () => {
   test("a project checked out under a different directory name owns its history", async () => {
     const checkout = registerProject("alpha", "workspace");
-    const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
+    const { appendProjectHistory } = await import("../src/progress/work-tracking");
 
     appendProjectHistory(checkout, entry("did the thing"));
 
@@ -65,7 +65,7 @@ describe("history routing", () => {
     const checkout = registerProject("beta", "beta");
     const nested = resolve(checkout, "src", "server");
     mkdirSync(nested, { recursive: true });
-    const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
+    const { appendProjectHistory } = await import("../src/progress/work-tracking");
 
     appendProjectHistory(nested, entry("worked deeper in the tree"));
 
@@ -76,7 +76,7 @@ describe("history routing", () => {
   test("an unregistered directory parks its history and mints no project folder", async () => {
     const loose = resolve(HOME, "checkouts", "untracked");
     mkdirSync(loose, { recursive: true });
-    const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
+    const { appendProjectHistory } = await import("../src/progress/work-tracking");
 
     appendProjectHistory(loose, entry("ad-hoc session"));
 
@@ -87,7 +87,7 @@ describe("history routing", () => {
   test("what was written is what is read back", async () => {
     const checkout = registerProject("alpha", "workspace");
     const { appendProjectHistory, readProjectHistory } = await import(
-      "../src/hooks/lib/work-tracking"
+      "../src/progress/work-tracking"
     );
 
     appendProjectHistory(checkout, entry("did the thing"));
@@ -98,7 +98,7 @@ describe("history routing", () => {
   test("a project's last session is found by name, from any folder", async () => {
     const checkout = registerProject("alpha", "workspace");
     const { appendProjectHistory, lastSessionTitle } = await import(
-      "../src/hooks/lib/work-tracking"
+      "../src/progress/work-tracking"
     );
 
     appendProjectHistory(checkout, entry("first"));
@@ -111,7 +111,7 @@ describe("history routing", () => {
   test("a session keeps one entry, its latest summary", async () => {
     const checkout = registerProject("alpha", "workspace");
     const { appendProjectHistory, readProjectHistory } = await import(
-      "../src/hooks/lib/work-tracking"
+      "../src/progress/work-tracking"
     );
 
     appendProjectHistory(checkout, { ...entry("early summary"), session: "s1" });
@@ -133,7 +133,7 @@ describe("parked history finds its project", () => {
   async function parkUnder(dirName: string, title: string): Promise<string> {
     const loose = resolve(HOME, "checkouts", dirName);
     mkdirSync(loose, { recursive: true });
-    const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
+    const { appendProjectHistory } = await import("../src/progress/work-tracking");
     appendProjectHistory(loose, entry(title));
 
     return loose;
@@ -141,7 +141,7 @@ describe("parked history finds its project", () => {
 
   test("moves in the moment its project is created here, with no migration run", async () => {
     const loose = await parkUnder("delta", "before the project existed");
-    const { writeProject } = await import("../src/hooks/lib/projects");
+    const { writeProject } = await import("../src/progress/projects");
 
     writeProject({
       name: "delta",
@@ -161,7 +161,7 @@ describe("parked history finds its project", () => {
 
   test("never mints a project folder for a binding with no project record", async () => {
     const loose = await parkUnder("ghost", "no record anywhere");
-    const { writeBinding } = await import("../src/hooks/lib/bindings");
+    const { writeBinding } = await import("../src/progress/bindings");
 
     writeBinding("ghost", loose);
 
@@ -175,7 +175,7 @@ describe("parked history finds its project", () => {
     mkdirSync(other, { recursive: true });
     registerProject("first", "shared");
     registerProject("second", "shared");
-    const { writeBindings } = await import("../src/hooks/lib/bindings");
+    const { writeBindings } = await import("../src/progress/bindings");
 
     writeBindings({ first: loose, second: other });
 
@@ -235,7 +235,7 @@ describe("v6 history-slugs", () => {
   test("folds parked history back in once its project is registered", async () => {
     const loose = resolve(HOME, "checkouts", "gamma");
     mkdirSync(loose, { recursive: true });
-    const { appendProjectHistory } = await import("../src/hooks/lib/work-tracking");
+    const { appendProjectHistory } = await import("../src/progress/work-tracking");
     appendProjectHistory(loose, entry("before registration"));
 
     registerProject("gamma", "gamma");

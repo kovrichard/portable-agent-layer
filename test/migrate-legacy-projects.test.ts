@@ -3,8 +3,8 @@ import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { v1Projects } from "../src/cli/migrations/v1-projects";
 import { v2ThreadsToIsc } from "../src/cli/migrations/v2-threads-to-isc";
 import { v10ThreadsToProgressTree } from "../src/cli/migrations/v10-threads-to-progress-tree";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
-import { readProject } from "../src/hooks/lib/projects";
+import { scopeOf } from "../src/progress/progress-tree";
+import { readProject } from "../src/progress/projects";
 import {
   boundProject,
   homeFile,

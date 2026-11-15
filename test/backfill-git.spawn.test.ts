@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { resolve } from "node:path";
 import { PAL_REPO_URL } from "../src/core/remote";
 import { reload } from "../src/core/settings";
-import { writeProject } from "../src/hooks/lib/projects";
+import { writeProject } from "../src/progress/projects";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";

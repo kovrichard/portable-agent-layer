@@ -7,8 +7,8 @@ import {
   type AlgorithmRunReport,
   algorithmRunReport,
   type ReportedEvent,
-} from "../hooks/lib/algorithm-run-report";
-import { readEvents } from "../hooks/lib/progress-tree";
+} from "../progress/algorithm-run-report";
+import { readEvents } from "../progress/progress-tree";
 import { group, leaf, UsageError } from "../tools/lib/command";
 
 function parseSince(raw: string | undefined): Date {

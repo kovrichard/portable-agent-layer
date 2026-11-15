@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { sameArtifact } from "../src/hooks/lib/progress-artifact-match";
+import { sameArtifact } from "../src/progress/progress-artifact-match";
 
 function pr(a: string, b: string): boolean {
   return sameArtifact({ kind: "pr", ref: a }, { kind: "pr", ref: b });

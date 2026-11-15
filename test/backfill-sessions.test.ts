@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { type SessionRecord, writeSession } from "../src/hooks/lib/work-tracking";
+import { type SessionRecord, writeSession } from "../src/progress/work-tracking";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { logSessionEnd } from "../src/usage/session-events";
 import { freshTestDir } from "./lib/test-home";

@@ -13,8 +13,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
-import { mergeJsonlLines } from "../../core/import-merge";
-import { logError } from "../../core/log";
+import { mergeJsonlLines } from "../core/import-merge";
+import { logError } from "../core/log";
 
 type Bindings = Record<string, string>;
 

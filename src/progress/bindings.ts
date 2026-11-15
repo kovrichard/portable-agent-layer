@@ -20,12 +20,8 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { palHome, toPath } from "../../core/paths";
-import {
-  type Bindings,
-  bindingsFilePath,
-  readBindings,
-} from "../../core/project-bindings";
+import { palHome, toPath } from "../core/paths";
+import { type Bindings, bindingsFilePath, readBindings } from "../core/project-bindings";
 import { adoptParkedHistory } from "./parked-history";
 
 /**

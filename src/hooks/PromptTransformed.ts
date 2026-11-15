@@ -4,11 +4,11 @@
  */
 
 import { isPalSpawnedInference } from "../core/spawn-guard";
-import { recordHookRunOnExit } from "../usage/hook-run";
 import {
   type TransformedPromptPayload,
   transformedPromptResponse,
-} from "./lib/parked-context";
+} from "../progress/parked-context";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

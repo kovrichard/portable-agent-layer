@@ -9,7 +9,11 @@
  */
 
 import { logDebug, logError } from "../../core/log";
-import { readAllProjects, resolveProjectFromCwd, writeProject } from "../lib/projects";
+import {
+  readAllProjects,
+  resolveProjectFromCwd,
+  writeProject,
+} from "../../progress/projects";
 
 export async function projectTouch(): Promise<void> {
   try {

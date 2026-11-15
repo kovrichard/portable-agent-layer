@@ -31,6 +31,10 @@ async function usage<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "usage", mod));
 }
 
+async function progress<T>(mod: string): Promise<T> {
+  return await import(resolve(PAL_DIR, "src", "progress", mod));
+}
+
 type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
@@ -88,8 +92,8 @@ async function loadLoggingLibs() {
     await usage<typeof import("../../usage/tool-events")>("tool-events.ts");
   const { recordSlurpCheck } =
     await lib<typeof import("../../hooks/lib/slurp-check")>("slurp-check.ts");
-  const { attachProgressFromToolCall } = await lib<
-    typeof import("../../hooks/lib/progress-tree-tool")
+  const { attachProgressFromToolCall } = await progress<
+    typeof import("../../progress/progress-tree-tool")
   >("progress-tree-tool.ts");
   const { logAttention } =
     await usage<typeof import("../../usage/attention-events")>("attention-events.ts");

@@ -16,7 +16,7 @@ describe("target paths", () => {
   test("are anchored to the project so they survive a different mount", async () => {
     const root = resolve(HOME, "work", "app");
     mkdirSync(resolve(root, "src"), { recursive: true });
-    const { writeProject } = await import("../src/hooks/lib/projects");
+    const { writeProject } = await import("../src/progress/projects");
     writeProject({
       name: "demo",
       path: root,

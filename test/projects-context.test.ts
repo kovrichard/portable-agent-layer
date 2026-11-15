@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, setSystemTime, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { type ProjectProgress, writeProject } from "../src/hooks/lib/projects";
-import { loadActiveProjectsContext } from "../src/hooks/lib/projects-context";
+import { type ProjectProgress, writeProject } from "../src/progress/projects";
+import { loadActiveProjectsContext } from "../src/progress/projects-context";
 import { fakeProject, projectsHome } from "./lib/projects-lib-fixture";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { outsideRepoHome } from "./lib/test-home";

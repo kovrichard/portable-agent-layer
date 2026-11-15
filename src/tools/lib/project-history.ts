@@ -6,7 +6,7 @@
 
 import { appendEvent } from "../../bronze/events";
 import type { RecordAttribution } from "../../core/actor";
-import type { ProjectProgress } from "../../hooks/lib/projects";
+import type { ProjectProgress } from "../../progress/projects";
 import { parseIscs } from "./project-isc";
 
 export interface HistoryRow {

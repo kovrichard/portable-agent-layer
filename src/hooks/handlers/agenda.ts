@@ -13,11 +13,11 @@
 import { logDebug, logError } from "../../core/log";
 import { canInfer, inference } from "../../inference/inference";
 import { readTelosGoals } from "../../opinions/telos-goals";
+import { type AgendaMove, readAgenda, writeAgenda } from "../../progress/agenda-store";
+import { linkInputs, readGoalLinks, writeGoalLinks } from "../../progress/goal-links";
+import { readAllProjects } from "../../progress/projects";
+import { isServesKind, SERVES_KINDS, setServes } from "../../progress/serves";
 import { matrix } from "../../tools/control-room/matrix";
-import { type AgendaMove, readAgenda, writeAgenda } from "../lib/agenda-store";
-import { linkInputs, readGoalLinks, writeGoalLinks } from "../lib/goal-links";
-import { readAllProjects } from "../lib/projects";
-import { isServesKind, SERVES_KINDS, setServes } from "../lib/serves";
 
 const FRESH_HOURS = 6;
 const MAX_PROJECTS_PER_GUESS = 40;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AlgorithmTurnFacts } from "../src/hooks/lib/algorithm-run-facts";
+import type { AlgorithmTurnFacts } from "../src/progress/algorithm-run-facts";
 import {
   cachedState,
   emptyRunState,
@@ -7,7 +7,7 @@ import {
   replayRuns,
   type StopTurn,
   stopEvents,
-} from "../src/hooks/lib/algorithm-run-replay";
+} from "../src/progress/algorithm-run-replay";
 
 const T = (minute: number) => `2026-11-15T10:${String(minute).padStart(2, "0")}:00.000Z`;
 

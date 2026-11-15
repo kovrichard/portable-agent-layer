@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { appendEvent, EVENT_FIELDS } from "../src/bronze/events";
 import { paths } from "../src/core/paths";
 import { reload } from "../src/core/settings";
+import { stopTurn } from "../src/hooks/lib/stop";
 import {
   algorithmRunsCacheFile,
   loadRunState,
@@ -11,8 +12,7 @@ import {
   recordAlgorithmTurn,
   recordAlgorithmTurnQuietly,
   turnTexts,
-} from "../src/hooks/lib/algorithm-runs";
-import { stopTurn } from "../src/hooks/lib/stop";
+} from "../src/progress/algorithm-runs";
 import { run as reflect } from "../src/tools/agent/algorithm-reflect";
 import {
   algorithmReply,

@@ -4,7 +4,7 @@ import { algorithmRunCommand, formatReport, reportSince } from "../src/cli/algor
 import {
   algorithmRunReport,
   type ReportedEvent,
-} from "../src/hooks/lib/algorithm-run-report";
+} from "../src/progress/algorithm-run-report";
 import { runCommand } from "../src/tools/lib/command";
 import { enterNode, inSandbox, makeSandbox } from "./lib/algorithm-run-fixture";
 import { freshTestDir } from "./lib/test-home";

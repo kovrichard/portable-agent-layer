@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
+import { appendEvent, readTree } from "../src/progress/progress-tree";
 import {
   renderNodeDetail,
   renderPromptLine,
   renderSessionContext,
   renderTreeList,
-} from "../src/hooks/lib/progress-tree-render";
+} from "../src/progress/progress-tree-render";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;

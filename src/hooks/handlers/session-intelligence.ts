@@ -22,11 +22,11 @@ import {
   isRecaptureWorthwhile,
   markCaptured,
   readCapture,
-} from "../lib/capture-store";
-import { progressSession } from "../lib/progress-session";
-import { recordWhereSessionStopped } from "../lib/progress-tree-session-end";
+} from "../../progress/capture-store";
+import { progressSession } from "../../progress/progress-session";
+import { recordWhereSessionStopped } from "../../progress/progress-tree-session-end";
+import { appendProjectHistory } from "../../progress/work-tracking";
 import { sessionStatusJudgment } from "../lib/shadow-judgments";
-import { appendProjectHistory } from "../lib/work-tracking";
 
 // ── JSON schema for merged Haiku call ──
 

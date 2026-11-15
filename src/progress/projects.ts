@@ -18,15 +18,15 @@ import {
 } from "node:fs";
 import * as hostPath from "node:path";
 import { basename, resolve } from "node:path";
-import { parse, stringify } from "../../core/frontmatter";
-import { palHome, paths } from "../../core/paths";
+import { parse, stringify } from "../core/frontmatter";
+import { palHome, paths } from "../core/paths";
 import {
   type Bindings,
   type PlatformPath,
   projectRootContaining,
   readBindings,
-} from "../../core/project-bindings";
-import { detectRemote } from "../../core/remote";
+} from "../core/project-bindings";
+import { detectRemote } from "../core/remote";
 import { writeBinding, writeBindings } from "./bindings";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";

@@ -124,7 +124,7 @@ async function runPrune(
 }
 
 async function lib() {
-  return import("../src/hooks/lib/merged-worktrees");
+  return import("../src/progress/merged-worktrees");
 }
 
 function prunedEvents(): Record<string, unknown>[] {

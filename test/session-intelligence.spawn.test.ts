@@ -11,9 +11,9 @@ import {
   isRecaptureWorthwhile,
   markCaptured,
   readCapture,
-} from "../src/hooks/lib/capture-store";
-import { readTree, scopeOf } from "../src/hooks/lib/progress-tree";
-import { readProjectHistory } from "../src/hooks/lib/work-tracking";
+} from "../src/progress/capture-store";
+import { readTree, scopeOf } from "../src/progress/progress-tree";
+import { readProjectHistory } from "../src/progress/work-tracking";
 import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";

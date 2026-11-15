@@ -8,7 +8,7 @@ import {
   extractHandoff,
   readProjectHistory,
   writeSession,
-} from "../src/hooks/lib/work-tracking";
+} from "../src/progress/work-tracking";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

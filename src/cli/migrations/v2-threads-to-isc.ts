@@ -4,7 +4,7 @@ import {
   readAllProjects,
   readProject,
   writeProject,
-} from "../../hooks/lib/projects";
+} from "../../progress/projects";
 import { readThreads, type Thread, writeThreads } from "../../tools/lib/thread";
 import type { Migration, MigrationResult } from "./migration";
 

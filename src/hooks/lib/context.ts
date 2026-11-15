@@ -9,11 +9,11 @@ import { toPath } from "../../core/paths";
 import { sessionDir } from "../../core/session-dir";
 import * as settings from "../../core/settings";
 import { opinionsContext } from "../../opinions/adaptation-rules";
+import { loadProgressTreeContext } from "../../progress/progress-tree-context";
+import { loadActiveProjectsContext } from "../../progress/projects-context";
+import { lastSessionTitle } from "../../progress/work-tracking";
 import { dueNudgeSections } from "./daily-nudge";
-import { loadProgressTreeContext } from "./progress-tree-context";
-import { loadActiveProjectsContext } from "./projects-context";
 import { loadSteeringRules } from "./semi-static";
-import { lastSessionTitle } from "./work-tracking";
 
 /** Load and concatenate loadAtStartup files */
 function loadStartupFiles(): string {

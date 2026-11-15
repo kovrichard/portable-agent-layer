@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { paths } from "../../core/paths";
-import { readProject, writeProject } from "../../hooks/lib/projects";
-import { legacyJsonToProgress } from "../../hooks/lib/projects-legacy";
+import { readProject, writeProject } from "../../progress/projects";
+import { legacyJsonToProgress } from "../../progress/projects-legacy";
 import { ok } from "./project-io";
 
 export function cmdMigrate(): undefined {
