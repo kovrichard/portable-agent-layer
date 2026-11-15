@@ -5,6 +5,7 @@ import { buildSpawnGuardEnv } from "../../core/spawn-guard";
 import { agentFailureText, parseJsonFromOutput } from "./inference-prompt";
 import type { InferenceOptions, InferenceResult } from "./inference-types";
 import type { InferenceUsage } from "./inference-usage";
+import { type ClaudeAuthMode, noteClaudeLogin } from "./login-rejected";
 
 function firstLine(text: string): string | undefined {
   return text
@@ -128,6 +129,7 @@ export interface SpawnPlace {
   cwd?: string;
   env?: Record<string, string | undefined>;
   logTag?: string;
+  claudeAuth?: ClaudeAuthMode;
   /** Sees the final attempt's stdout whatever the outcome, timeouts included. */
   afterRun?: (rawStdout: string) => void;
 }
@@ -166,6 +168,7 @@ export async function inferenceViaCliSpawn(
   const attempt = await attemptWithEmptyAbortRetry(runOnce, log, started);
 
   place.afterRun?.(attempt.stdout);
+  noteClaudeLogin(place.claudeAuth, attempt);
   const elapsedMs = Date.now() - started;
   const usage = reply.usage(attempt.stdout);
   const result = attemptOutcome(attempt, opts, reply, log);

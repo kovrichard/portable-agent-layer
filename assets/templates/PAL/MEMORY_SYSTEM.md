@@ -41,6 +41,7 @@ memory/
 
 - `claude-login.json`: when the Claude login expires.
 - `health.json`: how many doctor findings fail and warn, and the worst one, written by every doctor report.
+- `login-rejected.json`: when a background Claude call was last rejected and in which auth mode; the next call that succeeds deletes it.
 
 ## Where to write
 

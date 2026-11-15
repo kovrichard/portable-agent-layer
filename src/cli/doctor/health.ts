@@ -6,6 +6,7 @@ import { cachedStatus, type UpdateCache } from "../../hooks/handlers/update-chec
 import type { AgentLogin } from "../../hooks/lib/agent-login";
 import { loggedClaudeAuthMode } from "../../hooks/lib/inference-agents";
 import { readLoginCache } from "../../hooks/lib/login-cache";
+import { CLAUDE_LOGIN_REJECTED } from "../../hooks/lib/login-rejected";
 import { checkPendingMigrations } from "../migrate";
 import { type Finding, failing, passed, warning } from "./finding";
 
@@ -19,7 +20,6 @@ interface ErrorContext {
   now: number;
 }
 
-const CLAUDE_LOGIN_EXPIRED = /Failed to authenticate/;
 const MINUTE_MS = 60_000;
 const LOG_IN_AGAIN = {
   say: "Log the Claude CLI in again",
@@ -58,7 +58,7 @@ export function hookErrorFindings(
   const log = resolve(palHome(), "debug", "debug.log");
 
   return groups.map((group) => {
-    if (CLAUDE_LOGIN_EXPIRED.test(group.last))
+    if (CLAUDE_LOGIN_REJECTED.test(group.last))
       return claudeLoginExpiredFinding(group, context);
     const times = group.count === 1 ? "once" : `${group.count} times`;
 

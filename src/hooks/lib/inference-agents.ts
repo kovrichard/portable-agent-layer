@@ -26,6 +26,7 @@ import {
   jsonLines,
   opencodeSpawnUsage,
 } from "./inference-usage";
+import type { ClaudeAuthMode } from "./login-rejected";
 import { inferenceEffort } from "./models";
 import { opencodeTierModel, writeInstructionFreeConfig } from "./opencode-config";
 
@@ -76,8 +77,6 @@ const CLAUDE_REPLY: CliReply = {
   usage: claudeSpawnUsage,
 };
 
-type ClaudeAuthMode = "token" | "native";
-
 function claudeAuthMode(): ClaudeAuthMode {
   return withPalEnv().CLAUDE_CODE_OAUTH_TOKEN ? "token" : "native";
 }
@@ -115,6 +114,7 @@ export async function inferenceViaClaudeSpawn(
     inferenceViaCliSpawn(bin, args, opts.user, opts, CLAUDE_REPLY, {
       env: credentialOverridesFor(mode),
       logTag: `auth=${mode}`,
+      claudeAuth: mode,
     });
   const system = opts.jsonSchema
     ? injectJsonSchemaInstruction(opts.system ?? "", opts.jsonSchema)
