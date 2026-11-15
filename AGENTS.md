@@ -56,7 +56,7 @@ A test that starts a subprocess (`Bun.spawn`, `node:child_process`) lives in a `
 
 Run the CLI against a sandboxed home with `PAL_HOME=./.test/cli.spawn/home bun src/cli/index.ts cli init`. `.test/cli.spawn/home/` is wiped at the start of `bun test test/cli.spawn.test.ts`. Every test home lives under `.test/`, one folder per test file, built by `test/lib/test-home.ts`. Tests set up only for themselves and never tear down; the framework (`test/setup.ts`) points `TMPDIR` at a per-process folder and removes it in `afterAll`, so a run, passing or failing, leaves nothing in the system temp folder. A run killed before `afterAll` has its folder removed by the next run.
 
-Nothing that starts Claude Code, a test or a one-off experiment, may leave a transcript in `~/.claude/projects`: PAL archives every transcript there and prompt-watch reads them as real sessions. Run `claude -p` with `--no-session-persistence`, or point `CLAUDE_CONFIG_DIR` at a folder under the test home.
+Nothing that starts Claude Code, a test or a one-off experiment, may leave a transcript in `~/.claude/projects`: PAL copies every transcript from that folder into `~/.pal/memory/content/claude`, and prompt-watch reads both as real sessions. Run `claude -p` with `--no-session-persistence`, or point `CLAUDE_CONFIG_DIR` at a folder under the test home.
 
 The control room's page is the one part of `src/` that is built rather than served from source: Bun's CSS bundler passes Tailwind's `@theme` / `@utility` directives through as unknown at-rules, so `vite.config.ts` builds `src/tools/control-room/ui/` into `ui/dist/`, which is gitignored and emitted at `prepack`.
 
