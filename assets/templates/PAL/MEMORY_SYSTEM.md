@@ -37,6 +37,8 @@ memory/
     └── <slug>/                         # Per-project history, progress
 ```
 
+`~/.pal/cache/` sits beside `memory/` and holds machine-local state that is rebuilt on the next read, such as `claude-login.json` (when the Claude login expires). Any file in it may be deleted at any time; nothing in it is a record, so export skips it.
+
 ## Where to write
 
 Almost everything in `state/`, `signals/`, `relationship/`, `learning/`, and `wisdom/` is hook-managed — **never edit these directly**. Use the relevant skill or tool instead.

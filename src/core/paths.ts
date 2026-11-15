@@ -130,6 +130,7 @@ export const paths = {
   transcriptHandoff: () => ensureDir(home("memory", "state", "transcript-handoff")),
   work: () => ensureDir(home("memory", "work")),
   backups: () => ensureDir(home("backups")),
+  cache: () => ensureDir(home("cache")),
   debug: () => ensureDir(home("debug")),
   serverState: () => home("server.json"),
 } as const;

@@ -1,10 +1,8 @@
 /**
  * Hook: SessionStart — Injects dynamic context + regenerates AGENTS.md if stale.
  *
- * Static context (TELOS, setup prompt) is loaded natively from AGENTS.md /
- * CLAUDE.md. This hook injects dynamic context only: the progress tree,
- * opinions, work state.
- *
+ * Static context (TELOS, setup prompt) loads natively from AGENTS.md / CLAUDE.md;
+ * this hook injects only the dynamic part: progress tree, opinions, work state.
  * Which agent gets what, in which envelope, is in lib/session-context.ts.
  */
 
@@ -18,6 +16,7 @@ import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { hookSessionId } from "./lib/hook-turn";
+import { refreshLoginOnStart } from "./lib/login-cache";
 import {
   contextEnvelope,
   contextForSource,
@@ -54,6 +53,7 @@ try {
 }
 
 heartbeatOnStart();
+refreshLoginOnStart();
 
 try {
   const active = getActiveAgent();

@@ -94,6 +94,7 @@ pal cli status        # check your setup
 | `pal cli cost` | What each month was paid against its API-equivalent cost, per agent |
 | `pal cli wrapped [--year <yyyy>]` | A year of your work in numbers, read from the event log |
 | `pal cli env [--refresh]` | The OS and script languages PAL tells every agent about; `--refresh` detects again after you install one |
+| `pal cli auth [--refresh] [--json]` | When the active agent's login expires (Claude only; other agents do not report it). Reads the answer cached at session start; `--refresh` asks the agent again |
 | `pal cli patterns` | How you work across projects, read from the event log |
 | `pal cli progress [show\|list\|open\|enter\|park\|wait\|done\|stopped\|decide\|attach\|follow-up]` | The progress tree: what you are on in this project, where it stopped, what is parked or waiting, and the decisions and artifacts on each node. Detours are child nodes and `done` returns to the parent. The active node rides along in every session and prompt, and your own commits attach to it at turn end |
 | `pal cli timebox [start\|status\|end]` | Stop work at a deadline: `start --for 15m` or `--until 18:00`. After the deadline every working tool call is refused except `pal cli` and edits to the report, so the agent stops and reports what it has |
