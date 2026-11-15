@@ -4,13 +4,13 @@
  * every confirmed correction again.
  */
 
+import { judge } from "../../inference/judge";
 import { readTurns, replaceTurns, type Turn, turnKey } from "./adaptation-turns";
 import {
   type CorrectionKind,
   hasCurrentKind,
   withCorrectionKind,
 } from "./correction-kind";
-import { judge } from "./judge";
 import { correctionKindJudgment, correctionKindOf } from "./rating-judgments";
 
 export type KindLabeller = (turn: Turn) => Promise<CorrectionKind | null>;

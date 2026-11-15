@@ -15,7 +15,7 @@ import { ratingsFile } from "../../bronze/signals";
 import { logDebug } from "../../core/log";
 import { ensureDir, paths } from "../../core/paths";
 import { extractKeywords, similarity } from "../../core/text-similarity";
-import { canInfer, inference } from "./inference";
+import { canInfer, inference } from "../../inference/inference";
 import { type FailureEntry, readFailures } from "./learning-store";
 
 // ── Types ──

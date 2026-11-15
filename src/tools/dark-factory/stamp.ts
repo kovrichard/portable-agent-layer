@@ -5,7 +5,7 @@ import {
   HAIKU_5_5_MODEL,
   OPUS_MODEL,
   SONNET_MODEL,
-} from "../../hooks/lib/models";
+} from "../../inference/models";
 
 type FactoryTier = "small" | "medium" | "large" | "flagship";
 

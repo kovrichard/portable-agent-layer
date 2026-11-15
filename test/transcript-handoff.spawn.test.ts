@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import * as realDetached from "../src/hooks/lib/detached-inference";
+import * as realDetached from "../src/inference/detached-inference";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { freshTestDir } from "./lib/test-home";
 
@@ -20,7 +20,7 @@ let recording = false;
 /** Taken before mock.module: afterwards the namespace import resolves to the mock itself. */
 const realSpawn = realDetached.spawnDetachedInference;
 
-mock.module("../src/hooks/lib/detached-inference", () => ({
+mock.module("../src/inference/detached-inference", () => ({
   ...realDetached,
   spawnDetachedInference: (scriptPath: string, args: string[], scope: string) => {
     if (!recording) return realSpawn(scriptPath, args, scope);

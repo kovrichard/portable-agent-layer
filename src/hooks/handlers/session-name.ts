@@ -10,8 +10,8 @@
  */
 
 import { logDebug, logError } from "../../core/log";
-import { spawnDetachedInference } from "../lib/detached-inference";
-import { canInfer, inference } from "../lib/inference";
+import { spawnDetachedInference } from "../../inference/detached-inference";
+import { canInfer, inference } from "../../inference/inference";
 import {
   extractFallbackName,
   labelFromModel,

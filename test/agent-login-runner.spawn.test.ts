@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { systemRunner } from "../src/hooks/lib/agent-login";
+import { systemRunner } from "../src/inference/agent-login";
 
 const bun = process.execPath;
 

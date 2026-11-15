@@ -51,8 +51,8 @@ test("pal cli judge reads a request from stdin", () => {
 
 test("the command is a thin wrapper: it imports judge and holds no HTTP or inference call", () => {
   const source = readFileSync(SRC, "utf-8");
-  expect(source).toMatch(/from "\.\.\/hooks\/lib\/judge"/);
+  expect(source).toMatch(/from "\.\.\/inference\/judge"/);
   expect(source).not.toMatch(/\bfetch\(/);
-  expect(source).not.toMatch(/hooks\/lib\/inference"/);
+  expect(source).not.toMatch(/inference\/inference"/);
   expect(source).not.toMatch(/logQuietly|appendEvent/);
 });

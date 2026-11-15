@@ -1,8 +1,8 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { type AgentType, getActiveAgent } from "../../core/agent";
-import { logError } from "../../core/log";
-import { paths } from "../../core/paths";
+import { type AgentType, getActiveAgent } from "../core/agent";
+import { logError } from "../core/log";
+import { paths } from "../core/paths";
 import {
   type AgentLogin,
   type CommandRunner,

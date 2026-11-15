@@ -5,8 +5,8 @@ import {
   buildOpenAiBody,
   inferenceViaApi,
   inferenceViaOpenAiApi,
-} from "../src/hooks/lib/inference-api";
-import type { InferenceOptions, InferenceResult } from "../src/hooks/lib/inference-types";
+} from "../src/inference/inference-api";
+import type { InferenceOptions, InferenceResult } from "../src/inference/inference-types";
 import { debugHome } from "./lib/fake-spawn";
 import { restoreEnv, savedEnv } from "./lib/inference-dispatch-fixture";
 

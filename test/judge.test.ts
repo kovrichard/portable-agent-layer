@@ -3,20 +3,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
 import { correctionKindRequest } from "../src/hooks/lib/correction-kind";
-import type { inference } from "../src/hooks/lib/inference";
-import {
-  JUDGE_ADAPTERS,
-  type JudgeAdapter,
-  judge,
-  TYPESAFE_DEFAULT_MODEL,
-} from "../src/hooks/lib/judge";
-import {
-  answersProblem,
-  type JudgeRequest,
-  type JudgeResult,
-  judgeRequestJson,
-} from "../src/hooks/lib/judgment";
-import { costOfUsage, MODEL_PRICING } from "../src/hooks/lib/models";
 import {
   correctionCheckJudgment,
   correctionCheckOf,
@@ -29,6 +15,20 @@ import {
   correctionCheckRequest,
   reactionRequest,
 } from "../src/hooks/lib/reaction-rating";
+import type { inference } from "../src/inference/inference";
+import {
+  JUDGE_ADAPTERS,
+  type JudgeAdapter,
+  judge,
+  TYPESAFE_DEFAULT_MODEL,
+} from "../src/inference/judge";
+import {
+  answersProblem,
+  type JudgeRequest,
+  type JudgeResult,
+  judgeRequestJson,
+} from "../src/inference/judgment";
+import { costOfUsage, MODEL_PRICING } from "../src/inference/models";
 import { freshTestDir } from "./lib/test-home";
 
 type Infer = typeof inference;

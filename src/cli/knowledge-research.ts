@@ -15,7 +15,7 @@ import {
   researchEntity,
   researchItem,
 } from "../hooks/lib/entity-research";
-import { inference } from "../hooks/lib/inference";
+import { inference } from "../inference/inference";
 import { leaf, UsageError } from "../tools/lib/command";
 
 interface ResearchValues {

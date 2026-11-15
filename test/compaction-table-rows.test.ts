@@ -7,7 +7,7 @@ import type { WindowEntry } from "../src/hooks/lib/compaction-backtest";
 import { freshTestDir } from "./lib/test-home";
 
 const nearLib = () => import("../src/hooks/lib/compaction-near");
-const modelsLib = () => import("../src/hooks/lib/models");
+const modelsLib = () => import("../src/inference/models");
 const backtestLib = () => import("../src/hooks/lib/compaction-backtest");
 const cliLib = () => import("../src/cli/compaction");
 

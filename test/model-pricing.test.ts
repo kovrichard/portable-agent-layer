@@ -4,7 +4,7 @@ import {
   MODEL_PRICING,
   PRICE_HISTORY,
   pricingFor,
-} from "../src/hooks/lib/models";
+} from "../src/inference/models";
 
 beforeEach(() => {
   delete PRICE_HISTORY["claude-opus-5"];

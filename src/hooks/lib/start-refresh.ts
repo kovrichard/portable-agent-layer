@@ -1,5 +1,5 @@
+import { refreshLoginOnStart } from "../../inference/login-cache";
 import { refreshHealthOnStart } from "./health-cache";
-import { refreshLoginOnStart } from "./login-cache";
 
 export function refreshCachesOnStart(
   refreshLogin: () => void = refreshLoginOnStart,

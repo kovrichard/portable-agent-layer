@@ -3,12 +3,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
 import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
-import { inference } from "../src/hooks/lib/inference";
+import { inference } from "../src/inference/inference";
 import {
   buildOpencodeArgs,
   extractOpencodeText,
-} from "../src/hooks/lib/inference-agents";
-import { buildCliPrompt } from "../src/hooks/lib/inference-prompt";
+} from "../src/inference/inference-agents";
+import { buildCliPrompt } from "../src/inference/inference-prompt";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";

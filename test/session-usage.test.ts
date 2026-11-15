@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { PRICE_HISTORY } from "../src/hooks/lib/models";
+import { PRICE_HISTORY } from "../src/inference/models";
 import {
   accumulateUsage,
   claudeProjectsDir,

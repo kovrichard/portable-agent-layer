@@ -4,7 +4,7 @@ import {
   poModel,
   poUnattendedCommand,
 } from "../assets/plugins/dark-factory/scripts/task.mjs";
-import { FABLE_MODEL } from "../src/hooks/lib/models";
+import { FABLE_MODEL } from "../src/inference/models";
 import { FACTORY_MODELS, ROLE_TIERS } from "../src/tools/dark-factory/stamp";
 
 describe("the product owner's model", () => {

@@ -16,7 +16,7 @@ import {
   researchSystem,
 } from "../src/hooks/lib/entity-research";
 import { acceptReview, pendingReviews } from "../src/hooks/lib/entity-review";
-import type { inference } from "../src/hooks/lib/inference";
+import type { inference } from "../src/inference/inference";
 import { ingestEntities } from "../src/tools/knowledge/ingest";
 import { load } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";

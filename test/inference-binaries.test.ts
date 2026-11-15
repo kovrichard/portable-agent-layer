@@ -14,7 +14,7 @@ import {
   hasCopilotBinary,
   hasCursorBinary,
   hasOpencodeBinary,
-} from "../src/hooks/lib/inference-binaries";
+} from "../src/inference/inference-binaries";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 

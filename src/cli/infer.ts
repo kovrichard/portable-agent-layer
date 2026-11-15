@@ -6,8 +6,8 @@
 
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { inference, plannedInferenceRoute } from "../hooks/lib/inference";
-import { INFERENCE_TIERS, type InferenceTier } from "../hooks/lib/models";
+import { inference, plannedInferenceRoute } from "../inference/inference";
+import { INFERENCE_TIERS, type InferenceTier } from "../inference/models";
 import { leaf } from "../tools/lib/command";
 
 const DEFAULT_TIMEOUT_SECONDS = 60;

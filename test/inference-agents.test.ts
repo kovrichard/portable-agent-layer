@@ -13,9 +13,9 @@ import {
   inferenceViaCopilotSpawn,
   inferenceViaOpencodeSpawn,
   loggedClaudeAuthMode,
-} from "../src/hooks/lib/inference-agents";
-import { schemaInstruction } from "../src/hooks/lib/inference-prompt";
-import type { InferenceOptions, InferenceResult } from "../src/hooks/lib/inference-types";
+} from "../src/inference/inference-agents";
+import { schemaInstruction } from "../src/inference/inference-prompt";
+import type { InferenceOptions, InferenceResult } from "../src/inference/inference-types";
 import { debugHome, type FakeRun, type SpawnCall, withFakeSpawn } from "./lib/fake-spawn";
 import { restoreEnv, savedEnv } from "./lib/inference-dispatch-fixture";
 

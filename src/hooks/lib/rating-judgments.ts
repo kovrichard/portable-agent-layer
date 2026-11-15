@@ -2,11 +2,6 @@
  * The rating handler's three judgments as System One questions, copied from the evaluated eval/system-one/questions.js, with each one's current small-model request as its fallback.
  */
 
-import {
-  type CorrectionKind,
-  correctionKindRequest,
-  parseCorrectionKind,
-} from "./correction-kind";
 import type {
   JudgeAnswers,
   JudgeFallback,
@@ -14,7 +9,12 @@ import type {
   JudgeRequest,
   JudgeResult,
   JudgeState,
-} from "./judgment";
+} from "../../inference/judgment";
+import {
+  type CorrectionKind,
+  correctionKindRequest,
+  parseCorrectionKind,
+} from "./correction-kind";
 import {
   correctionCheckRequest,
   parseCorrectionCheck,

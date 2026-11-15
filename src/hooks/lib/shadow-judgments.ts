@@ -2,15 +2,15 @@
  * The session-status, entity-precheck and rule-recurring judgments as System One questions, each with its caller's current request as the fallback.
  */
 
-import type { RequestedTurn } from "./adaptation-turns";
-import { parseExtraction } from "./entity-extraction";
 import type {
   JudgeAnswers,
   JudgeFallback,
   JudgeQuestion,
   JudgeRequest,
   JudgeState,
-} from "./judgment";
+} from "../../inference/judgment";
+import type { RequestedTurn } from "./adaptation-turns";
+import { parseExtraction } from "./entity-extraction";
 
 type InferenceRequest = JudgeFallback["request"];
 

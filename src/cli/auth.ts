@@ -5,8 +5,8 @@ import {
   type LoginRead,
   reportsLoginExpiry,
   systemRunner,
-} from "../hooks/lib/agent-login";
-import { readLoginCache, refreshLogin } from "../hooks/lib/login-cache";
+} from "../inference/agent-login";
+import { readLoginCache, refreshLogin } from "../inference/login-cache";
 import { leaf } from "../tools/lib/command";
 
 const HOUR_S = 3600;

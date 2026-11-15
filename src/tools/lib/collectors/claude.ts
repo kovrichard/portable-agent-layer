@@ -10,7 +10,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 import { appendEvent } from "../../../bronze/events";
-import { cacheWritesOf, type TranscriptUsage } from "../transcript-usage";
+import { cacheWritesOf, type TranscriptUsage } from "../../../inference/transcript-usage";
 import { claudeTranscripts } from "../usage-buckets";
 import { type Billing, UNKNOWN } from "./billing";
 import { readCursor, writeCursor } from "./cursors";

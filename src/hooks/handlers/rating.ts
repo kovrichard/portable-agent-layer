@@ -12,6 +12,9 @@ import { emitRating } from "../../bronze/signals";
 import { logDebug } from "../../core/log";
 import { paths } from "../../core/paths";
 import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
+import { spawnDetachedInference } from "../../inference/detached-inference";
+import { canInfer } from "../../inference/inference";
+import { judge } from "../../inference/judge";
 import {
   readCandidates,
   recordCandidate,
@@ -20,10 +23,7 @@ import {
 import { readRules } from "../lib/adaptation-rules";
 import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
 import { needsCorrectionKind, withCorrectionKind } from "../lib/correction-kind";
-import { spawnDetachedInference } from "../lib/detached-inference";
-import { canInfer } from "../lib/inference";
 import { replyEnd } from "../lib/interaction-samples";
-import { judge } from "../lib/judge";
 import {
   correctionCheckJudgment,
   correctionCheckOf,

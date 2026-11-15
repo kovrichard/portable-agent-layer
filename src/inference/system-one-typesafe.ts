@@ -2,7 +2,7 @@
  * TypeSafe's System One API (https://docs.typesafe.ai/api/system-one.md): one POST with every question, retried on 429 and 529.
  */
 
-import { logError } from "../../core/log";
+import { logError } from "../core/log";
 import {
   type JudgeAdapter,
   type JudgeAnswers,

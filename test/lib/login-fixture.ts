@@ -1,7 +1,7 @@
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { findBinaryOnPath } from "../../src/core/which";
-import type { AgentLogin, CommandRunner } from "../../src/hooks/lib/agent-login";
+import type { AgentLogin, CommandRunner } from "../../src/inference/agent-login";
 
 type CommandRun = ReturnType<CommandRunner>;
 

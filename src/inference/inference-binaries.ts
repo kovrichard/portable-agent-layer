@@ -1,4 +1,4 @@
-import { findBinaryOnPath } from "../../core/which";
+import { findBinaryOnPath } from "../core/which";
 
 const binaryCache = new Map<string, string | null>();
 

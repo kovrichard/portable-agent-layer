@@ -15,7 +15,7 @@ import {
   routeFinding,
 } from "../src/cli/doctor/inference";
 import { palEnvPath } from "../src/core/pal-env";
-import { loginCacheFile, readLoginCache } from "../src/hooks/lib/login-cache";
+import { loginCacheFile, readLoginCache } from "../src/inference/login-cache";
 import { debugHome } from "./lib/fake-spawn";
 import { freshTestDir } from "./lib/test-home";
 

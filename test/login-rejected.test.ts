@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { inferenceViaClaudeSpawn } from "../src/hooks/lib/inference-agents";
-import { inferenceViaCliSpawn } from "../src/hooks/lib/inference-spawn";
+import { inferenceViaClaudeSpawn } from "../src/inference/inference-agents";
+import { inferenceViaCliSpawn } from "../src/inference/inference-spawn";
 import {
   CLAUDE_LOGIN_REJECTED,
   loginRejectedFile,
   noteClaudeLogin,
-} from "../src/hooks/lib/login-rejected";
+} from "../src/inference/login-rejected";
 import { debugHome, type FakeRun, withFakeSpawn } from "./lib/fake-spawn";
 import { restoreEnv, savedEnv } from "./lib/inference-dispatch-fixture";
 import { removeOnceReleased } from "./lib/remove-once-released";

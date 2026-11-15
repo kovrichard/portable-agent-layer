@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { LoggedEvent } from "../src/bronze/events";
-import { costOfUsage, OPUS_MODEL } from "../src/hooks/lib/models";
+import { costOfUsage, OPUS_MODEL } from "../src/inference/models";
 import { runStats } from "../src/tools/lib/run-stats";
 
 const REPO = "/work/repo";

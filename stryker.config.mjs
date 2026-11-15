@@ -59,6 +59,7 @@ export default {
   mutate: [
     "src/core/**/*.ts",
     "src/bronze/**/*.ts",
+    "src/inference/**/*.ts",
     "src/hooks/lib/**/*.ts",
     "src/hooks/handlers/*.ts",
     "src/tools/**/*.ts",
@@ -89,7 +90,7 @@ export default {
     "src/targets/agent-render.ts",
     "src/targets/vscode-settings.ts",
     "src/targets/opencode/permission.ts",
-    "!src/hooks/lib/inference.ts",
+    "!src/inference/inference.ts",
     "!src/core/notify.ts",
     "!src/hooks/lib/stdin.ts",
     "!src/core/which.ts",

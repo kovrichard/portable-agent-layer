@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { withPalEnv } from "../../core/pal-env";
-import { platform } from "../../core/paths";
+import { withPalEnv } from "../core/pal-env";
+import { platform } from "../core/paths";
 import {
   extractAntigravityText,
   INFERENCE_AGENT,

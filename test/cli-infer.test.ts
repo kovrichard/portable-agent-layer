@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { inferFromCli, routeFromCli } from "../src/cli/infer";
-import type { inference } from "../src/hooks/lib/inference";
+import type { inference } from "../src/inference/inference";
 import { freshTestDir } from "./lib/test-home";
 
 type InferenceCall = Parameters<typeof inference>[0];

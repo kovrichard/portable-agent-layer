@@ -5,8 +5,8 @@ import {
   type CliReply,
   inferenceViaCliSpawn,
   type SpawnPlace,
-} from "../src/hooks/lib/inference-spawn";
-import type { InferenceOptions } from "../src/hooks/lib/inference-types";
+} from "../src/inference/inference-spawn";
+import type { InferenceOptions } from "../src/inference/inference-types";
 import { debugHome, type FakeRun, withFakeSpawn } from "./lib/fake-spawn";
 import { restoreEnv, savedEnv } from "./lib/inference-dispatch-fixture";
 
