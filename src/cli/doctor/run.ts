@@ -13,12 +13,13 @@ import { healthFindings } from "./health";
 import { inferenceFindings } from "./inference";
 import { type DoctorReport, doctorExitCode, renderReport } from "./render";
 import { stateFindings } from "./state";
+import { saveHealthSummary } from "./summary";
 
 const inGroup = (group: Group, findings: Finding[]) =>
   findings.map((finding) => ({ ...finding, group }));
 
 const healthGroup = (finding: Finding): Group =>
-  finding.id.startsWith("hook-errors") ? "Inference" : "State";
+  /^(hook-errors|claude-login)/.test(finding.id) ? "Inference" : "State";
 
 function doctorFindings(health: DoctorResult): Finding[] {
   const agents = installedAgents(health);
@@ -38,6 +39,7 @@ export function doctorReport(
   started = performance.now()
 ): DoctorReport {
   const findings = doctorFindings(health);
+  saveHealthSummary(findings);
 
   return {
     version: getInstalledVersion(),

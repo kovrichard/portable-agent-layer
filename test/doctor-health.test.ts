@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
+import type { Finding } from "../src/cli/doctor/finding";
 import {
   hookErrorFindings,
+  loginExpiryFindings,
   migrationFindings,
   updateFinding,
 } from "../src/cli/doctor/health";
@@ -13,9 +15,16 @@ import {
   routeFinding,
 } from "../src/cli/doctor/inference";
 import { palEnvPath } from "../src/core/pal-env";
+import { loginCacheFile, readLoginCache } from "../src/hooks/lib/login-cache";
+import { debugHome } from "./lib/fake-spawn";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
+const LOG_IN_AGAIN = {
+  say: "Log the Claude CLI in again",
+  command: "claude auth login",
+  external: true,
+};
 const MINUTE = 60_000;
 const at = (minutesAgo: number) => NOW - minutesAgo * MINUTE;
 const noToken = { now: NOW };
@@ -71,8 +80,7 @@ describe("hook errors", () => {
 
     expect(finding.severity).toBe("fail");
     expect(finding.title).toContain("38");
-    expect(finding.fix?.command).toBe("claude auth login");
-    expect(finding.fix?.say).not.toContain("TOKEN");
+    expect(finding.fix).toEqual(LOG_IN_AGAIN);
   });
 
   test("a line logged before spawns were tagged reads as the native login", () => {
@@ -80,13 +88,78 @@ describe("hook errors", () => {
     expect(finding.fix?.command).toBe("claude auth login");
   });
 
-  test("a rejected token warns and says to renew it", () => {
+  test("a rejected token fails and says to renew it", () => {
     const [finding] = hookErrorFindings([rejectedBy("token")], noToken);
 
-    expect(finding.severity).toBe("warn");
+    expect(finding.severity).toBe("fail");
+    expect(finding.id).toBe("hook-errors.inference");
+    expect(finding.fix).toMatchObject({ external: true });
     expect(finding.title).toContain("last 1h ago");
     expect(finding.fix?.command).toBe("claude setup-token");
     expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN was rejected");
+  });
+});
+
+describe("the Claude login expiry", () => {
+  const HOUR_S = 3600;
+  const DAY_S = 24 * HOUR_S;
+  const login = (secondsLeft: number | null) => ({
+    checkedAt: new Date(NOW).toISOString(),
+    loggedIn: true,
+    authMethod: "claude.ai",
+    expiresAt: null,
+    expiresAtEpoch: secondsLeft === null ? null : Math.floor(NOW / 1000) + secondsLeft,
+  });
+  const expiry = (secondsLeft: number | null) =>
+    loginExpiryFindings(login(secondsLeft), NOW);
+  const expiringWarning = (title: string): Finding[] => [
+    { id: "claude-login.expiry", severity: "warn", title, fix: LOG_IN_AGAIN },
+  ];
+
+  test("more than 7 days left says nothing", () => {
+    expect(expiry(8 * DAY_S)).toEqual([]);
+    expect(expiry(7 * DAY_S + 1)).toEqual([]);
+  });
+
+  test("7 days or fewer left warns in days", () => {
+    expect(expiry(7 * DAY_S)).toEqual(expiringWarning("Claude login expires in 7d"));
+    expect(expiry(3 * DAY_S + 5 * 60)).toEqual(
+      expiringWarning("Claude login expires in 3d")
+    );
+  });
+
+  test("under a day left warns in hours", () => {
+    expect(expiry(DAY_S - 1)).toEqual(expiringWarning("Claude login expires in 23h"));
+    expect(expiry(5 * HOUR_S + 5 * 60)).toEqual(
+      expiringWarning("Claude login expires in 5h")
+    );
+  });
+
+  test("an expired login fails and says to log in again", () => {
+    const expired: Finding[] = [
+      {
+        id: "claude-login.expiry",
+        severity: "fail",
+        title: "Claude login expired",
+        fix: LOG_IN_AGAIN,
+      },
+    ];
+
+    expect(expiry(-HOUR_S)).toEqual(expired);
+    expect(expiry(0)).toEqual(expired);
+    expect(expiry(1)).toEqual(expiringWarning("Claude login expires in 0h"));
+  });
+
+  test("no cache or no expiry says nothing", () => {
+    expect(loginExpiryFindings(null, NOW)).toEqual([]);
+    expect(expiry(null)).toEqual([]);
+  });
+
+  test("measures against the current time when given none", () => {
+    debugHome(import.meta.file);
+    writeFileSync(loginCacheFile(), JSON.stringify(login(-HOUR_S)), "utf-8");
+
+    expect(loginExpiryFindings(readLoginCache())[0].severity).toBe("fail");
   });
 });
 
