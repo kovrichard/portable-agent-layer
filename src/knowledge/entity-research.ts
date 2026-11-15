@@ -4,9 +4,8 @@
  * reaches the store through the review queue.
  */
 
-import { logDebug, logError } from "../../core/log";
-import type { inference } from "../../inference/inference";
-import type { IngestInput, IngestResult } from "../../tools/knowledge/ingest";
+import { logDebug, logError } from "../core/log";
+import type { inference } from "../inference/inference";
 import type { RegisterEntry } from "./company-register";
 import {
   closedObject,
@@ -15,6 +14,7 @@ import {
   type ResearchProfile,
   type ReviewItem,
 } from "./entity-extraction";
+import type { IngestInput, IngestResult } from "./ingest";
 
 export interface ResearchTarget {
   kind: ExtractedEntity["kind"];

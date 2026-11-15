@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { extractionUser } from "../src/hooks/lib/entity-extraction";
-import { buildNameIndex, type NamedEntity } from "../src/hooks/lib/entity-names";
+import { extractionUser } from "../src/knowledge/entity-extraction";
+import { buildNameIndex, type NamedEntity } from "../src/knowledge/entity-names";
 
 const CONFIG = resolve(import.meta.dir, "../eval/entity-extraction/promptfoo.yaml");
 

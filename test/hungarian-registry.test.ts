@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { lookupCompanyRegister } from "../src/hooks/lib/company-register-router";
-import { hungarianRegister } from "../src/hooks/lib/hungarian-registry";
+import { lookupCompanyRegister } from "../src/knowledge/company-register-router";
+import { hungarianRegister } from "../src/knowledge/hungarian-registry";
 
 const HOME = `<form action="https://ceginfo.hu/cegkereso/rapid" method="post">
 <input type="hidden" name="ceginfo_csrf_token" value="tok123"></form>`;

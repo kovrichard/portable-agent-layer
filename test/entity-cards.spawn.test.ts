@@ -7,8 +7,8 @@ import {
   entityReminder,
   latestNote,
   loadKnownEntities,
-} from "../src/hooks/lib/entity-cards";
-import { ingestEntities } from "../src/tools/knowledge/ingest";
+} from "../src/knowledge/entity-cards";
+import { ingestEntities } from "../src/knowledge/ingest";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { testHome } from "./lib/test-home";

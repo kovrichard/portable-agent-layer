@@ -3,8 +3,7 @@
  * never has to re-explain who someone is. Reads files only; no model call.
  */
 
-import { identity } from "../../core/settings";
-import { type Entity, list } from "../../tools/knowledge/lib";
+import { identity } from "../core/settings";
 import {
   buildNameIndex,
   entityKey,
@@ -13,6 +12,7 @@ import {
   type NamedEntity,
   type NameIndex,
 } from "./entity-names";
+import { type Entity, list } from "./lib";
 
 const MAX_CARDS = 3;
 const MAX_LATEST = 160;

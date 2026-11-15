@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import * as clack from "@clack/prompts";
 import { cmdAdd, parseAddFlags } from "../src/cli/knowledge-add";
-import { load, RELATION_TYPES, STATUSES } from "../src/tools/knowledge/lib";
+import { load, RELATION_TYPES, STATUSES } from "../src/knowledge/lib";
 import { UsageError } from "../src/tools/lib/command";
 import { captureConsole } from "./lib/console-capture";
 import { removeOnceReleased } from "./lib/remove-once-released";

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { getOrCreate } from "../src/tools/knowledge/lib";
+import { getOrCreate } from "../src/knowledge/lib";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";
 

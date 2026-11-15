@@ -13,7 +13,7 @@
  * graph state lives on disk.
  */
 
-import { type Domain, type Entity, list } from "./lib";
+import { type Domain, type Entity, list } from "../../knowledge/lib";
 
 // --- Constants --------------------------------------------------------------
 

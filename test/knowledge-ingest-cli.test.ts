@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { cmdIngest } from "../src/cli/knowledge-ingest";
-import { exists } from "../src/tools/knowledge/lib";
+import { exists } from "../src/knowledge/lib";
 import { UsageError } from "../src/tools/lib/command";
 import { captureConsole } from "./lib/console-capture";
 import { removeOnceReleased } from "./lib/remove-once-released";

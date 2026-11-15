@@ -7,7 +7,7 @@ import {
   dueNudgeReminder,
   pendingToday,
 } from "../src/hooks/lib/daily-nudge";
-import { queueForReview } from "../src/hooks/lib/entity-extraction";
+import { queueForReview } from "../src/knowledge/entity-extraction";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;

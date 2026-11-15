@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseScalar, parseStringArray } from "../src/tools/knowledge/yaml-scalars";
+import { parseScalar, parseStringArray } from "../src/knowledge/yaml-scalars";
 
 describe("parseScalar", () => {
   test.each<[string, unknown]>([

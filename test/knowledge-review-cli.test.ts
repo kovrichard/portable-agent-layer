@@ -7,9 +7,9 @@ import {
   queueForReview,
   type ResearchProfile,
   type ReviewItem,
-} from "../src/hooks/lib/entity-extraction";
-import { pendingReviews } from "../src/hooks/lib/entity-review";
-import { ingestEntities } from "../src/tools/knowledge/ingest";
+} from "../src/knowledge/entity-extraction";
+import { pendingReviews } from "../src/knowledge/entity-review";
+import { ingestEntities } from "../src/knowledge/ingest";
 import { captureConsole } from "./lib/console-capture";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";

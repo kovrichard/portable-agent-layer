@@ -6,7 +6,7 @@ import {
   type NamedEntity,
   type NameIndex,
   proseOnly,
-} from "../src/hooks/lib/entity-names";
+} from "../src/knowledge/entity-names";
 
 function person(slug: string, title: string, aliases: string[] = []): NamedEntity {
   return { slug, domain: "People", title, aliases };

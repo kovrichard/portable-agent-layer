@@ -23,10 +23,10 @@ import { watchReplyRules } from "../src/hooks/lib/adaptation-steering";
 import { appendTurn } from "../src/hooks/lib/adaptation-turns";
 import { writeBinding } from "../src/hooks/lib/bindings";
 import { watchClaims } from "../src/hooks/lib/claim-log";
-import { queueForReview } from "../src/hooks/lib/entity-extraction";
 import { appendEvent as appendProgressEvent } from "../src/hooks/lib/progress-tree";
 import { recordRunEstimate } from "../src/hooks/lib/run-estimates";
 import { appendProjectHistory, writeSession } from "../src/hooks/lib/work-tracking";
+import { queueForReview } from "../src/knowledge/entity-extraction";
 import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
 import { freshTestDir } from "./lib/test-home";
 

@@ -4,11 +4,11 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { type IngestInput, ingestEntities } from "../../tools/knowledge/ingest";
 import { loadKnownEntities, loadNameIndex } from "./entity-cards";
 import { ingestInput, type ReviewItem, reviewQueueFile } from "./entity-extraction";
 import { indexedEntities, type NamedEntity, type NameIndex } from "./entity-names";
 import { profileIngest } from "./entity-research";
+import { type IngestInput, ingestEntities } from "./ingest";
 
 export interface AcceptChoice {
   as?: string;
