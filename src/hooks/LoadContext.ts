@@ -16,7 +16,6 @@ import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { recordHookRunOnExit } from "./lib/hook-run";
 import { hookSessionId } from "./lib/hook-turn";
-import { refreshLoginOnStart } from "./lib/login-cache";
 import {
   contextEnvelope,
   contextForSource,
@@ -26,6 +25,7 @@ import {
   writeCopilotInstructions,
 } from "./lib/session-context";
 import { logSessionStart, type SessionStartPayload } from "./lib/session-events";
+import { refreshCachesOnStart } from "./lib/start-refresh";
 import { readStdinJSON } from "./lib/stdin";
 import { heartbeatOnStart } from "./lib/telemetry";
 
@@ -53,7 +53,7 @@ try {
 }
 
 heartbeatOnStart();
-refreshLoginOnStart();
+refreshCachesOnStart();
 
 try {
   const active = getActiveAgent();

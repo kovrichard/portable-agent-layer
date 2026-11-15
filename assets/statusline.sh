@@ -77,20 +77,6 @@ if echo "$input" | jq -e '.cost.total_cost_usd != null' >/dev/null 2>&1; then
   fi
 fi
 
-# PAL: Hook health — count ERROR lines in debug.log from last 24h
-HOOK_ERRORS=0
-DEBUG_LOG="$HOME/.pal/debug/debug.log"
-if [ -f "$DEBUG_LOG" ]; then
-  # Cross-platform 24h cutoff: macOS uses date -v, GNU Linux uses date -d
-  CUTOFF=$(date -v-24H "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -d '24 hours ago' "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
-  if [ -n "$CUTOFF" ]; then
-    # Log format: [YYYY-MM-DD HH:MM:SS] LEVEL ... — split on [ or ] to get $2 = timestamp
-    HOOK_ERRORS=$(grep '\] ERROR ' "$DEBUG_LOG" | awk -F'[][]]' '$2 > "'"$CUTOFF"'"' | wc -l | tr -d ' ')
-  else
-    HOOK_ERRORS=$(grep -c '\] ERROR ' "$DEBUG_LOG" 2>/dev/null || echo 0)
-  fi
-fi
-
 # PAL: Open ISC count — find project matching current directory
 OPEN_ISCS=0
 PROJECTS_DIR="$HOME/.pal/memory/projects"
@@ -223,24 +209,36 @@ if [ -f "$UPDATE_CACHE" ]; then
   fi
 fi
 
-# PAL: Claude login expiry (reads the cache PAL refreshes at session start)
-LOGIN_LINE=""
-LOGIN_COLOR=$YELLOW
-LOGIN_CACHE="$HOME/.pal/cache/claude-login.json"
-if [ -f "$LOGIN_CACHE" ]; then
-  LOGIN_EPOCH=$(jq -r '.expiresAtEpoch // empty | floor' "$LOGIN_CACHE" 2>/dev/null)
-  if [[ "$LOGIN_EPOCH" =~ ^[0-9]+$ ]]; then
-    LOGIN_LEFT=$(( LOGIN_EPOCH - $(date +%s) ))
-    if [ "$LOGIN_LEFT" -le 0 ]; then
-      LOGIN_LINE="🔑 Claude login expired — run: claude auth login"
-      LOGIN_COLOR=$RED
-    elif [ "$LOGIN_LEFT" -lt 86400 ]; then
-      LOGIN_LINE="🔑 Claude login expires in $(( LOGIN_LEFT / 3600 ))h"
-    elif [ "$LOGIN_LEFT" -le 604800 ]; then
-      LOGIN_LINE="🔑 Claude login expires in $(( LOGIN_LEFT / 86400 ))d"
-    fi
+# PAL: Health — what the doctor (health.json) and a rejected Claude call (login-rejected.json) left
+PAL_CACHE="$HOME/.pal/cache"
+HEALTH_JQ='def count(f): f | if type == "number" and . > 0 then floor else 0 end;
+  count(.failing), count(.warnings), (.worst | if type == "string" then . else "" end)'
+HEALTH_FIELDS=$(jq -r "$HEALTH_JQ" "$PAL_CACHE/health.json" 2>/dev/null)
+{ read -r HEALTH_FAILING; read -r HEALTH_WARNINGS; IFS= read -r HEALTH_WORST; } <<< "$HEALTH_FIELDS"
+[[ "$HEALTH_FAILING" =~ ^[0-9]+$ ]] || HEALTH_FAILING=0
+[[ "$HEALTH_WARNINGS" =~ ^[0-9]+$ ]] || HEALTH_WARNINGS=0
+
+HEALTH_LABEL=""
+HEALTH_MORE=0
+HEALTH_COLOR=$RED
+if [ -f "$PAL_CACHE/login-rejected.json" ]; then
+  if [ "$(jq -r '.auth // empty' "$PAL_CACHE/login-rejected.json" 2>/dev/null)" = "token" ]; then
+    HEALTH_LABEL="Claude token rejected"
+  else
+    HEALTH_LABEL="Claude login rejected"
   fi
+  HEALTH_MORE=$HEALTH_FAILING
+elif [ "$HEALTH_FAILING" -gt 0 ]; then
+  HEALTH_LABEL=${HEALTH_WORST:-Doctor found a failure}
+  HEALTH_MORE=$(( HEALTH_FAILING - 1 ))
+elif [ "$HEALTH_WARNINGS" -eq 1 ]; then
+  HEALTH_LABEL="1 warning"
+  HEALTH_COLOR=$YELLOW
+elif [ "$HEALTH_WARNINGS" -gt 1 ]; then
+  HEALTH_LABEL="$HEALTH_WARNINGS warnings"
+  HEALTH_COLOR=$YELLOW
 fi
+[ "$HEALTH_MORE" -gt 0 ] && HEALTH_LABEL="$HEALTH_LABEL (+$HEALTH_MORE more)"
 
 # Dark factory: one line per task that is building or waiting on the user.
 # Reads the tail of each task's own event log, so it stays fast as logs grow.
@@ -279,13 +277,11 @@ if [ -d "$FACTORY_TASKS" ]; then
 fi
 
 # Build PAL indicators
-HOOK_STR=""
-[ "$HOOK_ERRORS" -gt 0 ] && HOOK_STR="  ${RED}⚠️  ${HOOK_ERRORS} hook err${RESET}"
 ISC_STR=""
 [ "$OPEN_ISCS" -gt 0 ] && ISC_STR="  ${DIM}📋 ${OPEN_ISCS} open ISCs${RESET}"
 
-# Line 1: Model, Directory, Git Branch, Hook Health, Open ISCs, Signal
-echo -e "${CYAN}[${MODEL}]${RESET} 📁 ${DIR_DISPLAY}${DIM}${GIT_INDICATOR}${RESET}${HOOK_STR}${ISC_STR}${SIGNAL_STR}"
+# Line 1: Model, Directory, Git Branch, Open ISCs, Signal
+echo -e "${CYAN}[${MODEL}]${RESET} 📁 ${DIR_DISPLAY}${DIM}${GIT_INDICATOR}${RESET}${ISC_STR}${SIGNAL_STR}"
 
 # Line 2: Context bar; cost segment only when Claude sends it
 if [ -n "$COST_STR" ]; then
@@ -297,8 +293,8 @@ fi
 # Line 3: Update available (only when cache says available AND versions differ)
 [ -n "$UPDATE_LINE" ] && echo -e "${YELLOW}${UPDATE_LINE}${RESET}"
 
-# Line 3a: Claude login close to expiring or expired
-[ -n "$LOGIN_LINE" ] && echo -e "${LOGIN_COLOR}${LOGIN_LINE}${RESET}"
+# Line 3a: Health — the worst failure or the warning count, pointing to the doctor
+[ -n "$HEALTH_LABEL" ] && printf '%b%s%b\n' "$HEALTH_COLOR" "⚠️  $HEALTH_LABEL — pal cli doctor" "$RESET"
 
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 for FACTORY_LINE in "${FACTORY_LINES[@]}"; do

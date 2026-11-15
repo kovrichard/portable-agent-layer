@@ -1,4 +1,5 @@
 import { getInstalledVersion } from "../../hooks/handlers/update-check";
+import { releaseHealthMarker } from "../../hooks/lib/health-cache";
 import { createStyle } from "../ui/style";
 import {
   agentFindings,
@@ -47,6 +48,17 @@ export function doctorReport(
     findings,
     elapsedMs: performance.now() - started,
   };
+}
+
+export function runBackgroundDoctor(
+  report: (health: DoctorResult) => unknown = doctorReport,
+  detect: () => DoctorResult = detectAgents
+): void {
+  try {
+    report(detect());
+  } finally {
+    releaseHealthMarker();
+  }
 }
 
 /** `pal cli doctor [--verbose] [--json]` — prints the report and returns the exit code. */

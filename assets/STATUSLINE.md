@@ -4,9 +4,10 @@ A customizable status line for Claude Code that displays context usage, active m
 
 ## What It Shows
 
-**Line 1:** Model name, current directory, git branch, hook health, open ISCs, signal trend  
+**Line 1:** Model name, current directory, git branch, open ISCs, signal trend  
 **Line 2:** Context usage progress bar, percentage used, session cost, remaining context, rate limits  
-**Line 3:** Update notice (only when a new PAL version is available)
+**Line 3:** Update notice (only when a new PAL version is available)  
+**Health line:** The worst failing check in red, or the warning count in yellow, pointing to `pal cli doctor` (only when something needs attention)
 
 Example output (macOS/Linux):
 ```
@@ -95,7 +96,6 @@ The statusline script is at: `portable-agent-layer/assets/statusline.ps1`
 - **Model:** Active Claude model (Opus, Sonnet, Haiku, etc.)
 - **Directory:** Repository name (if in a git repo) or folder name
 - **Git Branch:** Current branch, fetched from git worktree or `git` command
-- **Hook Health:** Count of ERROR lines in `~/.pal/memory/state/debug.log` from last 24h (hidden when 0)
 - **Open ISCs:** Count of unchecked ISCs for the current project (hidden when 0)
 - **Signal Trend:** Session quality score from `~/.pal/memory/state/signal-cache.json` with trend arrow
 - **Context Bar:** Visual progress bar showing token usage
@@ -104,6 +104,7 @@ The statusline script is at: `portable-agent-layer/assets/statusline.ps1`
 - **Remaining %:** Percentage of context window remaining
 - **Rate Limits:** 5h and 7d usage percentages (Pro/Max plans only — hidden on other plans)
 - **Update Notice:** Shown on line 3 when `~/.pal/memory/state/update-available.json` flags a new version
+- **Health:** Read from `~/.pal/cache/health.json`, which every doctor run writes (PAL starts one in the background at session start when it is missing or over 6 hours old), and `~/.pal/cache/login-rejected.json`, which a rejected background Claude call writes at once. Shows `Claude token rejected` or `Claude login rejected` first, else the worst failing check (with `(+N more)` when several fail), else `N warnings`; hidden when all is fine. Run `pal cli doctor` for the details and fixes
 
 ## Dependencies
 

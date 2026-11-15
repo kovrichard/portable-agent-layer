@@ -24,6 +24,7 @@ function runLoadContext() {
     env: {
       ...process.env,
       PAL_HOME: resolve(sandbox, "home"),
+      PAL_SKIP_DOCTOR: "1",
       PAL_COPILOT_DIR: copilotDir,
       PAL_CLAUDE_DIR: resolve(sandbox, "claude"),
       PAL_OPENCODE_DIR: resolve(sandbox, "opencode"),
