@@ -3,6 +3,11 @@ import { resolve } from "node:path";
 import { palHome, palPkg } from "../../core/paths";
 import { auditBindings, type BindingIssue } from "../../hooks/lib/projects";
 import { telosStatus } from "../../hooks/lib/telos-topics";
+import {
+  type LegacyOpinions,
+  opinionCount,
+  readLegacyOpinions,
+} from "../legacy-opinions";
 import { retiredKeysIn } from "../migrations/v7-retired-settings-keys";
 import { type Finding, failing, optional, passed, warning } from "./finding";
 
@@ -282,6 +287,34 @@ function dependencyFinding(): Finding {
       );
 }
 
+const REVIEW_LEGACY_OPINIONS = {
+  say: "Review them and re-add the ones worth keeping",
+  command: "pal cli rule legacy-opinions",
+  external: false,
+};
+
+export function legacyOpinionsFindings(legacy: LegacyOpinions): Finding[] {
+  if (legacy.state === "unreadable")
+    return [
+      warning(
+        "legacy-opinions",
+        `The old opinion tracker's opinions.json cannot be read — ${legacy.reason}`,
+        REVIEW_LEGACY_OPINIONS
+      ),
+    ];
+
+  if (legacy.state === "missing" || legacy.opinions.length === 0) return [];
+  const count = legacy.opinions.length;
+
+  return [
+    warning(
+      "legacy-opinions",
+      `${opinionCount(count)} from the old opinion tracker ${count === 1 ? "is" : "are"} no longer in use — the ones still loading from the old context file stop loading when the first new opinion is approved`,
+      REVIEW_LEGACY_OPINIONS
+    ),
+  ];
+}
+
 export function stateFindings(): Finding[] {
   const home = palHome();
 
@@ -289,6 +322,7 @@ export function stateFindings(): Finding[] {
     ...telosFindings(home),
     ...settingsFindings(),
     ...bindingFindings(),
+    ...legacyOpinionsFindings(readLegacyOpinions()),
     dependencyFinding(),
   ];
 }

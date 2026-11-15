@@ -8,6 +8,7 @@
  *   deny <id>               Reject a draft; it stays on record so it is not redrafted
  *   retire <id>             End an approved rule or opinion
  *   add-opinion --kind K --when W --steering S [--evidence E]
+ *   legacy-opinions [--reviewed]   The old opinion tracker's opinions; --reviewed sets them aside
  */
 
 import {
@@ -28,6 +29,15 @@ import {
 } from "../hooks/lib/correction-rates";
 import { gateAdvice } from "../hooks/lib/opinion-gate";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
+import {
+  legacyOpinionLine,
+  legacyOpinionsAdvice,
+  legacyOpinionsPath,
+  markLegacyOpinionsReviewed,
+  opinionCount,
+  readLegacyOpinions,
+  reviewedMessage,
+} from "./legacy-opinions";
 
 type DecideResult = ReturnType<typeof decideRule>;
 
@@ -75,6 +85,19 @@ export const ruleCommand = group({
       },
       run: ({ values }) =>
         cmdAddOpinion(values.kind, values.when, values.steering, values.evidence),
+    }),
+    "legacy-opinions": leaf({
+      summary:
+        "Show the opinions the old opinion tracker left, to re-add the ones to keep",
+      options: {
+        reviewed: {
+          type: "boolean",
+          description:
+            "Mark them reviewed: renames opinions.json to opinions.reviewed.json",
+        },
+      },
+      run: ({ values }) =>
+        values.reviewed === true ? cmdLegacyReviewed() : cmdLegacyOpinions(),
     }),
   },
 });
@@ -180,6 +203,48 @@ function report(id: string, result: DecideResult): number {
   }
 
   console.log(resultLine(id, result.rule));
+
+  return 0;
+}
+
+function cmdLegacyOpinions(): number {
+  const legacy = readLegacyOpinions();
+
+  if (legacy.state === "unreadable") {
+    console.error(`Cannot read ${legacyOpinionsPath()}: ${legacy.reason}`);
+
+    return 1;
+  }
+
+  if (legacy.state === "missing" || legacy.opinions.length === 0) {
+    console.log("No opinions left from the old opinion tracker.");
+
+    return 0;
+  }
+
+  console.log(
+    [
+      `${opinionCount(legacy.opinions.length)} from the old opinion tracker, no longer in use, highest confidence first:`,
+      ...legacy.opinions.map(legacyOpinionLine),
+      "",
+      ...legacyOpinionsAdvice(),
+    ].join("\n")
+  );
+
+  return 0;
+}
+
+function cmdLegacyReviewed(): number {
+  const outcome = markLegacyOpinionsReviewed();
+  const message = reviewedMessage(outcome);
+
+  if (outcome === "taken") {
+    console.error(message);
+
+    return 1;
+  }
+
+  console.log(message);
 
   return 0;
 }
