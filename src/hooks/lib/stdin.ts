@@ -1,4 +1,4 @@
-import { noteHookPayload } from "./hook-run";
+import { noteHookPayload } from "../../usage/hook-run";
 
 /** Read all of stdin as a string */
 async function readStdin(): Promise<string> {

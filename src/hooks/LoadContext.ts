@@ -10,12 +10,13 @@ import { getActiveAgent } from "../core/agent";
 import { hookSessionId } from "../core/hook-payload";
 import { logContextSnapshot, logDebug, logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { logSessionStart, type SessionStartPayload } from "../usage/session-events";
 import { autoUpdateOnStart } from "./lib/auto-update";
 import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
 import { buildSystemReminder } from "./lib/context";
 import { logContextInjected } from "./lib/context-overhead";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
 import {
   contextEnvelope,
   contextForSource,
@@ -24,7 +25,6 @@ import {
   reminderTarget,
   writeCopilotInstructions,
 } from "./lib/session-context";
-import { logSessionStart, type SessionStartPayload } from "./lib/session-events";
 import { refreshCachesOnStart } from "./lib/start-refresh";
 import { readStdinJSON } from "./lib/stdin";
 import { heartbeatOnStart } from "./lib/telemetry";

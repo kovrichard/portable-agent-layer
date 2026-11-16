@@ -10,8 +10,8 @@
  */
 
 import { blockResponse, normalizeToolUse } from "../core/agent";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

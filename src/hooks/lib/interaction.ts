@@ -25,6 +25,7 @@ import { ensureDir, paths } from "../../core/paths";
 import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
 import { isEnabled } from "../../core/settings";
 import { localClock } from "../../core/wall-clock";
+import { backAfterNotificationSec } from "../../usage/waiting-on-user";
 import { asksForLess, followedHint, ignoredHintReminder } from "./interaction-hint-check";
 import {
   type Baseline,
@@ -44,7 +45,6 @@ import {
 } from "./interaction-reaction";
 import { keepSample, replyEnd } from "./interaction-samples";
 import { responseModeOf, turnExtras } from "./turn-extras";
-import { backAfterNotificationSec } from "./waiting-on-user";
 
 interface ReplyShape {
   at: string;

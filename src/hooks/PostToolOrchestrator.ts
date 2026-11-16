@@ -4,8 +4,8 @@
  */
 
 import { enterHookWorkspace } from "../core/hook-payload";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
 import { runPostToolHandlers } from "./lib/post-tool";
 import { readStdinJSON } from "./lib/stdin";
 

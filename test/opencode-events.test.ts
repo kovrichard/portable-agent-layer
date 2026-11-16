@@ -9,7 +9,7 @@ import {
   logOpencodeSessionCreated,
   logOpencodeToolFailure,
   rememberAskedTool,
-} from "../src/hooks/lib/opencode-events";
+} from "../src/usage/opencode-events";
 import { freshTestDir } from "./lib/test-home";
 
 // Shapes from @opencode-ai/sdk's generated Event types (v1, which the plugin

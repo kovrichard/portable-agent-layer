@@ -11,8 +11,8 @@ import { recordBlocked } from "../bronze/ledger";
 import { blockResponse } from "../core/agent";
 import { enterHookWorkspace } from "../core/hook-payload";
 import { logError } from "../core/log";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
 import { decideRefusal, type SecurityInput } from "./lib/security-gate";
 import { readStdinJSON } from "./lib/stdin";
 

@@ -14,11 +14,11 @@ import { latestUserRequest } from "../../bronze/antigravity-transcript";
 import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
 import { logContextSnapshot, logError, logPromptSnapshot } from "../../core/log";
 import { paths } from "../../core/paths";
+import { startHookTiming } from "../../usage/hook-timing";
 import { getPromptContext } from "../handlers/inject-retrieval";
 import { autoUpdateOnStart } from "./auto-update";
 import { regenerateIfNeeded } from "./claude-md";
 import { buildSystemReminder } from "./context";
-import { startHookTiming } from "./hook-timing";
 import { capturePrompt } from "./prompt-capture";
 import { heartbeatOnStart } from "./telemetry";
 

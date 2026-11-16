@@ -3,13 +3,13 @@ import { existsSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { DoctorResult } from "../src/cli/doctor/agents";
 import { runBackgroundDoctor } from "../src/cli/doctor/run";
+import { refreshCachesOnStart } from "../src/hooks/lib/start-refresh";
 import {
   healthFile,
   healthMarkerFile,
   isHealthStale,
   refreshHealthOnStart,
-} from "../src/hooks/lib/health-cache";
-import { refreshCachesOnStart } from "../src/hooks/lib/start-refresh";
+} from "../src/usage/health-cache";
 import { debugHome } from "./lib/fake-spawn";
 
 const HOUR_MS = 3600 * 1000;

@@ -10,11 +10,11 @@
 import { type HookTurnPayload, hookSessionId } from "../core/hook-payload";
 import { logDebug, logPromptSnapshot } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { startHookTiming } from "../usage/hook-timing";
 import { injectPromptContext } from "./handlers/inject-retrieval";
 import { compactionWarningReminder, recordCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { startHookTiming } from "./lib/hook-timing";
 import { capturePrompt } from "./lib/prompt-capture";
 import { readStdinJSON } from "./lib/stdin";
 

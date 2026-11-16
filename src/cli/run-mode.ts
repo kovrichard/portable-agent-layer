@@ -19,9 +19,9 @@ import {
   untilLabel,
   writeRun,
 } from "../hooks/lib/run-mode";
-import { isInGitRepo } from "../hooks/lib/session-events";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import { gatherRunStats } from "../tools/lib/run-stats";
+import { isInGitRepo } from "../usage/session-events";
 
 const FOR = {
   type: "string",

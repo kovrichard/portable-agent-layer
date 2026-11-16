@@ -4,7 +4,7 @@
  */
 
 import { isPalSpawnedInference } from "../core/spawn-guard";
-import { recordHookRunOnExit } from "./lib/hook-run";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { finishDeferredStop } from "./lib/stop";
 
 recordHookRunOnExit();

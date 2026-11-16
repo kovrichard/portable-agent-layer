@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { collectExportFiles } from "../src/core/export";
 import { reload } from "../src/core/settings";
 import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
-import { logToolCall } from "../src/hooks/lib/tool-events";
+import { logToolCall } from "../src/usage/tool-events";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;

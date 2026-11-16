@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import * as hostPath from "node:path";
 import type { Bindings, PlatformPath } from "../../core/project-bindings";
 import { type ProjectProgress, resolveProjectFromCwd } from "../../hooks/lib/projects";
-import { repoRootOf } from "../../hooks/lib/session-events";
+import { repoRootOf } from "../../usage/session-events";
 
 export const UNKNOWN_PROJECT = "(unknown)";
 

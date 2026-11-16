@@ -3,8 +3,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { AgentName, DoctorResult } from "../src/cli/doctor/agents";
 import { doctorReport } from "../src/cli/doctor/run";
 import { AGENT_NAMES } from "../src/core/agent-registry";
-import { healthFile } from "../src/hooks/lib/health-cache";
 import { loginCacheFile } from "../src/inference/login-cache";
+import { healthFile } from "../src/usage/health-cache";
 import { debugHome } from "./lib/fake-spawn";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 

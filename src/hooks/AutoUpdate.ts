@@ -7,8 +7,8 @@
  */
 
 import { logError } from "../core/log";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { runAutoUpdate } from "./lib/auto-update";
-import { recordHookRunOnExit } from "./lib/hook-run";
 
 recordHookRunOnExit();
 

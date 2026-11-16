@@ -4,17 +4,13 @@
  */
 
 import { basename, extname } from "node:path";
-import { appendEvent, logQuietly } from "../../bronze/events";
-import { unappliedVerdictOf } from "../../bronze/ledger-hook";
-import { isSensitivePath } from "../../bronze/sensitive-path";
-import { appendToolOutput, type ToolOutputRow } from "../../bronze/tool-output";
-import {
-  FILE_TARGET_KEYS,
-  normalizeToolUse,
-  type ToolUseRequest,
-} from "../../core/agent";
-import { hookSessionId } from "../../core/hook-payload";
-import { isPalSpawnedInference } from "../../core/spawn-guard";
+import { appendEvent, logQuietly } from "../bronze/events";
+import { unappliedVerdictOf } from "../bronze/ledger-hook";
+import { isSensitivePath } from "../bronze/sensitive-path";
+import { appendToolOutput, type ToolOutputRow } from "../bronze/tool-output";
+import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "../core/agent";
+import { hookSessionId } from "../core/hook-payload";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];

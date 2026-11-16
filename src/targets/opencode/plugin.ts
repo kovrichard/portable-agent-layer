@@ -27,6 +27,10 @@ async function bronze<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "bronze", mod));
 }
 
+async function usage<T>(mod: string): Promise<T> {
+  return await import(resolve(PAL_DIR, "src", "usage", mod));
+}
+
 type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
@@ -81,14 +85,14 @@ async function loadLoggingLibs() {
   const { logDebug, logError, logPromptSnapshot } =
     await core<typeof import("../../core/log")>("log.ts");
   const { logToolCall } =
-    await lib<typeof import("../../hooks/lib/tool-events")>("tool-events.ts");
+    await usage<typeof import("../../usage/tool-events")>("tool-events.ts");
   const { recordSlurpCheck } =
     await lib<typeof import("../../hooks/lib/slurp-check")>("slurp-check.ts");
   const { attachProgressFromToolCall } = await lib<
     typeof import("../../hooks/lib/progress-tree-tool")
   >("progress-tree-tool.ts");
   const { logAttention } =
-    await lib<typeof import("../../hooks/lib/attention-events")>("attention-events.ts");
+    await usage<typeof import("../../usage/attention-events")>("attention-events.ts");
   const { commitApplied, ledgeredTarget, snapshotCall } =
     await bronze<typeof import("../../bronze/ledger-hook")>("ledger-hook.ts");
 
@@ -109,7 +113,7 @@ async function loadLoggingLibs() {
 async function loadTurnLibs() {
   const { runStopHandlers } = await lib<typeof import("../../hooks/lib/stop")>("stop.ts");
   const opencodeEvents =
-    await lib<typeof import("../../hooks/lib/opencode-events")>("opencode-events.ts");
+    await usage<typeof import("../../usage/opencode-events")>("opencode-events.ts");
   const { captureSessionName } = await lib<
     typeof import("../../hooks/handlers/session-name")
   >("../handlers/session-name.ts");

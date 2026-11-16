@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
 import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
-import { logToolCall } from "../src/hooks/lib/tool-events";
+import { logToolCall } from "../src/usage/tool-events";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
