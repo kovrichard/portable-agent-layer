@@ -20,8 +20,8 @@ import {
 } from "../../bronze/ledger-hook";
 import { logDebug } from "../../core/log";
 import { attachProgressFromToolCall } from "../../progress/progress-tree-tool";
+import { recordSlurpCheck } from "../../safety/slurp-check";
 import { logToolCall } from "../../usage/tool-events";
-import { recordSlurpCheck } from "./slurp-check";
 
 type Payload = Record<string, unknown>;
 

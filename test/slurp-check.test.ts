@@ -8,12 +8,8 @@ import {
   recordSlurpCheck,
   showsOutOfMemory,
   slurpVerdictOf,
-} from "../src/hooks/lib/slurp-check";
-import {
-  commandSlurps,
-  type FileProbe,
-  shellTokens,
-} from "../src/hooks/lib/slurp-detect";
+} from "../src/safety/slurp-check";
+import { commandSlurps, type FileProbe, shellTokens } from "../src/safety/slurp-detect";
 import { freshTestDir } from "./lib/test-home";
 
 const CWD = resolve("/work");

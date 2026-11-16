@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { newRun, writeRun } from "../src/hooks/lib/run-mode";
 import { appendEvent, readEvents, scopeOf } from "../src/progress/progress-tree";
 import { attachGitProgress } from "../src/progress/progress-tree-git";
+import { newRun, writeRun } from "../src/safety/run-mode";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 

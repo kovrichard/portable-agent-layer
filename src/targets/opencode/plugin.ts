@@ -35,6 +35,10 @@ async function progress<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "progress", mod));
 }
 
+async function safety<T>(mod: string): Promise<T> {
+  return await import(resolve(PAL_DIR, "src", "safety", mod));
+}
+
 type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
@@ -71,7 +75,7 @@ async function loadGuardLibs() {
   const { buildSystemReminder } =
     await lib<typeof import("../../hooks/lib/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
-    await lib<typeof import("../../hooks/lib/security")>("security.ts");
+    await safety<typeof import("../../safety/security")>("security.ts");
   const { findBinaryOnPath } = await core<typeof import("../../core/which")>("which.ts");
   const { isPalSpawnedInference } =
     await core<typeof import("../../core/spawn-guard")>("spawn-guard.ts");
@@ -91,7 +95,7 @@ async function loadLoggingLibs() {
   const { logToolCall } =
     await usage<typeof import("../../usage/tool-events")>("tool-events.ts");
   const { recordSlurpCheck } =
-    await lib<typeof import("../../hooks/lib/slurp-check")>("slurp-check.ts");
+    await safety<typeof import("../../safety/slurp-check")>("slurp-check.ts");
   const { attachProgressFromToolCall } = await progress<
     typeof import("../../progress/progress-tree-tool")
   >("progress-tree-tool.ts");

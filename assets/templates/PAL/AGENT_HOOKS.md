@@ -24,7 +24,7 @@ jq '.hooks // .pal | keys' assets/templates/hooks.cursor.json
 
 ## Blocking a tool call
 
-Every surface can refuse a tool call before it runs. Six run `SecurityValidator.ts` as their pre-tool hook, and `blockResponse()` in `src/core/agent.ts` writes the deny shape for the active agent. opencode runs a plugin instead, which throws. Both call `checkBashCommand()` and `checkFilePath()` in `src/hooks/lib/security.ts`, so a new shell or path refusal belongs there and reaches all seven without a new hook.
+Every surface can refuse a tool call before it runs. Six run `SecurityValidator.ts` as their pre-tool hook, and `blockResponse()` in `src/core/agent.ts` writes the deny shape for the active agent. opencode runs a plugin instead, which throws. Both call `checkBashCommand()` and `checkFilePath()` in `src/safety/security.ts`, so a new shell or path refusal belongs there and reaches all seven without a new hook.
 
 | Agent | Pre-tool event | Deny output | Notes |
 | ----- | -------------- | ----------- | ----- |

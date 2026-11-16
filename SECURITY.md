@@ -25,7 +25,7 @@ within 30 days. Fixes ship as a canary first, then in the next stable release.
 PAL runs hooks inside your coding agents and stores your context locally, so
 these count as security issues:
 
-- a way around the security hook (`src/hooks/lib/security.ts`), for example
+- a way around the security hook (`src/safety/security.ts`), for example
   a command it should block but lets through
 - secrets from `~/.pal/.env` or your environment reaching logs, the event
   log, exports or a model prompt
