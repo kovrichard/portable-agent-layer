@@ -196,7 +196,7 @@ describe("injectPromptContext handler", () => {
 
 describe("tier-2 context sources", () => {
   test("the failures digest is not a semi-static source", async () => {
-    const { getSemiStaticSources } = await import("../src/hooks/lib/semi-static");
+    const { getSemiStaticSources } = await import("../src/context/semi-static");
     const slugs = getSemiStaticSources().map((s) => s.slug);
     expect(slugs).not.toContain("failures");
   });

@@ -4,7 +4,7 @@
  * HEAD appeared during the call before the command text is parsed at all.
  */
 
-import { toPath } from "../../core/paths";
+import { toPath } from "../core/paths";
 import type { Git } from "./repo-state";
 
 const COMMAND_START = String.raw`(?:^|[;&|(\s])`;

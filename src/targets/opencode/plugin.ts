@@ -39,6 +39,10 @@ async function safety<T>(mod: string): Promise<T> {
   return await import(resolve(PAL_DIR, "src", "safety", mod));
 }
 
+async function context<T>(mod: string): Promise<T> {
+  return await import(resolve(PAL_DIR, "src", "context", mod));
+}
+
 type TranscriptMessage = { role: string; content: string; id?: string };
 
 function isSessionEvent(type: string): boolean {
@@ -73,7 +77,7 @@ function rtkRewriter(rtkBin: string | null) {
 
 async function loadGuardLibs() {
   const { buildSystemReminder } =
-    await lib<typeof import("../../hooks/lib/context")>("context.ts");
+    await context<typeof import("../../context/context")>("context.ts");
   const { checkBashCommand, checkFilePath } =
     await safety<typeof import("../../safety/security")>("security.ts");
   const { findBinaryOnPath } = await core<typeof import("../../core/which")>("which.ts");
@@ -277,7 +281,7 @@ async function onSessionOpenedOrUpdated(event: OpencodeEvent): Promise<void> {
 
   if (event.type === "session.created" || event.type === "session.updated") {
     const { regenerateIfNeeded } =
-      await lib<typeof import("../../hooks/lib/claude-md")>("claude-md.ts");
+      await context<typeof import("../../context/claude-md")>("claude-md.ts");
     regenerateIfNeeded();
   }
 }

@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { matchSkills, type SkillIndex } from "../src/hooks/lib/skill-match";
+import { matchSkills, type SkillIndex } from "../src/context/skill-match";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -37,7 +37,7 @@ async function setSettings(data: Record<string, unknown>) {
 }
 
 async function loadMatcher() {
-  const mod = await import(`../src/hooks/lib/skill-match.ts?t=${Date.now()}`);
+  const mod = await import(`../src/context/skill-match.ts?t=${Date.now()}`);
 
   return mod.getSkillReminder as (prompt: string) => string | null;
 }

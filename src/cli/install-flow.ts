@@ -191,7 +191,7 @@ async function installAll(plan: InstallPlan): Promise<Done> {
 
 async function prepareShared(): Promise<number> {
   const { copyPalDocs } = await import("../targets/pal-docs");
-  const { regenerateIfNeeded } = await import("../hooks/lib/claude-md");
+  const { regenerateIfNeeded } = await import("../context/claude-md");
   const { refreshEnvironment } = await import("../core/environment");
   const docs = copyPalDocs();
   refreshEnvironment();

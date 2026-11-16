@@ -5,8 +5,8 @@
 
 import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { getSemiStaticSources } from "../../context/semi-static";
 import { platform } from "../../core/paths";
-import { getSemiStaticSources } from "../../hooks/lib/semi-static";
 import { log } from "../log";
 import { removePalDocs } from "../pal-docs";
 import { removeAgentsFromOpencode } from "../shipped-agents";

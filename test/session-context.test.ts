@@ -8,7 +8,7 @@ import {
   isSubagentSession,
   needsAgentsMd,
   writeCopilotInstructions,
-} from "../src/hooks/lib/session-context";
+} from "../src/context/session-context";
 import { freshTestDir } from "./lib/test-home";
 
 // The four runtimes disagree on every part of this: whether AGENTS.md is already

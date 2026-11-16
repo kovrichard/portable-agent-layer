@@ -321,7 +321,7 @@ describe("the repo line", () => {
     const dir = checkout();
     pushedWorktree(dir, "feat/done");
     mergeAndDeleteOnRemote(dir, "feat/done");
-    const { observeRepoState } = await import("../src/hooks/lib/repo-state");
+    const { observeRepoState } = await import("../src/context/repo-state");
 
     expect(observeRepoState(dir)).toContain("1 merged worktree: pal cli worktree prune");
   });
@@ -329,7 +329,7 @@ describe("the repo line", () => {
   test("says nothing about worktrees when none is merged", async () => {
     const dir = checkout();
     pushedWorktree(dir, "feat/open");
-    const { observeRepoState } = await import("../src/hooks/lib/repo-state");
+    const { observeRepoState } = await import("../src/context/repo-state");
 
     expect(observeRepoState(dir)).not.toContain("worktree");
   });

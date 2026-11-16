@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import type { SkillIndex } from "../src/hooks/lib/skill-match";
+import type { SkillIndex } from "../src/context/skill-match";
 import { wrappedPal } from "../src/tools/lib/wrapped/pal";
 import { palLines } from "../src/tools/lib/wrapped/render";
 import { budapestHome, event } from "./lib/wrapped-events";

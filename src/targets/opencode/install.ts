@@ -5,8 +5,8 @@
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { getSemiStaticSources } from "../../context/semi-static";
 import { palPkg, platform } from "../../core/paths";
-import { getSemiStaticSources } from "../../hooks/lib/semi-static";
 import { writeJson } from "../json-file";
 import { log } from "../log";
 import { copyAgentsForOpencode } from "../shipped-agents";

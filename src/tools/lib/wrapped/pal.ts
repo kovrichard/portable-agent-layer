@@ -1,5 +1,5 @@
 import type { LoggedEvent } from "../../../bronze/events";
-import type { SkillIndex } from "../../../hooks/lib/skill-match";
+import type { SkillIndex } from "../../../context/skill-match";
 import { dayOf, numberOf, ofType, type Tally, tally } from "./year";
 
 export interface SkillsNeverUsed {

@@ -3,20 +3,12 @@
  *
  * Static context (TELOS, setup prompt) loads natively from AGENTS.md / CLAUDE.md;
  * this hook injects only the dynamic part: progress tree, opinions, work state.
- * Which agent gets what, in which envelope, is in lib/session-context.ts.
+ * Which agent gets what, in which envelope, is in src/context/session-context.ts.
  */
 
-import { getActiveAgent } from "../core/agent";
-import { hookSessionId } from "../core/hook-payload";
-import { logContextSnapshot, logDebug, logError } from "../core/log";
-import { isPalSpawnedInference } from "../core/spawn-guard";
-import { recordHookRunOnExit } from "../usage/hook-run";
-import { logSessionStart, type SessionStartPayload } from "../usage/session-events";
-import { autoUpdateOnStart } from "./lib/auto-update";
-import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
-import { buildSystemReminder } from "./lib/context";
-import { logContextInjected } from "./lib/context-overhead";
-import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { buildClaudeMd, regenerateIfNeeded } from "../context/claude-md";
+import { buildSystemReminder } from "../context/context";
+import { logContextInjected } from "../context/context-overhead";
 import {
   contextEnvelope,
   contextForSource,
@@ -24,8 +16,16 @@ import {
   needsAgentsMd,
   reminderTarget,
   writeCopilotInstructions,
-} from "./lib/session-context";
-import { refreshCachesOnStart } from "./lib/start-refresh";
+} from "../context/session-context";
+import { refreshCachesOnStart } from "../context/start-refresh";
+import { getActiveAgent } from "../core/agent";
+import { hookSessionId } from "../core/hook-payload";
+import { logContextSnapshot, logDebug, logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { logSessionStart, type SessionStartPayload } from "../usage/session-events";
+import { autoUpdateOnStart } from "./lib/auto-update";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { readStdinJSON } from "./lib/stdin";
 import { heartbeatOnStart } from "./lib/telemetry";
 

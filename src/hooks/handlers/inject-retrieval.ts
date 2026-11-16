@@ -6,6 +6,9 @@
  * any error produces empty output, never blocks the prompt.
  */
 
+import { dueNudgeReminder } from "../../context/daily-nudge";
+import { observeRepoState } from "../../context/repo-state";
+import { getSkillReminder } from "../../context/skill-match";
 import { promptContextResponse } from "../../core/agent";
 import { logDebug, logError } from "../../core/log";
 import { isSystemText } from "../../core/prompt-text";
@@ -19,9 +22,6 @@ import { parkPromptContext } from "../../progress/parked-context";
 import { progressTreePromptLine } from "../../progress/progress-tree-context";
 import { scheduledPromptsReminder } from "../../progress/scheduled-prompts";
 import { runModePromptLine } from "../../safety/run-mode-gate";
-import { dueNudgeReminder } from "../lib/daily-nudge";
-import { observeRepoState } from "../lib/repo-state";
-import { getSkillReminder } from "../lib/skill-match";
 
 const BUDGET_MS = 250;
 

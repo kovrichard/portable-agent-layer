@@ -4,20 +4,20 @@
  * Runs at session stop so that CLAUDE.md can @import these files natively
  * at the next session start, keeping hook stdout small.
  *
- * Sources are defined in src/hooks/lib/semi-static.ts — add one entry there
+ * Sources are defined in src/context/semi-static.ts — add one entry there
  * to extend coverage to all consumers (CLAUDE.md, opencode, Cursor, Copilot, Antigravity).
  */
 
 import { existsSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { ensureDir, platform } from "../../core/paths";
 import {
   antigravityFilename,
   antigravityRule,
   copilotFilename,
   cursorFilename,
   getSemiStaticSources,
-} from "../lib/semi-static";
+} from "../../context/semi-static";
+import { ensureDir, platform } from "../../core/paths";
 
 function subdirIfInstalled(agentHome: () => string, subdir: string): string | null {
   try {

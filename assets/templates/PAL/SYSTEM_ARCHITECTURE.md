@@ -365,7 +365,7 @@ A rule the user states            A correction PAL detects
 
 ### Semi-Static Registry
 
-All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to every consumer — no other files need to change.
+All semi-static sources are defined in `src/context/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to every consumer — no other files need to change.
 
 ### Dynamic Injection Order
 

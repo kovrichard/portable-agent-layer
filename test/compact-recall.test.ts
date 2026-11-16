@@ -8,7 +8,7 @@ import {
   recallBudget,
   type SavedExchange,
   truncate,
-} from "../src/hooks/lib/compact-recall";
+} from "../src/context/compact-recall";
 import { freshTestDir } from "./lib/test-home";
 
 // This runs once per compaction and its output is the only surviving copy of the

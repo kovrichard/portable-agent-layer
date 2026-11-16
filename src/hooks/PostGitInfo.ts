@@ -3,9 +3,9 @@
  * the checkout's state as it is now. Never blocks; silent on any error.
  */
 
+import { postGitInfoResponse } from "../context/post-git-info";
 import { recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { postGitInfoResponse } from "./lib/post-git-info";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

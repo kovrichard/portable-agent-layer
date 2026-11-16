@@ -21,7 +21,7 @@ rules:
     no-unguarded-json-parse: error
     no-sync-in-async:
       severity: error
-      include: ["src/hooks/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**"]
+      include: ["src/hooks/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
     no-nested-template-literals: error
     no-consecutive-array-push: error
     no-string-match: error
@@ -33,7 +33,7 @@ rules:
 
 arch:
   layers:
-    core: ["src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/hooks/lib/**", "src/tools/**"]
+    core: ["src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**", "src/hooks/lib/**", "src/tools/**"]
     skills: ["assets/skills/**"]
     targets: ["src/targets/**"]
     cli: ["src/cli/**"]
@@ -84,6 +84,10 @@ arch:
       allow: ["src/safety/**", "src/progress/**", "src/opinions/**", "src/usage/**", "src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
       message: "src/safety/ sits above src/progress/ — it imports only src/safety/ and the folders below it (progress, opinions, usage, knowledge, inference, bronze, core), never another src/ folder."
 
+    - from: ["src/context/**"]
+      allow: ["src/context/**", "src/safety/**", "src/progress/**", "src/opinions/**", "src/usage/**", "src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/context/ is the top domain folder — it imports only src/context/ and the folders below it (safety, progress, opinions, usage, knowledge, inference, bronze, core), never src/hooks/, src/cli/, src/tools/ or src/targets/."
+
   maxCommentDensity:
     - limit: 5
       in: ["src/**", "assets/skills/**", "!assets/skills/consulting-report/template/**"]
@@ -114,7 +118,7 @@ arch:
 
   forbidden:
     - pattern: "process.exit("
-      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
     # cmd.exe never expands "~" and PowerShell hands it to native commands
@@ -185,7 +189,7 @@ arch:
       in:
         - "src/**"
         - "!src/targets/symlink.ts"
-        - "!src/hooks/lib/claude-md.ts"
+        - "!src/context/claude-md.ts"
       message: "Raw symlinkSync — a directory symlink needs Developer Mode on Windows. Create links in src/targets/symlink.ts, where ensureSymlink() picks a junction on Windows."
 
   singleton:
@@ -196,7 +200,7 @@ arch:
 
     - pattern: "process.env.PAL_ANTHROPIC_API_KEY"
       only: "src/inference/inference.ts"
-      in: ["src/hooks/**", "src/tools/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**"]
+      in: ["src/hooks/**", "src/tools/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
       message: "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead."
 
     - pattern: "process.env.PAL_PKG"
@@ -206,5 +210,5 @@ arch:
 
     - pattern: "resolve(import.meta.dir"
       only: "src/core/paths.ts"
-      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
       message: "Package-relative path resolution in hook lib must go through the paths module — import getPalPkg() instead of navigating from import.meta.dir."
