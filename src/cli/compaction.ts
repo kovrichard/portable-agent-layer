@@ -12,11 +12,11 @@ import {
   backtestCompaction,
   type WindowEntry,
   windowResolver,
-} from "../hooks/lib/compaction-backtest";
+} from "../context/compaction-backtest";
 import {
   COMPACTION_MARGIN_FRACTION,
   currentCompactionWindow,
-} from "../hooks/lib/compaction-near";
+} from "../context/compaction-near";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 import { windowDays } from "./correction";
 

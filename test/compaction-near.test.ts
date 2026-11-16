@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EVENT_FIELDS, eventsSince } from "../src/bronze/events";
-import { reload } from "../src/core/settings";
 import {
   COMPACTION_MARGIN_FRACTION,
   compactionPoint,
@@ -10,7 +9,8 @@ import {
   recordCompactionNear,
   recordIdleCompactionNear,
   resolveCompactionWindow,
-} from "../src/hooks/lib/compaction-near";
+} from "../src/context/compaction-near";
+import { reload } from "../src/core/settings";
 import { logCompaction } from "../src/usage/session-events";
 import { freshTestDir } from "./lib/test-home";
 
@@ -309,7 +309,7 @@ describe("event registry", () => {
 });
 
 describe("compactionWarningReminder table rows", () => {
-  const nearLib = () => import("../src/hooks/lib/compaction-near");
+  const nearLib = () => import("../src/context/compaction-near");
 
   function verdictFor(
     contextTokens: number,

@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendEvent, eventsSince, type LoggedEvent } from "../src/bronze/events";
+import type { WindowEntry } from "../src/context/compaction-backtest";
 import { reload } from "../src/core/settings";
-import type { WindowEntry } from "../src/hooks/lib/compaction-backtest";
 import { freshTestDir } from "./lib/test-home";
 
-const nearLib = () => import("../src/hooks/lib/compaction-near");
+const nearLib = () => import("../src/context/compaction-near");
 const modelsLib = () => import("../src/inference/models");
-const backtestLib = () => import("../src/hooks/lib/compaction-backtest");
+const backtestLib = () => import("../src/context/compaction-backtest");
 const cliLib = () => import("../src/cli/compaction");
 
 const WINDOW_ENV = "CLAUDE_CODE_AUTO_COMPACT_WINDOW";

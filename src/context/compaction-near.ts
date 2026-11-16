@@ -1,17 +1,17 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent, logQuietly } from "../../bronze/events";
-import { isClaude } from "../../core/agent";
-import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
-import { platform } from "../../core/paths";
-import { isPalSpawnedInference } from "../../core/spawn-guard";
-import { modelLimitsFor } from "../../inference/models";
-import { claudeConfigFile } from "../../tools/lib/collectors/billing";
+import { appendEvent, logQuietly } from "../bronze/events";
+import { isClaude } from "../core/agent";
+import { type HookTurnPayload, hookSessionId } from "../core/hook-payload";
+import { platform } from "../core/paths";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { modelLimitsFor } from "../inference/models";
+import { claudeConfigFile } from "../usage/billing";
 import {
   contextModelOf,
   contextTokensOf,
   lastCompactionAt,
-} from "../../usage/session-events";
+} from "../usage/session-events";
 
 const MAX_OUTPUT_CAP = 20_000;
 const SUMMARY_BUFFER = 13_000;

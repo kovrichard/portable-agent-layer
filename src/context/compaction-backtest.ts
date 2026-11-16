@@ -1,5 +1,5 @@
-import type { LoggedEvent } from "../../bronze/events";
-import { median } from "../../opinions/interaction-mood";
+import type { LoggedEvent } from "../bronze/events";
+import { median } from "../opinions/interaction-mood";
 import {
   compactionInput,
   compactionMarginTokens,

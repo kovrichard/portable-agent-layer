@@ -6,7 +6,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { platform } from "../../../core/paths";
+import { platform } from "../core/paths";
 
 export interface Billing {
   billing: "subscription" | "api" | "unknown";
