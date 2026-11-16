@@ -11,7 +11,7 @@ import {
   readEvents,
   readTree,
   type WorkEvent,
-} from "../src/hooks/lib/progress-tree";
+} from "../src/progress/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;

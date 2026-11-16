@@ -1,5 +1,5 @@
 import { describe, expect, setSystemTime, test } from "bun:test";
-import { legacyJsonToProgress } from "../src/hooks/lib/projects-legacy";
+import { legacyJsonToProgress } from "../src/progress/projects-legacy";
 
 const NOW = new Date("2026-06-01T12:00:00.000Z");
 const REQUIRED = { name: "old", path: "/repos/old", status: "active" } as const;

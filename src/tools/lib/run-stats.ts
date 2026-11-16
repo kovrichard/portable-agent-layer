@@ -11,7 +11,7 @@ import {
   loggedEventIds,
 } from "../../bronze/events";
 import { eventLogEnabled } from "../../core/settings";
-import { scopeOf } from "../../hooks/lib/progress-tree";
+import { scopeOf } from "../../progress/progress-tree";
 import { backfillGit } from "./backfill/git";
 import { collectEvents } from "./collectors";
 import { apiPriceOf } from "./cost-report";

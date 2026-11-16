@@ -6,7 +6,7 @@
  */
 
 import { appendEvent, eventsSince } from "../../../bronze/events";
-import { readSessionHistory, type SessionRecord } from "../../../hooks/lib/work-tracking";
+import { readSessionHistory, type SessionRecord } from "../../../progress/work-tracking";
 
 const sessionEventId = (sessionId: string) => `session:${sessionId}`;
 

@@ -10,7 +10,7 @@ import {
   readProject,
   resolveProjectFromCwd,
   writeProject,
-} from "../src/hooks/lib/projects";
+} from "../src/progress/projects";
 import { fakeProject, projectsHome } from "./lib/projects-lib-fixture";
 
 const TEST_HOME = projectsHome(import.meta.file);

@@ -2,8 +2,8 @@ import { beforeEach } from "bun:test";
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../../src/core/settings";
-import { appendEvent, readTree, scopeOf } from "../../src/hooks/lib/progress-tree";
-import { loadProgressTreeContext } from "../../src/hooks/lib/progress-tree-context";
+import { appendEvent, readTree, scopeOf } from "../../src/progress/progress-tree";
+import { loadProgressTreeContext } from "../../src/progress/progress-tree-context";
 import { freshTestDir } from "./test-home";
 
 export const PR = "https://github.com/acme/widgets/pull/42";

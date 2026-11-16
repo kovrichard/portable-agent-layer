@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { readProject } from "../src/hooks/lib/projects";
+import { readProject } from "../src/progress/projects";
 import {
   isImportant,
   isServesKind,
   SERVES_KINDS,
   SERVES_MEANING,
   setServes,
-} from "../src/hooks/lib/serves";
+} from "../src/progress/serves";
 import { freshTestDir } from "./lib/test-home";
 
 // The override rule is the whole point of storing who decided, so it is pinned

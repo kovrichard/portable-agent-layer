@@ -5,7 +5,7 @@
  */
 
 import { resolve } from "node:path";
-import { scopeOf } from "./progress-tree";
+import { scopeOf } from "../../progress/progress-tree";
 import {
   clearRun,
   describeRun,

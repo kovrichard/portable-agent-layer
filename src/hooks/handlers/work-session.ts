@@ -16,7 +16,7 @@ import {
   extractFallbackName,
   readSessionNames,
   writeSessionName,
-} from "../lib/session-names";
+} from "../../progress/session-names";
 import {
   detectStatus,
   extractArtifacts,
@@ -24,7 +24,7 @@ import {
   readSession,
   type SessionRecord,
   writeSession,
-} from "../lib/work-tracking";
+} from "../../progress/work-tracking";
 
 function sessionLength(
   messages: Message[],

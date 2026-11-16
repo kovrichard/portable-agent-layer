@@ -5,7 +5,7 @@
  */
 
 import { eventsSince } from "../../../bronze/events";
-import { readAllProjects } from "../../../hooks/lib/projects";
+import { readAllProjects } from "../../../progress/projects";
 import {
   closedIscRows,
   decisionRows,

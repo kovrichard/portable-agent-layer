@@ -12,8 +12,8 @@
 import { appendFileSync } from "node:fs";
 import { storeDir } from "../../bronze/bronze";
 import { paths } from "../../core/paths";
-import { recordAlgorithmReflectionQuietly } from "../../hooks/lib/algorithm-runs";
-import { progressSession } from "../../hooks/lib/progress-session";
+import { recordAlgorithmReflectionQuietly } from "../../progress/algorithm-runs";
+import { progressSession } from "../../progress/progress-session";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { emit } from "../lib/emit";

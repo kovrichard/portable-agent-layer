@@ -3,7 +3,7 @@
  * it drops it, and a snooze puts it off. Each change of state is one event, whichever surface made it.
  */
 
-import { appendEvent, logQuietly } from "../../bronze/events";
+import { appendEvent, logQuietly } from "../bronze/events";
 
 export type CommitmentOutcome = "opened" | "kept" | "dropped" | "snoozed" | "reopened";
 

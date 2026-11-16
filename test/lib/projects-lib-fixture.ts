@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ProjectProgress } from "../../src/hooks/lib/projects";
+import type { ProjectProgress } from "../../src/progress/projects";
 import { removeOnceReleased } from "./remove-once-released";
 import { testHome } from "./test-home";
 

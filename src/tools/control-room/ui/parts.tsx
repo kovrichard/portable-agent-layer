@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import type { AgendaMove } from "../../../hooks/lib/agenda-store";
+import type { AgendaMove } from "../../../progress/agenda-store";
 import type { MatrixItem } from "../matrix";
 import type { WorkCard } from "../work";
 import { Badge } from "./components/badge";

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { type GoalLinks, linkInputs, progressFor } from "../src/hooks/lib/goal-links";
+import { type GoalLinks, linkInputs, progressFor } from "../src/progress/goal-links";
 
 // The model draws the linkage; this counts it. Everything asserted here runs
 // with no inference at all, which is also what the page falls back to when a

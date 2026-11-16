@@ -6,8 +6,8 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "../../core/paths";
-import { localClock, localDay, localMinuteOfDay } from "../../core/wall-clock";
+import { ensureDir, paths } from "../core/paths";
+import { localClock, localDay, localMinuteOfDay } from "../core/wall-clock";
 import { newNodeId, scopeOf } from "./progress-tree";
 
 export type Repeat = "daily" | "every-session" | "every-prompt";

@@ -23,7 +23,7 @@ describe("injectPromptContext handler", () => {
 
   test("the active progress-tree node rides along once the scope has work", async () => {
     await setSettings({ dynamicContext: { progressTree: true } });
-    const { appendEvent, scopeOf } = await import("../src/hooks/lib/progress-tree");
+    const { appendEvent, scopeOf } = await import("../src/progress/progress-tree");
     const { sessionDir } = await import("../src/core/session-dir");
     appendEvent(scopeOf(sessionDir()), "n1", "open", { title: "Gate", parent: null });
     const { injectPromptContext } = await loadHandlers();

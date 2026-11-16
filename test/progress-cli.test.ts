@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runProgress } from "../src/cli/progress";
-import { PROJECT_ROOT, readTree } from "../src/hooks/lib/progress-tree";
+import { PROJECT_ROOT, readTree } from "../src/progress/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];

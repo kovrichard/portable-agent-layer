@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { writeBinding } from "../src/hooks/lib/bindings";
+import { writeBinding } from "../src/progress/bindings";
 import { freshTestDir } from "./lib/test-home";
 
 // The read side is only worth as much as the questions it can answer without

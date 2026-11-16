@@ -8,7 +8,7 @@ import {
 } from "bun:test";
 import { mkdirSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
-import { readProject, writeProject } from "../src/hooks/lib/projects";
+import { readProject, writeProject } from "../src/progress/projects";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { outsideRepoHome } from "./lib/test-home";

@@ -30,11 +30,11 @@ beforeEach(() => {
 async function freshLib() {
   const t = Date.now();
   const projects = (await import(
-    `../src/hooks/lib/projects.ts?t=${t}`
-  )) as typeof import("../src/hooks/lib/projects");
+    `../src/progress/projects.ts?t=${t}`
+  )) as typeof import("../src/progress/projects");
   const context = (await import(
-    `../src/hooks/lib/projects-context.ts?t=${t}`
-  )) as typeof import("../src/hooks/lib/projects-context");
+    `../src/progress/projects-context.ts?t=${t}`
+  )) as typeof import("../src/progress/projects-context");
 
   return { ...projects, ...context };
 }

@@ -11,7 +11,7 @@ import {
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { palHome } from "../../core/paths";
-import { foldHistoryInto } from "../../hooks/lib/parked-history";
+import { foldHistoryInto } from "../../progress/parked-history";
 import { discardEmptyFolder, type Migration, type MigrationResult } from "./migration";
 
 /**

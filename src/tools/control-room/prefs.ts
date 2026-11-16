@@ -8,7 +8,7 @@
  */
 
 import { raw as rawSettings, reload, write as writeSettings } from "../../core/settings";
-import { PROJECT_STALE_DAYS_DEFAULT } from "../../hooks/lib/projects";
+import { PROJECT_STALE_DAYS_DEFAULT } from "../../progress/projects";
 
 const ATTENTION_SOURCES = ["refusals", "waiting", "unranked", "rules"] as const;
 export type AttentionSource = (typeof ATTENTION_SOURCES)[number];

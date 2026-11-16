@@ -15,12 +15,12 @@ import { getEntityReminder } from "../../knowledge/entity-cards";
 import { promptRulesReminder } from "../../opinions/adaptation-steering";
 import { observeTurn } from "../../opinions/interaction";
 import { getSteeringReminder } from "../../opinions/steering";
+import { parkPromptContext } from "../../progress/parked-context";
+import { progressTreePromptLine } from "../../progress/progress-tree-context";
+import { scheduledPromptsReminder } from "../../progress/scheduled-prompts";
 import { dueNudgeReminder } from "../lib/daily-nudge";
-import { parkPromptContext } from "../lib/parked-context";
-import { progressTreePromptLine } from "../lib/progress-tree-context";
 import { observeRepoState } from "../lib/repo-state";
 import { runModePromptLine } from "../lib/run-mode-gate";
-import { scheduledPromptsReminder } from "../lib/scheduled-prompts";
 import { getSkillReminder } from "../lib/skill-match";
 
 const BUDGET_MS = 250;

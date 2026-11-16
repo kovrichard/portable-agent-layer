@@ -9,7 +9,7 @@ import {
   isRecaptureWorthwhile,
   markCaptured,
   readCapture,
-} from "../src/hooks/lib/capture-store";
+} from "../src/progress/capture-store";
 import { freshTestDir } from "./lib/test-home";
 
 // Stop fires after every response, so one session reaches the capture handler

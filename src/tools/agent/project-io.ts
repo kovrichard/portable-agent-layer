@@ -1,4 +1,4 @@
-import { type ProjectProgress, readProject } from "../../hooks/lib/projects";
+import { type ProjectProgress, readProject } from "../../progress/projects";
 import { UsageError } from "../lib/command";
 
 export function now(): string {

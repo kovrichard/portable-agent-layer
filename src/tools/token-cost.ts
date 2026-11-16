@@ -11,7 +11,7 @@ import { AGENT_REGISTRY, type AgentName } from "../core/agent-registry";
 import { platform } from "../core/paths";
 import { readBindings } from "../core/project-bindings";
 import { findBinaryOnPath } from "../core/which";
-import { readAllProjects } from "../hooks/lib/projects";
+import { readAllProjects } from "../progress/projects";
 import {
   opencodeDatabase,
   readCodex,

@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { captureSessionIntelligence } from "../src/hooks/handlers/session-intelligence";
-import { readTree, scopeOf } from "../src/hooks/lib/progress-tree";
-import { readProjectHistory } from "../src/hooks/lib/work-tracking";
+import { readTree, scopeOf } from "../src/progress/progress-tree";
+import { readProjectHistory } from "../src/progress/work-tracking";
 import {
   eventsOf,
   fakeAdapter,

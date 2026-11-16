@@ -63,6 +63,7 @@ export default {
     "src/usage/**/*.ts",
     "src/knowledge/**/*.ts",
     "src/opinions/**/*.ts",
+    "src/progress/**/*.ts",
     "src/hooks/lib/**/*.ts",
     "src/hooks/handlers/*.ts",
     "src/tools/**/*.ts",

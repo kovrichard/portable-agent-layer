@@ -10,7 +10,7 @@
 
 import { existsSync } from "node:fs";
 import { toPath } from "../../core/paths";
-import { writeBinding } from "../../hooks/lib/bindings";
+import { writeBinding } from "../../progress/bindings";
 import {
   defaultSlug,
   deleteProject,
@@ -22,8 +22,8 @@ import {
   readProject,
   type ServesKind,
   writeProject,
-} from "../../hooks/lib/projects";
-import { isServesKind, SERVES_KINDS, setServes } from "../../hooks/lib/serves";
+} from "../../progress/projects";
+import { isServesKind, SERVES_KINDS, setServes } from "../../progress/serves";
 import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
 import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";
 import { iscTitle, parseIscs } from "../lib/project-isc";

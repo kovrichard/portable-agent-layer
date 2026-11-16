@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { appendEvent } from "../src/bronze/events";
 import { timeboxCommand, unattendedCommand } from "../src/cli/run-mode";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
 import {
   type RunEstimateRecord,
   runEstimateRecord,
@@ -17,6 +16,7 @@ import {
   readRun,
   untilLabel,
 } from "../src/hooks/lib/run-mode";
+import { scopeOf } from "../src/progress/progress-tree";
 import { type Command, runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 

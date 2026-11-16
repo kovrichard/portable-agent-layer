@@ -3,8 +3,8 @@
  * themselves or for one project. The prompt hook injects the due ones.
  */
 
-import { scopeOf } from "../hooks/lib/progress-tree";
-import { readAllProjects } from "../hooks/lib/projects";
+import { scopeOf } from "../progress/progress-tree";
+import { readAllProjects } from "../progress/projects";
 import {
   addSchedule,
   appliesHere,
@@ -17,7 +17,7 @@ import {
   scheduleLine,
   USER_SCOPE,
   windowLabel,
-} from "../hooks/lib/scheduled-prompts";
+} from "../progress/scheduled-prompts";
 import { group, leaf, UsageError } from "../tools/lib/command";
 
 interface AddValues {

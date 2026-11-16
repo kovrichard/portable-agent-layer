@@ -69,7 +69,7 @@ function released(name = "app"): string {
 }
 
 async function registerProject(name: string, path: string) {
-  const { writeProject } = await import("../src/hooks/lib/projects");
+  const { writeProject } = await import("../src/progress/projects");
   const now = new Date().toISOString();
   writeProject({ name, path, status: "active", created: now, updated: now });
 }

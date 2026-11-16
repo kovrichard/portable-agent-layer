@@ -3,8 +3,8 @@
  * compacted session starts with, and the line every prompt carries.
  */
 
-import { sessionDir } from "../../core/session-dir";
-import { reactionTo } from "../../opinions/interaction-reaction";
+import { sessionDir } from "../core/session-dir";
+import { reactionTo } from "../opinions/interaction-reaction";
 import { progressSession } from "./progress-session";
 import { readTree, scopeOf } from "./progress-tree";
 import { attachFactoryPrs } from "./progress-tree-factory";

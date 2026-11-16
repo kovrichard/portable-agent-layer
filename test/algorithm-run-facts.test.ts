@@ -5,7 +5,7 @@ import {
   PHASES,
   phasesIn,
   runVerdict,
-} from "../src/hooks/lib/algorithm-run-facts";
+} from "../src/progress/algorithm-run-facts";
 import {
   algorithmReply,
   FORMAT_HEADER,

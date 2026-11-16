@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readProject } from "../src/hooks/lib/projects";
+import { readProject } from "../src/progress/projects";
 import {
   commitmentEvents,
   projectCli,

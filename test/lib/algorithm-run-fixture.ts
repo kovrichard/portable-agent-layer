@@ -2,8 +2,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsSince, type LoggedEvent } from "../../src/bronze/events";
 import { reload } from "../../src/core/settings";
-import { appendEvent as appendTreeEvent } from "../../src/hooks/lib/progress-tree";
 import { observeTurn } from "../../src/opinions/interaction";
+import { appendEvent as appendTreeEvent } from "../../src/progress/progress-tree";
 
 export const PAL_HEADER = "══════ PAL | ALGORITHM ══════";
 export const FORMAT_HEADER = "♻️ ALGORITHM ═══════════════════════════";
