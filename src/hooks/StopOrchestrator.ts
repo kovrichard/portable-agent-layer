@@ -10,6 +10,7 @@ import {
   isSideStop,
   withTranscriptReply,
 } from "../bronze/antigravity-transcript";
+import { recordIdleCompactionNear } from "../context/compaction-near";
 import { stopBlockResponse } from "../core/agent";
 import { enterHookWorkspace, type StopTurnPayload } from "../core/hook-payload";
 import { logError } from "../core/log";
@@ -19,7 +20,6 @@ import { stopProgressTree } from "../progress/progress-tree-stop";
 import { unattendedStopReason } from "../safety/run-mode-gate";
 import { recordHookRunOnExit } from "../usage/hook-run";
 import { checkReadmeSync } from "./handlers/readme-sync";
-import { recordIdleCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { readStdinJSON } from "./lib/stdin";
 import { stopTurn } from "./lib/stop";

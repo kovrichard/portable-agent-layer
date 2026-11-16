@@ -7,7 +7,7 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { appendEvent } from "../../../bronze/events";
-import { type Billing, opencodeBilling } from "./billing";
+import { type Billing, opencodeBilling } from "../../../usage/billing";
 import { readCursor, writeCursor } from "./cursors";
 import { type AllowList, selectAllowed } from "./sqlite";
 

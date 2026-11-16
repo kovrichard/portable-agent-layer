@@ -12,11 +12,7 @@ import { resolve } from "node:path";
 import { agentDirOverrides } from "../src/core/paths";
 import { reload } from "../src/core/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
-import {
-  claudeBilling,
-  codexBilling,
-  opencodeBilling,
-} from "../src/tools/lib/collectors/billing";
+import { claudeBilling, codexBilling, opencodeBilling } from "../src/usage/billing";
 import { freshTestDir } from "./lib/test-home";
 
 // Field names from each agent's own files: ~/.claude.json's oauthAccount,

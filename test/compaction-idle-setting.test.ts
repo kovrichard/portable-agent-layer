@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
+import { recordIdleCompactionNear } from "../src/context/compaction-near";
 import { reload } from "../src/core/settings";
-import { recordIdleCompactionNear } from "../src/hooks/lib/compaction-near";
 import { freshTestDir } from "./lib/test-home";
 
 const IDLE_ENV = "CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS";
