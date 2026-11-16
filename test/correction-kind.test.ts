@@ -7,7 +7,7 @@ import {
   needsCorrectionKind,
   parseCorrectionKind,
   withCorrectionKind,
-} from "../src/hooks/lib/correction-kind";
+} from "../src/opinions/correction-kind";
 
 const CONFIG = resolve(import.meta.dir, "../eval/correction-kind/promptfoo.yaml");
 

@@ -4,7 +4,7 @@
  * anything unclear is a follow-up, never a guess at approval or complaint.
  */
 
-import { extractKeywords, similarity } from "../../core/text-similarity";
+import { extractKeywords, similarity } from "../core/text-similarity";
 
 export type Reaction =
   | "corrected"

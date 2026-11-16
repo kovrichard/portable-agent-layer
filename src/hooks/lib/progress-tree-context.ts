@@ -4,7 +4,7 @@
  */
 
 import { sessionDir } from "../../core/session-dir";
-import { reactionTo } from "./interaction-reaction";
+import { reactionTo } from "../../opinions/interaction-reaction";
 import { progressSession } from "./progress-session";
 import { readTree, scopeOf } from "./progress-tree";
 import { attachFactoryPrs } from "./progress-tree-factory";

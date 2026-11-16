@@ -11,7 +11,7 @@ import {
 } from "../src/bronze/evidence";
 import { evidenceCommand } from "../src/cli/evidence";
 import { reload } from "../src/core/settings";
-import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
+import { observeTurn, recordReply } from "../src/opinions/interaction";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 

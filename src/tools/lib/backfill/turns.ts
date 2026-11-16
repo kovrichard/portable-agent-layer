@@ -5,11 +5,7 @@
  */
 
 import { appendEvent } from "../../../bronze/events";
-import {
-  legacyTurnId,
-  legacyTurns,
-  type TurnEvent,
-} from "../../../hooks/lib/interaction";
+import { legacyTurnId, legacyTurns, type TurnEvent } from "../../../opinions/interaction";
 import { type AttributedRow, emitUnseen, recordedAttribution } from "./rows";
 
 type LegacyTurn = TurnEvent & AttributedRow;

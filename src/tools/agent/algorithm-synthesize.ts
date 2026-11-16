@@ -19,7 +19,7 @@
  */
 
 import { paths } from "../../core/paths";
-import { readReflections } from "../../hooks/lib/learning-store";
+import { readReflections } from "../../opinions/learning-store";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 

@@ -3,9 +3,9 @@
  * the agent's replies changed while a measured label was in its context.
  */
 
-import type { ClaimRecord } from "../../hooks/lib/claim-log";
-import type { TurnEvent } from "../../hooks/lib/interaction";
-import { median } from "../../hooks/lib/interaction-mood";
+import type { ClaimRecord } from "../../opinions/claim-log";
+import type { TurnEvent } from "../../opinions/interaction";
+import { median } from "../../opinions/interaction-mood";
 import {
   approvedShare,
   hasEnoughReplies,
@@ -14,8 +14,8 @@ import {
   type Side,
   type Split,
   splits,
-} from "../../hooks/lib/interaction-preferences";
-import { approvalIsKnown } from "../../hooks/lib/interaction-reaction";
+} from "../../opinions/interaction-preferences";
+import { approvalIsKnown } from "../../opinions/interaction-reaction";
 
 const LABELS = ["short", "long", "fast", "skimming", "friction"] as const;
 

@@ -4,8 +4,8 @@
  * newest), the known rules, and what the drafter must do with them.
  */
 
-import type { RequestedTurn } from "../../src/hooks/lib/adaptation-turns";
-import type { KnownRule } from "../../src/hooks/lib/rule-drafter";
+import type { RequestedTurn } from "../../src/opinions/adaptation-turns";
+import type { KnownRule } from "../../src/opinions/rule-drafter";
 
 interface CorrectionText {
   prompt?: string;

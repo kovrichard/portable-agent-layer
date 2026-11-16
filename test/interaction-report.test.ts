@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { TurnEvent } from "../src/hooks/lib/interaction";
-import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
+import type { TurnEvent } from "../src/opinions/interaction";
+import { REACTION_RULES } from "../src/opinions/interaction-reaction";
 import { reportLines, summarize } from "../src/tools/lib/interaction-report";
 
 let clock = 0;

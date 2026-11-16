@@ -19,11 +19,11 @@ import {
   readCandidates,
   recordCandidate,
   reproveWaiting,
-} from "../lib/adaptation-candidates";
-import { readRules } from "../lib/adaptation-rules";
-import { appendTurn, readTurns, withRequests } from "../lib/adaptation-turns";
-import { needsCorrectionKind, withCorrectionKind } from "../lib/correction-kind";
-import { replyEnd } from "../lib/interaction-samples";
+} from "../../opinions/adaptation-candidates";
+import { readRules } from "../../opinions/adaptation-rules";
+import { appendTurn, readTurns, withRequests } from "../../opinions/adaptation-turns";
+import { needsCorrectionKind, withCorrectionKind } from "../../opinions/correction-kind";
+import { replyEnd } from "../../opinions/interaction-samples";
 import {
   correctionCheckJudgment,
   correctionCheckOf,
@@ -31,21 +31,21 @@ import {
   correctionKindOf,
   reactionJudgment,
   reactionLabelOf,
-} from "../lib/rating-judgments";
+} from "../../opinions/rating-judgments";
 import {
   needsCorrectionCheck,
   ratingContext,
   ratingFromLabels,
   settledLabel,
   turnFromLabels,
-} from "../lib/reaction-rating";
+} from "../../opinions/reaction-rating";
 import {
   canRepeat,
   canWiden,
   correctionsToDraftFrom,
   drafterRequest,
   parseDraft,
-} from "../lib/rule-drafter";
+} from "../../opinions/rule-drafter";
 import { ruleRecurringJudgment } from "../lib/shadow-judgments";
 
 /** Read cached last assistant response (written by StopOrchestrator), looked up by session */

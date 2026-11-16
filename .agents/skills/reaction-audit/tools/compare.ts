@@ -4,8 +4,8 @@
  * and print where they disagree with the rules, as JSON.
  */
 
-import { readSamples } from "../../../../src/hooks/lib/interaction-samples";
-import { compareLabels } from "../../../../src/hooks/lib/reaction-audit";
+import { readSamples } from "../../../../src/opinions/interaction-samples";
+import { compareLabels } from "../../../../src/opinions/reaction-audit";
 
 const file = process.argv[2];
 if (!file) {

@@ -6,8 +6,8 @@
 
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { hookSessionId, type StopTurnPayload } from "../../core/hook-payload";
-import { ensureDir, paths } from "../../core/paths";
+import { hookSessionId, type StopTurnPayload } from "../core/hook-payload";
+import { ensureDir, paths } from "../core/paths";
 
 function isContinuedStop(payload: StopTurnPayload): boolean {
   return (

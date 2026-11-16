@@ -10,7 +10,7 @@ import type {
   JudgeState,
 } from "../../inference/judgment";
 import { parseExtraction } from "../../knowledge/entity-extraction";
-import type { RequestedTurn } from "./adaptation-turns";
+import type { RequestedTurn } from "../../opinions/adaptation-turns";
 
 type InferenceRequest = JudgeFallback["request"];
 

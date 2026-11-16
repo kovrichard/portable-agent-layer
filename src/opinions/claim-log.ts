@@ -7,15 +7,15 @@
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { storeDir } from "../../bronze/bronze";
-import { readTranscriptTail } from "../../bronze/transcript";
-import { currentAttribution } from "../../core/actor";
+import { storeDir } from "../bronze/bronze";
+import { readTranscriptTail } from "../bronze/transcript";
+import { currentAttribution } from "../core/actor";
 import {
   hookFinalReply,
   hookSessionId,
   type StopTurnPayload,
-} from "../../core/hook-payload";
-import { isEnabled, isOptedIn } from "../../core/settings";
+} from "../core/hook-payload";
+import { isEnabled, isOptedIn } from "../core/settings";
 import {
   type ClaimCheck,
   type ClaimVerdict,

@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import type { Reaction } from "../src/hooks/lib/interaction-reaction";
-import { keepSample, readSamples } from "../src/hooks/lib/interaction-samples";
+import type { Reaction } from "../src/opinions/interaction-reaction";
+import { keepSample, readSamples } from "../src/opinions/interaction-samples";
 import {
   blindSamples,
   compareLabels,
   loadReactionAuditNudge,
   unauditedSamples,
   writeAuditMark,
-} from "../src/hooks/lib/reaction-audit";
+} from "../src/opinions/reaction-audit";
 import { freshTestDir } from "./lib/test-home";
 
 const REPO_ROOT = resolve(import.meta.dir, "..");

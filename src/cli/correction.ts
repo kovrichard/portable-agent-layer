@@ -6,13 +6,13 @@
  *   backfill [--relabel]                        Label the confirmed corrections without a current kind
  */
 
-import { readTurns } from "../hooks/lib/adaptation-turns";
+import { readTurns } from "../opinions/adaptation-turns";
 import {
   backfillCorrectionKinds,
   type KindLabeller,
   labelWithInference,
-} from "../hooks/lib/correction-backfill";
-import { type KindRates, kindRates, splitRates } from "../hooks/lib/correction-rates";
+} from "../opinions/correction-backfill";
+import { type KindRates, kindRates, splitRates } from "../opinions/correction-rates";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 function correctionCommandFor(label: KindLabeller) {

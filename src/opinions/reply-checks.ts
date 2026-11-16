@@ -1,5 +1,5 @@
-import type { StopTurnPayload } from "../../core/hook-payload";
-import { logError } from "../../core/log";
+import type { StopTurnPayload } from "../core/hook-payload";
+import { logError } from "../core/log";
 import { watchReplyRules } from "./adaptation-steering";
 import { watchClaims } from "./claim-log";
 import { rememberSendBack } from "./send-back-guard";

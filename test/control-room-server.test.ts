@@ -574,7 +574,7 @@ describe("the one thing the page may change", () => {
 
 describe("the relationship tab", () => {
   const draftRule = async () => {
-    const { addDraft } = await import("../src/hooks/lib/adaptation-rules");
+    const { addDraft } = await import("../src/opinions/adaptation-rules");
 
     return addDraft({
       when: "Claiming tests pass",
@@ -592,7 +592,7 @@ describe("the relationship tab", () => {
   });
 
   test("/api/relationship says why a gated draft is not offered as an opinion", async () => {
-    const { addDraft } = await import("../src/hooks/lib/adaptation-rules");
+    const { addDraft } = await import("../src/opinions/adaptation-rules");
     const open = await draftRule();
     const gated = addDraft({
       when: "Claiming CI is green",

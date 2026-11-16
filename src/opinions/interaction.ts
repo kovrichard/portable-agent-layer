@@ -12,20 +12,20 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { currentChannel } from "../../bronze/channel";
+import { currentChannel } from "../bronze/channel";
 import {
   appendEvent,
   eventsInMonth,
   eventsSince,
   type LoggedEvent,
   logQuietly,
-} from "../../bronze/events";
-import { hearsPromptContext } from "../../core/agent";
-import { ensureDir, paths } from "../../core/paths";
-import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
-import { isEnabled } from "../../core/settings";
-import { localClock } from "../../core/wall-clock";
-import { backAfterNotificationSec } from "../../usage/waiting-on-user";
+} from "../bronze/events";
+import { hearsPromptContext } from "../core/agent";
+import { ensureDir, paths } from "../core/paths";
+import { isSystemText, stripInjectedTags } from "../core/prompt-text";
+import { isEnabled } from "../core/settings";
+import { localClock } from "../core/wall-clock";
+import { backAfterNotificationSec } from "../usage/waiting-on-user";
 import { asksForLess, followedHint, ignoredHintReminder } from "./interaction-hint-check";
 import {
   type Baseline,

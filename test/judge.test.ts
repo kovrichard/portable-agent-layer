@@ -2,19 +2,6 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { correctionKindRequest } from "../src/hooks/lib/correction-kind";
-import {
-  correctionCheckJudgment,
-  correctionCheckOf,
-  correctionKindJudgment,
-  correctionKindOf,
-  reactionJudgment,
-  reactionLabelOf,
-} from "../src/hooks/lib/rating-judgments";
-import {
-  correctionCheckRequest,
-  reactionRequest,
-} from "../src/hooks/lib/reaction-rating";
 import type { inference } from "../src/inference/inference";
 import {
   JUDGE_ADAPTERS,
@@ -29,6 +16,16 @@ import {
   judgeRequestJson,
 } from "../src/inference/judgment";
 import { costOfUsage, MODEL_PRICING } from "../src/inference/models";
+import { correctionKindRequest } from "../src/opinions/correction-kind";
+import {
+  correctionCheckJudgment,
+  correctionCheckOf,
+  correctionKindJudgment,
+  correctionKindOf,
+  reactionJudgment,
+  reactionLabelOf,
+} from "../src/opinions/rating-judgments";
+import { correctionCheckRequest, reactionRequest } from "../src/opinions/reaction-rating";
 import { freshTestDir } from "./lib/test-home";
 
 type Infer = typeof inference;

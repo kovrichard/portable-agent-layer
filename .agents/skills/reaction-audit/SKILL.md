@@ -12,7 +12,7 @@ metadata:
 
 # Reaction rules audit
 
-A **repo-only, maintainer** workflow. The rules live in `src/hooks/lib/interaction-reaction.ts`; the samples in `~/.pal/memory/state/reaction-samples.json` are messages the rules labelled, each with the end of the reply it answered. This audit **never edits the rules**. It reports, the user decides.
+A **repo-only, maintainer** workflow. The rules live in `src/opinions/interaction-reaction.ts`; the samples in `~/.pal/memory/state/reaction-samples.json` are messages the rules labelled, each with the end of the reply it answered. This audit **never edits the rules**. It reports, the user decides.
 
 ## Workflow
 

@@ -12,16 +12,16 @@ import { isSystemText } from "../../core/prompt-text";
 import { isEnabled } from "../../core/settings";
 import { getWallClockReminder } from "../../core/wall-clock";
 import { getEntityReminder } from "../../knowledge/entity-cards";
-import { promptRulesReminder } from "../lib/adaptation-steering";
+import { promptRulesReminder } from "../../opinions/adaptation-steering";
+import { observeTurn } from "../../opinions/interaction";
+import { getSteeringReminder } from "../../opinions/steering";
 import { dueNudgeReminder } from "../lib/daily-nudge";
-import { observeTurn } from "../lib/interaction";
 import { parkPromptContext } from "../lib/parked-context";
 import { progressTreePromptLine } from "../lib/progress-tree-context";
 import { observeRepoState } from "../lib/repo-state";
 import { runModePromptLine } from "../lib/run-mode-gate";
 import { scheduledPromptsReminder } from "../lib/scheduled-prompts";
 import { getSkillReminder } from "../lib/skill-match";
-import { getSteeringReminder } from "../lib/steering";
 
 const BUDGET_MS = 250;
 

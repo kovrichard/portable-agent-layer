@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { runCorrection } from "../src/cli/correction";
-import { appendTurn, readTurns, type TurnInput } from "../src/hooks/lib/adaptation-turns";
-import type { KindLabeller } from "../src/hooks/lib/correction-backfill";
-import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
+import { appendTurn, readTurns, type TurnInput } from "../src/opinions/adaptation-turns";
+import type { KindLabeller } from "../src/opinions/correction-backfill";
+import { CORRECTION_KINDS_VERSION } from "../src/opinions/correction-kind";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];

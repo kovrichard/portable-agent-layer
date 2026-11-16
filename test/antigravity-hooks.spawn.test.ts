@@ -4,8 +4,8 @@ import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
 import { palHome, paths } from "../src/core/paths";
 import { reload } from "../src/core/settings";
-import { claimChecksSince } from "../src/hooks/lib/claim-log";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
+import { claimChecksSince } from "../src/opinions/claim-log";
 import {
   CONVERSATION,
   DANGEROUS,

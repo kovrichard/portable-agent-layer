@@ -1,6 +1,6 @@
 # PAL rule drafter evaluation
 #
-# Evaluates the prompt in src/hooks/lib/rule-drafter.ts, which decides after a
+# Evaluates the prompt in src/opinions/rule-drafter.ts, which decides after a
 # confirmed correction whether it repeats an earlier one and drafts the rule
 # that would have prevented them, or widens an approved rule that missed it.
 # build-prompt.ts writes the system prompt, the schema and every test's user

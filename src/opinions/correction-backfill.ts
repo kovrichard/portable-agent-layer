@@ -4,7 +4,7 @@
  * every confirmed correction again.
  */
 
-import { judge } from "../../inference/judge";
+import { judge } from "../inference/judge";
 import { readTurns, replaceTurns, type Turn, turnKey } from "./adaptation-turns";
 import {
   type CorrectionKind,

@@ -3,7 +3,7 @@
  * from drafterRequest(), so the eval always measures the request that ships.
  */
 import { mkdir } from "node:fs/promises";
-import { drafterRequest } from "../../src/hooks/lib/rule-drafter";
+import { drafterRequest } from "../../src/opinions/rule-drafter";
 import { asTurns, CASES } from "./cases";
 
 const generated = new URL("generated/", import.meta.url).pathname;

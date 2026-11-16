@@ -10,7 +10,7 @@ import {
   reactionRequest,
   settledLabel,
   turnFromLabels,
-} from "../src/hooks/lib/reaction-rating";
+} from "../src/opinions/reaction-rating";
 
 const corrected = {
   reaction: "corrected" as const,

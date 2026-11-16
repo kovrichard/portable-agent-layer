@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
-import type { Reaction } from "../src/hooks/lib/interaction-reaction";
-import { keepSample, readSamples } from "../src/hooks/lib/interaction-samples";
+import { observeTurn, recordReply } from "../src/opinions/interaction";
+import type { Reaction } from "../src/opinions/interaction-reaction";
+import { keepSample, readSamples } from "../src/opinions/interaction-samples";
 import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;

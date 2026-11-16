@@ -3,7 +3,7 @@ import {
   hookFinalReply,
   hookSessionId,
 } from "../../core/hook-payload";
-import { recordReply } from "./interaction";
+import { recordReply } from "../../opinions/interaction";
 
 export function fileFinalReply(payload: HookTurnPayload | null | undefined): void {
   const sessionId = hookSessionId(payload);

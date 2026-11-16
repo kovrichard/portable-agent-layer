@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { RequestedTurn } from "../src/hooks/lib/adaptation-turns";
+import type { RequestedTurn } from "../src/opinions/adaptation-turns";
 import {
   firesOn,
   proofVerdict,
   proveTrigger,
   widenedProofVerdict,
-} from "../src/hooks/lib/rule-proof";
+} from "../src/opinions/rule-proof";
 
 const turn = (over: Partial<RequestedTurn>): RequestedTurn => ({
   ts: "2026-10-07T08:00:00.000Z",

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { generateRecommendations } from "../src/hooks/lib/graduation";
 import type { inference } from "../src/inference/inference";
+import { generateRecommendations } from "../src/opinions/graduation";
 
 import { freshTestDir } from "./lib/test-home";
 

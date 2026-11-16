@@ -10,6 +10,7 @@ import { extractContent, type Message } from "../../bronze/transcript";
 import { paths } from "../../core/paths";
 import { sessionDir } from "../../core/session-dir";
 import { eventLogEnabled } from "../../core/settings";
+import { lastTurnIdOf } from "../../opinions/interaction";
 import { algorithmTurnFacts, phasesIn } from "./algorithm-run-facts";
 import {
   cachedState,
@@ -19,7 +20,6 @@ import {
   replayRuns,
   stopEvents,
 } from "./algorithm-run-replay";
-import { lastTurnIdOf } from "./interaction";
 import { progressSession } from "./progress-session";
 import { activePath, readTree, scopeOf } from "./progress-tree";
 

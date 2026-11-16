@@ -1,12 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Turn } from "../src/hooks/lib/adaptation-turns";
-import {
-  type RuleEvent,
-  readRuleEvents,
-  ruleEffects,
-} from "../src/hooks/lib/rule-effect";
+import type { Turn } from "../src/opinions/adaptation-turns";
+import { type RuleEvent, readRuleEvents, ruleEffects } from "../src/opinions/rule-effect";
 import { freshTestDir } from "./lib/test-home";
 
 const turn = (ts: string, over: Partial<Turn> = {}): Turn => ({

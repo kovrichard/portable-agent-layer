@@ -3,12 +3,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { hookSessionId } from "../src/core/hook-payload";
 import { fileFinalReply } from "../src/hooks/lib/hook-turn";
-import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
 import {
   parkPromptContext,
   transformedPromptResponse,
 } from "../src/hooks/lib/parked-context";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
+import { observeTurn, recordReply } from "../src/opinions/interaction";
 import {
   asAgent,
   EARLIER_EXCHANGE,

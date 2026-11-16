@@ -160,7 +160,7 @@ describe("injectPromptContext handler", () => {
   });
 
   test("a subagent's hand-back matches no rule, lesson, skill or self-check", async () => {
-    const { addDraft, decideRule } = await import("../src/hooks/lib/adaptation-rules");
+    const { addDraft, decideRule } = await import("../src/opinions/adaptation-rules");
     const rule = addDraft({
       when: "The user reports a broken build",
       trigger: { side: "prompt", pattern: "build is broken" },

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { reactionTo } from "../src/hooks/lib/interaction-reaction";
+import { reactionTo } from "../src/opinions/interaction-reaction";
 
 function react(text: string, previousPrompt = "fix the flaky upload test") {
   return reactionTo(text, previousPrompt);

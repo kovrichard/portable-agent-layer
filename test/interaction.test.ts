@@ -3,13 +3,13 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
-import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
+import { observeTurn, recordReply, type TurnEvent } from "../src/opinions/interaction";
 import {
   DEFAULT_BASELINE,
   type MoodTurn,
   readMood,
-} from "../src/hooks/lib/interaction-mood";
-import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
+} from "../src/opinions/interaction-mood";
+import { REACTION_RULES } from "../src/opinions/interaction-reaction";
 import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;

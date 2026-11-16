@@ -2,7 +2,7 @@
  * What one turn's assistant texts say about an ALGORITHM run, read in code.
  */
 
-import { MODE_RE } from "./turn-extras";
+import { MODE_RE } from "../../opinions/turn-extras";
 
 export const PHASES = ["OBSERVE", "PLAN", "EXECUTE", "VERIFY", "LEARN"] as const;
 

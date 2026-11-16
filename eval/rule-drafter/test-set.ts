@@ -13,9 +13,9 @@
 
 import { resolve } from "node:path";
 import { paths } from "../../src/core/paths";
-import { readTurns, withRequests } from "../../src/hooks/lib/adaptation-turns";
-import { drafterRequest } from "../../src/hooks/lib/rule-drafter";
 import { inference } from "../../src/inference/inference";
+import { readTurns, withRequests } from "../../src/opinions/adaptation-turns";
+import { drafterRequest } from "../../src/opinions/rule-drafter";
 import { asTurns, type DrafterCase } from "./cases";
 import { type Grade, grade, gradeNext, gradeTrigger } from "./grading";
 
