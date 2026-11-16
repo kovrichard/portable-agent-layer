@@ -5,7 +5,6 @@
  * formatting + argv parsing only; all entity logic lives in the tools.
  */
 
-import { buildGraph, resolveSlug, stats, traverse } from "../tools/knowledge/graph";
 import {
   DOMAINS,
   type Domain,
@@ -14,7 +13,8 @@ import {
   load,
   RELATION_TYPES,
   STATUSES,
-} from "../tools/knowledge/lib";
+} from "../knowledge/lib";
+import { buildGraph, resolveSlug, stats, traverse } from "../tools/knowledge/graph";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 import { cmdAdd, parseAddFlags } from "./knowledge-add";
 import { cmdIngest } from "./knowledge-ingest";

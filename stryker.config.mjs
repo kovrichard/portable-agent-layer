@@ -61,6 +61,7 @@ export default {
     "src/bronze/**/*.ts",
     "src/inference/**/*.ts",
     "src/usage/**/*.ts",
+    "src/knowledge/**/*.ts",
     "src/hooks/lib/**/*.ts",
     "src/hooks/handlers/*.ts",
     "src/tools/**/*.ts",

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { resolve } from "node:path";
 import { runMigrate } from "../src/cli/migrate";
 import { v3EntitiesToKnowledge as v3 } from "../src/cli/migrations/v3-entities-to-knowledge";
-import { exists, load } from "../src/tools/knowledge/lib";
+import { exists, load } from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

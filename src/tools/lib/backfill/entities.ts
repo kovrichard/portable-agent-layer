@@ -3,8 +3,8 @@
  * live event shares its id, so an entity already logged is skipped.
  */
 
-import { entityEventId, logEntityFirstSeen } from "../../../hooks/lib/entity-events";
-import { type Entity, list, seenEntity } from "../../knowledge/lib";
+import { entityEventId, logEntityFirstSeen } from "../../../knowledge/entity-events";
+import { type Entity, list, seenEntity } from "../../../knowledge/lib";
 import { emitUnseen } from "./rows";
 
 interface EntityRow {

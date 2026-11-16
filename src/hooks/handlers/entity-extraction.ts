@@ -10,9 +10,12 @@ import { logDebug, logError } from "../../core/log";
 import { identity, isEnabled, isOptedIn } from "../../core/settings";
 import { canInfer, inference } from "../../inference/inference";
 import { judge } from "../../inference/judge";
-import { ingestEntities } from "../../tools/knowledge/ingest";
-import { lookupCompanyRegister } from "../lib/company-register-router";
-import { excludedNames, loadKnownEntities, loadNameIndex } from "../lib/entity-cards";
+import { lookupCompanyRegister } from "../../knowledge/company-register-router";
+import {
+  excludedNames,
+  loadKnownEntities,
+  loadNameIndex,
+} from "../../knowledge/entity-cards";
 import {
   extractionSchema,
   extractionSystem,
@@ -24,8 +27,9 @@ import {
   seenCursor,
   unseenUserText,
   worthExtracting,
-} from "../lib/entity-extraction";
-import { newResearchTargets, researchNewEntities } from "../lib/entity-research";
+} from "../../knowledge/entity-extraction";
+import { newResearchTargets, researchNewEntities } from "../../knowledge/entity-research";
+import { ingestEntities } from "../../knowledge/ingest";
 import { entityPrecheckJudgment } from "../lib/shadow-judgments";
 
 function sourceId(sessionId: string, lastId: string | undefined): string {

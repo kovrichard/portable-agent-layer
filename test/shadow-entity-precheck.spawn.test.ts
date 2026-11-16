@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseMessages } from "../src/bronze/transcript";
 import { extractSessionEntities } from "../src/hooks/handlers/entity-extraction";
-import { unseenUserText } from "../src/hooks/lib/entity-extraction";
+import { unseenUserText } from "../src/knowledge/entity-extraction";
 import {
   eventsOf,
   fakeAdapter,

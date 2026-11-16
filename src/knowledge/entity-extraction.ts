@@ -6,15 +6,10 @@
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { storeDir } from "../../bronze/bronze";
-import { type Message, messagesAfter } from "../../bronze/transcript";
-import { paths } from "../../core/paths";
-import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
-import type {
-  CompanyInput,
-  IngestInput,
-  PersonInput,
-} from "../../tools/knowledge/ingest";
+import { storeDir } from "../bronze/bronze";
+import { type Message, messagesAfter } from "../bronze/transcript";
+import { paths } from "../core/paths";
+import { isSystemText, stripInjectedTags } from "../core/prompt-text";
 import {
   findMentions,
   foldName,
@@ -25,6 +20,7 @@ import {
   type NameIndex,
   proseOnly,
 } from "./entity-names";
+import type { CompanyInput, IngestInput, PersonInput } from "./ingest";
 
 type Cursor = string | number;
 

@@ -7,7 +7,7 @@ import { mkdir } from "node:fs/promises";
 import {
   extractionSchema,
   extractionSystem,
-} from "../../src/hooks/lib/entity-extraction";
+} from "../../src/knowledge/entity-extraction";
 
 const generated = new URL("generated/", import.meta.url).pathname;
 await mkdir(generated, { recursive: true });

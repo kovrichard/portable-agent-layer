@@ -1,14 +1,14 @@
 import { existsSync, readFileSync, renameSync } from "node:fs";
 import { resolve } from "node:path";
 import { palHome } from "../../core/paths";
-import { appendSourceLog } from "../../tools/knowledge/ingest";
+import { appendSourceLog } from "../../knowledge/ingest";
 import {
   type Entity,
   type EntityFrontmatter,
   exists as knowledgeExists,
   save as knowledgeSave,
   slugify,
-} from "../../tools/knowledge/lib";
+} from "../../knowledge/lib";
 import type { Migration, MigrationResult } from "./migration";
 
 interface LegacyPerson {

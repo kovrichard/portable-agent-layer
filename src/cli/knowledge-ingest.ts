@@ -1,10 +1,6 @@
 import { readFileSync } from "node:fs";
 import { toPath } from "../core/paths";
-import {
-  type CompanyInput,
-  ingestEntities,
-  type PersonInput,
-} from "../tools/knowledge/ingest";
+import { type CompanyInput, ingestEntities, type PersonInput } from "../knowledge/ingest";
 import { UsageError } from "../tools/lib/command";
 
 interface IngestPayload {

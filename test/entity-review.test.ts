@@ -3,19 +3,19 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { reload } from "../src/core/settings";
-import { loadKnownEntities, loadNameIndex } from "../src/hooks/lib/entity-cards";
+import { loadKnownEntities, loadNameIndex } from "../src/knowledge/entity-cards";
 import {
   type ExtractedEntity,
   planExtraction,
   queueForReview,
-} from "../src/hooks/lib/entity-extraction";
+} from "../src/knowledge/entity-extraction";
 import {
   acceptReview,
   pendingReviews,
   rejectReview,
-} from "../src/hooks/lib/entity-review";
-import { ingestEntities } from "../src/tools/knowledge/ingest";
-import { load } from "../src/tools/knowledge/lib";
+} from "../src/knowledge/entity-review";
+import { ingestEntities } from "../src/knowledge/ingest";
+import { load } from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

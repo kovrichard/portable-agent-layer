@@ -6,7 +6,7 @@ import {
   type RelationType,
   STATUSES,
   type Status,
-} from "../tools/knowledge/lib";
+} from "../knowledge/lib";
 import { UsageError } from "../tools/lib/command";
 
 interface AddFlags {

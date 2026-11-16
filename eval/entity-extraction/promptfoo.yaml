@@ -1,6 +1,6 @@
 # PAL entity extraction evaluation
 #
-# Evaluates the prompt in src/hooks/lib/entity-extraction.ts as the background
+# Evaluates the prompt in src/knowledge/entity-extraction.ts as the background
 # extractor sends it. build-prompt.ts writes the system prompt and the schema from
 # src/ before each run; the user template below mirrors extractionUser(), and
 # test/entity-extraction-eval.test.ts fails when the two drift apart.

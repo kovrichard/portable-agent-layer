@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 import { ensureDir, paths } from "../../core/paths";
 import { isEnabled, isOptedIn } from "../../core/settings";
 import { localDay } from "../../core/wall-clock";
+import { loadEntityReviewNudge } from "../../knowledge/entity-review";
 import { loadAlgorithmReviewNudge } from "./algorithm-review";
 import { loadAnalyzeNudge } from "./analyze-nudge";
-import { loadEntityReviewNudge } from "./entity-review";
 import { loadReactionAuditNudge } from "./reaction-audit";
 
 type ShownOn = Record<string, string>;

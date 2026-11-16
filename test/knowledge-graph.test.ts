@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
+import { type Domain, getOrCreate, save } from "../src/knowledge/lib";
 import {
   buildGraph,
   extractWikilinks,
@@ -8,7 +9,6 @@ import {
   stats,
   traverse,
 } from "../src/tools/knowledge/graph";
-import { type Domain, getOrCreate, save } from "../src/tools/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

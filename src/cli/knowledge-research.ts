@@ -4,18 +4,18 @@
  */
 
 import { identity } from "../core/settings";
-import { lookupCompanyRegister } from "../hooks/lib/company-register-router";
-import { loadKnownEntities, loadNameIndex } from "../hooks/lib/entity-cards";
-import { queueForReview } from "../hooks/lib/entity-extraction";
-import { lookupName } from "../hooks/lib/entity-names";
+import { inference } from "../inference/inference";
+import { lookupCompanyRegister } from "../knowledge/company-register-router";
+import { loadKnownEntities, loadNameIndex } from "../knowledge/entity-cards";
+import { queueForReview } from "../knowledge/entity-extraction";
+import { lookupName } from "../knowledge/entity-names";
 import {
   type ResearchDeps,
   type ResearchTarget,
   renderProfile,
   researchEntity,
   researchItem,
-} from "../hooks/lib/entity-research";
-import { inference } from "../inference/inference";
+} from "../knowledge/entity-research";
 import { leaf, UsageError } from "../tools/lib/command";
 
 interface ResearchValues {

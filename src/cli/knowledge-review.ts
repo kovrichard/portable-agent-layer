@@ -1,11 +1,11 @@
-import type { ReviewItem } from "../hooks/lib/entity-extraction";
-import { renderProfile } from "../hooks/lib/entity-research";
+import type { ReviewItem } from "../knowledge/entity-extraction";
+import { renderProfile } from "../knowledge/entity-research";
 import {
   type AcceptChoice,
   acceptReview,
   pendingReviews,
   rejectReview,
-} from "../hooks/lib/entity-review";
+} from "../knowledge/entity-review";
 import { group, leaf, UsageError } from "../tools/lib/command";
 
 export const reviewCommand = group({

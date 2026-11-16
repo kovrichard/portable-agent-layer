@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type {
   CompanyRegister,
   RegisteredCompany,
-} from "../src/hooks/lib/company-register";
-import { lookupCompanyRegister } from "../src/hooks/lib/company-register-router";
+} from "../src/knowledge/company-register";
+import { lookupCompanyRegister } from "../src/knowledge/company-register-router";
 
 const COMPANY: RegisteredCompany = {
   name: "Brightmoor Lighting Oy",
