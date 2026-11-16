@@ -22,6 +22,7 @@ import {
 
 process.env.PAL_INFERENCE_DISABLED = "1";
 process.env.PAL_NOTIFICATIONS_DISABLED = "1";
+process.env.HUSKY = "0";
 // 2026-11-10: fake CLIs abort on purpose; the real 0.5-1.5 s retry wait cost each dispatch test ~1.5 s
 process.env.PAL_INFERENCE_RETRY_JITTER_MS = "0";
 
