@@ -1,7 +1,10 @@
 version: 2
 updates: 
   - package-ecosystem: "bun"
-    directory: "/"
+    directories:
+      - "/"
+      - "/assets/skills/consulting-report/demo"
+      - "/assets/skills/consulting-report/template"
     target-branch: "canary"
     schedule:
       interval: "weekly"
