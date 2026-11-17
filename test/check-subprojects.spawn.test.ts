@@ -36,12 +36,18 @@ function repoWithBrokenSubproject(): string {
   return root;
 }
 
+const INSTALL_AND_TSC_TIMEOUT_MS = 30_000;
+
 describe("check-subprojects", () => {
-  test("fails at tsc and names the subproject that holds the type error", () => {
-    const root = repoWithBrokenSubproject();
-    const r = spawnSync(process.execPath, [SCRIPT], { cwd: root, encoding: "utf8" });
-    expect(r.stderr).toContain("index.ts");
-    expect(r.stderr).toContain("subprojects: nested/app failed at tsc");
-    expect(r.status).toBe(1);
-  });
+  test(
+    "fails at tsc and names the subproject that holds the type error",
+    () => {
+      const root = repoWithBrokenSubproject();
+      const r = spawnSync(process.execPath, [SCRIPT], { cwd: root, encoding: "utf8" });
+      expect(r.stderr).toContain("index.ts");
+      expect(r.stderr).toContain("subprojects: nested/app failed at tsc");
+      expect(r.status).toBe(1);
+    },
+    INSTALL_AND_TSC_TIMEOUT_MS
+  );
 });
