@@ -7,11 +7,11 @@ import { spawnSync } from "node:child_process";
 import { createReadStream, constants as fsConstants } from "node:fs";
 import { access, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
-import { dirname, extname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { extname, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import { chromium, type Page } from "playwright";
-import { copyReportSource } from "./lib/copy-report";
+import { copyTemplateWithOverlay, demoDir, templateDir } from "./lib/copy-report";
 
 interface ReportMeta {
   clientName: string;
@@ -327,16 +327,18 @@ async function generate(opts: GenerateOptions): Promise<{
   return { htmlPath, pdfPath };
 }
 
-function demoDir(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-
-  return resolve(here, "..", "demo");
+interface DemoSources {
+  template: string;
+  demo: string;
 }
 
-export async function prepareDemo(cwd: string, source = demoDir()): Promise<string> {
+export async function prepareDemo(
+  cwd: string,
+  sources: DemoSources = { template: templateDir(), demo: demoDir() }
+): Promise<string> {
   const target = join(cwd, DEMO_FOLDER);
   if (!(await exists(target))) {
-    await copyReportSource(source, target);
+    await copyTemplateWithOverlay(sources.template, sources.demo, target);
   }
 
   return target;

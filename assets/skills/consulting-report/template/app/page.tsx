@@ -9,7 +9,8 @@ import { Section } from "@/components/section";
 import { StatGrid } from "@/components/stat-grid";
 import { TableOfContents } from "@/components/table-of-contents";
 import { Timeline } from "@/components/timeline";
-import { type ReportData, reportData } from "@/lib/report-data";
+import { reportData } from "@/lib/report-data";
+import type { ReportData } from "@/lib/types";
 
 const sections = [
   { id: "executive-summary", title: "Executive Summary" },
@@ -23,14 +24,6 @@ const sections = [
   { id: "call-to-action", title: "Call to Action" },
 ];
 
-const targetStateRows = [
-  {
-    metric: "Replace with metric",
-    left: "Current state value",
-    right: "Target state value",
-  },
-];
-
 type DataProps = { data: ReportData };
 
 function HeadlineStats({ data }: DataProps) {
@@ -41,8 +34,7 @@ function HeadlineStats({ data }: DataProps) {
           value: String(data.executiveSummary.methodology.interviewCount),
           label: "Interviews",
         },
-        { value: "—", label: "Headline metric", caption: "replace with your own" },
-        { value: "—", label: "Headline metric", caption: "replace with your own" },
+        ...data.executiveSummary.headlineStats,
       ]}
     />
   );
@@ -241,7 +233,11 @@ function TargetState({ data }: DataProps) {
     <Section id="target-state" title="Target State Vision">
       <p className="text-lg mb-6">{data.targetState.description}</p>
 
-      <ComparisonTable leftLabel="Today" rightLabel="Target" rows={targetStateRows} />
+      <ComparisonTable
+        leftLabel="Today"
+        rightLabel="Target"
+        rows={data.targetState.comparison}
+      />
 
       <TargetCapabilities data={data} />
 

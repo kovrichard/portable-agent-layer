@@ -44,6 +44,18 @@ export interface TimelinePhase {
   duration: string;
 }
 
+export interface HeadlineStat {
+  value: string;
+  label: string;
+  caption?: string;
+}
+
+export interface ComparisonRow {
+  metric: string;
+  left: string;
+  right: string;
+}
+
 export interface ReportData {
   clientName: string;
   reportTitle: string;
@@ -55,6 +67,7 @@ export interface ReportData {
   executiveSummary: {
     context: string;
     methodology: { interviewCount: number; roles: string[] };
+    headlineStats: HeadlineStat[];
     keyFindings: string[];
     primaryRecommendation: string;
     expectedOutcomes: string[];
@@ -83,6 +96,7 @@ export interface ReportData {
 
   targetState: {
     description: string;
+    comparison: ComparisonRow[];
     keyCapabilities: string[];
     successMetrics: string[];
   };
