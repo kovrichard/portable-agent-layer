@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -16,7 +17,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { resolve } from "node:path";
+import { delimiter, dirname, resolve } from "node:path";
 import { linkDir, linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { outsideRepoHome } from "./lib/test-home";
@@ -35,7 +36,8 @@ interface Sandbox {
 }
 
 const REPO = resolve(import.meta.dir, "..");
-const PROVING = process.env.PAL_FIX_PROOFS === "1" && process.platform !== "win32";
+const PROVING = process.env.PAL_FIX_PROOFS === "1";
+const WINDOWS = process.platform === "win32";
 const AGENT_DIRS = [".claude", ".opencode", ".cursor", ".copilot", ".codex", ".agents"];
 const STATE_DIRS = ["home", "user", ...AGENT_DIRS];
 
@@ -49,7 +51,14 @@ function bunCache(): string {
   return spawnSync("bun", ["pm", "cache"], { encoding: "utf-8" }).stdout.trim();
 }
 
-function sandboxEnv(root: string): Record<string, string> {
+function systemDirs(): string[] {
+  if (!WINDOWS) return ["/usr/bin", "/bin"];
+  const windows = process.env.SystemRoot ?? "C:\\Windows";
+
+  return [resolve(windows, "System32"), windows, dirname(Bun.which("git") ?? "git")];
+}
+
+function inheritedWithoutPath(): Record<string, string> {
   const {
     PAL_SKIP_DOCTOR: _skip,
     PAL_PKG: _pkg,
@@ -57,16 +66,26 @@ function sandboxEnv(root: string): Record<string, string> {
     CLAUDE_CODE_OAUTH_TOKEN: _token,
     ...inherited
   } = process.env;
+
+  return Object.fromEntries(
+    Object.entries(inherited as Record<string, string>).filter(
+      ([key]) => key.toUpperCase() !== "PATH"
+    )
+  );
+}
+
+function sandboxEnv(root: string): Record<string, string> {
   const dirs = Object.fromEntries(
     AGENT_DIRS.map((dir) => [`PAL_${dir.slice(1).toUpperCase()}_DIR`, resolve(root, dir)])
   );
 
   return {
-    ...(inherited as Record<string, string>),
+    ...inheritedWithoutPath(),
     ...dirs,
     HOME: resolve(root, "user"),
-    PATH: [resolve(root, "bin"), resolve(root, ".bun", "bin"), "/usr/bin", "/bin"].join(
-      ":"
+    USERPROFILE: resolve(root, "user"),
+    PATH: [resolve(root, "bin"), resolve(root, ".bun", "bin"), ...systemDirs()].join(
+      delimiter
     ),
     BUN_INSTALL: resolve(root, ".bun"),
     BUN_INSTALL_CACHE_DIR: bunCache(),
@@ -76,7 +95,8 @@ function sandboxEnv(root: string): Record<string, string> {
 }
 
 function sh(root: string, command: string, cwd = root) {
-  const result = spawnSync("sh", ["-c", command], {
+  const result = spawnSync(command, {
+    shell: true,
     cwd,
     env: sandboxEnv(root),
     encoding: "utf-8",
@@ -90,12 +110,22 @@ function fakeAgentsOnPath(root: string): void {
   const bin = resolve(root, "bin");
   mkdirSync(bin, { recursive: true });
 
-  for (const agent of ["claude", "opencode", "cursor-agent", "copilot", "codex"]) {
-    writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
-    chmodSync(resolve(bin, agent), 0o755);
+  for (const agent of ["claude", "opencode", "cursor-agent", "copilot", "codex"])
+    fakeAgent(bin, agent);
+
+  if (WINDOWS) copyFileSync(process.execPath, resolve(bin, "bun.exe"));
+  else linkFile(process.execPath, resolve(bin, "bun"));
+}
+
+function fakeAgent(bin: string, agent: string): void {
+  if (WINDOWS) {
+    writeFileSync(resolve(bin, `${agent}.cmd`), "@echo 1.0.0\r\n");
+
+    return;
   }
 
-  linkFile(process.execPath, resolve(bin, "bun"));
+  writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
+  chmodSync(resolve(bin, agent), 0o755);
 }
 
 function installFromTarball(root: string): string {
@@ -310,7 +340,10 @@ const BREAKAGES: Breakage[] = [
   {
     id: "pal.path",
     modes: ["repo"],
-    break: (s) => removeOnceReleased(at(s, ".bun", "bin", "pal")),
+    break: (s) => {
+      for (const name of ["pal", "pal.exe", "pal.bunx"])
+        removeOnceReleased(at(s, ".bun", "bin", name));
+    },
   },
   {
     id: "dependencies",
