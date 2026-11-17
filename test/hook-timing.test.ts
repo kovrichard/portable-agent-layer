@@ -34,7 +34,7 @@ beforeEach(() => {
 describe("hook timing", () => {
   test("one event per run names the hook, its total and each handler's time", async () => {
     const timing = startHookTiming("stop");
-    await timing.time("slow", Bun.sleep(30));
+    await timing.time("slow", () => Bun.sleep(30));
     await timing.time("fast", () => 1);
     timing.log("s1");
     const [event] = timings();
