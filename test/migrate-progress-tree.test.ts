@@ -258,12 +258,13 @@ describe("the schema and the template name no progress-tree switch", () => {
 describe("the old names are gone from src/ and assets/", () => {
   const MIGRATIONS_DIR = resolve(import.meta.dir, "..", "src", "cli", "migrations");
   const OLD_NAME = /workTree|work-tree/;
+  const BUILD_OUTPUT = new Set(["node_modules", "dist", ".next", "out"]);
 
   function filesUnder(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {
       const path = resolve(dir, name);
 
-      if (name === "node_modules" || name === "dist") return [];
+      if (BUILD_OUTPUT.has(name)) return [];
 
       return statSync(path).isDirectory() ? filesUnder(path) : [path];
     });
