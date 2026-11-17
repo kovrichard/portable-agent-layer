@@ -65,7 +65,7 @@ These come from PAL code, not from a runtime hook, so every runtime has them.
 | `entity_first_seen` | A person, company, idea or research topic first enters the knowledge store |
 | `discord_nag` | The Discord bot reports a nag or its answer through `pal cli events discord-nag` |
 | `repo_state` | Every prompt in a git checkout: the commit, branch and count of uncommitted files the prompt starts from |
-| `algorithm_run` | Shadow mode. At stop, an ALGORITHM turn (`change: turn`, with its node, phases and verdict), the open run it supersedes, and a run a reflection finished; `pal cli algorithm-reflect` adds `change: reflected` for the session's current turn |
+| `algorithm_run` | Shadow mode. At stop, an ALGORITHM turn (`change: turn`, with its node, phases and verdict, and its run type, would-nudge checks and exemption read from the turn's tool calls), the open run it supersedes, and a run a reflection finished; `pal cli algorithm-reflect` adds `change: reflected` for the session's current turn |
 
 ## Signals carried as fields, not events
 

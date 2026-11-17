@@ -11,7 +11,12 @@ import { paths } from "../core/paths";
 import { sessionDir } from "../core/session-dir";
 import { eventLogEnabled } from "../core/settings";
 import { lastTurnIdOf } from "../opinions/interaction";
-import { algorithmTurnFacts, phasesIn } from "./algorithm-run-facts";
+import { type RunChecks, runChecks } from "./algorithm-run-checks";
+import {
+  type AlgorithmTurnFacts,
+  algorithmTurnFacts,
+  phasesIn,
+} from "./algorithm-run-facts";
 import {
   cachedState,
   type PlannedEvent,
@@ -20,6 +25,7 @@ import {
   replayRuns,
   stopEvents,
 } from "./algorithm-run-replay";
+import { turnTools } from "./algorithm-run-tools";
 import { progressSession } from "./progress-session";
 import { activePath, readTree, scopeOf } from "./progress-tree";
 
@@ -106,11 +112,27 @@ export function turnTexts(messages: Message[]): string[] {
     .map(extractContent);
 }
 
+export type TurnLines = () => readonly string[] | null;
+
+const NO_TURN_LINES: TurnLines = () => null;
+
+function checksOf(
+  facts: AlgorithmTurnFacts | null,
+  texts: string[],
+  turnLines: TurnLines
+): RunChecks | null {
+  if (!facts) return null;
+  const lines = turnLines();
+
+  return runChecks(texts, lines ? turnTools(lines) : null);
+}
+
 export function recordAlgorithmTurn(
   session: string,
   texts: string[],
   source: TurnSource,
-  now: Date = new Date()
+  now: Date = new Date(),
+  turnLines: TurnLines = NO_TURN_LINES
 ): void {
   if (!eventLogEnabled()) return;
   const facts = algorithmTurnFacts(texts);
@@ -122,6 +144,7 @@ export function recordAlgorithmTurn(
   const node = activeNodeOf(session);
   const planned = stopEvents({
     facts,
+    checks: checksOf(facts, texts, turnLines),
     phases: phasesIn(texts),
     node,
     turn,
@@ -136,10 +159,13 @@ export function recordAlgorithmTurn(
 export function recordAlgorithmTurnQuietly(
   session: string | undefined,
   texts: string[],
-  source: TurnSource
+  source: TurnSource,
+  turnLines: TurnLines = NO_TURN_LINES
 ): void {
   if (!session) return;
-  logQuietly("algorithm_run", () => recordAlgorithmTurn(session, texts, source));
+  logQuietly("algorithm_run", () =>
+    recordAlgorithmTurn(session, texts, source, new Date(), turnLines)
+  );
 }
 
 export function recordAlgorithmReflection(

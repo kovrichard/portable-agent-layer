@@ -17,6 +17,7 @@ import { run as reflect } from "../src/tools/agent/algorithm-reflect";
 import {
   algorithmReply,
   changes,
+  edit,
   enterNode,
   FORMAT_HEADER,
   inSandbox,
@@ -25,6 +26,8 @@ import {
   prompt,
   type RunSandbox,
   runEvents,
+  transcriptLines,
+  userPrompt,
 } from "./lib/algorithm-run-fixture";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
@@ -77,6 +80,9 @@ describe("the event type", () => {
         "startsNew",
         "verdict",
         "source",
+        "runType",
+        "wouldNudge",
+        "exempt",
       ].sort()
     );
   });
@@ -123,6 +129,47 @@ describe("recording a turn at stop", () => {
         },
         pending: {},
       });
+    });
+  });
+
+  test("the turn records its run type and the checks that would nudge it", async () => {
+    const box = sandbox();
+    await inSandbox(box, () => {
+      enterNode(box, "n1", "s1");
+      prompt("s1", AT(0));
+      const lines = transcriptLines([userPrompt("go"), edit()]);
+      const reply = algorithmReply(["OBSERVE", "PLAN", "EXECUTE"]);
+      recordAlgorithmTurn("s1", [reply], "transcript", AT(1), () => lines);
+      prompt("s1", AT(2));
+      recordAlgorithmTurn("s1", [reply], "transcript", AT(3));
+      expect(
+        runEvents()
+          .filter((e) => e.change === "turn")
+          .map((e) => [e.runType, e.wouldNudge, e.exempt, e.mode])
+      ).toEqual([
+        [["code"], ["no-reflection", "no-check-after-edit"], null, "shadow"],
+        [[], [], "no-tool-record", "shadow"],
+      ]);
+    });
+  });
+
+  test("a reflected turn in another mode is not checked and never reads the transcript lines", async () => {
+    const box = sandbox();
+    await inSandbox(box, () => {
+      enterNode(box, "n1", "s1");
+      prompt("s1", AT(0));
+      recordAlgorithmTurn("s1", [algorithmReply(["OBSERVE"])], "transcript", AT(1));
+      prompt("s1", AT(2));
+      recordAlgorithmReflection("s1", AT(3));
+      let read = 0;
+      recordAlgorithmTurn("s1", [`${NATIVE_HEADER}\nok`], "transcript", AT(4), () => {
+        read += 1;
+
+        return [];
+      });
+      expect(read).toBe(0);
+      expect(changes()).toEqual(["turn", "reflected", "finished"]);
+      expect(runEvents().at(-1)?.wouldNudge).toBeUndefined();
     });
   });
 

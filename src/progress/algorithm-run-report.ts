@@ -2,11 +2,16 @@
  * The shadow numbers for ALGORITHM runs, counted from their events.
  */
 
+import {
+  type CheckedTurn,
+  type CheckReport,
+  checkReport,
+} from "./algorithm-run-check-report";
 import { lastPhase, PHASES } from "./algorithm-run-facts";
 import { type RunEvent, type RunRecord, replayRuns } from "./algorithm-run-replay";
 import { shellKnowsSession } from "./progress-session";
 
-export interface ReportedEvent extends RunEvent {
+export interface ReportedEvent extends RunEvent, CheckedTurn {
   project?: string | null;
   runtime?: string;
   verdict?: string;
@@ -39,6 +44,7 @@ export interface AlgorithmRunReport {
     withoutObserve: number;
     cases: OverOpenRunCase[];
   };
+  checks: CheckReport;
 }
 
 export interface ReportInputs {
@@ -142,5 +148,6 @@ export function algorithmRunReport(inputs: ReportInputs): AlgorithmRunReport {
       withoutObserve: cases.filter((c) => !c.observe).length,
       cases,
     },
+    checks: checkReport(turns, runs, inputs.nodeTitle),
   };
 }

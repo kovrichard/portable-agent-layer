@@ -91,6 +91,10 @@ function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+export function replyAsks(text: string): boolean {
+  return text.trim().endsWith("?");
+}
+
 function replyShape(text: string, at: Date): ReplyShape {
   const lines = text.split("\n");
 
@@ -99,7 +103,7 @@ function replyShape(text: string, at: Date): ReplyShape {
     words: wordCount(text),
     listItems: lines.filter((l) => /^\s*(?:[-*]|\d+\.)\s/.test(l)).length,
     headings: lines.filter((l) => /^#{1,6}\s/.test(l)).length,
-    asked: text.trim().endsWith("?"),
+    asked: replyAsks(text),
   };
 }
 

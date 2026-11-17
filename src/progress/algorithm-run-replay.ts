@@ -3,6 +3,7 @@
  * stop adds. Pure: the cache, the stop and the report all fold the same way.
  */
 
+import type { RunChecks } from "./algorithm-run-checks";
 import { type AlgorithmTurnFacts, runVerdict } from "./algorithm-run-facts";
 
 type RunChange = "turn" | "reflected" | "finished" | "superseded";
@@ -137,6 +138,7 @@ export function cachedState(state: RunState, now: Date): RunState {
 
 export interface StopTurn {
   facts: AlgorithmTurnFacts | null;
+  checks: RunChecks | null;
   phases: string[];
   node: string | null;
   turn: string | null;
@@ -170,6 +172,7 @@ function algorithmTurnEvents(stop: StopTurn, facts: AlgorithmTurnFacts): Planned
       node,
       turn,
       ...facts,
+      ...stop.checks,
       verdict,
       source: stop.source,
     }),
