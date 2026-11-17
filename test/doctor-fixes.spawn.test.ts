@@ -4,7 +4,7 @@
  * Slow by design, so it runs in its own CI job: PAL_FIX_PROOFS=1.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -368,8 +368,6 @@ describe.skipIf(!PROVING).each(["package", "repo"] as Mode[])(
     beforeAll(() => {
       sandbox = prepare(mode);
     }, 300_000);
-
-    afterAll(() => removeOnceReleased(sandbox.root), 120_000);
 
     test("a fresh install leaves nothing for PAL to fix", () => {
       const left = palFixable(sandbox).filter((f) => !(f.id in UNPROVEN));

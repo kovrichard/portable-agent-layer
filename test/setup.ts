@@ -126,7 +126,7 @@ failTheTestAfterOneThatRewritesTheRealRepoConfig();
 
 function keepTempFilesInAFolderTheRunRemoves() {
   redirectTempIntoTestFolder();
-  afterAll(removeTestTempFolder);
+  afterAll(removeTestTempFolder, 120_000);
 }
 
 keepTempFilesInAFolderTheRunRemoves();
