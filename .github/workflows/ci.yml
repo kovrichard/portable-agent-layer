@@ -16,14 +16,20 @@ concurrency:
 
 jobs:
   test:
-    name: test (${{ matrix.os }})
+    name: test (${{ matrix.os }}${{ matrix.shard && format(' {0}', matrix.shard) || '' }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
+        # Windows starts processes about 10x slower, so its spawn tier runs on two runners.
+        include:
+          - os: windows-latest
+            shard: 1/2
+          - os: windows-latest
+            shard: 2/2
 
     env:
       # Skip the heavy Chromium download in CI (~150MB) — only the consulting-report
@@ -63,99 +69,19 @@ jobs:
         continue-on-error: true
         run: bun audit --audit-level=high
 
-      - name: Measure process start cost
-        shell: bash
-        run: |
-          mkdir -p .test
-          cat > .test/spawn-probe.ts <<'EOF'
-          import { spawnSync } from "node:child_process";
-          import { mkdirSync } from "node:fs";
-          import { availableParallelism, totalmem } from "node:os";
-          import { resolve } from "node:path";
-          import { spawnTool } from "../assets/plugins/dark-factory/scripts/lib.mjs";
-          import { writeFakeBin } from "../test/fixtures/fake-bin";
-
-          const RUNS = 15;
-          const bin = resolve(".test/probe-bin");
-          mkdirSync(bin, { recursive: true });
-          writeFakeBin(bin, "fake", "console.log('ok');\n");
-          const env = { ...process.env, PATH: `${bin}${process.platform === "win32" ? ";" : ":"}${process.env.PATH}` };
-
-          const cases: Record<string, () => unknown> = {
-            "git --version": () => spawnSync("git", ["--version"]),
-            "git status": () => spawnSync("git", ["status", "--porcelain"]),
-            "bun -e 0": () => spawnSync(process.execPath, ["-e", "0"]),
-            "bun run fake.ts": () => spawnSync(process.execPath, ["run", resolve(bin, "fake.ts")]),
-            "fake CLI via shim": () => spawnTool("fake", [], { env }),
-            "sh -c true": () => spawnSync("sh", ["-c", "true"]),
-          };
-
-          console.log(`${process.platform}, ${availableParallelism()} CPUs, ${Math.round(totalmem() / 2 ** 30)} GB`);
-          for (const [name, run] of Object.entries(cases)) {
-            run();
-            const ms = Array.from({ length: RUNS }, () => {
-              const start = performance.now();
-              run();
-              return performance.now() - start;
-            }).sort((a, b) => a - b);
-            console.log(`${name.padEnd(20)} median ${ms[RUNS >> 1].toFixed(0).padStart(5)} ms   max ${ms[RUNS - 1].toFixed(0).padStart(5)} ms`);
-          }
-          EOF
-          bun .test/spawn-probe.ts
-
-      - name: Profile one factory run alone
-        shell: bash
-        run: |
-          mkdir -p .test/trace2
-          cat > .test/trace-sum.ts <<'EOF'
-          import { readdirSync, readFileSync } from "node:fs";
-          import { join } from "node:path";
-
-          const dir = process.argv[2] as string;
-          const byCommand = new Map<string, { count: number; seconds: number }>();
-          for (const file of readdirSync(dir)) {
-            let name = "?";
-            let seconds = 0;
-            for (const line of readFileSync(join(dir, file), "utf8").split("\n").filter(Boolean)) {
-              const event = JSON.parse(line);
-              if (event.event === "start" && name === "?") name = `git ${event.argv?.[1] ?? ""}`.replace(/^git \S*[\\/]/, "git ");
-              if (event.event === "atexit" || event.event === "exit") seconds = Math.max(seconds, event.t_abs ?? 0);
-            }
-            const entry = byCommand.get(name) ?? { count: 0, seconds: 0 };
-            byCommand.set(name, { count: entry.count + 1, seconds: entry.seconds + seconds });
-          }
-          const rows = [...byCommand].sort((a, b) => b[1].seconds - a[1].seconds);
-          const total = rows.reduce((sum, [, e]) => sum + e.seconds, 0);
-          const count = rows.reduce((sum, [, e]) => sum + e.count, 0);
-          console.log(`git: ${count} processes, ${total.toFixed(2)} s inside git`);
-          for (const [name, e] of rows.slice(0, 12))
-            console.log(`${name.padEnd(28)} ${String(e.count).padStart(4)}x ${e.seconds.toFixed(2).padStart(7)} s`);
-          EOF
-          GIT_TRACE2_EVENT="$PWD/.test/trace2" bun test test/dark-factory-build.spawn.test.ts --test-name-pattern "a whole feature run"
-          bun .test/trace-sum.ts .test/trace2
-          cat > .test/gaps.ts <<'EOF'
-          const lines = require("fs").readFileSync(process.argv[2], "utf8").split("\n").filter(Boolean).map((l: string) => JSON.parse(l));
-          let prev = Date.parse(lines[0].ts);
-          for (const e of lines) {
-            const t = Date.parse(e.ts);
-            console.log(`${String(t - prev).padStart(6)} ms  ${e.event}${e.role ? ":" + e.role : ""}`);
-            prev = t;
-          }
-          EOF
-          bun .test/gaps.ts .test/dark-factory-build.spawn/tmp/1/factory/events.jsonl
-
       - name: Gates and fast tests
+        if: matrix.shard != '2/2'
         shell: bash
         run: LINT_STAGE=commit bun run gates
 
       - name: Spawn tests
-        run: bun run test --spawn --only-failures ${{ runner.os == 'Windows' && '--parallel=4' || '' }}
+        run: bun run test --spawn --only-failures ${{ matrix.shard && format('--shard={0}', matrix.shard) || '' }}
 
       - name: Upload test timings
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-report-${{ matrix.os }}
+          name: test-report-${{ matrix.os }}-${{ strategy.job-index }}
           path: .test/test-report.xml
           if-no-files-found: ignore
 
