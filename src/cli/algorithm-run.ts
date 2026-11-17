@@ -3,6 +3,7 @@
  */
 
 import { allEventsSince } from "../bronze/events";
+import type { CheckReport } from "../progress/algorithm-run-check-report";
 import {
   type AlgorithmRunReport,
   algorithmRunReport,
@@ -54,6 +55,17 @@ function counts(record: Record<string, number>): string {
   return entries.length ? entries.map(([k, n]) => `${k} ${n}`).join(", ") : "none";
 }
 
+function formatChecks(checks: CheckReport): string[] {
+  return [
+    `Turns checked: ${checks.checkedTurns} (run types ${counts(checks.runTypes)}; exempt ${counts(checks.exempt)})`,
+    `Would nudge: ${counts(checks.verdicts)} (no-reflection reflected later in the run ${checks.reflectedLater})`,
+    ...checks.cases.map(
+      (c) =>
+        `  ${c.date} ${c.project ?? "-"} "${c.nodeTitle ?? c.node ?? "-"}" ${c.runType.join("+") || "-"} ${c.check} turn ${c.turn ?? "-"}${c.reflectedLater ? " reflected later" : ""}`
+    ),
+  ];
+}
+
 export function formatReport(report: AlgorithmRunReport): string[] {
   const { runs, overOpenRun } = report;
 
@@ -70,6 +82,7 @@ export function formatReport(report: AlgorithmRunReport): string[] {
       (c) =>
         `  ${c.date} ${c.project ?? "-"} "${c.nodeTitle ?? c.node ?? "-"}" old [${c.oldPhases.join(" ")}] observe ${c.observe ? "yes" : "no"} turns ${c.oldTurn ?? "-"} -> ${c.newTurn ?? "-"}`
     ),
+    ...formatChecks(report.checks),
   ];
 }
 
