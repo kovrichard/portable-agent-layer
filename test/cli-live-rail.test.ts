@@ -13,9 +13,13 @@ function railOn(term: Partial<Terminal>) {
     width: 80,
     ...term,
   });
-  const rail = new LiveRail(style, (text) => {
-    out += text;
-  });
+  const rail = new LiveRail(
+    style,
+    (text) => {
+      out += text;
+    },
+    () => 0
+  );
 
   return { rail, output: () => out };
 }
