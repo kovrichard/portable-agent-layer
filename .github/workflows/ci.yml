@@ -133,6 +133,16 @@ jobs:
           EOF
           GIT_TRACE2_EVENT="$PWD/.test/trace2" bun test test/dark-factory-build.spawn.test.ts --test-name-pattern "a whole feature run"
           bun .test/trace-sum.ts .test/trace2
+          cat > .test/gaps.ts <<'EOF'
+          const lines = require("fs").readFileSync(process.argv[2], "utf8").split("\n").filter(Boolean).map((l: string) => JSON.parse(l));
+          let prev = Date.parse(lines[0].ts);
+          for (const e of lines) {
+            const t = Date.parse(e.ts);
+            console.log(`${String(t - prev).padStart(6)} ms  ${e.event}${e.role ? ":" + e.role : ""}`);
+            prev = t;
+          }
+          EOF
+          bun .test/gaps.ts .test/dark-factory-build.spawn/tmp/1/factory/events.jsonl
 
       - name: Gates and fast tests
         shell: bash
