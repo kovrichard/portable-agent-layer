@@ -103,6 +103,37 @@ jobs:
           EOF
           bun .test/spawn-probe.ts
 
+      - name: Profile one factory run alone
+        shell: bash
+        run: |
+          mkdir -p .test/trace2
+          cat > .test/trace-sum.ts <<'EOF'
+          import { readdirSync, readFileSync } from "node:fs";
+          import { join } from "node:path";
+
+          const dir = process.argv[2] as string;
+          const byCommand = new Map<string, { count: number; seconds: number }>();
+          for (const file of readdirSync(dir)) {
+            let name = "?";
+            let seconds = 0;
+            for (const line of readFileSync(join(dir, file), "utf8").split("\n").filter(Boolean)) {
+              const event = JSON.parse(line);
+              if (event.event === "start" && name === "?") name = `git ${event.argv?.[1] ?? ""}`.replace(/^git \S*[\\/]/, "git ");
+              if (event.event === "atexit" || event.event === "exit") seconds = Math.max(seconds, event.t_abs ?? 0);
+            }
+            const entry = byCommand.get(name) ?? { count: 0, seconds: 0 };
+            byCommand.set(name, { count: entry.count + 1, seconds: entry.seconds + seconds });
+          }
+          const rows = [...byCommand].sort((a, b) => b[1].seconds - a[1].seconds);
+          const total = rows.reduce((sum, [, e]) => sum + e.seconds, 0);
+          const count = rows.reduce((sum, [, e]) => sum + e.count, 0);
+          console.log(`git: ${count} processes, ${total.toFixed(2)} s inside git`);
+          for (const [name, e] of rows.slice(0, 12))
+            console.log(`${name.padEnd(28)} ${String(e.count).padStart(4)}x ${e.seconds.toFixed(2).padStart(7)} s`);
+          EOF
+          GIT_TRACE2_EVENT="$PWD/.test/trace2" bun test test/dark-factory-build.spawn.test.ts --test-name-pattern "a whole feature run"
+          bun .test/trace-sum.ts .test/trace2
+
       - name: Gates and fast tests
         shell: bash
         run: LINT_STAGE=commit bun run gates
