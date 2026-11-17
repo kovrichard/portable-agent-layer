@@ -80,7 +80,7 @@ Each gate, its script, and its wrapper in `.agents/hooks/`:
 | `bun run lf:fix`           | Converts offenders to LF           | (manual)          |
 | `bun run exact-versions`   | Every dependency pinned exactly (no `^`, `~`, `latest`) | `exact-versions.ts` |
 | `bun run lock:check`       | Every `bun.lock` matches its `package.json` files; hooks run it only when one of them changed | `lock-check.ts` |
-| `bun run subprojects`      | Every nested `bun.lock` project: install, Next typegen, tsc, knip, madge; `--build` adds its build; overlays from `.agents/subprojects.json` are type-checked inside a copy; hooks run it only for changed projects | `subprojects.ts` |
+| `bun run subprojects`      | Every nested `bun.lock` project: install, Next typegen, tsc, knip, madge; `--build` adds its build; overlays from `.agents/subprojects.json` are type-checked inside a copy; commit and Stop hooks run it only for changed projects, pre-push runs every project with `--build` | `subprojects.ts` |
 | `bun run secretlint`       | Secret scanning                    | `secretlint.ts`   |
 | `bun run test`             | Bun test runner (randomized)       | (pre-push and CI) |
 | `bun run test:mutate:diff` | Stryker on the changed lines       | (CI on PRs)       |
@@ -100,7 +100,7 @@ Every wrapper above is wired into the Stop / session-end event of each agent con
 
 To add a gate: a script in `package.json`, a wrapper in `.agents/hooks/`, and an entry in each agent config above.
 
-Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-commit` runs lint-staged plus every gate except the test suite, `pre-push` runs `bun run test`, and `commit-msg` runs commitlint — so commit messages must be conventional commits.
+Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-commit` runs lint-staged plus every gate except the test suite, `pre-push` runs `bun run subprojects --build` and `bun run test`, and `commit-msg` runs commitlint — so commit messages must be conventional commits.
 
 ## Branches and releases
 
