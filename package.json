@@ -63,6 +63,7 @@
     "lf:fix": "bun .agents/scripts/check-lf.ts --fix",
     "exact-versions": "bun .agents/scripts/check-exact-versions.ts",
     "lock:check": "bun .agents/scripts/check-lock.ts",
+    "subprojects": "bun .agents/scripts/check-subprojects.ts",
     "secretlint": "secretlint \"**/*\"",
     "lint-staged": "lint-staged",
     "prepare": "bun .husky/install.mjs",

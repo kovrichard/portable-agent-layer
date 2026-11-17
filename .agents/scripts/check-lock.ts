@@ -16,7 +16,7 @@ export function isLockInput(path: string): boolean {
   return LOCK_INPUT_NAMES.has(basename(path));
 }
 
-function git(root: string, args: string[]): string {
+export function git(root: string, args: string[]): string {
   const r = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   if (r.status !== 0) throw new Error(r.stderr || `git ${args.join(" ")} failed`);
   return r.stdout;

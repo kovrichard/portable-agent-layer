@@ -1,0 +1,6 @@
+{
+  "assets/skills/consulting-report/template": {
+    "knip": { "entry": ["components/*.tsx", "lib/*.ts"] },
+    "overlays": ["assets/skills/consulting-report/demo"]
+  }
+}
