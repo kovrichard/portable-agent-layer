@@ -7,8 +7,7 @@ import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { copyReportSource } from "./lib/copy-report";
+import { copyReportSource, templateDir } from "./lib/copy-report";
 
 interface ScaffoldOptions {
   targetDir: string;
@@ -25,12 +24,6 @@ async function exists(p: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function templateDir(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-
-  return resolve(here, "..", "template");
 }
 
 async function scaffold(opts: ScaffoldOptions): Promise<void> {

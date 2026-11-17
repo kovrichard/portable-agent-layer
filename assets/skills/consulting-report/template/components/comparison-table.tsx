@@ -1,8 +1,4 @@
-interface ComparisonRow {
-  metric: string;
-  left: string;
-  right: string;
-}
+import type { ComparisonRow } from "@/lib/types";
 
 interface ComparisonTableProps {
   leftLabel: string;

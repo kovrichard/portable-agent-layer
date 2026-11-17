@@ -1,77 +1,4 @@
-export interface Finding {
-  id: string;
-  title: string;
-  description: string;
-  evidence: string;
-  source: string;
-  severity: "critical" | "high" | "medium" | "low";
-}
-
-export interface Recommendation {
-  id: string;
-  title: string;
-  description: string;
-  priority: "immediate" | "short-term" | "long-term";
-}
-
-export interface TimelinePhase {
-  phase: string;
-  title: string;
-  description: string;
-  duration: string;
-}
-
-export interface ReportData {
-  clientName: string;
-  reportTitle: string;
-  reportDate: string;
-  classification: string;
-  consultancyName: string;
-  preTitle?: string;
-
-  executiveSummary: {
-    context: string;
-    methodology: { interviewCount: number; roles: string[] };
-    keyFindings: string[];
-    primaryRecommendation: string;
-    expectedOutcomes: string[];
-  };
-
-  situationAssessment: {
-    currentState: string;
-    clientAsk: string;
-    whyNow: string;
-  };
-
-  findings: Finding[];
-
-  riskAnalysis: {
-    existentialRisks: string[];
-    competitiveThreats: string[];
-    timelinePressures: string;
-  };
-
-  strategicOpportunity: {
-    goodNews: string;
-    requirements: string[];
-  };
-
-  recommendations: Recommendation[];
-
-  targetState: {
-    description: string;
-    keyCapabilities: string[];
-    successMetrics: string[];
-  };
-
-  roadmap: TimelinePhase[];
-
-  callToAction: {
-    immediateSteps: string[];
-    decisionPoints: string[];
-    commitmentRequired: string;
-  };
-}
+import type { ReportData } from "./types";
 
 export const reportData: ReportData = {
   clientName: "Acme Industries",
@@ -88,6 +15,10 @@ export const reportData: ReportData = {
       interviewCount: 5,
       roles: ["Head of Platform", "SRE Lead", "Senior Engineers (3)", "VP Engineering"],
     },
+    headlineStats: [
+      { value: "3×", label: "MTTR", caption: "vs. peer benchmark" },
+      { value: "71%", label: "Concentration", caption: "on-call held by 3 engineers" },
+    ],
     keyFindings: [
       "Production deploys lack a tested rollback path — the single largest operational risk.",
       "Runbooks are stale across half of tier-1 services.",
@@ -194,6 +125,24 @@ export const reportData: ReportData = {
   targetState: {
     description:
       "Engineering operations that can absorb 3× load without operator heroics — every tier-1 service has a fresh runbook, every production deploy has a tested rollback, and on-call is a shared discipline rather than a three-person tax.",
+    comparison: [
+      { metric: "MTTR", left: "3× peer benchmark", right: "Within 1.5× peer benchmark" },
+      {
+        metric: "Rollback path",
+        left: "Manual, untested",
+        right: "Single-command, validated monthly",
+      },
+      {
+        metric: "On-call coverage",
+        left: "3 engineers carry 71%",
+        right: "8 engineers, max 15% each",
+      },
+      {
+        metric: "Runbook freshness",
+        left: "7 of 14 stale (>18 months)",
+        right: "Tracked as service-owner KPI",
+      },
+    ],
     keyCapabilities: [
       "Single-command rollback validated monthly",
       "Tier-1 runbook freshness as a service-owner KPI",

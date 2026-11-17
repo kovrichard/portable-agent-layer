@@ -150,7 +150,7 @@ Override with `--pdf <path>`. Pass `--skip-build` to re-render the PDF from the 
 pal cli skill run consulting-report generate-pdf --demo
 ```
 
-Copies the bundled Acme Industries example to `./consulting-report-demo` in the current directory (an existing folder is reused, not overwritten), renders it end-to-end, and writes the PDF inside that folder. Inspect the resulting PDF to see the full layout before authoring your own.
+Copies the template to `./consulting-report-demo` in the current directory with the bundled Acme Industries `lib/report-data.ts` in place of the placeholder (an existing folder is reused, not overwritten), renders it end-to-end, and writes the PDF inside that folder. The skill's `demo/` folder holds only that data file, so the demo always renders the current template. Inspect the resulting PDF to see the full layout before authoring your own.
 
 ## Important
 

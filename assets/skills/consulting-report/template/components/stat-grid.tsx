@@ -1,11 +1,7 @@
-interface Stat {
-  value: string;
-  label: string;
-  caption?: string;
-}
+import type { HeadlineStat } from "@/lib/types";
 
 interface StatGridProps {
-  stats: Stat[];
+  stats: HeadlineStat[];
 }
 
 export function StatGrid({ stats }: StatGridProps) {
