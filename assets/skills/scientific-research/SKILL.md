@@ -152,13 +152,23 @@ Apply these tests before keeping a claim:
    lanes ran as parallel subagents or sequentially, and whether UpToDate was
    accessible.
 
+With a Workflow tool, run steps 5-7 as the `scientific-research` workflow instead
+of spawning. Pass `args` as `{ lanes: [{ id, description }], laneBrief,
+verifierBrief }`: one lane per agent you would have spawned, and the two briefs below
+with the question and PICO filled in and `{{LANE}}` and `{{FINDINGS}}` left as they
+are. Build the answer from its `confirmed` claims only; `couldNotVerify`,
+`nothingFound`, `inaccessibleLanes` and `failedLanes` go under "What is uncertain /
+not found".
+
 Without a subagent tool, perform steps 5-7 yourself: run lane A, then B, then C,
 then D, recording findings in the lane output shape; then do the verification pass
 as a distinct step, re-opening every cited source before writing.
 
 ## Source-lane subagent brief
 
-Send each lane agent this text with the placeholders filled in:
+Send each lane agent this text with the placeholders filled in. `{{LANE}}` is the
+lane letter, a dash, and that lane's description and domains from the Allowed
+sources table:
 
 ```
 Research the following scientific question using ONLY the sources named for your
@@ -166,7 +176,7 @@ lane. You have web search and fetch tools. Return nothing you did not open and r
 
 Question: <restated question>
 Population / intervention / comparison / outcome: <from step 1>
-Your lane: <A | B | C | D> — <lane description and domains from the Allowed sources table>
+Your lane: {{LANE}}
 
 Rules:
 - Search only your lane's domains (use site: restricted queries). Open each
@@ -186,8 +196,8 @@ Rules:
   journal or body, year, PMID or DOI or URL); the journal's SJR quartile; funding:
   the funders named in the source and one label, vendor-funded, vendor-linked
   authors, funding not stated or funding not accessible.
-- Lane D only: if UpToDate does not open or shows a paywall, return the single line
-  "UpToDate inaccessible" and nothing else.
+- Lane D only: if UpToDate does not open or shows a paywall, say it is inaccessible
+  and return no claims.
 - Do not fill gaps from memory. If your lane has nothing on a sub-question, say
   "nothing found in this lane for: <sub-question>".
 
@@ -197,7 +207,8 @@ the queries you ran and the URLs you opened.
 
 ## Verifier subagent brief
 
-Send the verifier this text with the lane findings pasted in:
+Send the verifier this text with every lane's output pasted in place of
+`{{FINDINGS}}`:
 
 ```
 You are verifying research findings before they are used in an answer. You have web
@@ -206,7 +217,7 @@ search and fetch tools. Do not add new claims.
 Question: <restated question>
 
 Findings from the source lanes (verbatim):
-<paste every lane's output>
+{{FINDINGS}}
 
 For every claim:
 1. Open the cited source (PMID, DOI or URL). If it does not open, mark the claim
@@ -256,7 +267,7 @@ Then:
    found, claims the verifier could not confirm (stated as unconfirmed, not as
    facts), and known limits of the evidence (small trials, old guidelines,
    population mismatch).
-5. **Method** — one line: parallel subagents or sequential lanes; UpToDate read or
+5. **Method** — one line: workflow, parallel subagents or sequential lanes; UpToDate read or
    inaccessible; number of sources opened.
 6. **References** — numbered list matching the inline numbers: authors or body,
    title, journal or body, year, PMID or DOI or URL, SJR quartile, and funding (the
