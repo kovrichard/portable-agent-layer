@@ -63,12 +63,60 @@ jobs:
         continue-on-error: true
         run: bun audit --audit-level=high
 
+      - name: Measure process start cost
+        shell: bash
+        run: |
+          mkdir -p .test
+          cat > .test/spawn-probe.ts <<'EOF'
+          import { spawnSync } from "node:child_process";
+          import { mkdirSync } from "node:fs";
+          import { availableParallelism, totalmem } from "node:os";
+          import { resolve } from "node:path";
+          import { spawnTool } from "../assets/plugins/dark-factory/scripts/lib.mjs";
+          import { writeFakeBin } from "../test/fixtures/fake-bin";
+
+          const RUNS = 15;
+          const bin = resolve(".test/probe-bin");
+          mkdirSync(bin, { recursive: true });
+          writeFakeBin(bin, "fake", "console.log('ok');\n");
+          const env = { ...process.env, PATH: `${bin}${process.platform === "win32" ? ";" : ":"}${process.env.PATH}` };
+
+          const cases: Record<string, () => unknown> = {
+            "git --version": () => spawnSync("git", ["--version"]),
+            "git status": () => spawnSync("git", ["status", "--porcelain"]),
+            "bun -e 0": () => spawnSync(process.execPath, ["-e", "0"]),
+            "bun run fake.ts": () => spawnSync(process.execPath, ["run", resolve(bin, "fake.ts")]),
+            "fake CLI via shim": () => spawnTool("fake", [], { env }),
+            "sh -c true": () => spawnSync("sh", ["-c", "true"]),
+          };
+
+          console.log(`${process.platform}, ${availableParallelism()} CPUs, ${Math.round(totalmem() / 2 ** 30)} GB`);
+          for (const [name, run] of Object.entries(cases)) {
+            run();
+            const ms = Array.from({ length: RUNS }, () => {
+              const start = performance.now();
+              run();
+              return performance.now() - start;
+            }).sort((a, b) => a - b);
+            console.log(`${name.padEnd(20)} median ${ms[RUNS >> 1].toFixed(0).padStart(5)} ms   max ${ms[RUNS - 1].toFixed(0).padStart(5)} ms`);
+          }
+          EOF
+          bun .test/spawn-probe.ts
+
       - name: Gates and fast tests
         shell: bash
         run: LINT_STAGE=commit bun run gates
 
       - name: Spawn tests
         run: bun run test --spawn --only-failures
+
+      - name: Upload test timings
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-report-${{ matrix.os }}
+          path: .test/test-report.xml
+          if-no-files-found: ignore
 
   browser-smoke:
     # Windows only, deliberately: chromium.launch hung under Bun on Windows and
