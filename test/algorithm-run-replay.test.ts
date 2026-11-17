@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { RunChecks } from "../src/progress/algorithm-run-checks";
 import type { AlgorithmTurnFacts } from "../src/progress/algorithm-run-facts";
 import {
   cachedState,
@@ -51,9 +52,16 @@ const FACTS: AlgorithmTurnFacts = {
   startsNew: true,
 };
 
+const CHECKS: RunChecks = {
+  runType: ["code"],
+  wouldNudge: ["no-reflection"],
+  exempt: null,
+};
+
 function stop(overrides: Partial<StopTurn>): StopTurn {
   return {
     facts: FACTS,
+    checks: CHECKS,
     phases: FACTS.phases,
     node: "n1",
     turn: "t2",
@@ -183,6 +191,7 @@ describe("the events a stop appends", () => {
           node: "n1",
           turn: "t2",
           ...FACTS,
+          ...CHECKS,
           verdict: "started",
           source: "transcript",
           mode: "shadow",

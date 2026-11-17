@@ -25,6 +25,43 @@ export function algorithmReply(phases: string[], header = PAL_HEADER): string {
   return [header, "🗒️ TASK: fixture", ...phases.map(marker)].join("\n\n");
 }
 
+type TranscriptEntry = Record<string, unknown>;
+
+export function userPrompt(text: string): TranscriptEntry {
+  return { type: "user", message: { content: text } };
+}
+
+export function assistantText(text: string): TranscriptEntry {
+  return { type: "assistant", message: { content: [{ type: "text", text }] } };
+}
+
+export function toolUse(name: string, input: Record<string, unknown>): TranscriptEntry {
+  return {
+    type: "assistant",
+    message: { content: [{ type: "tool_use", id: `tu-${name}`, name, input }] },
+  };
+}
+
+export function bash(command: string): TranscriptEntry {
+  return toolUse("Bash", { command });
+}
+
+export function edit(file = "src/a.ts"): TranscriptEntry {
+  return toolUse("Edit", { file_path: file, old_string: "a", new_string: "b" });
+}
+
+export function toolResult(content: unknown, structured?: unknown): TranscriptEntry {
+  return {
+    type: "user",
+    message: { content: [{ type: "tool_result", tool_use_id: "tu", content }] },
+    ...(structured !== undefined && { toolUseResult: structured }),
+  };
+}
+
+export function transcriptLines(entries: TranscriptEntry[]): string[] {
+  return entries.map((entry) => JSON.stringify(entry));
+}
+
 const ENV_KEYS = [
   "PAL_HOME",
   "PAL_AGENT",

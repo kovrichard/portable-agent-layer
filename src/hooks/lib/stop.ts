@@ -31,8 +31,13 @@ import {
 import { logDebug, logError } from "../../core/log";
 import { assets, ensureDir, paths } from "../../core/paths";
 import { spawnDetachedInference } from "../../inference/detached-inference";
+import { transcriptLines } from "../../opinions/claim-log";
 import { recordReply } from "../../opinions/interaction";
-import { recordAlgorithmTurnQuietly, turnTexts } from "../../progress/algorithm-runs";
+import {
+  recordAlgorithmTurnQuietly,
+  type TurnLines,
+  turnTexts,
+} from "../../progress/algorithm-runs";
 import { startHookTiming } from "../../usage/hook-timing";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
@@ -143,6 +148,7 @@ async function runTurnStop(
     await runStopHandlers(messages, {
       lastAssistantMessage: hookFinalReply(payload),
       sessionId: hookSessionId(payload),
+      turnLines: () => (payload ? transcriptLines(payload) : null),
     });
 
     return;
@@ -157,6 +163,7 @@ async function runTurnStop(
 interface RunStopHandlersOptions {
   lastAssistantMessage?: string;
   sessionId?: string;
+  turnLines?: TurnLines;
 }
 
 /** Run all stop handlers on the newest messages of the transcript */
@@ -177,7 +184,12 @@ export async function runStopHandlers(
 
   if (options.sessionId) recordFinalReply(messages, options.sessionId);
 
-  recordAlgorithmTurnQuietly(options.sessionId, turnTexts(messages), "transcript");
+  recordAlgorithmTurnQuietly(
+    options.sessionId,
+    turnTexts(messages),
+    "transcript",
+    options.turnLines
+  );
 
   // Always persist last exchange — drives CompactRecover + "Pick Up Where You Left Off"
   if (options.sessionId) persistLastExchange(messages, options.sessionId);
