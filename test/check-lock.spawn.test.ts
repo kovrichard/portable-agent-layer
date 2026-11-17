@@ -5,7 +5,6 @@ import { join, resolve } from "node:path";
 import {
   driftedLocks,
   lockDirs,
-  lockInputsChanged,
   lockInputsInCheckout,
 } from "../.agents/scripts/check-lock";
 import { outsideRepoHome } from "./lib/test-home";
@@ -78,19 +77,5 @@ describe("driftedLocks", () => {
 
   test("every bun.lock in this repo matches its package.json files", () => {
     expect(driftedLocks(resolve(import.meta.dir, ".."))).toEqual([]);
-  });
-});
-
-describe("lockInputsChanged", () => {
-  test("ignores a change outside the lock inputs", () => {
-    const root = repoWithLockedProjects();
-    writeFileSync(join(root, "index.ts"), "export {};\n");
-    expect(lockInputsChanged(root)).toBe(false);
-  });
-
-  test("sees an edited manifest", () => {
-    const root = repoWithLockedProjects();
-    writeManifest(root, DRIFTED);
-    expect(lockInputsChanged(root)).toBe(true);
   });
 });

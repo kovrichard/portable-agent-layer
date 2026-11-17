@@ -37,7 +37,8 @@ export class LiveRail {
     private readonly style: Style,
     private readonly write: (text: string) => void = (text) => {
       process.stdout.write(text);
-    }
+    },
+    private readonly now: () => number = () => performance.now()
   ) {}
 
   line(text = ""): void {
@@ -85,14 +86,14 @@ export class LiveRail {
       frame += 1;
       draw();
     }, FRAME_MS);
-    const started = performance.now();
+    const started = this.now();
 
     try {
       const done = await work();
       clearInterval(spinner);
       this.write(CLEAR_LINE);
 
-      if (done) this.settle(name, done, stepTime(performance.now() - started));
+      if (done) this.settle(name, done, stepTime(this.now() - started));
 
       return done;
     } catch (error) {

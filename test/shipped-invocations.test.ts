@@ -19,13 +19,13 @@ function shippedInvocations(pattern: RegExp): { file: string; command: string }[
   );
 }
 
+const BUILD_OUTPUT = new Set(["node_modules", "dist", ".next", "out"]);
+
 function instructionFilesUnder(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const path = resolve(dir, entry);
     if (statSync(path).isDirectory()) {
-      return entry !== "node_modules" && entry !== "dist"
-        ? instructionFilesUnder(path)
-        : [];
+      return BUILD_OUTPUT.has(entry) ? [] : instructionFilesUnder(path);
     }
 
     return /\.(md|ts|json|rules|template)$/.test(entry) ? [path] : [];

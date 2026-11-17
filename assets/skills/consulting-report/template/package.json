@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "next typegen && tsc --noEmit --incremental false"
   },
   "dependencies": {
     "next": "16.4.6",

@@ -56,7 +56,7 @@
     "check-write": "bun .agents/scripts/check-write.ts",
     "knip": "knip-bun",
     "klint": "klint && klint --config test",
-    "klint:hook": "klint --json --hook && klint --config test --json --hook",
+    "klint:hook": "klint --hook && klint --config test --hook",
     "jscpd": "jscpd --no-tips",
     "madge": "madge --circular --extensions ts --ts-config tsconfig.json src",
     "lf": "bun .agents/scripts/check-lf.ts",
@@ -64,7 +64,7 @@
     "exact-versions": "bun .agents/scripts/check-exact-versions.ts",
     "lock:check": "bun .agents/scripts/check-lock.ts",
     "secretlint": "secretlint \"**/*\"",
-    "lint-staged": "lint-staged",
+    "gates": "lint-staged --all --fail-on-changes --continue-on-error",
     "prepare": "bun .husky/install.mjs",
     "build:ui": "bun run --filter @pal/control-room-ui build",
     "dev:ui": "bun run --filter @pal/control-room-ui dev",
@@ -83,14 +83,6 @@
     "eval:rule-drafter": "bun eval/rule-drafter/build-prompt.ts && bun eval/run.ts rule-drafter",
     "eval:rule-drafter:test": "bun eval/rule-drafter/test-set.ts",
     "eval:pareto-analyze": "bun eval/pareto-analyze/build-prompt.ts && bun eval/run.ts pareto-analyze"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "bun run check"
-    ],
-    "{package.json,bun.lock,bunfig.toml,.npmrc}": [
-      "bun run lock:check"
-    ]
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.7",

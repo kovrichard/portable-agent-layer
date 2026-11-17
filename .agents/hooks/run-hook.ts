@@ -5,7 +5,7 @@ type HookFormat = "claude" | "cursor" | "opencode" | "codex" | "antigravity";
 
 const FORMAT_FLAGS = ["--codex", "--cursor", "--opencode", "--antigravity"];
 
-export function hookFormatFromArgs(args: string[] = process.argv.slice(2)): HookFormat {
+function hookFormatFromArgs(args: string[] = process.argv.slice(2)): HookFormat {
   const flag = FORMAT_FLAGS.find((f) => args.includes(f));
   return flag ? (flag.slice(2) as HookFormat) : "claude";
 }

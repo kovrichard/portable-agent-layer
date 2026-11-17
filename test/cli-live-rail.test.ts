@@ -4,7 +4,7 @@ import { LiveRail, type Note, stepTime } from "../src/cli/ui/live";
 import { createStyle } from "../src/cli/ui/style";
 import type { Terminal } from "../src/cli/ui/terminal";
 
-function railOn(term: Partial<Terminal>) {
+function railOn(term: Partial<Terminal>, now: () => number = () => 0) {
   let out = "";
   const style = createStyle({
     rich: true,
@@ -13,9 +13,13 @@ function railOn(term: Partial<Terminal>) {
     width: 80,
     ...term,
   });
-  const rail = new LiveRail(style, (text) => {
-    out += text;
-  });
+  const rail = new LiveRail(
+    style,
+    (text) => {
+      out += text;
+    },
+    now
+  );
 
   return { rail, output: () => out };
 }
@@ -71,6 +75,29 @@ describe("a step, at a terminal", () => {
 
     expect(output()).toContain("◐  Cursor       installing…");
     expect(finalLines(output())).toEqual(["✓  Cursor       12 hooks", "│  ▲ kept rules"]);
+  });
+
+  test("prints how long a step took once it passes the instant mark", async () => {
+    const readings = [1000, 2234];
+    const { rail, output } = railOn({}, () => readings.shift() ?? 0);
+
+    await rail.step("Cursor", "installing…", () => ({ detail: ["12 hooks"] }));
+
+    expect(finalLines(output())[0]).toEndWith(
+      "12 hooks                                1.2s"
+    );
+  });
+
+  test("reads the real clock by default, so an instant step prints no time", async () => {
+    let out = "";
+    const terminal = createStyle({ rich: true, color: "none", unicode: true, width: 80 });
+    const rail = new LiveRail(terminal, (text) => {
+      out += text;
+    });
+
+    await rail.step("Cursor", "installing…", () => ({ detail: ["12 hooks"] }));
+
+    expect(finalLines(out)).toEqual(["✓  Cursor       12 hooks"]);
   });
 
   test("clears the spinner for a step that had nothing to do", async () => {

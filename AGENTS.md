@@ -65,28 +65,22 @@ bun run build:ui   # vite build — the server serves ui/dist, and builds it on 
 bun run dev:ui     # vite dev with hot reload, proxying /api to a running control room
 ```
 
-Each gate, its script, and its wrapper in `.agents/hooks/`:
+## Gates
 
-| Script                     | What it does                       | Wrapper           |
-| -------------------------- | ---------------------------------- | ----------------- |
-| `bun run check`            | Biome lint + format (read-only)    | `check.ts`        |
-| `bun run check-write`      | Biome `--write`, naming what it rewrote | (manual)     |
-| `bun run type-check`       | `tsc --noEmit`                     | `type-check.ts`   |
-| `bun run knip`             | Dead-code / unused-deps scan       | `knip.ts`         |
-| `bun run jscpd`            | Copy-paste detection               | `jscpd.ts`        |
-| `bun run klint`            | Architecture rules                 | `klint.ts`        |
-| `bun run madge`            | Circular-import detection          | `madge.ts`        |
-| `bun run lf`               | CRLF guard on tracked files        | `lf.ts`           |
-| `bun run lf:fix`           | Converts offenders to LF           | (manual)          |
-| `bun run exact-versions`   | Every dependency pinned exactly (no `^`, `~`, `latest`) | `exact-versions.ts` |
-| `bun run lock:check`       | Every `bun.lock` matches its `package.json` files; hooks run it only when one of them changed | `lock-check.ts` |
-| `bun run secretlint`       | Secret scanning                    | `secretlint.ts`   |
-| `bun run test`             | Bun test runner (randomized)       | (pre-push and CI) |
-| `bun run test:mutate:diff` | Stryker on the changed lines       | (CI on PRs)       |
+Every gate runs through lint-staged: `bun run gates` is `lint-staged --all --fail-on-changes`, so it never stashes or stages anything. Each `.lintstagedrc.mjs` holds the gates of its folder and runs them in that folder, in parallel; a folder with its own toolchain (a nested `bun.lock`, a `Cargo.toml`) gets its own `.lintstagedrc.mjs` with its language's gates. The root one runs Biome, `tsc`, knip, jscpd, klint, madge, the LF, exact-version, lockfile and secretlint checks; `assets/skills/consulting-report/.lintstagedrc.mjs` installs the report template and type-checks, knips and madges it and the demo data. To add a gate, add one line to the right `.lintstagedrc.mjs`.
+
+| Stage                          | Runs                                                        |
+| ------------------------------ | ----------------------------------------------------------- |
+| Every agent Stop               | `bun run gates`                                             |
+| `pre-commit` and CI            | `LINT_STAGE=commit bun run gates`: also the template's `next build` and `bun run test --fast` |
+| `pre-push` and CI              | `bun run test`, the full suite                              |
+| CI only                        | mutation testing, pkg-e2e, doctor-fixes, browser-smoke      |
+
+`bun run check-write` and `bun run lf:fix` fix what `check` and `lf` report.
 
 ## The `.agents/hooks/` system
 
-Every wrapper above is wired into the Stop / session-end event of each agent configured here. Each wrapper is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the whole chain when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop. Antigravity CLI is the exception: it gets a Stop `continue` reply with exit 0, and it runs the gates from `.agents/`, so its commands are relative to that folder. Claude Code's `SubagentStop` passes `--subagent`, which gates a subagent only in its own git worktree; one sharing the main checkout is covered by the parent's `Stop`. The same gates also run as a `PreToolUse` hook on `SubagentHandback`, because a subagent that has already handed its report back cannot be resumed, so Claude Code drops its `SubagentStop` block. Dark-factory roles and the factory's PO session start with `--setting-sources local`, so none of these Claude Code hooks run in them: the factory's only gate is the repo's `.dark-factory.json`, they keep this repo's `permissions`, and the git hooks in `.husky/` still run on every commit they make. A `PreToolUse` hook (`.agents/scripts/agent-isolation.ts`) refuses to launch a subagent that can edit files from the main checkout unless it has `isolation: "worktree"`; in a linked worktree it may share the checkout, because `--subagent` gates it there; read-only types may always share.
+`.agents/hooks/gates.ts` is wired into the Stop / session-end event of each agent configured here. It is a thin call into `run-hook.ts`, which does the subprocess plumbing and skips the gates when `git status` is empty — so a conversational turn that changed nothing costs a single git call. A failing gate makes `run-hook.ts` exit 2, which the agent treats as a blocked session-end: it must fix the underlying issue before it can stop. Antigravity CLI is the exception: it gets a Stop `continue` reply with exit 0, and it runs the gates from `.agents/`, so its commands are relative to that folder. Claude Code's `SubagentStop` passes `--subagent`, which gates a subagent only in its own git worktree; one sharing the main checkout is covered by the parent's `Stop`. The same gates also run as a `PreToolUse` hook on `SubagentHandback`, because a subagent that has already handed its report back cannot be resumed, so Claude Code drops its `SubagentStop` block. Dark-factory roles and the factory's PO session start with `--setting-sources local`, so none of these Claude Code hooks run in them: the factory's only gate is the repo's `.dark-factory.json`, they keep this repo's `permissions`, and the git hooks in `.husky/` still run on every commit they make. A `PreToolUse` hook (`.agents/scripts/agent-isolation.ts`) refuses to launch a subagent that can edit files from the main checkout unless it has `isolation: "worktree"`; in a linked worktree it may share the checkout, because `--subagent` gates it there; read-only types may always share.
 
 | Agent           | Config file                 | Event          |
 | --------------- | --------------------------- | -------------- |
@@ -97,9 +91,7 @@ Every wrapper above is wired into the Stop / session-end event of each agent con
 | opencode        | `.opencode/plugins/lint.ts` | `session.idle` |
 | Antigravity CLI | `.agents/hooks.json`        | `Stop`         |
 
-To add a gate: a script in `package.json`, a wrapper in `.agents/hooks/`, and an entry in each agent config above.
-
-Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-commit` runs lint-staged plus every gate except the test suite, `pre-push` runs `bun run test`, and `commit-msg` runs commitlint — so commit messages must be conventional commits.
+Git hooks in `.husky/` enforce the same gates independently of any agent: `pre-commit` runs the commit stage, `pre-push` runs `bun run test`, and `commit-msg` runs commitlint — so commit messages must be conventional commits.
 
 ## Branches and releases
 

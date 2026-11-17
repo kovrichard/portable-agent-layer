@@ -63,38 +63,9 @@ jobs:
         continue-on-error: true
         run: bun audit --audit-level=high
 
-      - name: Check (lint + format)
-        run: bun run check
-
-      - name: Type-check
-        run: bun run type-check
-
-      - name: Knip
-        run: bun run knip
-
-      - name: jscpd
-        run: bun run jscpd
-
-      - name: Klint
-        run: bun run klint
-
-      - name: Madge
-        run: bun run madge
-
-      - name: Line endings
-        run: bun run lf
-
-      - name: Exact dependency versions
-        run: bun run exact-versions
-
-      - name: Lockfile matches package.json
-        run: bun run lock:check
-
-      - name: Secretlint
-        run: bun run secretlint
-
-      - name: Fast tests
-        run: bun run test --fast --only-failures
+      - name: Gates and fast tests
+        shell: bash
+        run: LINT_STAGE=commit bun run gates
 
       - name: Spawn tests
         run: bun run test --spawn --only-failures
