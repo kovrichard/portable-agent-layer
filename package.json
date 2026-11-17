@@ -56,6 +56,7 @@
     "check-write": "bun .agents/scripts/check-write.ts",
     "knip": "knip-bun",
     "klint": "klint && klint --config test",
+    "klint:hook": "klint --hook && klint --config test --hook",
     "jscpd": "jscpd --no-tips",
     "madge": "madge --circular --extensions ts --ts-config tsconfig.json src",
     "lf": "bun .agents/scripts/check-lf.ts",

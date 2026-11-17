@@ -5,7 +5,7 @@ const gates = [
   "type-check",
   "knip",
   "jscpd",
-  "klint",
+  commit ? "klint" : "klint:hook",
   "madge",
   "lf",
   "exact-versions",
