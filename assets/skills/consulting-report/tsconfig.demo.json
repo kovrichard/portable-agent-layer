@@ -1,7 +1,7 @@
 {
   "extends": "./template/tsconfig.json",
   "compilerOptions": {
-    "incremental": false,
+    "tsBuildInfoFile": "template/node_modules/.cache/tsc-demo.tsbuildinfo",
     "plugins": [],
     "rootDirs": ["template/lib", "demo/lib"]
   },
