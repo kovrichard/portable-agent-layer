@@ -4,7 +4,7 @@
  * Slow by design, so it runs in its own CI job: PAL_FIX_PROOFS=1.
  */
 
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -256,7 +256,10 @@ function undeclared(path: string): void {
 function retiredHookScript(sandbox: Sandbox): void {
   editJson(at(sandbox, ".claude", "settings.json"), (settings) => {
     const hooks = settings.hooks as Record<string, unknown[]>;
-    const script = resolve(sandbox.pkg, "src", "hooks", "RetiredHook.ts");
+    const script = resolve(sandbox.pkg, "src", "hooks", "RetiredHook.ts").replaceAll(
+      "\\",
+      "/"
+    );
     hooks.Stop.push({
       hooks: [{ type: "command", command: `bun run ${script} --agent=claude` }],
     });
@@ -365,6 +368,8 @@ describe.skipIf(!PROVING).each(["package", "repo"] as Mode[])(
     beforeAll(() => {
       sandbox = prepare(mode);
     }, 300_000);
+
+    afterAll(() => removeOnceReleased(sandbox.root), 120_000);
 
     test("a fresh install leaves nothing for PAL to fix", () => {
       const left = palFixable(sandbox).filter((f) => !(f.id in UNPROVEN));
