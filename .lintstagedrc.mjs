@@ -11,9 +11,12 @@ const gates = [
   "exact-versions",
   "lock:check",
   "secretlint",
-  ...(commit ? ["test --fast --only-failures"] : []),
 ];
 
+const afterGates = commit ? ["test --fast --only-failures"] : [];
+
+const run = (script) => () => `bun run ${script}`;
+
 export default {
-  "*": [gates.map((gate) => () => `bun run ${gate}`)],
+  "*": [gates.map(run), ...afterGates.map(run)],
 };
