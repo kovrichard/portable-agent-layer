@@ -25,6 +25,7 @@ interface CheckCase {
   check: string;
   turn: string | null;
   reflectedLater: boolean;
+  exempt: string | null;
 }
 
 export interface CheckReport {
@@ -32,12 +33,27 @@ export interface CheckReport {
   runTypes: Record<string, number>;
   exempt: Record<string, number>;
   verdicts: Record<string, number>;
+  exemptVerdicts: Record<string, Record<string, number>>;
   reflectedLater: number;
   cases: CheckCase[];
 }
 
 function tally(counts: Record<string, number>, key: string): void {
   counts[key] = (counts[key] ?? 0) + 1;
+}
+
+function tallyVerdicts(
+  turn: CheckedTurn,
+  verdicts: Record<string, number>,
+  exemptVerdicts: Record<string, Record<string, number>>
+): void {
+  for (const check of turn.wouldNudge ?? []) {
+    if (!turn.exempt) tally(verdicts, check);
+    else {
+      exemptVerdicts[check] = exemptVerdicts[check] ?? {};
+      tally(exemptVerdicts[check], turn.exempt);
+    }
+  }
 }
 
 function wasChecked(turn: CheckedTurn): boolean {
@@ -69,6 +85,7 @@ function casesOf(
     check,
     turn: turn.turn,
     reflectedLater: finishedLater(turn, check, runs),
+    exempt: turn.exempt ?? null,
   }));
 }
 
@@ -81,13 +98,13 @@ export function checkReport(
   const runTypes: Record<string, number> = {};
   const exempt: Record<string, number> = {};
   const verdicts: Record<string, number> = {};
+  const exemptVerdicts: Record<string, Record<string, number>> = {};
 
   for (const turn of checked) {
     if (turn.runType?.length) tally(runTypes, turn.runType.join("+"));
 
     if (turn.exempt) tally(exempt, turn.exempt);
-
-    for (const check of turn.wouldNudge ?? []) tally(verdicts, check);
+    tallyVerdicts(turn, verdicts, exemptVerdicts);
   }
 
   const cases = checked.flatMap((turn) => casesOf(turn, runs, nodeTitle));
@@ -97,7 +114,8 @@ export function checkReport(
     runTypes,
     exempt,
     verdicts,
-    reflectedLater: cases.filter((c) => c.reflectedLater).length,
+    exemptVerdicts,
+    reflectedLater: cases.filter((c) => c.reflectedLater && !c.exempt).length,
     cases,
   };
 }

@@ -294,8 +294,8 @@ describe("uncited-fetch", () => {
   });
 });
 
-describe("exemptions get no verdict", () => {
-  test("no tool record", () => {
+describe("exemptions are recorded beside the verdict, which is still computed", () => {
+  test("no tool record leaves nothing to compute", () => {
     expect(runChecks([DONE], null)).toEqual({
       runType: [],
       wouldNudge: [],
@@ -306,7 +306,11 @@ describe("exemptions get no verdict", () => {
   test("a turn that stopped at PLAN without edits", () => {
     expect(
       checksOf([toolUse("WebSearch", {})], algorithmReply(["OBSERVE", "PLAN"]))
-    ).toEqual({ runType: ["research"], wouldNudge: [], exempt: "stopped-at-plan" });
+    ).toEqual({
+      runType: ["research"],
+      wouldNudge: ["no-reflection"],
+      exempt: "stopped-at-plan",
+    });
     expect(checksOf([], algorithmReply(["OBSERVE"])).exempt).toBe("stopped-at-plan");
   });
 
@@ -322,10 +326,10 @@ describe("exemptions get no verdict", () => {
     expect(checksOf([edit()], algorithmReply([])).exempt).toBeNull();
   });
 
-  test("a reply that asks the user something", () => {
-    expect(checksOf([edit()], `${DONE}\n\nShall I commit?  `)).toEqual({
+  test("an asked-user code turn without a check still records no-check-after-edit", () => {
+    expect(checksOf([edit(), REFLECT], `${DONE}\n\nShall I commit?  `)).toEqual({
       runType: ["code"],
-      wouldNudge: [],
+      wouldNudge: ["no-check-after-edit"],
       exempt: "asked-user",
     });
   });

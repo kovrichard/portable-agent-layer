@@ -183,14 +183,16 @@ function exemption(phases: string[], reply: string, calls: ToolCall[]): Exemptio
   return replyAsks(reply) ? "asked-user" : null;
 }
 
-/** The turn's run type and failing checks; an exempt turn has a run type but no verdict. */
+/** The turn's run type, failing checks and exemption, each recorded as its own fact. */
 export function runChecks(texts: string[], tools: TurnTools | null): RunChecks {
   if (!tools) return { runType: [], wouldNudge: [], exempt: "no-tool-record" };
   const phases = phasesIn(texts);
   const reply = texts.at(-1) ?? "";
   const runType = runTypesOf(tools.calls);
-  const exempt = exemption(phases, reply, tools.calls);
-  const wouldNudge = exempt ? [] : failedChecks(runType, phases, reply, tools);
 
-  return { runType, wouldNudge, exempt };
+  return {
+    runType,
+    wouldNudge: failedChecks(runType, phases, reply, tools),
+    exempt: exemption(phases, reply, tools.calls),
+  };
 }

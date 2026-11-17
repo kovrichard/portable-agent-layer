@@ -84,7 +84,7 @@ const FIXTURE: ReportedEvent[] = [
   turn("r5", null, "t5", 5, {
     phases: ALL,
     runType: ["code"],
-    wouldNudge: [],
+    wouldNudge: ["no-reflection", "no-check-after-edit"],
     exempt: "asked-user",
   }),
   event("reflected", null, "n2", "t6", 6),
@@ -231,9 +231,26 @@ describe("the run checks in the report", () => {
     });
   });
 
-  test("one case per verdict; a no-reflection whose run a later turn finished is marked", () => {
+  test("verdicts of exempt turns are counted apart, per check and exemption reason", () => {
+    expect(report().checks.exemptVerdicts).toEqual({
+      "no-reflection": { "asked-user": 1 },
+      "no-check-after-edit": { "asked-user": 1 },
+    });
+  });
+
+  test("one case per verdict, exempt ones marked; a no-reflection whose run a later turn finished is marked", () => {
     const { checks } = report();
-    const base = { project: "proj-a", node: "n1", nodeTitle: "the node" };
+    const base = { project: "proj-a", node: "n1", nodeTitle: "the node", exempt: null };
+    const exemptCase = {
+      date: "2026-11-05",
+      project: "proj-a",
+      node: null,
+      nodeTitle: null,
+      runType: ["code"],
+      turn: "t5",
+      reflectedLater: false,
+      exempt: "asked-user",
+    };
     expect(checks.cases).toEqual([
       {
         ...base,
@@ -267,8 +284,27 @@ describe("the run checks in the report", () => {
         turn: "t4",
         reflectedLater: true,
       },
+      { ...exemptCase, check: "no-reflection" },
+      { ...exemptCase, check: "no-check-after-edit" },
     ]);
     expect(checks.reflectedLater).toBe(1);
+  });
+
+  test("a no-reflection reflected later in an exempt turn is not counted as reflected later", () => {
+    const { checks } = algorithmRunReport({
+      events: [
+        turn("r1", "n1", "t1", 1, {
+          wouldNudge: ["no-reflection"],
+          exempt: "asked-user",
+        }),
+        event("finished", "r1", "n1", "t2", 2),
+      ],
+      replyModes: new Map(),
+      nodeTitle: () => null,
+    });
+    expect(checks.cases[0]?.reflectedLater).toBe(true);
+    expect(checks.reflectedLater).toBe(0);
+    expect(checks.verdicts).toEqual({});
   });
 
   test("a case with no node, project, run, run type or turn", () => {
@@ -297,6 +333,7 @@ describe("the run checks in the report", () => {
       check: "no-reflection",
       turn: null,
       reflectedLater: false,
+      exempt: null,
     });
     expect(checks.runTypes).toEqual({});
     expect(
@@ -336,10 +373,13 @@ describe("the printed report", () => {
       '  2026-11-04 proj-a "the node" old [OBSERVE PLAN] observe no turns t3 -> t4',
       "Turns checked: 4 (run types code 2, code+research 1, explain 1; exempt asked-user 1)",
       "Would nudge: no-check-after-edit 1, no-reflection 2, uncited-fetch 1 (no-reflection reflected later in the run 1)",
+      "Verdicts on exempt turns: no-reflection (asked-user 1), no-check-after-edit (asked-user 1)",
       '  2026-11-01 proj-a "the node" code no-check-after-edit turn t1',
       '  2026-11-02 proj-a "the node" code+research no-reflection turn t2',
       '  2026-11-02 proj-a "the node" code+research uncited-fetch turn t2',
       '  2026-11-04 proj-a "the node" explain no-reflection turn t4 reflected later',
+      '  2026-11-05 proj-a "-" code no-reflection turn t5 exempt asked-user',
+      '  2026-11-05 proj-a "-" code no-check-after-edit turn t5 exempt asked-user',
     ]);
   });
 });
