@@ -149,7 +149,7 @@ jobs:
         run: LINT_STAGE=commit bun run gates
 
       - name: Spawn tests
-        run: bun run test --spawn --only-failures
+        run: bun run test --spawn --only-failures ${{ runner.os == 'Windows' && '--parallel=4' || '' }}
 
       - name: Upload test timings
         if: always()
