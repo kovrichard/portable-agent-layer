@@ -1,7 +1,8 @@
 const commit = process.env.LINT_STAGE === "commit";
+const githubActions = Boolean(process.env.GITHUB_ACTIONS);
 
 const gates = [
-  "check",
+  githubActions ? "check --reporter=github" : "check",
   "type-check",
   "knip",
   "jscpd",
