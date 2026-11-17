@@ -28,17 +28,6 @@ export function lockInputsInCheckout(root: string): string[] {
     .filter((path) => isLockInput(path) && existsSync(join(root, path)));
 }
 
-export function pathsInPorcelain(porcelain: string): string[] {
-  return porcelain
-    .split("\n")
-    .filter(Boolean)
-    .flatMap((line) => line.slice(3).split(" -> "));
-}
-
-export function lockInputsChanged(root: string): boolean {
-  return pathsInPorcelain(git(root, ["status", "--porcelain=v1"])).some(isLockInput);
-}
-
 export function lockDirs(inputs: string[]): string[] {
   return inputs.filter((path) => basename(path) === "bun.lock").map(dirname);
 }
@@ -96,11 +85,5 @@ function report(drifted: string[]): number {
 
 if (import.meta.main) {
   const root = git(".", ["rev-parse", "--show-toplevel"]).trim();
-  if (process.argv.includes("--changed") && !lockInputsChanged(root)) {
-    process.stdout.write(
-      "skipped: no package.json, bun.lock, bunfig.toml or .npmrc changed\n"
-    );
-    process.exit(0);
-  }
   process.exit(report(driftedLocks(root)));
 }

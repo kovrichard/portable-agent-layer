@@ -1,0 +1,9 @@
+{
+  "extends": "./template/tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "plugins": [],
+    "rootDirs": ["template/lib", "demo/lib"]
+  },
+  "include": ["demo/lib/report-data.ts"]
+}

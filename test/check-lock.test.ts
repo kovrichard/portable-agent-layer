@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isLockInput, lockDirs, pathsInPorcelain } from "../.agents/scripts/check-lock";
+import { isLockInput, lockDirs } from "../.agents/scripts/check-lock";
 
 describe("isLockInput", () => {
   test("accepts every file that decides what bun.lock holds, in any folder", () => {
@@ -23,19 +23,6 @@ describe("isLockInput", () => {
     ]) {
       expect(isLockInput(path)).toBe(false);
     }
-  });
-});
-
-describe("pathsInPorcelain", () => {
-  test("reads modified, untracked and both sides of a rename", () => {
-    const porcelain =
-      " M package.json\n?? eval/package.json\nR  old/bun.lock -> new/bun.lock\n";
-    expect(pathsInPorcelain(porcelain)).toEqual([
-      "package.json",
-      "eval/package.json",
-      "old/bun.lock",
-      "new/bun.lock",
-    ]);
   });
 });
 
