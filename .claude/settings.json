@@ -43,6 +43,10 @@
           {
             "type": "command",
             "command": "bun .agents/hooks/lock-check.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/subprojects.ts"
           }
         ]
       }
@@ -64,7 +68,8 @@
           { "type": "command", "command": "bun .agents/hooks/madge.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/exact-versions.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/lock-check.ts --subagent" }
+          { "type": "command", "command": "bun .agents/hooks/lock-check.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/subprojects.ts --subagent" }
         ]
       }
     ],
@@ -80,7 +85,8 @@
           { "type": "command", "command": "bun .agents/hooks/madge.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" },
           { "type": "command", "command": "bun .agents/hooks/exact-versions.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/lock-check.ts --subagent" }
+          { "type": "command", "command": "bun .agents/hooks/lock-check.ts --subagent" },
+          { "type": "command", "command": "bun .agents/hooks/subprojects.ts --subagent" }
         ]
       }
     ]

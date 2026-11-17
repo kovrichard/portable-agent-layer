@@ -40,6 +40,10 @@
       {
         "type": "command",
         "command": "bun hooks/lock-check.ts --antigravity"
+      },
+      {
+        "type": "command",
+        "command": "bun hooks/subprojects.ts --antigravity"
       }
     ]
   }

@@ -51,6 +51,11 @@
         "type": "command",
         "command": "bun .agents/hooks/lock-check.ts",
         "timeoutSec": 120
+      },
+      {
+        "type": "command",
+        "command": "bun .agents/hooks/subprojects.ts",
+        "timeoutSec": 120
       }
     ]
   }

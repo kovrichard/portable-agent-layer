@@ -31,6 +31,9 @@
       },
       {
         "command": "bun .agents/hooks/lock-check.ts"
+      },
+      {
+        "command": "bun .agents/hooks/subprojects.ts"
       }
     ]
   }

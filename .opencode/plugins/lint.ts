@@ -15,6 +15,7 @@ export const LintPlugin: Plugin = async ({ $ }) => {
       await $`bun run lf`;
       await $`bun run exact-versions`;
       await $`bun run lock:check --changed`;
+      await $`bun run subprojects --changed`;
       await $`bun run secretlint`;
     },
   };
