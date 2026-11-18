@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { allEventsSince } from "../src/bronze/events";
 import { scopeOf } from "../src/progress/progress-tree";
 import {
   deadlineFrom,
@@ -9,9 +10,11 @@ import {
 } from "../src/safety/run-mode";
 import {
   MAX_STOP_BLOCKS,
+  minimumStopGate,
   runModePromptLine,
   runModeRecall,
   runModeRefusal,
+  runStopReason,
   unattendedStopReason,
 } from "../src/safety/run-mode-gate";
 import { decideRefusal } from "../src/safety/security-gate";
@@ -151,6 +154,90 @@ describe("an unattended run", () => {
     const recall = runModeRecall(CWD, BEFORE) ?? "";
 
     for (const part of ["never ask", "fix the parser", "parser fixed, abc123"])
+      expect(recall).toContain(part);
+  });
+});
+
+describe("a minimum run", () => {
+  const ROUND = { at: BEFORE.toISOString(), scores: "s: 6/10", weakest: "w", did: "d" };
+
+  function startMinimum(extra: Partial<Run> = {}): Run {
+    return start("minimum", { goal: "a sharp brief", bar: ["clarity: 9/10"], ...extra });
+  }
+
+  function minimumEvents(): Record<string, unknown>[] {
+    return allEventsSince(NOW).filter((e) => e.type === "minimum_run");
+  }
+
+  test("sends a stop back before the floor, counting the block and the lens in bronze", () => {
+    startMinimum();
+    expect(minimumStopGate(CWD, "Done.", BEFORE)).toContain("a sharp brief");
+    expect(readRun(scopeOf(CWD), BEFORE)).toMatchObject({
+      stopBlocks: 1,
+      roundsAtLastBlock: 0,
+    });
+    expect(minimumEvents()).toMatchObject([
+      { change: "blocked", lens: "recheck", blocks: 1, rounds: 0 },
+    ]);
+  });
+
+  test("still sends back a reply that asks the user", () => {
+    startMinimum();
+    expect(minimumStopGate(CWD, "Should I also cover pricing?", BEFORE)).toContain(
+      "Questions belong in the intake"
+    );
+  });
+
+  test("demands a round when the agent stops again without logging one", () => {
+    startMinimum({ rounds: [ROUND] });
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain('lens "recheck"');
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain("without logging a round");
+  });
+
+  test("tells the agent once that the floor is reached, then lets it stop", () => {
+    startMinimum({ rounds: [ROUND] });
+    expect(minimumStopGate(CWD, "", AFTER)).toContain("the floor is reached");
+    expect(readRun(scopeOf(CWD), AFTER)?.done).toBe(true);
+    expect(minimumStopGate(CWD, "", AFTER)).toBeNull();
+    expect(minimumEvents()).toMatchObject([{ change: "floor", rounds: 1 }]);
+  });
+
+  test("warns on the last push-back and lets the agent stop at the cap", () => {
+    startMinimum({ stopBlocks: MAX_STOP_BLOCKS - 1 });
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain("This is the last push-back");
+    expect(minimumStopGate(CWD, "", BEFORE)).toBeNull();
+    expect(minimumEvents().map((e) => e.change)).toEqual(["blocked", "capped"]);
+  });
+
+  test("goes through the run's stop reason, which the Stop hook calls", () => {
+    startMinimum();
+    expect(runStopReason(CWD, "", BEFORE)).toContain("You may not stop yet");
+    expect(unattendedStopReason(CWD, BEFORE)).toBeNull();
+  });
+
+  test("refuses questions before the floor but lets subagents run", () => {
+    startMinimum();
+    expect(runModeRefusal({ tool: "AskUserQuestion" }, CWD, BEFORE)).toContain(
+      "Minimum run: no questions"
+    );
+
+    for (const tool of ["Agent", "Task", "Workflow"])
+      expect(runModeRefusal({ tool }, CWD, BEFORE)).toBeNull();
+  });
+
+  test("refuses nothing after the floor", () => {
+    startMinimum();
+    expect(runModeRefusal({ tool: "AskUserQuestion" }, CWD, AFTER)).toBeNull();
+    expect(runModeRefusal({ tool: "Bash", command: "bun test" }, CWD, AFTER)).toBeNull();
+  });
+
+  test("names the floor and the goal in the prompt line and after a compaction", () => {
+    startMinimum({ rounds: [ROUND] });
+    expect(runModePromptLine(CWD, BEFORE)).toContain("floor at");
+    expect(runModePromptLine(CWD, BEFORE)).toContain("a sharp brief");
+    const recall = runModeRecall(CWD, BEFORE) ?? "";
+
+    for (const part of ["Minimum run: floor at", "clarity: 9/10", "weakest: w"])
       expect(recall).toContain(part);
   });
 });

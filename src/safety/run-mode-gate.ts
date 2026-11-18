@@ -1,11 +1,15 @@
 /**
  * What the hooks do while a run is on: refuse tool calls past the deadline,
  * refuse questions and delegation while unattended, keep an unattended agent
- * from stopping with work left, and say where the run stands.
+ * from stopping with work left, push a minimum run's agent back until its
+ * floor, and say where the run stands.
  */
 
 import { resolve } from "node:path";
+import { replyAsks } from "../opinions/interaction";
 import { scopeOf } from "../progress/progress-tree";
+import { logMinimum } from "./minimum-events";
+import { floorReachedMessage, minimumStopReason, nextLensName } from "./minimum-prompt";
 import {
   clearRun,
   describeRun,
@@ -73,6 +77,12 @@ function unattendedRefusal(tool: string): string | null {
   return null;
 }
 
+function minimumRefusal(run: Run, tool: string, now: Date): string | null {
+  if (isOver(run, now) || !ASK_TOOLS.has(tool.toLowerCase())) return null;
+
+  return "Minimum run: no questions before the floor; they belong in the intake. Pick the sensible default, note it in the next round's --did, and keep going.";
+}
+
 /** Why this call may not run under the scope's run, or null to let it through. */
 export function runModeRefusal(
   call: RunToolCall,
@@ -81,6 +91,8 @@ export function runModeRefusal(
 ): string | null {
   const run = runIn(cwd, now);
   if (!run) return null;
+
+  if (run.kind === "minimum") return minimumRefusal(run, call.tool, now);
 
   if (isOver(run, now))
     return finishesTheRun(run, call, cwd) ? null : deadlineMessage(run);
@@ -110,6 +122,63 @@ export function unattendedStopReason(cwd: string, now: Date = new Date()): strin
   return stopMessage(run, now);
 }
 
+const LAST_PUSH_BACK = `This is the last push-back: the run's safety cap of ${MAX_STOP_BLOCKS} is reached, so your next stop ends the turn. Say in your summary that the floor was not reached.`;
+
+function finishAtFloor(run: Run, now: Date): string {
+  const finished = { ...run, done: true };
+  writeRun(finished);
+  logMinimum("floor", finished, now);
+
+  return floorReachedMessage(finished);
+}
+
+function releaseAtCap(run: Run, now: Date): null {
+  const released = { ...run, done: true };
+  writeRun(released);
+  logMinimum("capped", released, now);
+
+  return null;
+}
+
+function pushBack(run: Run, reply: string, now: Date): string {
+  const reason = minimumStopReason(run, now, replyAsks(reply)) ?? "";
+  const lens = nextLensName(run);
+  const blocked = {
+    ...run,
+    stopBlocks: run.stopBlocks + 1,
+    roundsAtLastBlock: run.rounds?.length ?? 0,
+  };
+  writeRun(blocked);
+  logMinimum("blocked", blocked, now, { lens });
+
+  return blocked.stopBlocks >= MAX_STOP_BLOCKS ? `${reason}\n${LAST_PUSH_BACK}` : reason;
+}
+
+/** The push-back for a minimum run's agent that tries to stop, or null to let it stop. Counts each block. */
+export function minimumStopGate(
+  cwd: string,
+  reply: string,
+  now: Date = new Date()
+): string | null {
+  const run = runIn(cwd, now);
+  if (run?.kind !== "minimum" || run.done) return null;
+
+  if (isOver(run, now)) return finishAtFloor(run, now);
+
+  if (run.stopBlocks >= MAX_STOP_BLOCKS) return releaseAtCap(run, now);
+
+  return pushBack(run, reply, now);
+}
+
+/** Why the scope's run keeps the agent from stopping, or null to let it stop. */
+export function runStopReason(
+  cwd: string,
+  reply: string,
+  now: Date = new Date()
+): string | null {
+  return unattendedStopReason(cwd, now) ?? minimumStopGate(cwd, reply, now);
+}
+
 function taskSuffix(run: Run): string {
   return run.task ? `: ${run.task}` : "";
 }
@@ -117,6 +186,9 @@ function taskSuffix(run: Run): string {
 function promptLine(run: Run, now: Date): string {
   if (run.kind === "timebox")
     return `Time box until ${untilLabel(run)}, ${minutesLeft(run, now)} min left${taskSuffix(run)}. Stop and report at the deadline.`;
+
+  if (run.kind === "minimum")
+    return `Minimum run: floor at ${untilLabel(run)}, ${minutesLeft(run, now)} min left. Goal: ${run.goal ?? ""}. Answer the user, then keep doing passes and logging rounds with \`pal cli minimum round\`. Only the user ends it early, with \`pal cli minimum end\`.`;
 
   return `Unattended run until ${untilLabel(run)}, but the user just wrote: answer them. If they are back, run \`pal cli unattended end\`.`;
 }

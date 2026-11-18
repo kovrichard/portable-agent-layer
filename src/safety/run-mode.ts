@@ -11,11 +11,18 @@ import { resolve } from "node:path";
 import { ensureDir, paths } from "../core/paths";
 import { localHourMinute, localMinuteOfDay } from "../core/wall-clock";
 
-export type RunKind = "timebox" | "unattended";
+export type RunKind = "timebox" | "unattended" | "minimum";
 
 interface RunLogEntry {
   at: string;
   entry: string;
+}
+
+export interface MinimumRound {
+  at: string;
+  scores: string;
+  weakest: string;
+  did: string;
 }
 
 export interface Run {
@@ -33,6 +40,10 @@ export interface Run {
   stopBlocks: number;
   estimateMinutes?: number | null;
   sessions?: string[];
+  goal?: string;
+  bar?: string[];
+  rounds?: MinimumRound[];
+  roundsAtLastBlock?: number;
 }
 
 const MINUTE_MS = 60_000;
@@ -168,9 +179,19 @@ export function newRun(fields: {
   fallbacks?: string[];
   rules?: string[];
   estimateMinutes?: number | null;
+  goal?: string;
+  bar?: string[];
 }): Run {
   return {
     ...(fields.estimateMinutes ? { estimateMinutes: fields.estimateMinutes } : {}),
+    ...(fields.kind === "minimum"
+      ? {
+          goal: fields.goal ?? "",
+          bar: fields.bar ?? [],
+          rounds: [],
+          roundsAtLastBlock: 0,
+        }
+      : {}),
     kind: fields.kind,
     scope: fields.scope,
     startedAt: (fields.now ?? new Date()).toISOString(),
@@ -202,17 +223,45 @@ function logLines(run: Run): string[] {
   return run.log.map((l) => `  - ${localHourMinute(new Date(l.at))} ${l.entry}`);
 }
 
+const RUN_NAMES: Record<RunKind, string> = {
+  timebox: "Time box",
+  unattended: "Unattended",
+  minimum: "Minimum run",
+};
+
 function timeLine(run: Run, now: Date): string {
-  const name = run.kind === "unattended" ? "Unattended" : "Time box";
+  const name = RUN_NAMES[run.kind];
+
+  if (run.kind === "minimum")
+    return isOver(run, now)
+      ? `${name}: floor reached at ${untilLabel(run)}.`
+      : `${name}: floor at ${untilLabel(run)} (${minutesLeft(run, now)} min left).`;
 
   return isOver(run, now)
     ? `${name} ended at ${untilLabel(run)}.`
     : `${name} until ${untilLabel(run)} (${minutesLeft(run, now)} min left).`;
 }
 
+function roundLine(round: MinimumRound): string {
+  return `${localHourMinute(new Date(round.at))} scores: ${round.scores}; weakest: ${round.weakest}; did: ${round.did}`;
+}
+
+function minimumLines(run: Run): string[] {
+  const lines: string[] = [];
+
+  if (run.goal) lines.push(`Goal: ${run.goal}`);
+
+  if (run.bar?.length) lines.push("Bar:", ...numbered(run.bar));
+
+  if (run.rounds?.length)
+    lines.push("Rounds:", ...run.rounds.map((r) => `  - ${roundLine(r)}`));
+
+  return lines;
+}
+
 /** The whole run as text: what `status` prints and what compaction recovery injects. */
 export function describeRun(run: Run, now: Date = new Date()): string {
-  const lines = [timeLine(run, now)];
+  const lines = [timeLine(run, now), ...minimumLines(run)];
 
   if (run.task) lines.push(`Task: ${run.task}`);
 
