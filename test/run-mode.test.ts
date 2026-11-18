@@ -6,6 +6,7 @@ import {
   newRun,
   type Run,
   readRun,
+  untilLabel,
   writeRun,
 } from "../src/safety/run-mode";
 import {
@@ -234,6 +235,48 @@ describe("a minimum run", () => {
       expect(runModeRefusal({ tool }, CWD, BEFORE)).toBeNull();
   });
 
+  test("refuses the agent's own early end, however the command is written", () => {
+    startMinimum();
+
+    for (const command of [
+      "pal cli minimum end",
+      "pal  cli   minimum  end --quiet",
+      "bun test && pal cli minimum end",
+      "pal cli minimum round --scores s; pal cli minimum end",
+      "PAL_HOME=/x pal cli minimum end | tail -1",
+      "bun src/cli/index.ts cli minimum end",
+      "bun /repo/src/cli/index.ts cli minimum end",
+      'bash -c "pal cli minimum end"',
+    ])
+      expect(runModeRefusal({ tool: "Bash", command }, CWD, BEFORE)).toBe(
+        "Minimum run: the floor is at " +
+          `${untilLabel(readRun(scopeOf(CWD), BEFORE) as Run)} (20 min left). ` +
+          "Only the user ends a minimum run early, by running `pal cli minimum end` themselves " +
+          "(in Claude Code: `! pal cli minimum end`, or from any terminal). " +
+          "Keep doing passes and logging rounds."
+      );
+  });
+
+  test("lets every other minimum command and lookalike through before the floor", () => {
+    startMinimum();
+
+    for (const command of [
+      "pal cli minimum round --scores s --weakest w --did d",
+      "pal cli minimum status",
+      "pal cli minimum start --for 30m",
+      "pal cli minimum ended",
+      "pal cli timebox end",
+    ])
+      expect(runModeRefusal({ tool: "Bash", command }, CWD, BEFORE)).toBeNull();
+  });
+
+  test("lets the agent end the run once the floor has passed", () => {
+    startMinimum();
+    expect(
+      runModeRefusal({ tool: "Bash", command: "pal cli minimum end" }, CWD, AFTER)
+    ).toBeNull();
+  });
+
   test("refuses nothing after the floor", () => {
     startMinimum();
     expect(runModeRefusal({ tool: "AskUserQuestion" }, CWD, AFTER)).toBeNull();
@@ -268,6 +311,9 @@ describe("with no run, or a run in another folder", () => {
   test("nothing is refused, held or added", () => {
     start("unattended", {}, OTHER_CWD);
     expect(runModeRefusal({ tool: "AskUserQuestion" }, CWD, BEFORE)).toBeNull();
+    expect(
+      runModeRefusal({ tool: "Bash", command: "pal cli minimum end" }, CWD, BEFORE)
+    ).toBeNull();
     expect(unattendedStopReason(CWD, BEFORE)).toBeNull();
     expect(runModePromptLine(CWD, BEFORE)).toBeNull();
     expect(runModeRecall(CWD, BEFORE)).toBeNull();
@@ -291,5 +337,27 @@ describe("the security gate", () => {
     );
     expect(refusal?.reason).toBe("run mode");
     expect(refusal?.message).toContain("nobody can answer");
+  });
+
+  test("refuses a shell call that ends a minimum run before its floor", () => {
+    const now = new Date();
+    writeRun(
+      newRun({
+        kind: "minimum",
+        scope: scopeOf(CWD),
+        until: new Date(now.getTime() + 3_600_000),
+        now,
+      })
+    );
+    const refusal = decideRefusal(
+      {
+        hook_event_name: "PreToolUse",
+        tool_name: "Bash",
+        tool_input: { command: "pal cli minimum end" },
+      },
+      CWD
+    );
+    expect(refusal?.reason).toBe("run mode");
+    expect(refusal?.message).toContain("Only the user ends a minimum run early");
   });
 });

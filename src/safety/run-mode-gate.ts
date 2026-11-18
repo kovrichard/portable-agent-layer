@@ -77,8 +77,22 @@ function unattendedRefusal(tool: string): string | null {
   return null;
 }
 
-function minimumRefusal(run: Run, tool: string, now: Date): string | null {
-  if (isOver(run, now) || !ASK_TOOLS.has(tool.toLowerCase())) return null;
+const MINIMUM_END = /(?:\bpal|\bcli[\\/]index\.ts)\s+cli\s+minimum\s+end(?=[\s;&|"')]|$)/;
+
+function endsMinimumRun(command: string | undefined): boolean {
+  return command !== undefined && MINIMUM_END.test(command);
+}
+
+function earlyEndMessage(run: Run, now: Date): string {
+  return `Minimum run: the floor is at ${untilLabel(run)} (${minutesLeft(run, now)} min left). Only the user ends a minimum run early, by running \`pal cli minimum end\` themselves (in Claude Code: \`! pal cli minimum end\`, or from any terminal). Keep doing passes and logging rounds.`;
+}
+
+function minimumRefusal(run: Run, call: RunToolCall, now: Date): string | null {
+  if (isOver(run, now)) return null;
+
+  if (endsMinimumRun(call.command)) return earlyEndMessage(run, now);
+
+  if (!ASK_TOOLS.has(call.tool.toLowerCase())) return null;
 
   return "Minimum run: no questions before the floor; they belong in the intake. Pick the sensible default, note it in the next round's --did, and keep going.";
 }
@@ -92,7 +106,7 @@ export function runModeRefusal(
   const run = runIn(cwd, now);
   if (!run) return null;
 
-  if (run.kind === "minimum") return minimumRefusal(run, call.tool, now);
+  if (run.kind === "minimum") return minimumRefusal(run, call, now);
 
   if (isOver(run, now))
     return finishesTheRun(run, call, cwd) ? null : deadlineMessage(run);
@@ -188,7 +202,7 @@ function promptLine(run: Run, now: Date): string {
     return `Time box until ${untilLabel(run)}, ${minutesLeft(run, now)} min left${taskSuffix(run)}. Stop and report at the deadline.`;
 
   if (run.kind === "minimum")
-    return `Minimum run: floor at ${untilLabel(run)}, ${minutesLeft(run, now)} min left. Goal: ${run.goal ?? ""}. Answer the user, then keep doing passes and logging rounds with \`pal cli minimum round\`. Only the user ends it early, with \`pal cli minimum end\`.`;
+    return `Minimum run: floor at ${untilLabel(run)}, ${minutesLeft(run, now)} min left. Goal: ${run.goal ?? ""}. Answer the user, then keep doing passes and logging rounds with \`pal cli minimum round\`. Only the user ends it early, by running \`pal cli minimum end\` themselves; yours is refused.`;
 
   return `Unattended run until ${untilLabel(run)}, but the user just wrote: answer them. If they are back, run \`pal cli unattended end\`.`;
 }

@@ -84,7 +84,7 @@ The lenses rotate in this order, one per logged round:
 | verify | Verify the claim or assumption the work leans on most with a tool or a source; correct the work if it fails. |
 | end-user | Use or read the work as the person it is for, start to finish; fix the first place they stumble. |
 
-Never run `pal cli minimum end` before the floor unless the user asks: it is the user's way out, not yours. When the user writes during the run, answer, then continue the passes. After a context compaction, run `pal cli minimum status` and resume from the last round.
+You cannot end the run before the floor: the gate refuses your `pal cli minimum end`, even when the user asks for it. Only the user ends it early, by running `pal cli minimum end` themselves (in Claude Code `! pal cli minimum end`, or from any terminal); when they ask you to stop, tell them that command. When the user writes during the run, answer, then continue the passes. After a context compaction, run `pal cli minimum status` and resume from the last round.
 
 ### 4. At the floor
 

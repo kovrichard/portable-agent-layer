@@ -10,7 +10,7 @@ See `SKILL.md` for the full workflow. The commands behind it:
 pal cli minimum start --for 30m --goal "<what good looks like>" --bar "<dimension: target, how checked>"
 pal cli minimum round --scores "<dimension: n/10, ...>" --weakest "<weakest part>" --did "<what changed>"
 pal cli minimum status
-pal cli minimum end      # your way out: ends the run, also before the floor
+pal cli minimum end      # your way out: ends the run, also before the floor (the agent's own call is refused until then)
 ```
 
 Limits: no questions reach you during the run, and a safety cap releases the agent after 20 push-backs even if the floor is not reached; the summary says so when that happens.
