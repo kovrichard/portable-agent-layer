@@ -2,7 +2,7 @@
  * The push-back a minimum run gives an agent that tries to stop before its
  * floor. No model runs here: the agent wrote the goal and bar at the start and
  * logs a round after each pass; this assembles them with a lens that rotates
- * on the block count.
+ * on the rounds logged, so a push-back that demands a missing round skips none.
  */
 
 import { isOver, type MinimumRound, minutesLeft, type Run } from "./run-mode";
@@ -54,7 +54,11 @@ export function lensFor(blocks: number): Lens {
 }
 
 function skippedRound(run: Run): boolean {
-  return run.stopBlocks > 0 && (run.rounds?.length ?? 0) === (run.roundsAtLastBlock ?? 0);
+  return run.stopBlocks > 0 && roundCount(run) === (run.roundsAtLastBlock ?? 0);
+}
+
+function roundCount(run: Run): number {
+  return run.rounds?.length ?? 0;
 }
 
 function lastRound(run: Run): MinimumRound | null {
@@ -94,7 +98,7 @@ function skippedRoundPrompt(run: Run, now: Date): string {
 }
 
 function passPrompt(run: Run, now: Date): string {
-  const lens = lensFor(run.stopBlocks);
+  const lens = lensFor(roundCount(run));
 
   return [
     header(run, now),
@@ -124,7 +128,7 @@ export function minimumStopReason(
 
 /** The lens the next push-back uses, or null when it is the skipped-round prompt. */
 export function nextLensName(run: Run): string | null {
-  return skippedRound(run) ? null : lensFor(run.stopBlocks).name;
+  return skippedRound(run) ? null : lensFor(roundCount(run)).name;
 }
 
 export function floorReachedMessage(run: Run): string {

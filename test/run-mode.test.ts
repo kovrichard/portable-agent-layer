@@ -190,8 +190,17 @@ describe("a minimum run", () => {
 
   test("demands a round when the agent stops again without logging one", () => {
     startMinimum({ rounds: [ROUND] });
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain('lens "critic"');
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain("without logging a round");
+  });
+
+  test("gives the next lens after a skipped round, burning none", () => {
+    startMinimum();
     expect(minimumStopGate(CWD, "", BEFORE)).toContain('lens "recheck"');
     expect(minimumStopGate(CWD, "", BEFORE)).toContain("without logging a round");
+    const run = readRun(scopeOf(CWD), BEFORE) as Run;
+    writeRun({ ...run, rounds: [ROUND] });
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain('lens "critic"');
   });
 
   test("tells the agent once that the floor is reached, then lets it stop", () => {

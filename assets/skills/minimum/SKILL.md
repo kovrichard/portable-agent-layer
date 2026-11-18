@@ -72,7 +72,7 @@ What the hooks do before the floor:
 - **Subagents are allowed.** The critic lens needs one.
 - **After 20 push-backs the safety cap releases you.** The 20th says it is the last. Your next stop ends the turn; say in the summary that the floor was not reached.
 
-The lenses rotate, one per push-back:
+The lenses rotate in this order, one per logged round:
 
 | Lens | What the pass does |
 | --- | --- |

@@ -58,9 +58,13 @@ describe("the push-back before the floor", () => {
     expect(lines.at(-1)).toContain("Only the user ends a minimum run early");
   });
 
-  test("rotates the lens on the block count", () => {
-    LENSES.forEach((lens, blocks) => {
-      const run = minimum({ stopBlocks: blocks, rounds: [ROUND], roundsAtLastBlock: 0 });
+  test("rotates the lens on the logged rounds, so a block without a round skips none", () => {
+    LENSES.forEach((lens, logged) => {
+      const run = minimum({
+        stopBlocks: 3,
+        rounds: Array.from({ length: logged }, () => ROUND),
+        roundsAtLastBlock: logged - 1,
+      });
       expect(minimumStopReason(run, BEFORE)).toContain(
         `lens "${lens.name}": ${lens.text}`
       );
