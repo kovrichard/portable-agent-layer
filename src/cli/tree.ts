@@ -33,7 +33,7 @@ import { patternsCommand } from "./patterns";
 import { telosCommand, timezoneCommand } from "./personal-context";
 import { progressCommand } from "./progress";
 import { ruleCommand } from "./rule";
-import { timeboxCommand, unattendedCommand } from "./run-mode";
+import { minimumCommand, timeboxCommand, unattendedCommand } from "./run-mode";
 import { scheduleCommand } from "./schedule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
@@ -225,6 +225,7 @@ export function cliTree(admin: AdminHandlers): Group {
       progress: progressCommand,
       timebox: timeboxCommand,
       unattended: unattendedCommand,
+      minimum: minimumCommand,
       schedule: scheduleCommand,
       server: serverCommand,
       skill: skillCommand,

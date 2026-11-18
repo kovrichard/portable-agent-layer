@@ -117,6 +117,40 @@ describe("a stop held by an unattended run", () => {
   });
 });
 
+describe("a stop before a minimum run's floor", () => {
+  function startMinimumRun(untilOffsetMs: number) {
+    const now = new Date();
+    writeRun(
+      newRun({
+        kind: "minimum",
+        scope: scopeOf(repo),
+        until: new Date(now.getTime() + untilOffsetMs),
+        now: new Date(now.getTime() - 3_600_000),
+        goal: "a tight launch post",
+        bar: ["clarity: 9/10, reread against the brief"],
+      })
+    );
+  }
+
+  test("is sent back with the goal, the bar and a lens, even when the reply asks", () => {
+    startMinimumRun(3_600_000);
+
+    const out = stop("Want me to also draft the email?").stdout;
+
+    expect(out).toContain('"decision":"block"');
+    expect(out).toContain("a tight launch post");
+    expect(out).toContain('lens \\"recheck\\"');
+    expect(out).toContain("Questions belong in the intake");
+  });
+
+  test("past the floor is sent back once to wrap up, then let through", () => {
+    startMinimumRun(-60_000);
+
+    expect(stop().stdout).toContain("the floor is reached");
+    expect(stop("Summary.", true).stdout).not.toContain('"decision":"block"');
+  });
+});
+
 describe("a stop sent back by the claim check", () => {
   test("still attaches the commits made since the last turn", () => {
     optIntoClaimSendBack();

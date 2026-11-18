@@ -12,12 +12,16 @@ import {
 } from "../bronze/antigravity-transcript";
 import { recordIdleCompactionNear } from "../context/compaction-near";
 import { stopBlockResponse } from "../core/agent";
-import { enterHookWorkspace, type StopTurnPayload } from "../core/hook-payload";
+import {
+  enterHookWorkspace,
+  hookFinalReply,
+  type StopTurnPayload,
+} from "../core/hook-payload";
 import { logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
 import { replySendBack } from "../opinions/reply-checks";
 import { stopProgressTree } from "../progress/progress-tree-stop";
-import { unattendedStopReason } from "../safety/run-mode-gate";
+import { runStopReason } from "../safety/run-mode-gate";
 import { recordHookRunOnExit } from "../usage/hook-run";
 import { checkReadmeSync } from "./handlers/readme-sync";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
@@ -65,13 +69,13 @@ try {
 }
 
 try {
-  const keepGoing = unattendedStopReason(process.cwd());
+  const keepGoing = runStopReason(process.cwd(), hookFinalReply(payload) ?? "");
   if (keepGoing) {
     process.stdout.write(stopBlockResponse(keepGoing));
     process.exit(0);
   }
 } catch (err) {
-  logError("StopOrchestrator:unattended", err);
+  logError("StopOrchestrator:run-mode", err);
 }
 
 // Last: it writes to the terminal and starts inference, which only a stop that really ends may do.

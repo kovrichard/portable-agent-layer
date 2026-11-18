@@ -1,17 +1,21 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { allEventsSince } from "../src/bronze/events";
 import { scopeOf } from "../src/progress/progress-tree";
 import {
   deadlineFrom,
   newRun,
   type Run,
   readRun,
+  untilLabel,
   writeRun,
 } from "../src/safety/run-mode";
 import {
   MAX_STOP_BLOCKS,
+  minimumStopGate,
   runModePromptLine,
   runModeRecall,
   runModeRefusal,
+  runStopReason,
   unattendedStopReason,
 } from "../src/safety/run-mode-gate";
 import { decideRefusal } from "../src/safety/security-gate";
@@ -155,6 +159,141 @@ describe("an unattended run", () => {
   });
 });
 
+describe("a minimum run", () => {
+  const ROUND = { at: BEFORE.toISOString(), scores: "s: 6/10", weakest: "w", did: "d" };
+
+  function startMinimum(extra: Partial<Run> = {}): Run {
+    return start("minimum", { goal: "a sharp brief", bar: ["clarity: 9/10"], ...extra });
+  }
+
+  function minimumEvents(): Record<string, unknown>[] {
+    return allEventsSince(NOW).filter((e) => e.type === "minimum_run");
+  }
+
+  test("sends a stop back before the floor, counting the block and the lens in bronze", () => {
+    startMinimum();
+    expect(minimumStopGate(CWD, "Done.", BEFORE)).toContain("a sharp brief");
+    expect(readRun(scopeOf(CWD), BEFORE)).toMatchObject({
+      stopBlocks: 1,
+      roundsAtLastBlock: 0,
+    });
+    expect(minimumEvents()).toMatchObject([
+      { change: "blocked", lens: "recheck", blocks: 1, rounds: 0 },
+    ]);
+  });
+
+  test("still sends back a reply that asks the user", () => {
+    startMinimum();
+    expect(minimumStopGate(CWD, "Should I also cover pricing?", BEFORE)).toContain(
+      "Questions belong in the intake"
+    );
+  });
+
+  test("demands a round when the agent stops again without logging one", () => {
+    startMinimum({ rounds: [ROUND] });
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain('lens "critic"');
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain("without logging a round");
+  });
+
+  test("gives the next lens after a skipped round, burning none", () => {
+    startMinimum();
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain('lens "recheck"');
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain("without logging a round");
+    const run = readRun(scopeOf(CWD), BEFORE) as Run;
+    writeRun({ ...run, rounds: [ROUND] });
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain('lens "critic"');
+  });
+
+  test("tells the agent once that the floor is reached, then lets it stop", () => {
+    startMinimum({ rounds: [ROUND] });
+    expect(minimumStopGate(CWD, "", AFTER)).toContain("the floor is reached");
+    expect(readRun(scopeOf(CWD), AFTER)?.done).toBe(true);
+    expect(minimumStopGate(CWD, "", AFTER)).toBeNull();
+    expect(minimumEvents()).toMatchObject([{ change: "floor", rounds: 1 }]);
+  });
+
+  test("warns on the last push-back and lets the agent stop at the cap", () => {
+    startMinimum({ stopBlocks: MAX_STOP_BLOCKS - 1 });
+    expect(minimumStopGate(CWD, "", BEFORE)).toContain("This is the last push-back");
+    expect(minimumStopGate(CWD, "", BEFORE)).toBeNull();
+    expect(minimumEvents().map((e) => e.change)).toEqual(["blocked", "capped"]);
+  });
+
+  test("goes through the run's stop reason, which the Stop hook calls", () => {
+    startMinimum();
+    expect(runStopReason(CWD, "", BEFORE)).toContain("You may not stop yet");
+    expect(unattendedStopReason(CWD, BEFORE)).toBeNull();
+  });
+
+  test("refuses questions before the floor but lets subagents run", () => {
+    startMinimum();
+    expect(runModeRefusal({ tool: "AskUserQuestion" }, CWD, BEFORE)).toContain(
+      "Minimum run: no questions"
+    );
+
+    for (const tool of ["Agent", "Task", "Workflow"])
+      expect(runModeRefusal({ tool }, CWD, BEFORE)).toBeNull();
+  });
+
+  test("refuses the agent's own early end, however the command is written", () => {
+    startMinimum();
+
+    for (const command of [
+      "pal cli minimum end",
+      "pal  cli   minimum  end --quiet",
+      "bun test && pal cli minimum end",
+      "pal cli minimum round --scores s; pal cli minimum end",
+      "PAL_HOME=/x pal cli minimum end | tail -1",
+      "bun src/cli/index.ts cli minimum end",
+      "bun /repo/src/cli/index.ts cli minimum end",
+      'bash -c "pal cli minimum end"',
+    ])
+      expect(runModeRefusal({ tool: "Bash", command }, CWD, BEFORE)).toBe(
+        "Minimum run: the floor is at " +
+          `${untilLabel(readRun(scopeOf(CWD), BEFORE) as Run)} (20 min left). ` +
+          "Only the user ends a minimum run early, by running `pal cli minimum end` themselves " +
+          "(in Claude Code: `! pal cli minimum end`, or from any terminal). " +
+          "Keep doing passes and logging rounds."
+      );
+  });
+
+  test("lets every other minimum command and lookalike through before the floor", () => {
+    startMinimum();
+
+    for (const command of [
+      "pal cli minimum round --scores s --weakest w --did d",
+      "pal cli minimum status",
+      "pal cli minimum start --for 30m",
+      "pal cli minimum ended",
+      "pal cli timebox end",
+    ])
+      expect(runModeRefusal({ tool: "Bash", command }, CWD, BEFORE)).toBeNull();
+  });
+
+  test("lets the agent end the run once the floor has passed", () => {
+    startMinimum();
+    expect(
+      runModeRefusal({ tool: "Bash", command: "pal cli minimum end" }, CWD, AFTER)
+    ).toBeNull();
+  });
+
+  test("refuses nothing after the floor", () => {
+    startMinimum();
+    expect(runModeRefusal({ tool: "AskUserQuestion" }, CWD, AFTER)).toBeNull();
+    expect(runModeRefusal({ tool: "Bash", command: "bun test" }, CWD, AFTER)).toBeNull();
+  });
+
+  test("names the floor and the goal in the prompt line and after a compaction", () => {
+    startMinimum({ rounds: [ROUND] });
+    expect(runModePromptLine(CWD, BEFORE)).toContain("floor at");
+    expect(runModePromptLine(CWD, BEFORE)).toContain("a sharp brief");
+    const recall = runModeRecall(CWD, BEFORE) ?? "";
+
+    for (const part of ["Minimum run: floor at", "clarity: 9/10", "weakest: w"])
+      expect(recall).toContain(part);
+  });
+});
+
 describe("the prompt line", () => {
   test("says how much time is left", () => {
     start("timebox");
@@ -172,6 +311,9 @@ describe("with no run, or a run in another folder", () => {
   test("nothing is refused, held or added", () => {
     start("unattended", {}, OTHER_CWD);
     expect(runModeRefusal({ tool: "AskUserQuestion" }, CWD, BEFORE)).toBeNull();
+    expect(
+      runModeRefusal({ tool: "Bash", command: "pal cli minimum end" }, CWD, BEFORE)
+    ).toBeNull();
     expect(unattendedStopReason(CWD, BEFORE)).toBeNull();
     expect(runModePromptLine(CWD, BEFORE)).toBeNull();
     expect(runModeRecall(CWD, BEFORE)).toBeNull();
@@ -195,5 +337,27 @@ describe("the security gate", () => {
     );
     expect(refusal?.reason).toBe("run mode");
     expect(refusal?.message).toContain("nobody can answer");
+  });
+
+  test("refuses a shell call that ends a minimum run before its floor", () => {
+    const now = new Date();
+    writeRun(
+      newRun({
+        kind: "minimum",
+        scope: scopeOf(CWD),
+        until: new Date(now.getTime() + 3_600_000),
+        now,
+      })
+    );
+    const refusal = decideRefusal(
+      {
+        hook_event_name: "PreToolUse",
+        tool_name: "Bash",
+        tool_input: { command: "pal cli minimum end" },
+      },
+      CWD
+    );
+    expect(refusal?.reason).toBe("run mode");
+    expect(refusal?.message).toContain("Only the user ends a minimum run early");
   });
 });
