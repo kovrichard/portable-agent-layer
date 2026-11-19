@@ -4,7 +4,7 @@ A customizable status line for Claude Code that displays context usage, active m
 
 ## What It Shows
 
-**Line 1:** Model name, current directory, git branch, open ISCs, signal trend  
+**Line 1:** Model name, current directory, git branch, open ISCs  
 **Line 2:** Context usage progress bar, percentage used, session cost, remaining context, rate limits  
 **Line 3:** Update notice (only when a new PAL version is available)  
 **Run line:** The timebox, unattended or minimum run of this folder or project: its deadline (or floor) in your PAL timezone, time left and, for a minimum run, rounds logged (only while one is on)  
@@ -12,13 +12,13 @@ A customizable status line for Claude Code that displays context usage, active m
 
 Example output (macOS/Linux):
 ```
-[Opus] 📁 portable-agent-layer  🌿 main  📋 21 open ISCs  sig: 3.0/10 ↓
+[Opus] 📁 portable-agent-layer  🌿 main  📋 21 open ISCs
 ████████░░░░░░░░░░░░ 45% │ $0.12 │ 55% free
 ```
 
 Example output (Windows):
 ```
-[Opus] folder: portable-agent-layer  (git: main)  21 open ISCs  sig: 3.0/10 v
+[Opus] folder: portable-agent-layer  (git: main)  21 open ISCs
 ########------------ 45% - $0.12 - 55% free
 ```
 
@@ -69,7 +69,7 @@ chmod +x ~/.cursor/statusline.sh
 
 Copy `assets/statusline.sh` to `~/.cursor/statusline.sh` (or symlink). Restart the Cursor CLI after editing config.
 
-On Cursor, session cost and rate limits are usually absent from stdin — the script omits the cost segment and hides rate limits automatically. PAL indicators (hooks, ISCs, signal, update) still read from `~/.pal/memory/state/`.
+On Cursor, session cost and rate limits are usually absent from stdin — the script omits the cost segment and hides rate limits automatically. PAL indicators (hooks, ISCs, update) still read from `~/.pal/memory/state/`.
 
 ### On Windows
 
@@ -98,7 +98,6 @@ The statusline script is at: `portable-agent-layer/assets/statusline.ps1`
 - **Directory:** Repository name (if in a git repo) or folder name
 - **Git Branch:** Current branch, fetched from git worktree or `git` command
 - **Open ISCs:** Count of unchecked ISCs for the current project (hidden when 0)
-- **Signal Trend:** Session quality score from `~/.pal/memory/state/signal-cache.json` with trend arrow
 - **Context Bar:** Visual progress bar showing token usage
 - **Context %:** Percentage of context window used
 - **Cost:** Estimated session cost in USD (shows "free" if <$0.01 on macOS/Linux, `$0.00` on Windows)

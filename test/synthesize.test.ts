@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { synthesize, writeSynthesis } from "../src/tools/agent/synthesize";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -248,60 +248,12 @@ describe("writeSynthesis", () => {
     expect(JSON.parse(readFileSync(path, "utf-8")).days).toBe(7);
   });
 
-  test("writes a signal cache alongside it", () => {
-    writeRatings([
-      { ts: iso(0), rating: 8 },
-      { ts: iso(3), rating: 6 },
-    ]);
+  test("writes no signal cache for the statusline", () => {
+    const cache = resolve(HOME, "memory", "state", "signal-cache.json");
+    writeRatings([{ ts: iso(0), rating: 8 }]);
 
     writeSynthesis(synthesize(7));
 
-    const cache = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "signal-cache.json"), "utf-8")
-    );
-    expect(cache.today).toBe(8);
-    expect(cache.week).toBe(7);
-    expect(cache.computed_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-  });
-
-  test("leaves cache windows null when no rating falls in them", () => {
-    writeRatings([{ ts: iso(60), rating: 9 }]);
-
-    writeSynthesis(synthesize(7));
-
-    const cache = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "signal-cache.json"), "utf-8")
-    );
-    expect(cache.today).toBeNull();
-    expect(cache.week).toBeNull();
-    expect(cache.month).toBeNull();
-  });
-
-  test("marks the cache trend up when recent ratings rise", () => {
-    writeRatings([
-      ...Array.from({ length: 6 }, () => ({ ts: iso(2), rating: 4 })),
-      ...Array.from({ length: 6 }, () => ({ ts: iso(1), rating: 9 })),
-    ]);
-
-    writeSynthesis(synthesize(7));
-
-    const cache = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "signal-cache.json"), "utf-8")
-    );
-    expect(cache.trend).toBe("up");
-  });
-
-  test("marks the cache trend down when recent ratings fall", () => {
-    writeRatings([
-      ...Array.from({ length: 6 }, () => ({ ts: iso(2), rating: 9 })),
-      ...Array.from({ length: 6 }, () => ({ ts: iso(1), rating: 4 })),
-    ]);
-
-    writeSynthesis(synthesize(7));
-
-    const cache = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "signal-cache.json"), "utf-8")
-    );
-    expect(cache.trend).toBe("down");
+    expect(existsSync(cache)).toBe(false);
   });
 });
