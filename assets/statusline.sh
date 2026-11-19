@@ -276,6 +276,34 @@ if [ -d "$FACTORY_TASKS" ]; then
   done
 fi
 
+# PAL: The timebox, unattended or minimum run of this folder or of the project it is in
+RUN_JQ='
+def left: if . >= 60 then "\(. / 60 | floor)h\(. % 60)m" else "\(.)m" end;
+.scope as $scope
+| ($bindings[$scope] // "") as $root
+| (.until | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $until
+| select(.done != true and $until > now)
+| select($scope == $cwd or ($root != "" and ($cwd == $root or ($cwd | startswith($root + "/")))))
+| (($until - now) / 60 | ceil | left) as $left
+| ($until | strflocaltime("%H:%M")) as $at
+| if .kind == "minimum" then
+    (.rounds // [] | length) as $n
+    | "🔁 minimum run · floor \($at) · \($left) left · \($n) round\(if $n == 1 then "" else "s" end)"
+  elif .kind == "unattended" then "🌙 unattended until \($at) · \($left) left"
+  else "⏱ timebox until \($at) · \($left) left" end'
+RUN_LINES=()
+RUN_DIR="$HOME/.pal/cache/run-mode"
+if [ -d "$RUN_DIR" ]; then
+  BINDINGS=$(jq -c 'if type == "object" then . else {} end' "$HOME/.pal/bindings.json" 2>/dev/null)
+  [ -n "$BINDINGS" ] || BINDINGS='{}'
+  PRINCIPAL_TZ=$(jq -r '.identity.principal.timezone // empty' "$HOME/.pal/memory/pal-settings.json" 2>/dev/null)
+  for RUN_JSON in "$RUN_DIR"/*.json; do
+    [ -f "$RUN_JSON" ] || continue
+    RUN_LINE=$(TZ="${PRINCIPAL_TZ:-UTC}" jq -r --arg cwd "${CWD%/}" --argjson bindings "$BINDINGS" "$RUN_JQ" "$RUN_JSON" 2>/dev/null)
+    [ -n "$RUN_LINE" ] && RUN_LINES+=("$RUN_LINE")
+  done
+fi
+
 # Build PAL indicators
 ISC_STR=""
 [ "$OPEN_ISCS" -gt 0 ] && ISC_STR="  ${DIM}📋 ${OPEN_ISCS} open ISCs${RESET}"
@@ -299,6 +327,11 @@ fi
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 for FACTORY_LINE in "${FACTORY_LINES[@]}"; do
   echo -e "${CYAN}${FACTORY_LINE}${RESET}"
+done
+
+# Line 3c: The run this session works under
+for RUN_LINE in "${RUN_LINES[@]}"; do
+  echo -e "${YELLOW}${RUN_LINE}${RESET}"
 done
 
 # Line 4: Rotating quote (changes every 30 minutes)

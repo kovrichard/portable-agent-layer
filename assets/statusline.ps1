@@ -240,8 +240,49 @@ if (Test-Path $factoryTasks) {
   }
 }
 
+# PAL: The timebox, unattended or minimum run of this folder or of the project it is in
+$RUN_LINES = @()
+$runDir = Join-Path $env:USERPROFILE ".pal\cache\run-mode"
+if (Test-Path $runDir) {
+  $normPath = { param($p) ([string]$p).Replace('/', '\').TrimEnd('\') }
+  $runCwd = & $normPath $CWD
+  $bindings = $null
+  try { $bindings = Get-Content (Join-Path $env:USERPROFILE ".pal\bindings.json") -Raw -ErrorAction Stop | ConvertFrom-Json } catch {}
+  $principalZone = [TimeZoneInfo]::Utc
+  try {
+    $zoneId = (Get-Content (Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json") -Raw -ErrorAction Stop | ConvertFrom-Json).identity.principal.timezone
+    if ($zoneId) {
+      $principalZone = [TimeZoneInfo]::Local
+      $principalZone = [TimeZoneInfo]::FindSystemTimeZoneById($zoneId)
+    }
+  } catch {}
+  foreach ($runJson in Get-ChildItem -Path $runDir -Filter "*.json" -ErrorAction SilentlyContinue) {
+    try {
+      $r = Get-Content $runJson.FullName -Raw | ConvertFrom-Json
+      $until = [DateTimeOffset]::Parse($r.until)
+      $leftMins = [math]::Ceiling(($until - [DateTimeOffset]::UtcNow).TotalMinutes)
+      if ($r.done -eq $true -or $leftMins -le 0) { continue }
+      $root = ""
+      if ($bindings -and $bindings.PSObject.Properties[$r.scope]) { $root = & $normPath $bindings.($r.scope) }
+      $inScope = ((& $normPath $r.scope) -eq $runCwd) -or ($root -and ($runCwd -eq $root -or $runCwd.StartsWith("$root\", [StringComparison]::OrdinalIgnoreCase)))
+      if (-not $inScope) { continue }
+      $left = if ($leftMins -ge 60) { "$([math]::Floor($leftMins / 60))h$($leftMins % 60)m" } else { "${leftMins}m" }
+      $at = [TimeZoneInfo]::ConvertTime($until, $principalZone).ToString("HH:mm")
+      $RUN_LINES += switch ($r.kind) {
+        "minimum" {
+          $n = @($r.rounds).Count
+          $plural = if ($n -eq 1) { "" } else { "s" }
+          "[minimum run] floor $at - $left left - $n round$plural"
+        }
+        "unattended" { "[unattended] until $at - $left left" }
+        default { "[timebox] until $at - $left left" }
+      }
+    } catch {}
+  }
+}
+
 # Build PAL indicators
-$ISC_STR  = if ($OPEN_ISCS -gt 0)   { "  " + $DIM + "$OPEN_ISCS open ISCs" + $RESET }  else { "" }
+$ISC_STR = if ($OPEN_ISCS -gt 0)   { "  " + $DIM + "$OPEN_ISCS open ISCs" + $RESET }  else { "" }
 
 # Line 1: Model, Directory, Git Branch, Open ISCs
 Write-Host ($CYAN + "[$MODEL]" + $RESET + " folder: $DIR_DISPLAY" + $DIM + $GIT_INDICATOR + $RESET + $ISC_STR + $SIGNAL_STR)
@@ -258,6 +299,9 @@ if ($HEALTH_LINE) { Write-Host ($HEALTH_COLOR + $HEALTH_LINE + $RESET) }
 
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 foreach ($factoryLine in $FACTORY_LINES) { Write-Host ($CYAN + $factoryLine + $RESET) }
+
+# Line 3c: The run this session works under
+foreach ($runLine in $RUN_LINES) { Write-Host ($YELLOW + $runLine + $RESET) }
 
 # Line 4: Rotating quote (changes every 30 minutes)
 $QUOTES = @(
