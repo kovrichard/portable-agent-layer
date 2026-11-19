@@ -7,6 +7,7 @@ A customizable status line for Claude Code that displays context usage, active m
 **Line 1:** Model name, current directory, git branch, open ISCs, signal trend  
 **Line 2:** Context usage progress bar, percentage used, session cost, remaining context, rate limits  
 **Line 3:** Update notice (only when a new PAL version is available)  
+**Run line:** The timebox, unattended or minimum run of this folder or project: its deadline (or floor) in your PAL timezone, time left and, for a minimum run, rounds logged (only while one is on)  
 **Health line:** The worst failing check in red, or the warning count in yellow, pointing to `pal cli doctor` (only when something needs attention)
 
 Example output (macOS/Linux):

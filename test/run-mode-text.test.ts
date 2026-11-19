@@ -156,7 +156,7 @@ describe("the stored run", () => {
 
   test("reads as none when its file is not JSON", () => {
     start("timebox");
-    const dir = resolve(home, "memory", "state", "run-mode");
+    const dir = resolve(home, "cache", "run-mode");
 
     for (const name of readdirSync(dir)) writeFileSync(resolve(dir, name), "{not json");
     expect(readRun(scopeOf(CWD), BEFORE)).toBeNull();
