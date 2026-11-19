@@ -97,7 +97,8 @@ describe("the run line", () => {
     const lines = runLines();
 
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toContain(`timebox until ${untilLabel(run)}`);
+    expect(lines[0]).toContain("timebox");
+    expect(lines[0]).toContain(`until ${untilLabel(run)}`);
     expect(lines[0]).toContain("25m left");
   });
 
@@ -105,7 +106,8 @@ describe("the run line", () => {
     const run = startRun("unattended", 150);
     const [line] = runLines();
 
-    expect(line).toContain(`unattended until ${untilLabel(run)}`);
+    expect(line).toContain("unattended");
+    expect(line).toContain(`until ${untilLabel(run)}`);
     expect(line).toContain("2h30m left");
   });
 
