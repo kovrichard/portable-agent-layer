@@ -269,11 +269,7 @@ const oldStateCache = (name: string) => resolve(paths.state(), name);
 const oldRunModeFolder = () => resolve(paths.state(), "run-mode");
 
 function isEmptyFolder(dir: string): boolean {
-  try {
-    return lstatSync(dir).isDirectory() && readdirSync(dir).length === 0;
-  } catch {
-    return false;
-  }
+  return existsSync(dir) && lstatSync(dir).isDirectory() && readdirSync(dir).length === 0;
 }
 
 function keepNewestCacheCopy(name: string): void {

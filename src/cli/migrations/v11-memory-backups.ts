@@ -99,14 +99,12 @@ function renameEntries(
   entries: string[],
   from: string,
   to: string,
-  done: string[] = []
-): string[] {
+  done: string[]
+): void {
   for (const entry of entries) {
     renameSync(resolve(from, entry), resolve(to, entry));
     done.push(entry);
   }
-
-  return done;
 }
 
 function recordMove(fields: Record<string, unknown>): void {
@@ -126,7 +124,7 @@ function refused(reason: string): MigrationResult {
 }
 
 function rollBack(moved: string[], manifest: string, reason: string): MigrationResult {
-  renameEntries(moved, newFolder(), oldFolder());
+  renameEntries(moved, newFolder(), oldFolder(), []);
   recordMove({ outcome: "rolled-back", entries: moved.length, manifest, reason });
 
   return {
@@ -136,7 +134,8 @@ function rollBack(moved: string[], manifest: string, reason: string): MigrationR
   };
 }
 
-function moveVerified(entries: string[], lines: ManifestLine[]): MigrationResult {
+/** @lintignore exercised directly by test/memory-cache-out.test.ts */
+export function moveVerified(entries: string[], lines: ManifestLine[]): MigrationResult {
   const manifest = writeManifest(lines);
   const moved: string[] = [];
 
@@ -176,7 +175,11 @@ function entriesFreeAtTarget(): { free: string[]; taken: string[] } {
   return { free: all.filter((entry) => !taken.includes(entry)), taken };
 }
 
-function runMove(dryRun: boolean): MigrationResult {
+/** @lintignore exercised directly by test/memory-cache-out.test.ts */
+export function runMove(
+  dryRun: boolean,
+  onOneFilesystem: () => boolean = sameFilesystem
+): MigrationResult {
   const { free, taken } = entriesFreeAtTarget();
   const skippedNote =
     taken.length > 0 ? [`left in place, name taken: ${taken.join(", ")}`] : [];
@@ -192,7 +195,7 @@ function runMove(dryRun: boolean): MigrationResult {
     };
   }
 
-  if (!sameFilesystem())
+  if (!onOneFilesystem())
     return refused("memory/ and backups/ are on different filesystems");
   const result = moveVerified(free, free.flatMap(describeEntry));
 
@@ -239,7 +242,7 @@ function undoBackupsMove(): MigrationResult {
       existsSync(resolve(newFolder(), entry)) && !existsSync(resolve(oldFolder(), entry))
   );
   mkdirSync(oldFolder(), { recursive: true });
-  renameEntries(entries, newFolder(), oldFolder());
+  renameEntries(entries, newFolder(), oldFolder(), []);
   const broken = lines.filter(
     (line) => entries.includes(line.entry) && !hashMatches(line, oldFolder())
   );

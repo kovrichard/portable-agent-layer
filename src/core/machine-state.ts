@@ -13,10 +13,9 @@ const MACHINE_LOCAL_STATE = [
   "memory/state/last-exchange/",
 ] as const;
 
-export function isMachineLocalState(relPath: string): boolean {
-  const rel = relPath.replaceAll("\\", "/").replace(/^\.\//, "");
-
+/** `normalizedPath` is relative to the PAL home, with forward slashes. */
+export function isMachineLocalState(normalizedPath: string): boolean {
   return MACHINE_LOCAL_STATE.some((entry) =>
-    entry.endsWith("/") ? rel.startsWith(entry) : rel === entry
+    entry.endsWith("/") ? normalizedPath.startsWith(entry) : normalizedPath === entry
   );
 }
