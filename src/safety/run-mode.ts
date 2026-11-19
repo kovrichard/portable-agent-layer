@@ -68,7 +68,7 @@ export function unattendedRules(inGitRepo: boolean, extra: string[] = []): strin
 }
 
 function runDir(): string {
-  return ensureDir(resolve(paths.state(), "run-mode"));
+  return ensureDir(resolve(paths.cache(), "run-mode"));
 }
 
 function runFile(scope: string): string {
