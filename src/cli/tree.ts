@@ -180,6 +180,7 @@ function maintenanceCommands(admin: AdminHandlers): Record<string, Leaf> {
       options: {
         list: { type: "boolean", description: "List pending and done migrations" },
         "dry-run": DRY_RUN,
+        undo: { type: "string", description: "Undo a migration that supports it, by id" },
       },
       run: ({ argv }) => runMigrate(argv),
     }),

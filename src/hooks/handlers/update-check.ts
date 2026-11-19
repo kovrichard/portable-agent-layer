@@ -4,13 +4,13 @@
  * Repo mode: auto-detected when a .git directory exists at palPkg() root.
  * Package mode: fallback when no .git is present (global bun install).
  *
- * Caches result in state/update-available.json. Checked at most once per hour.
+ * Caches result in cache/update-available.json. Checked at most once per hour.
  */
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug } from "../../core/log";
-import { ensureDir, palPkg, paths } from "../../core/paths";
+import { palPkg, paths } from "../../core/paths";
 import { raw as rawSettings, write as writeSettings } from "../../core/settings";
 
 export interface UpdateCache {
@@ -24,7 +24,7 @@ export interface UpdateCache {
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function cachePath(): string {
-  return resolve(ensureDir(paths.state()), "update-available.json");
+  return resolve(paths.cache(), "update-available.json");
 }
 
 /** The last check's result whatever its age — the notice and the page read this, not the TTL. */

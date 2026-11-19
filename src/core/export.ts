@@ -9,6 +9,7 @@ import AdmZip from "adm-zip";
 import { ensureActorRegistered } from "./actor";
 import { buildManifest, MANIFEST_NAME } from "./export-manifest";
 import { ensureRegistered } from "./machine";
+import { isMachineLocalState } from "./machine-state";
 import { palHome } from "./paths";
 
 /**
@@ -29,7 +30,9 @@ const SKIP_PATTERNS = [
 function shouldSkip(relPath: string): boolean {
   const normalized = relPath.replaceAll("\\", "/");
 
-  return SKIP_PATTERNS.some((p) => normalized.startsWith(p));
+  return (
+    SKIP_PATTERNS.some((p) => normalized.startsWith(p)) || isMachineLocalState(normalized)
+  );
 }
 
 /** Recursively collect all files under a directory, returning paths relative to root. */

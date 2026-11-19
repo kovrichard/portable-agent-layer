@@ -84,7 +84,7 @@ describe("runStopHandlers — the final reply", () => {
     });
 
     const shown = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "nudges-shown.json"), "utf-8")
+      readFileSync(resolve(HOME, "cache", "nudges-shown.json"), "utf-8")
     );
     expect(Object.keys(shown)).toEqual(["analyze"]);
   });

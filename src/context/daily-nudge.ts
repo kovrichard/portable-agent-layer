@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "../core/paths";
+import { paths } from "../core/paths";
 import { isEnabled, isOptedIn } from "../core/settings";
 import { localDay } from "../core/wall-clock";
 import { loadEntityReviewNudge } from "../knowledge/entity-review";
@@ -49,7 +49,7 @@ function isSwitchedOn(nudge: DueNudge): boolean {
 }
 
 function shownPath(): string {
-  return resolve(ensureDir(paths.state()), "nudges-shown.json");
+  return resolve(paths.cache(), "nudges-shown.json");
 }
 
 function readShownOn(): ShownOn {

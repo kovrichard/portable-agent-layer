@@ -46,7 +46,7 @@ function normalize(text: string): string {
 }
 
 export function readSkillIndex(): SkillIndex | null {
-  const path = resolve(paths.state(), "skill-index.json");
+  const path = resolve(paths.cache(), "skill-index.json");
   if (!existsSync(path)) return null;
 
   try {

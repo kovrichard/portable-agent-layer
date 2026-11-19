@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { declaredTriggers } from "../context/skill-triggers";
-import { palHome } from "../core/paths";
+import { paths } from "../core/paths";
 import { writeJson } from "./json-file";
 import { palSkillsDir } from "./skills";
 
@@ -91,10 +91,7 @@ export function generateSkillIndex(): number {
     }
   }
 
-  // Write to state directory
-  const stateDir = resolve(palHome(), "memory", "state");
-  mkdirSync(stateDir, { recursive: true });
-  writeJson(resolve(stateDir, "skill-index.json"), index);
+  writeJson(resolve(paths.cache(), "skill-index.json"), index);
 
   return index.totalSkills;
 }

@@ -13,7 +13,7 @@ import { eventLogEnabled } from "../../core/settings";
 const COLLECT_INTERVAL_MS = 15 * 60_000;
 
 function lastCollectPath(): string {
-  return resolve(paths.state(), "collect-last-run");
+  return resolve(paths.cache(), "collect-last-run");
 }
 
 export function collectDue(now: number = Date.now()): boolean {

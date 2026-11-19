@@ -188,7 +188,7 @@ export function renderEnvironment(env: Environment): string {
 }
 
 export function environmentFile(): string {
-  return resolve(paths.state(), "environment.json");
+  return resolve(paths.cache(), "environment.json");
 }
 
 export function readEnvironment(): Environment | null {

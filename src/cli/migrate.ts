@@ -22,6 +22,7 @@ import { v7RetiredSettingsKeys } from "./migrations/v7-retired-settings-keys";
 import { v8FactoryHome } from "./migrations/v8-factory-home";
 import { v9ProgressTreeNames } from "./migrations/v9-progress-tree-names";
 import { v10ThreadsToProgressTree } from "./migrations/v10-threads-to-progress-tree";
+import { v11MemoryBackups } from "./migrations/v11-memory-backups";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -60,6 +61,7 @@ const MIGRATIONS: Migration[] = [
   v8FactoryHome,
   v9ProgressTreeNames,
   v10ThreadsToProgressTree,
+  v11MemoryBackups,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 
@@ -115,10 +117,30 @@ function printMigrationList(): void {
   console.log("");
 }
 
+function undoMigration(id: string | undefined): void {
+  const migration = MIGRATIONS.find((m) => m.id === id);
+  const undoable = MIGRATIONS.filter((m) => m.undo).map((m) => m.id);
+
+  if (!migration?.undo) {
+    console.log(`  Nothing to undo for "${id ?? ""}". Undoable: ${undoable.join(", ")}`);
+
+    return;
+  }
+
+  for (const line of migration.undo().results) console.log(`  ${line}`);
+}
+
 /** Entry point for `pal cli migrate`. */
 export function runMigrate(args: string[]): void {
   const dryRun = args.includes("--dry-run");
   const list = args.includes("--list");
+  const undoIndex = args.indexOf("--undo");
+
+  if (undoIndex >= 0) {
+    undoMigration(args[undoIndex + 1]);
+
+    return;
+  }
 
   if (list) {
     printMigrationList();

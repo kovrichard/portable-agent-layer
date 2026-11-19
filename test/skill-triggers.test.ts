@@ -88,7 +88,7 @@ async function triggersFor(frontmatter: string): Promise<string[]> {
   writeSkill("probe", frontmatter);
   await generateIndex();
   const index = JSON.parse(
-    readFileSync(resolve(HOME, "memory", "state", "skill-index.json"), "utf-8")
+    readFileSync(resolve(HOME, "cache", "skill-index.json"), "utf-8")
   );
 
   return index.skills.probe.triggers;

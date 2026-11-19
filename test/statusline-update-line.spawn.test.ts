@@ -20,9 +20,10 @@ const SESSION_JSON = JSON.stringify({
 let HOME: string;
 
 function fixture(autoUpdate: boolean): void {
-  mkdirSync(resolve(HOME, ".pal", "memory", "state"), { recursive: true });
+  mkdirSync(resolve(HOME, ".pal", "cache"), { recursive: true });
+  mkdirSync(resolve(HOME, ".pal", "memory"), { recursive: true });
   writeFileSync(
-    resolve(HOME, ".pal", "memory", "state", "update-available.json"),
+    resolve(HOME, ".pal", "cache", "update-available.json"),
     JSON.stringify({
       checkedAt: new Date().toISOString(),
       available: true,

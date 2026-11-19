@@ -304,6 +304,8 @@
     ".opencode/config.json#permission.external_directory.{root}/home/**",
     ".opencode/plugins/package.json",
     ".opencode/plugins/pal-plugin.ts",
+    "home/cache/environment.json",
+    "home/cache/skill-index.json",
     "home/memory/actor.json",
     "home/memory/pal-settings.json",
     "home/memory/pal-settings.json#$schema",
@@ -332,8 +334,6 @@
     "home/memory/pal-settings.json#loadAtStartup.files",
     "home/memory/pal-settings.json#steering.disable",
     "home/memory/pal-settings.json#steering.rules",
-    "home/memory/state/environment.json",
-    "home/memory/state/skill-index.json",
     "home/skills/analyze-pdf -> {pkg}/assets/skills/analyze-pdf",
     "home/skills/analyze-youtube -> {pkg}/assets/skills/analyze-youtube",
     "home/skills/consulting-report -> {pkg}/assets/skills/consulting-report",
@@ -415,6 +415,8 @@
     "home/memory/pal-settings.json#loadAtStartup._docs",
     "home/memory/pal-settings.json#loadAtStartup.files[]=memory/PROJECTS.md",
     "home/memory/pal-settings.json#steering._docs",
+    "home/memory/state/environment.json",
+    "home/memory/state/skill-index.json",
     "home/skills/opinion -> {pkg}/assets/skills/opinion",
     "home/skills/pal-reflect -> {pkg}/assets/skills/pal-reflect"
   ]

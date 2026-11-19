@@ -146,7 +146,7 @@ if (Test-Path $signalCache) {
 # PAL: Update available check (reads cached result, no network call)
 # Emoji constructed at runtime to avoid PS5.1 UTF-8-without-BOM encoding issues
 $UPDATE_LINE = ""
-$updateCache = Join-Path $env:USERPROFILE ".pal\memory\state\update-available.json"
+$updateCache = Join-Path $env:USERPROFILE ".pal\cache\update-available.json"
 if (Test-Path $updateCache) {
   try {
     $uc = Get-Content $updateCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json

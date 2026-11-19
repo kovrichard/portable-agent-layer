@@ -104,7 +104,7 @@ The statusline script is at: `portable-agent-layer/assets/statusline.ps1`
 - **Cost:** Estimated session cost in USD (shows "free" if <$0.01 on macOS/Linux, `$0.00` on Windows)
 - **Remaining %:** Percentage of context window remaining
 - **Rate Limits:** 5h and 7d usage percentages (Pro/Max plans only — hidden on other plans)
-- **Update Notice:** Shown on line 3 when `~/.pal/memory/state/update-available.json` flags a new version
+- **Update Notice:** Shown on line 3 when `~/.pal/cache/update-available.json` flags a new version
 - **Health:** Read from `~/.pal/cache/health.json`, which every doctor run writes (PAL starts one in the background at session start when it is missing or over 6 hours old), and `~/.pal/cache/login-rejected.json`, which a rejected background Claude call writes at once. Shows `Claude token rejected` or `Claude login rejected` first, else the worst failing check (with `(+N more)` when several fail), else `N warnings`; hidden when all is fine. Run `pal cli doctor` for the details and fixes
 
 ## Dependencies

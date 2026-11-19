@@ -29,9 +29,9 @@ function seedCapture(slug: string, ctx: string, principle: string) {
 }
 
 function seedSkillIndex() {
-  mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
+  mkdirSync(resolve(TEST_HOME, "cache"), { recursive: true });
   writeFileSync(
-    resolve(TEST_HOME, "memory", "state", "skill-index.json"),
+    resolve(TEST_HOME, "cache", "skill-index.json"),
     JSON.stringify({
       skills: {
         presentation: {
