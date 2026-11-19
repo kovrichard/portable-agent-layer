@@ -167,24 +167,6 @@ if [ ${#RATE_PARTS[@]} -gt 0 ]; then
   RATE_STR=" │ ${RATE_JOINED}"
 fi
 
-# PAL: Signal trend (reads 10-min cache written by session intelligence)
-SIGNAL_STR=""
-SIGNAL_CACHE="$HOME/.pal/memory/state/signal-cache.json"
-if [ -f "$SIGNAL_CACHE" ]; then
-  SC_TODAY=$(jq -r '.today // empty' "$SIGNAL_CACHE" 2>/dev/null)
-  SC_TREND=$(jq -r '.trend // empty' "$SIGNAL_CACHE" 2>/dev/null)
-  if [ -n "$SC_TODAY" ]; then
-    case "$SC_TREND" in
-      up)     ARROW="↑"; SIG_COLOR=$GREEN ;;
-      down)   ARROW="↓"; SIG_COLOR=$RED ;;
-      stable) ARROW="→"; SIG_COLOR=$DIM ;;
-      *)      ARROW="?"; SIG_COLOR=$DIM ;;
-    esac
-    SIG_TODAY=$(printf "%.1f" "$SC_TODAY")
-    SIGNAL_STR="  ${SIG_COLOR}sig: ${SIG_TODAY}/10 ${ARROW}${RESET}"
-  fi
-fi
-
 # PAL: Update available check (reads cached result, no network call)
 UPDATE_LINE=""
 UPDATE_CACHE="$HOME/.pal/memory/state/update-available.json"
@@ -308,8 +290,8 @@ fi
 ISC_STR=""
 [ "$OPEN_ISCS" -gt 0 ] && ISC_STR="  ${DIM}📋 ${OPEN_ISCS} open ISCs${RESET}"
 
-# Line 1: Model, Directory, Git Branch, Open ISCs, Signal
-echo -e "${CYAN}[${MODEL}]${RESET} 📁 ${DIR_DISPLAY}${DIM}${GIT_INDICATOR}${RESET}${ISC_STR}${SIGNAL_STR}"
+# Line 1: Model, Directory, Git Branch, Open ISCs
+echo -e "${CYAN}[${MODEL}]${RESET} 📁 ${DIR_DISPLAY}${DIM}${GIT_INDICATOR}${RESET}${ISC_STR}"
 
 # Line 2: Context bar; cost segment only when Claude sends it
 if [ -n "$COST_STR" ]; then

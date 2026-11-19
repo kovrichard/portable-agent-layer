@@ -123,26 +123,6 @@ if ($SEVEN_D_RAW -ne $null) { $RATE_PARTS += "7d: $([int]$SEVEN_D_RAW)%" }
 if ($DAY_STR) { $RATE_PARTS += $DAY_STR }
 $RATE_STR = if ($RATE_PARTS.Count -gt 0) { " - " + ($RATE_PARTS -join " | ") } else { "" }
 
-# PAL: Signal trend (reads 10-min cache written by session intelligence)
-$SIGNAL_STR = ""
-$signalCache = Join-Path $env:USERPROFILE ".pal\memory\state\signal-cache.json"
-if (Test-Path $signalCache) {
-  try {
-    $sc = Get-Content $signalCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
-    if ($sc.today -ne $null) {
-      $ARROW = switch ($sc.trend) {
-        "up"     { "^"; break }
-        "down"   { "v"; break }
-        "stable" { "-"; break }
-        default  { "?"; break }
-      }
-      $SIG_TODAY = ([math]::Round([double]$sc.today, 1)).ToString("0.0")
-      $SIG_COLOR = if ($sc.trend -eq "up") { $GREEN } elseif ($sc.trend -eq "down") { $RED } else { $DIM }
-      $SIGNAL_STR = "  " + $SIG_COLOR + "sig: $SIG_TODAY/10 $ARROW" + $RESET
-    }
-  } catch {}
-}
-
 # PAL: Update available check (reads cached result, no network call)
 # Emoji constructed at runtime to avoid PS5.1 UTF-8-without-BOM encoding issues
 $UPDATE_LINE = ""
@@ -285,7 +265,7 @@ if (Test-Path $runDir) {
 $ISC_STR = if ($OPEN_ISCS -gt 0)   { "  " + $DIM + "$OPEN_ISCS open ISCs" + $RESET }  else { "" }
 
 # Line 1: Model, Directory, Git Branch, Open ISCs
-Write-Host ($CYAN + "[$MODEL]" + $RESET + " folder: $DIR_DISPLAY" + $DIM + $GIT_INDICATOR + $RESET + $ISC_STR + $SIGNAL_STR)
+Write-Host ($CYAN + "[$MODEL]" + $RESET + " folder: $DIR_DISPLAY" + $DIM + $GIT_INDICATOR + $RESET + $ISC_STR)
 
 # Line 2: Context bar with usage percentage, cost, and rate limits
 $CTX_STR = "$USED% - $COST_STR - ${REM}% free"
