@@ -11,6 +11,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reflectionsFile } from "../bronze/bronze";
 import { palPkg, paths } from "../core/paths";
 import { readReflections } from "./learning-store";
 
@@ -47,7 +48,7 @@ export function isMaintainerEnv(cwd: string = process.cwd()): boolean {
 
 /** Count reflections newer than the last review mark (all of them, if never reviewed). */
 export function countUnreviewed(mark: string | null = readReviewMark()): number {
-  const reflections = readReflections(paths.reflectionsFile());
+  const reflections = readReflections(reflectionsFile());
 
   if (!mark) return reflections.length;
   const cutoff = new Date(mark).getTime();

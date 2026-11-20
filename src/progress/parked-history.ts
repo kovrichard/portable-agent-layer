@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
+import { storeDir } from "../bronze/bronze";
 import { mergeJsonlLines } from "../core/import-merge";
 import { logError } from "../core/log";
 
@@ -35,27 +36,25 @@ function projectBoundUnder(slug: string, bindings: Bindings): string | null {
   return owners.length === 1 ? owners[0][0] : null;
 }
 
-function parkedDir(home: string): string {
-  return resolve(home, "memory", "state", "unbound-history");
-}
-
 function recordedProjectDir(home: string, project: string): string | null {
   const dir = resolve(home, "memory", "projects", project);
 
   return existsSync(resolve(dir, "ISA.md")) ? dir : null;
 }
 
+function historyFileOf(home: string, project: string): string {
+  return resolve(storeDir("project-history", home), project, "history.jsonl");
+}
+
 export function adoptParkedHistory(bindings: Bindings, home: string): void {
-  const dir = parkedDir(home);
-  if (!existsSync(dir)) return;
+  const dir = storeDir("unbound-history", home);
 
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".jsonl"))) {
     const owner = projectBoundUnder(file.slice(0, -".jsonl".length), bindings);
-    const projectDir = owner && recordedProjectDir(home, owner);
-    if (!projectDir) continue;
+    if (!owner || !recordedProjectDir(home, owner)) continue;
 
     try {
-      foldHistoryInto(resolve(projectDir, "history.jsonl"), resolve(dir, file));
+      foldHistoryInto(historyFileOf(home, owner), resolve(dir, file));
       unlinkSync(resolve(dir, file));
     } catch (err) {
       logError("parked-history:adopt", err);

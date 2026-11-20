@@ -113,7 +113,6 @@ function pkg(...segments: string[]): string {
 export const paths = {
   telos: () => home("telos"),
   memory: () => home("memory"),
-  learning: () => ensureDir(home("memory", "learning")),
   signals: () => ensureDir(home("memory", "signals")),
   state: () => ensureDir(home("memory", "state")),
   research: () => ensureDir(home("memory", "research")),
@@ -122,14 +121,8 @@ export const paths = {
   knowledge: () => ensureDir(home("memory", "knowledge")),
   knowledgeDomain: (d: string) => ensureDir(home("memory", "knowledge", d)),
   failures: () => ensureDir(home("memory", "learning", "failures")),
-  reflections: () => ensureDir(home("memory", "learning", "reflections")),
-  reflectionsFile: () =>
-    home("memory", "learning", "reflections", "algorithm-reflections.jsonl"),
-  ledger: () => ensureDir(home("memory", "ledger")),
-  content: () => ensureDir(home("memory", "content")),
   progress: () => ensureDir(home("memory", "state", "progress")),
   projectHistory: () => ensureDir(home("memory", "projects")),
-  unboundHistory: () => ensureDir(home("memory", "state", "unbound-history")),
   transcriptHandoff: () => ensureDir(home("memory", "state", "transcript-handoff")),
   work: () => ensureDir(home("memory", "work")),
   backups: () => ensureDir(home("backups")),

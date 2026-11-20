@@ -34,7 +34,7 @@ import { dirname, extname, resolve } from "node:path";
 import { calcPatch } from "fast-myers-diff";
 import { currentAttribution, type RecordAttribution } from "../core/actor";
 import { encodeAnchor, resolveAnchor } from "../core/anchor";
-import { ensureDir, paths } from "../core/paths";
+import { ensureDir } from "../core/paths";
 import { storeDir } from "./bronze";
 import { appendEvent } from "./events";
 import { isSensitivePath } from "./sensitive-path";
@@ -406,7 +406,7 @@ export interface PendingSnapshot {
 const PENDING_TTL_MS = 60 * 60 * 1000;
 
 function pendingDir(): string {
-  return ensureDir(resolve(paths.ledger(), "pending"));
+  return ensureDir(resolve(storeDir("ledger"), "pending"));
 }
 
 /**

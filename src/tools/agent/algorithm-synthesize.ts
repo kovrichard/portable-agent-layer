@@ -18,7 +18,7 @@
  * Script:   pal cli algorithm-synthesize [--since <ISO>] [--json]
  */
 
-import { paths } from "../../core/paths";
+import { reflectionsFile } from "../../bronze/bronze";
 import { readReflections } from "../../opinions/learning-store";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
@@ -155,7 +155,7 @@ function summarizeBucket(b: (typeof BUCKETS)[number], a: BucketAcc): AlgorithmBu
  * that matched none, so blind spots in the bucket set stay visible.
  */
 export function synthesizeAlgorithm(since?: Date): AlgorithmSynthesis {
-  const all = readReflections(paths.reflectionsFile());
+  const all = readReflections(reflectionsFile());
   const filtered = since ? all.filter((r) => r.ts && new Date(r.ts) >= since) : all;
   const withQ2 = filtered.filter((r) => r.q2.trim());
   // Cluster only general ideas; task-specific ones don't generalize to the

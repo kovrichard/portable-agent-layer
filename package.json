@@ -107,7 +107,7 @@
     "madge": "8.0.0",
     "promptfoo": "0.121.14",
     "secretlint": "14.0.1",
-    "semantic-release": "25.0.9",
+    "semantic-release": "26.0.1",
     "typescript": "5.9.3"
   },
   "dependencies": {

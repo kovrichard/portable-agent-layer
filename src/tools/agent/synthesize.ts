@@ -14,7 +14,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { storeDir } from "../../bronze/bronze";
+import { reflectionsFile } from "../../bronze/bronze";
 import { ratingsFile } from "../../bronze/signals";
 import { ensureDir, paths } from "../../core/paths";
 import { leaf, runCommand, UsageError } from "../lib/command";
@@ -110,8 +110,7 @@ interface Reflection {
 }
 
 function getAlgorithmStats(since: Date): SynthesisState["algorithm"] {
-  storeDir("reflections");
-  const reflections = readJsonl<Reflection>(paths.reflectionsFile()).filter(
+  const reflections = readJsonl<Reflection>(reflectionsFile()).filter(
     (r) => new Date(r.timestamp) >= since
   );
 

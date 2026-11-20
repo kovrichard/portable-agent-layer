@@ -10,11 +10,11 @@ import {
 import { relative, resolve } from "node:path";
 import { type StoreName, storeDir, storeNamed } from "../src/bronze/bronze";
 import { appendEvent } from "../src/bronze/events";
+import { appendImportLog } from "../src/bronze/import-log";
 import { recordAction } from "../src/bronze/ledger";
 import { emitRating } from "../src/bronze/signals";
 import { appendToolOutput } from "../src/bronze/tool-output";
 import { preserveTranscriptsOnce } from "../src/bronze/transcript-preserve";
-import { appendImportLog } from "../src/core/import-merge";
 import { palHome } from "../src/core/paths";
 import { reload } from "../src/core/settings";
 import { queueForReview } from "../src/knowledge/entity-extraction";
@@ -275,7 +275,7 @@ describe("each recorded store's writer files into the registry's folder", () => 
     test(name, async () => {
       await WRITE_ONE[name]();
       const store = storeNamed(name);
-      const dir = store.dir();
+      const dir = storeDir(name);
 
       expect(relative(HOME, dir).replaceAll("\\", "/")).toBe(LOCATION_TODAY[name]);
       expect(

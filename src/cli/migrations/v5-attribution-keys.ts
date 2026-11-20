@@ -11,7 +11,13 @@ import type { Migration, MigrationResult } from "./migration";
  * later. Nothing ever read `m`, so no consumer depends on the old spelling.
  */
 function attributionFiles(): string[] {
-  const files = [paths.reflectionsFile(), resolve(paths.state(), "threads.jsonl")];
+  const reflections = resolve(
+    paths.memory(),
+    "learning",
+    "reflections",
+    "algorithm-reflections.jsonl"
+  );
+  const files = [reflections, resolve(paths.state(), "threads.jsonl")];
   const signalsDir = paths.signals();
   if (existsSync(signalsDir)) {
     for (const name of readdirSync(signalsDir)) {

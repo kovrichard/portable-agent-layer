@@ -198,6 +198,21 @@ describe("v11-memory-backups: moving", () => {
     ]);
   });
 
+  test("names the manifest file in every move event it writes", () => {
+    seedBackups();
+    v11MemoryBackups.run(false);
+    v11MemoryBackups.undo?.();
+    moveVerified(
+      ["a-snapshot"],
+      [{ entry: "a-snapshot", file: "notes.md", size: 5, sha256: "0".repeat(64) }]
+    );
+
+    const names = moveEvents().map((event) => event.manifest);
+    const first = manifests().sort()[0];
+    expect(names.slice(0, 2)).toEqual([first, first]);
+    expect(manifests()).toContain(String(names[2]));
+  });
+
   test("writes a stamped manifest with one hashed line per file before moving", () => {
     seedBackups();
 

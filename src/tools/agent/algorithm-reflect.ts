@@ -10,8 +10,7 @@
  */
 
 import { appendFileSync } from "node:fs";
-import { storeDir } from "../../bronze/bronze";
-import { paths } from "../../core/paths";
+import { reflectionsFile } from "../../bronze/bronze";
 import { recordAlgorithmReflectionQuietly } from "../../progress/algorithm-runs";
 import { progressSession } from "../../progress/progress-session";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
@@ -94,9 +93,7 @@ function missingRequired(
 }
 
 function reflectionsPath(): string {
-  storeDir("reflections");
-
-  return paths.reflectionsFile();
+  return reflectionsFile();
 }
 
 function appendReflection(reflection: ReturnType<typeof buildReflection>): undefined {

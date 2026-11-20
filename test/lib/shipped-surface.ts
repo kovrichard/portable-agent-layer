@@ -52,6 +52,8 @@ const NOT_SURFACE = [
   /^home\/docs\//,
   /^home\/telos\//,
   /^home\/memory\/actors\//,
+  /^home\/memory\/(content\/)?events\//,
+  /^home\/machine\.json$/,
   /^home\/debug\/debug\.log(\.\d)?$/,
   /\/node_modules\//,
   /\/bun\.lock$/,

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { appendImportLog } from "../src/bronze/import-log";
 import type { ArchiveEntry } from "../src/core/import-merge";
 import {
-  appendImportLog,
   isNeverImport,
   mergeArchive,
   mergeJsonlLines,
