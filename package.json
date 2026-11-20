@@ -86,12 +86,12 @@
     "eval:pareto-analyze": "bun eval/pareto-analyze/build-prompt.ts && bun eval/run.ts pareto-analyze"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.7",
+    "@biomejs/biome": "2.6.8",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@hughescr/stryker-bun-runner": "1.6.0",
     "@konvert7/klint": "1.8.0",
-    "@opencode-ai/plugin": "1.19.5",
+    "@opencode-ai/plugin": "1.19.6",
     "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/git": "11.0.1",
@@ -103,7 +103,7 @@
     "issue-parser": "7.0.2",
     "jscpd": "5.4.3",
     "knip": "6.45.1",
-    "lint-staged": "17.6.0",
+    "lint-staged": "17.6.1",
     "madge": "8.0.0",
     "promptfoo": "0.121.14",
     "secretlint": "13.1.0",
@@ -114,10 +114,10 @@
     "@clack/prompts": "1.9.0",
     "adm-zip": "0.6.1",
     "fast-myers-diff": "3.2.0",
-    "marked": "18.2.0",
+    "marked": "18.2.1",
     "pdf-lib": "1.17.1",
     "playwright": "1.65.1",
-    "unpdf": "2.1.0",
+    "unpdf": "2.2.1",
     "zod": "4.6.7"
   },
   "overrides": {
