@@ -140,6 +140,17 @@ describe("moveVerified: moving", () => {
   });
 });
 
+describe("hashTotal", () => {
+  const line = { from: "/a", to: "/b", file: "x", size: 1, sha256: "f".repeat(64) };
+
+  test("changes with a file's name or hash, and is stable otherwise", () => {
+    expect(hashTotal([line])).toBe(hashTotal([{ ...line }]));
+    expect(hashTotal([line])).not.toBe(hashTotal([{ ...line, file: "y" }]));
+    expect(hashTotal([line])).not.toBe(hashTotal([{ ...line, sha256: "e".repeat(64) }]));
+    expect(hashTotal([line])).not.toBe(hashTotal([]));
+  });
+});
+
 describe("moveVerified: refusing", () => {
   test("refuses when a target already exists, and moves nothing", () => {
     const moves = seedStores();
@@ -360,6 +371,7 @@ describe("undoVerifiedMove", () => {
       { from: at("memory", "learning-2"), to: at("memory", "silver", "x") },
     ]);
     writeFile(at("backups", "layout-zzz.manifest.jsonl"), "not ours");
+    writeFile(at("backups", "layout-2099-01-01T00-00-00-000Z.manifest.jsonl.bak"), "");
     writeFile(at("backups", "layout-extra-2099-01-01T00-00-00-000Z.manifest.jsonl"), "");
 
     const report = undoVerifiedMove("layout");
@@ -367,6 +379,14 @@ describe("undoVerifiedMove", () => {
     expect(report.putBack).toBe(1);
     expect(read("memory", "learning-2", "x.md")).toBe("x");
     expect(existsSync(at("memory", "silver", "learning", "notes.md"))).toBe(true);
+  });
+
+  test("a second undo puts nothing back and names nothing as left in place", () => {
+    moveVerified("layout", seedStores());
+    undoVerifiedMove("layout");
+
+    expect(undoVerifiedMove("layout")).toMatchObject({ putBack: 0, leftInPlace: [] });
+    expectUntouched();
   });
 
   test("skips a malformed manifest line", () => {

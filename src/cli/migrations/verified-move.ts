@@ -274,7 +274,9 @@ export function undoVerifiedMove(name: string): UndoReport {
     back.flatMap((move) => linesOf(move, lines)),
     "from"
   );
-  const leftInPlace = moves.filter((move) => !back.includes(move)).map((move) => move.to);
+  const leftInPlace = moves
+    .filter((move) => !back.includes(move) && existsSync(move.to))
+    .map((move) => move.to);
   recordMemoryMove(
     name,
     {

@@ -84,6 +84,26 @@ describe("sweepLateWrites", () => {
     expect(read("memory", "bronze", "signals", "2026-11.jsonl")).toBe("a\nc\n");
   });
 
+  test("appends several new lines each on its own line, to an empty file too", () => {
+    writeFile(at("memory", "bronze", "signals", "2026-11.jsonl"), "");
+    writeFile(at("memory", "signals", "2026-11.jsonl"), "c\nd\n");
+
+    expect(sweepLateWrites("layout", [folderMove()]).lines).toBe(2);
+    expect(read("memory", "bronze", "signals", "2026-11.jsonl")).toBe("c\nd\n");
+  });
+
+  test("keeps the moved file when both copies have the same mtime", () => {
+    writeFile(at("memory", "gold", "sessions.json"), "moved");
+    writeFile(at("memory", "state", "sessions.json"), "late");
+    const when = Date.now() / 1000 - 60;
+    utimesSync(at("memory", "gold", "sessions.json"), when, when);
+    utimesSync(at("memory", "state", "sessions.json"), when, when);
+
+    sweepLateWrites("layout", [fileMove()]);
+
+    expect(read("memory", "gold", "sessions.json")).toBe("moved");
+  });
+
   test("appends nothing when every line is already there", () => {
     writeFile(at("memory", "bronze", "signals", "2026-11.jsonl"), "a");
     writeFile(at("memory", "signals", "2026-11.jsonl"), "a\n");

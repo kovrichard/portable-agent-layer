@@ -101,7 +101,9 @@ function pidIn(file: string): number | null {
       ? (JSON.parse(text) as { pid?: unknown }).pid
       : Number(text);
 
-    return Number.isInteger(pid) && pid !== process.pid ? (pid as number) : null;
+    return Number.isInteger(pid) && (pid as number) > 0 && pid !== process.pid
+      ? (pid as number)
+      : null;
   } catch {
     return null;
   }

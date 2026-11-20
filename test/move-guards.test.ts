@@ -105,6 +105,12 @@ describe("busyReasons", () => {
     expect(busyReasons({ ...idle, isAlive: () => true })).toEqual([]);
   });
 
+  test("ignores an empty lock, whose pid would name the whole process group", () => {
+    writeFile(at("memory", "state", "collect.lock"), "");
+
+    expect(busyReasons({ ...idle, isAlive: () => true })).toEqual([]);
+  });
+
   test("names a running bronze collect, but not this process's own", () => {
     writeFile(at("memory", "state", "collect.lock"), "777");
 
@@ -180,6 +186,18 @@ describe("moveGuardRefusal", () => {
     expect(memoryMoveDetails(HOME)).toEqual([
       expect.objectContaining({ busy: ["a bronze event was written 60s ago"] }),
     ]);
+  });
+
+  test("names the newest recent event and every reason", () => {
+    eventAt(2);
+    eventAt(1);
+    writeFile(at("server.json"), JSON.stringify({ pid: 4242 }));
+
+    expect(
+      moveGuardRefusal("layout", { seams: { ...idle, isAlive: (pid) => pid === 4242 } })
+    ).toBe(
+      "PAL is in use: a bronze event was written 60s ago; the control room is running (pid 4242)"
+    );
   });
 
   test("goes ahead while busy when forced", () => {
