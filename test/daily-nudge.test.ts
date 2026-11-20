@@ -6,6 +6,7 @@ import {
   dueNudgeReminder,
   pendingToday,
 } from "../src/context/daily-nudge";
+import { paths } from "../src/core/paths";
 import { reload } from "../src/core/settings";
 import { queueForReview } from "../src/knowledge/entity-extraction";
 import { freshTestDir } from "./lib/test-home";
@@ -73,7 +74,7 @@ describe("a due reminder", () => {
   });
 
   test("an unreadable record shows the reminder rather than hiding it", () => {
-    writeFileSync(resolve(HOME, "memory", "state", "nudges-shown.json"), "{ not json");
+    writeFileSync(resolve(paths.cache(), "nudges-shown.json"), "{ not json");
     expect(pendingToday("analyze", "## Due", morning)).toBe("## Due");
   });
 });

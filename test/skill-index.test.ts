@@ -26,9 +26,7 @@ function writeSkill(name: string, frontmatter: string | null, body = "text") {
 }
 
 function readIndex() {
-  return JSON.parse(
-    readFileSync(resolve(HOME, "memory", "state", "skill-index.json"), "utf-8")
-  );
+  return JSON.parse(readFileSync(resolve(HOME, "cache", "skill-index.json"), "utf-8"));
 }
 
 beforeEach(() => {
@@ -44,7 +42,7 @@ beforeEach(() => {
 describe("generateSkillIndex", () => {
   test("returns 0 and writes nothing when there is no skills directory", () => {
     expect(generateSkillIndex()).toBe(0);
-    expect(existsSync(resolve(HOME, "memory", "state", "skill-index.json"))).toBe(false);
+    expect(existsSync(resolve(HOME, "cache", "skill-index.json"))).toBe(false);
   });
 
   test("indexes a skill by its frontmatter name and description", () => {

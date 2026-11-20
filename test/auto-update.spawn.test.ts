@@ -321,7 +321,7 @@ describe("what the closing terminal says", () => {
   test("names the versions it is moving between", () => {
     setSettings({ enabled: true, decided: true });
     writeFileSync(
-      resolve(paths.state(), "update-available.json"),
+      resolve(paths.cache(), "update-available.json"),
       JSON.stringify({
         checkedAt: new Date().toISOString(),
         available: true,

@@ -169,7 +169,7 @@ fi
 
 # PAL: Update available check (reads cached result, no network call)
 UPDATE_LINE=""
-UPDATE_CACHE="$HOME/.pal/memory/state/update-available.json"
+UPDATE_CACHE="$HOME/.pal/cache/update-available.json"
 if [ -f "$UPDATE_CACHE" ]; then
   UC_AVAIL=$(jq -r '.available // false' "$UPDATE_CACHE" 2>/dev/null)
   if [ "$UC_AVAIL" = "true" ]; then

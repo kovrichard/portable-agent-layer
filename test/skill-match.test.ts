@@ -24,11 +24,8 @@ const INDEX: SkillIndex = {
 };
 
 function writeIndex(index: SkillIndex) {
-  mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
-  writeFileSync(
-    resolve(TEST_HOME, "memory", "state", "skill-index.json"),
-    JSON.stringify(index)
-  );
+  mkdirSync(resolve(TEST_HOME, "cache"), { recursive: true });
+  writeFileSync(resolve(TEST_HOME, "cache", "skill-index.json"), JSON.stringify(index));
 }
 
 async function setSettings(data: Record<string, unknown>) {
@@ -124,16 +121,13 @@ describe("getSkillReminder", () => {
   });
 
   test("returns null when there is no skill index on disk", async () => {
-    removeOnceReleased(resolve(TEST_HOME, "memory", "state", "skill-index.json"));
+    removeOnceReleased(resolve(TEST_HOME, "cache", "skill-index.json"));
 
     expect((await loadMatcher())("make me a pitch deck")).toBeNull();
   });
 
   test("returns null when the index is unreadable", async () => {
-    writeFileSync(
-      resolve(TEST_HOME, "memory", "state", "skill-index.json"),
-      "{ not json"
-    );
+    writeFileSync(resolve(TEST_HOME, "cache", "skill-index.json"), "{ not json");
 
     expect((await loadMatcher())("make me a pitch deck")).toBeNull();
   });

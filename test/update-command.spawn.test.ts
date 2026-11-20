@@ -124,7 +124,7 @@ describe("pal cli update — clears stale update cache", () => {
 
   test("clearUpdateCache removes the cache so no stale notice remains", () => {
     process.env.PAL_HOME = home;
-    const fp = resolve(paths.state(), "update-available.json");
+    const fp = resolve(paths.cache(), "update-available.json");
     writeFileSync(
       fp,
       JSON.stringify({

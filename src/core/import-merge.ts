@@ -19,6 +19,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { type ExportManifest, MANIFEST_NAME } from "./export-manifest";
+import { isMachineLocalState } from "./machine-state";
 
 /** One file inside an export archive, decoupled from the zip library. */
 export interface ArchiveEntry {
@@ -54,7 +55,10 @@ function normalize(path: string): string {
 export function isNeverImport(path: string): boolean {
   const rel = normalize(path);
 
-  return NEVER_IMPORT.some((deny) => rel === deny || rel.endsWith(`/${deny}`));
+  return (
+    NEVER_IMPORT.some((deny) => rel === deny || rel.endsWith(`/${deny}`)) ||
+    isMachineLocalState(rel)
+  );
 }
 
 function isJsonl(path: string): boolean {

@@ -13,6 +13,7 @@ export interface Migration {
   run(dryRun?: boolean): MigrationResult;
   /** Moves its sources rather than copying them, so there is nothing left to delete. */
   movesSources?: true;
+  undo?(): MigrationResult;
 }
 
 export function discardEmptyFolder(dir: string): void {

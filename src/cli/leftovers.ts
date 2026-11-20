@@ -1,4 +1,12 @@
-import { existsSync, lstatSync, readlinkSync, renameSync, unlinkSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readlinkSync,
+  renameSync,
+  rmdirSync,
+  unlinkSync,
+} from "node:fs";
 import { resolve } from "node:path";
 import { palHome, paths, platform } from "../core/paths";
 import { readJson, writeJson } from "../targets/json-file";
@@ -249,6 +257,46 @@ const debugLogPrev: Leftover = {
   },
 };
 
+const CACHES_MOVED_OUT_OF_STATE = [
+  "update-available.json",
+  "environment.json",
+  "skill-index.json",
+  "nudges-shown.json",
+  "collect-last-run",
+];
+
+const oldStateCache = (name: string) => resolve(paths.state(), name);
+const oldRunModeFolder = () => resolve(paths.state(), "run-mode");
+
+function isEmptyFolder(dir: string): boolean {
+  return existsSync(dir) && lstatSync(dir).isDirectory() && readdirSync(dir).length === 0;
+}
+
+function keepNewestCacheCopy(name: string): void {
+  const old = oldStateCache(name);
+  const current = resolve(paths.cache(), name);
+
+  if (existsSync(current)) unlinkSync(old);
+  else renameSync(old, current);
+}
+
+const cachesInState: Leftover = {
+  id: "caches-in-state",
+  description:
+    "Move machine-local caches from memory/state to ~/.pal/cache, so export stops carrying them to other machines",
+  find: () => [
+    ...CACHES_MOVED_OUT_OF_STATE.map(oldStateCache).filter((path) => existsSync(path)),
+    ...(isEmptyFolder(oldRunModeFolder()) ? [oldRunModeFolder()] : []),
+  ],
+  remove() {
+    for (const name of CACHES_MOVED_OUT_OF_STATE) {
+      if (existsSync(oldStateCache(name))) keepNewestCacheCopy(name);
+    }
+
+    if (isEmptyFolder(oldRunModeFolder())) rmdirSync(oldRunModeFolder());
+  },
+};
+
 export const LEFTOVERS: Leftover[] = [
   claudeFileToolRules,
   claudeFactoryHomeOverride,
@@ -261,4 +309,5 @@ export const LEFTOVERS: Leftover[] = [
   retiredVerbRules,
   opinionTrackingDocCopy,
   debugLogPrev,
+  cachesInState,
 ];

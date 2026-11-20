@@ -92,7 +92,8 @@ describe("buildClaudeMd", () => {
   });
 
   test("carries the environment detected at install, right after the identity", async () => {
-    const envFile = resolve(TEST_HOME, "memory", "state", "environment.json");
+    mkdirSync(resolve(TEST_HOME, "cache"), { recursive: true });
+    const envFile = resolve(TEST_HOME, "cache", "environment.json");
     writeFileSync(
       envFile,
       JSON.stringify({
