@@ -42,6 +42,33 @@ describe("palHome", () => {
     const { palHome } = await import("../src/core/paths");
     expect(palHome()).toBe(resolve(TEST_ROOT, "pal-home"));
   });
+
+  test("without PAL_TEST_ROOT the sandbox home is the checkout's own .test/pal-home", async () => {
+    delete process.env.PAL_HOME;
+    const testRoot = process.env.PAL_TEST_ROOT;
+    delete process.env.PAL_TEST_ROOT;
+    const { palHome } = await import("../src/core/paths");
+
+    try {
+      expect(palHome()).toBe(resolve(import.meta.dir, "..", ".test", "pal-home"));
+    } finally {
+      if (testRoot !== undefined) process.env.PAL_TEST_ROOT = testRoot;
+    }
+  });
+
+  test("PAL_TEST_ROOT moves the sandbox home under it", async () => {
+    delete process.env.PAL_HOME;
+    const testRoot = process.env.PAL_TEST_ROOT;
+    process.env.PAL_TEST_ROOT = TEST_DIR;
+    const { palHome } = await import("../src/core/paths");
+
+    try {
+      expect(palHome()).toBe(resolve(TEST_DIR, "pal-home"));
+    } finally {
+      if (testRoot === undefined) delete process.env.PAL_TEST_ROOT;
+      else process.env.PAL_TEST_ROOT = testRoot;
+    }
+  });
 });
 
 describe("palPkg", () => {

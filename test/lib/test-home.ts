@@ -3,6 +3,14 @@ import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { removeOnceReleased } from "./remove-once-released";
 
+const strykerWorker = process.env.STRYKER_MUTATOR_WORKER;
+
+if (strykerWorker && !process.env.PAL_TEST_ROOT)
+  process.env.PAL_TEST_ROOT = resolve(
+    import.meta.dir,
+    `../../.test/stryker-worker-${strykerWorker}`
+  );
+
 export const TEST_ROOT =
   process.env.PAL_TEST_ROOT ?? resolve(import.meta.dir, "../../.test");
 
