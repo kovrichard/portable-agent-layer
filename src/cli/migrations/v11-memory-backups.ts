@@ -7,7 +7,7 @@ import {
   renameSync,
   statSync,
 } from "node:fs";
-import { relative, resolve } from "node:path";
+import { basename, relative, resolve } from "node:path";
 import { appendEvent, logQuietly } from "../../bronze/events";
 import { paths } from "../../core/paths";
 import { filesUnder, sha256Of } from "./file-hash";
@@ -78,9 +78,15 @@ function renameEntries(
   }
 }
 
+function withManifestName(fields: Record<string, unknown>): Record<string, unknown> {
+  return typeof fields.manifest === "string"
+    ? { ...fields, manifest: basename(fields.manifest) }
+    : fields;
+}
+
 function recordMove(fields: Record<string, unknown>): void {
   logQuietly("memory_move", () =>
-    appendEvent("memory_move", { migration: ID, ...fields })
+    appendEvent("memory_move", { migration: ID, ...withManifestName(fields) })
   );
 }
 

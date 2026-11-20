@@ -15,6 +15,7 @@ export interface MoveManifestLine {
   file: string;
   size: number;
   sha256: string;
+  folder?: true;
 }
 
 const STAMP = /^\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-\d{3}Z\.manifest\.jsonl$/;
@@ -23,14 +24,38 @@ export function backupStamp(now = new Date()): string {
   return now.toISOString().replace(/[:.]/g, "-");
 }
 
+function emptyFoldersUnder(path: string): string[] {
+  if (!statSync(path).isDirectory()) return [];
+
+  const folders = readdirSync(path, { recursive: true, withFileTypes: true })
+    .filter((item) => item.isDirectory())
+    .map((item) => resolve(item.parentPath, item.name));
+
+  return [path, ...folders].filter((folder) => readdirSync(folder).length === 0);
+}
+
 function describeMove(move: PlannedMove): MoveManifestLine[] {
-  return filesUnder(move.from).map((file) => ({
+  const files = filesUnder(move.from).map((file) => ({
     from: move.from,
     to: move.to,
     file: relative(move.from, file),
     size: statSync(file).size,
     sha256: sha256Of(file),
   }));
+  const folders = emptyFoldersUnder(move.from).map((folder) => ({
+    from: move.from,
+    to: move.to,
+    file: relative(move.from, folder),
+    size: 0,
+    sha256: "",
+    folder: true as const,
+  }));
+
+  return [...files, ...folders];
+}
+
+export function fileLines(lines: MoveManifestLine[]): MoveManifestLine[] {
+  return lines.filter((line) => !line.folder);
 }
 
 export function describeMoves(moves: PlannedMove[]): MoveManifestLine[] {
@@ -79,8 +104,9 @@ export function locationOf(line: MoveManifestLine, side: "from" | "to"): string 
 
 export function hashMatchesAt(line: MoveManifestLine, side: "from" | "to"): boolean {
   const file = locationOf(line, side);
+  if (!existsSync(file)) return false;
 
-  return existsSync(file) && sha256Of(file) === line.sha256;
+  return line.folder ? statSync(file).isDirectory() : sha256Of(file) === line.sha256;
 }
 
 /** One hash over every file's hash, so two runs over the same files can be compared at a glance. */

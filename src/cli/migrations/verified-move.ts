@@ -4,6 +4,7 @@ import { appendEvent, logQuietly } from "../../bronze/events";
 import { palHome } from "../../core/paths";
 import {
   describeMoves,
+  fileLines,
   formatManifest,
   hashMatchesAt,
   hashTotal,
@@ -183,16 +184,17 @@ function moved(
   lines: MoveManifestLine[],
   entries: number
 ): MoveReport {
+  const files = fileLines(lines).length;
   recordMemoryMove(name, {
     outcome: "moved",
     entries,
-    files: lines.length,
+    files,
     bytes: lines.reduce((sum, line) => sum + line.size, 0),
     hashTotal: hashTotal(lines),
     manifest: basename(manifest),
   });
 
-  return { outcome: "moved", files: lines.length, manifest };
+  return { outcome: "moved", files, manifest };
 }
 
 /**

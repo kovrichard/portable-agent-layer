@@ -3,8 +3,10 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
+  rmdirSync,
   statSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
@@ -379,6 +381,41 @@ describe("undoVerifiedMove", () => {
     expect(report.putBack).toBe(1);
     expect(read("memory", "learning-2", "x.md")).toBe("x");
     expect(existsSync(at("memory", "silver", "learning", "notes.md"))).toBe(true);
+  });
+
+  test("puts back an empty store folder and an empty folder inside a moved one", () => {
+    const moves = seedStores();
+    mkdirSync(at("memory", "learning", "empty"), { recursive: true });
+    mkdirSync(at("memory", "wisdom"), { recursive: true });
+    const emptyStore = {
+      from: at("memory", "wisdom"),
+      to: at("memory", "silver", "wisdom"),
+    };
+
+    const report = moveVerified("layout", [...moves, emptyStore]);
+    const manifest = read("backups", manifestsIn(HOME)[0]);
+    undoVerifiedMove("layout");
+
+    expect(report).toMatchObject({ outcome: "moved", files: 3 });
+    expect(existsSync(at("memory", "wisdom"))).toBe(true);
+    expect(readdirSync(at("memory", "learning", "empty"))).toEqual([]);
+    expectUntouched();
+    expect(manifest).toContain('"folder":true');
+  });
+
+  test("names an empty folder that went missing, and one that became a file", () => {
+    const moves = seedStores();
+    mkdirSync(at("memory", "learning", "empty"), { recursive: true });
+    mkdirSync(at("memory", "learning", "other"), { recursive: true });
+    moveVerified("layout", moves);
+    rmdirSync(at("memory", "silver", "learning", "empty"));
+    rmdirSync(at("memory", "silver", "learning", "other"));
+    writeFile(at("memory", "silver", "learning", "other"), "x");
+
+    expect(undoVerifiedMove("layout").differ.sort()).toEqual([
+      at("memory", "learning", "empty"),
+      at("memory", "learning", "other"),
+    ]);
   });
 
   test("a second undo puts nothing back and names nothing as left in place", () => {
