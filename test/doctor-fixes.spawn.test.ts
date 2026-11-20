@@ -388,7 +388,12 @@ describe.skipIf(!PROVING).each(["package", "repo"] as Mode[])(
         const ran = sh(sandbox.root, command);
         expect(ran.output).toBeString();
 
-        expect(doctor(sandbox).map((f) => f.id)).not.toContain(breakage.id);
+        const left = doctor(sandbox).map((f) => f.id);
+        if (left.includes(breakage.id))
+          console.error(
+            `"${command}" left ${breakage.id} failing. Its output:\n${ran.output}`
+          );
+        expect(left).not.toContain(breakage.id);
       }, 120_000);
     }
   }

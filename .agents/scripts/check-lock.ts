@@ -12,8 +12,10 @@ import { basename, dirname, join } from "node:path";
 
 const LOCK_INPUT_NAMES = new Set(["package.json", "bun.lock", "bunfig.toml", ".npmrc"]);
 
+const PATCHED_DEPENDENCY = /(^|\/)patches\/[^/]+\.patch$/;
+
 export function isLockInput(path: string): boolean {
-  return LOCK_INPUT_NAMES.has(basename(path));
+  return LOCK_INPUT_NAMES.has(basename(path)) || PATCHED_DEPENDENCY.test(path);
 }
 
 function git(root: string, args: string[]): string {

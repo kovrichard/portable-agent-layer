@@ -76,7 +76,10 @@ export function palPkg(): string {
  * Power users who want memory/telos versioned in a repo can override via PAL_HOME.
  */
 function sandboxPalHome(): string {
-  return resolve(import.meta.dir, "..", "..", ".test", "pal-home");
+  const testRoot =
+    process.env.PAL_TEST_ROOT ?? resolve(import.meta.dir, "..", "..", ".test");
+
+  return resolve(testRoot, "pal-home");
 }
 
 function defaultPalHome(): string {
