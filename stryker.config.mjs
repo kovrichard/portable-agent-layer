@@ -151,7 +151,9 @@ export default {
   //   rung 4 — 2026-10-13: diff runs -> break 70
   //            (last 11 PR branches scored 78-100%; only the older entity and
   //            event-log PRs, 62-69%, would have broken)
-  thresholds: { high: 90, low: 80, break: 70 },
+  //   rung 5 — 2026-11-20: diff runs -> break 80
+  //            (a 156-file diff run scored 89.82%, 8192 mutants)
+  thresholds: { high: 90, low: 80, break: 80 },
   // Stryker copies the project into a sandbox with fs.copyFile, which throws ENOTSUP on a
   // symlink. Every entry below is either a symlink farm (agent config dirs, the installed
   // test homes, the vendored skill node_modules) or bulk the suite never reads.
