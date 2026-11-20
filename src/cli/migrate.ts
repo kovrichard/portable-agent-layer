@@ -10,6 +10,7 @@
  * its leftovers. Install runs pending migrations first; the doctor lists them.
  */
 
+import { appendEvent, logQuietly } from "../bronze/events";
 import { LEFTOVERS, type Leftover } from "./leftovers";
 import type { Migration, MigrationResult } from "./migrations/migration";
 import { v1Projects } from "./migrations/v1-projects";
@@ -73,10 +74,62 @@ interface PendingMigration {
   detail?: string;
 }
 
+interface RunKind {
+  dryRun: boolean;
+  undo: boolean;
+}
+
+function recordRun(
+  migration: Migration,
+  kind: RunKind,
+  result: MigrationResult | null
+): void {
+  const counts = result && { migrated: result.migrated, skipped: result.skipped };
+  logQuietly("migration_run", () =>
+    appendEvent(
+      "migration_run",
+      {
+        migration: migration.id,
+        outcome: result ? "done" : "failed",
+        ...counts,
+        ...kind,
+      },
+      result ? { content: { results: result.results } } : {}
+    )
+  );
+}
+
+function recorded(
+  migration: Migration,
+  kind: RunKind,
+  run: () => MigrationResult
+): MigrationResult {
+  try {
+    const result = run();
+    recordRun(migration, kind, result);
+
+    return result;
+  } catch (err) {
+    recordRun(migration, kind, null);
+    throw err;
+  }
+}
+
+/** Runs a migration and lands one migration_run event in bronze, a failure included. */
+export function runRecorded(migration: Migration, dryRun: boolean): MigrationResult {
+  return recorded(migration, { dryRun, undo: false }, () => migration.run(dryRun));
+}
+
+export function undoRecorded(
+  migration: Migration & Required<Pick<Migration, "undo">>
+): MigrationResult {
+  return recorded(migration, { dryRun: false, undo: true }, () => migration.undo());
+}
+
 /** Install runs these first, so one install leaves nothing an older PAL wrote. */
 export function applyPendingMigrations(): string[] {
   return MIGRATIONS.filter((m) => m.check().pending).flatMap((m) =>
-    m.run(false).results.map((line) => `${m.id}: ${line}`)
+    runRecorded(m, false).results.map((line) => `${m.id}: ${line}`)
   );
 }
 
@@ -127,7 +180,8 @@ function undoMigration(id: string | undefined): void {
     return;
   }
 
-  for (const line of migration.undo().results) console.log(`  ${line}`);
+  for (const line of undoRecorded({ ...migration, undo: migration.undo }).results)
+    console.log(`  ${line}`);
 }
 
 /** Entry point for `pal cli migrate`. */
@@ -162,7 +216,7 @@ export function runMigrate(args: string[]): void {
 
   for (const m of pending) {
     console.log(`  Running: ${m.id} — ${m.description}`);
-    const result = m.run(dryRun);
+    const result = runRecorded(m, dryRun);
     totalMigrated += result.migrated;
     totalSkipped += result.skipped;
 

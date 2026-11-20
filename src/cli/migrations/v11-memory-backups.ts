@@ -1,19 +1,16 @@
-import { createHash } from "node:crypto";
 import {
   appendFileSync,
-  closeSync,
   existsSync,
   mkdirSync,
-  openSync,
   readdirSync,
   readFileSync,
-  readSync,
   renameSync,
   statSync,
 } from "node:fs";
-import { relative, resolve } from "node:path";
+import { basename, relative, resolve } from "node:path";
 import { appendEvent, logQuietly } from "../../bronze/events";
 import { paths } from "../../core/paths";
+import { filesUnder, sha256Of } from "./file-hash";
 import { discardEmptyFolder, type Migration, type MigrationResult } from "./migration";
 
 /**
@@ -38,32 +35,6 @@ const manifestPrefix = "memory-backups-";
 
 function entriesToMove(): string[] {
   return existsSync(oldFolder()) ? readdirSync(oldFolder()) : [];
-}
-
-const HASH_CHUNK = 1024 * 1024;
-
-function sha256Of(file: string): string {
-  const hash = createHash("sha256");
-  const chunk = Buffer.alloc(HASH_CHUNK);
-  const fd = openSync(file, "r");
-
-  try {
-    for (let read = readSync(fd, chunk); read > 0; read = readSync(fd, chunk)) {
-      hash.update(chunk.subarray(0, read));
-    }
-  } finally {
-    closeSync(fd);
-  }
-
-  return hash.digest("hex");
-}
-
-function filesUnder(dir: string): string[] {
-  if (!statSync(dir).isDirectory()) return [dir];
-
-  return readdirSync(dir, { recursive: true, withFileTypes: true })
-    .filter((item) => item.isFile())
-    .map((item) => resolve(item.parentPath, item.name));
 }
 
 function describeEntry(entry: string): ManifestLine[] {
@@ -107,9 +78,15 @@ function renameEntries(
   }
 }
 
+function withManifestName(fields: Record<string, unknown>): Record<string, unknown> {
+  return typeof fields.manifest === "string"
+    ? { ...fields, manifest: basename(fields.manifest) }
+    : fields;
+}
+
 function recordMove(fields: Record<string, unknown>): void {
   logQuietly("memory_move", () =>
-    appendEvent("memory_move", { migration: ID, ...fields })
+    appendEvent("memory_move", { migration: ID, ...withManifestName(fields) })
   );
 }
 
