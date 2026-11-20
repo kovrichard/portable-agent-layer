@@ -11,6 +11,7 @@
     "assets/",
     ".claude-plugin/",
     ".husky/install.mjs",
+    "patches/",
     "README.md",
     "LICENSE"
   ],
