@@ -61,6 +61,8 @@ These come from PAL code, not from a runtime hook, so every runtime has them.
 | `judge_call` | PAL asks a typed judgment (`judge()`: ratings, correction kinds, `pal cli judge`): mode, route, System One provider, model, tokens, cost, latency, failure, and both sides' answers |
 | `pal_update` | A self-update runs or is skipped, including `pal cli update` |
 | `pal_heartbeat` | The daily heartbeat is sent, fails or is skipped, with the exact payload sent |
+| `migration_run` | A migration runs from install or `pal cli migrate`, a dry run or `--undo` included: its id, `done` or `failed`, and its migrated and skipped counts; the result lines go to the content store |
+| `memory_move` | Recorded data is backed up, moved, rolled back, refused, undone or swept by a migration: counts, hash total and the manifest or archive name; the paths go to the content store |
 | `commitment` | An ISC is kept, dropped, reopened or snoozed, from the CLI or the control room |
 | `entity_first_seen` | A person, company, idea or research topic first enters the knowledge store |
 | `discord_nag` | The Discord bot reports a nag or its answer through `pal cli events discord-nag` |
