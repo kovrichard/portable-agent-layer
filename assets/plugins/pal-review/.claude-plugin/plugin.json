@@ -1,0 +1,13 @@
+{
+  "name": "pal-review",
+  "version": "0.1.0",
+  "description": "A pane to approve or deny PAL rule drafts and close the open ISCs of the current project, every action through pal cli.",
+  "author": {
+    "name": "Portable Agent Layer",
+    "url": "https://github.com/kovrichard/portable-agent-layer"
+  },
+  "repository": "https://github.com/kovrichard/portable-agent-layer",
+  "license": "MIT",
+  "keywords": ["pal", "review", "rules", "isc", "pane"],
+  "types": "./types/index.d.ts"
+}
