@@ -9,6 +9,8 @@ describe("isLockInput", () => {
       "bunfig.toml",
       ".npmrc",
       "a/b/package.json",
+      "patches/@scope%2Fpkg@1.0.0.patch",
+      "a/patches/pkg@1.0.0.patch",
     ]) {
       expect(isLockInput(path)).toBe(true);
     }
@@ -20,6 +22,8 @@ describe("isLockInput", () => {
       "package.json.bak",
       "bun.lockb",
       "tsconfig.json",
+      "patches/README.md",
+      "src/fix.patch",
     ]) {
       expect(isLockInput(path)).toBe(false);
     }
