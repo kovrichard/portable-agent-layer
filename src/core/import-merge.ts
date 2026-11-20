@@ -192,35 +192,6 @@ export function readManifest(entries: ArchiveEntry[]): ExportManifest | null {
   }
 }
 
-export interface ImportLogEntry {
-  ts: string;
-  archive: string;
-  mode: "merge" | "overwrite";
-  created: number;
-  merged: number;
-  identical: number;
-  conflicts: number;
-  skipped: number;
-  linesAdded: number;
-  quarantineDir: string | null;
-  sourceMachineId?: string | null;
-}
-
-/** Append one record per import so a merged corpus stays attributable. */
-export function appendImportLog(home: string, entry: ImportLogEntry): void {
-  const logPath = resolve(home, "memory", "state", "import-log.jsonl");
-  mkdirSync(dirname(logPath), { recursive: true });
-  const line = `${JSON.stringify(entry)}\n`;
-
-  if (existsSync(logPath)) {
-    writeFileSync(logPath, readFileSync(logPath, "utf-8") + line);
-
-    return;
-  }
-
-  writeFileSync(logPath, line);
-}
-
 export function summarize(result: MergeResult): string {
   const parts = [
     `${result.created.length} new`,

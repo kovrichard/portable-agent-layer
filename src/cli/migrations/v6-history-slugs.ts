@@ -20,6 +20,8 @@ interface StrandedHistory {
   parked: boolean;
 }
 
+const unboundHistoryAtV6 = () => resolve(paths.state(), "unbound-history");
+
 function orphanHistoryFolders(): { slug: string; file: string }[] {
   const base = paths.projectHistory();
   if (!existsSync(base)) return [];
@@ -36,7 +38,7 @@ function orphanHistoryFolders(): { slug: string; file: string }[] {
 }
 
 function parkedHistoryFiles(): { slug: string; file: string }[] {
-  const base = paths.unboundHistory();
+  const base = unboundHistoryAtV6();
   if (!existsSync(base)) return [];
 
   return readdirSync(base)
@@ -75,7 +77,7 @@ function strandedHistory(): StrandedHistory[] {
 function destinationFor(item: StrandedHistory): string {
   return item.owner
     ? resolve(paths.projectHistory(), item.owner, "history.jsonl")
-    : resolve(paths.unboundHistory(), `${item.slug}.jsonl`);
+    : resolve(unboundHistoryAtV6(), `${item.slug}.jsonl`);
 }
 
 export const v6HistorySlugs: Migration = {
