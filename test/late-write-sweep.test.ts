@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, utimesSync } from "node:fs";
-import { resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { sweepLateWrites } from "../src/cli/migrations/late-write-sweep";
 import {
   memoryMoveDetails,
@@ -121,7 +121,7 @@ describe("sweepLateWrites", () => {
 
     expect(read("memory", "gold", "sessions.json")).toBe("late");
     expect(report.kept.map((file) => readFileSync(file, "utf-8"))).toEqual(["moved"]);
-    expect(report.kept[0]).toEndWith(resolve("/", "memory", "gold", "sessions.json"));
+    expect(report.kept[0]).toEndWith(join(sep, "memory", "gold", "sessions.json"));
   });
 
   test("an older reappeared file loses, and is kept", () => {
