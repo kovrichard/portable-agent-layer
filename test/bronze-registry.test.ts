@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   bronzeStores,
   type RecordedStore,
@@ -6,6 +8,7 @@ import {
   type StoreGroup,
   type StoreName,
   storeDir,
+  storeLocation,
   storeNamed,
   storesOutsideBronze,
 } from "../src/bronze/bronze";
@@ -49,10 +52,34 @@ describe("the store registry", () => {
     }
   });
 
-  test("storeDir gives the folder of the store it names", () => {
+  test("storeDir gives the store's location under the PAL home and creates it", () => {
     const name: StoreName = "progress-tree";
+    const dir = storeDir(name);
 
-    expect(storeDir(name)).toBe(storeNamed(name).dir());
+    expect(dir).toBe(resolve(HOME, "memory", "progress-tree"));
+    expect(existsSync(dir)).toBe(true);
+  });
+
+  test("storeLocation gives the same folder without creating it", () => {
+    const location = storeLocation("transcripts");
+
+    expect(location).toBe(resolve(HOME, "memory", "content", "claude"));
+    expect(existsSync(location)).toBe(false);
+  });
+
+  test("storeDir resolves the same location under another home", () => {
+    const other = resolve(HOME, "other-home");
+
+    expect(storeDir("import-log", other)).toBe(resolve(other, "memory", "state"));
+  });
+
+  test("every location is relative, with forward slashes", () => {
+    for (const store of everyStore()) {
+      expect({ name: store.name, location: store.location }).toEqual({
+        name: store.name,
+        location: expect.stringMatching(/^memory(\/[a-z-]+)+$/),
+      });
+    }
   });
 
   test("storeNamed throws on a name no store has", () => {
@@ -61,7 +88,7 @@ describe("the store registry", () => {
 
   test("every store's folder lies inside the PAL home", () => {
     for (const store of everyStore()) {
-      expect({ name: store.name, inside: isInside(HOME, store.dir()) }).toEqual({
+      expect({ name: store.name, inside: isInside(HOME, storeDir(store.name)) }).toEqual({
         name: store.name,
         inside: true,
       });

@@ -1,5 +1,5 @@
-import { dirname, resolve } from "node:path";
-import { ensureDir, paths } from "../core/paths";
+import { resolve } from "node:path";
+import { ensureDir, palHome } from "../core/paths";
 
 export type StoreGroup = "raw" | "bronze" | "outside";
 
@@ -26,7 +26,8 @@ export type StoreName =
 export interface RecordedStore {
   name: StoreName;
   group: StoreGroup;
-  dir: () => string;
+  /** The store's folder, relative to the PAL home, with forward slashes. */
+  location: string;
   files: string;
   appendOnly: boolean;
   alsoInEventLog: boolean;
@@ -36,7 +37,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "transcripts",
     group: "raw",
-    dir: () => resolve(paths.content(), "claude"),
+    location: "memory/content/claude",
     files: "<project>/**/<file>.gz",
     appendOnly: false,
     alsoInEventLog: false,
@@ -44,7 +45,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "events",
     group: "bronze",
-    dir: () => ensureDir(resolve(paths.memory(), "events")),
+    location: "memory/events",
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
@@ -52,7 +53,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "event-text",
     group: "bronze",
-    dir: () => ensureDir(resolve(paths.content(), "events")),
+    location: "memory/content/events",
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
@@ -60,7 +61,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "tool-output",
     group: "bronze",
-    dir: () => ensureDir(resolve(paths.content(), "tool-output")),
+    location: "memory/content/tool-output",
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
@@ -68,7 +69,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "ledger",
     group: "outside",
-    dir: paths.ledger,
+    location: "memory/ledger",
     files: "actions.jsonl, rotated to actions-<stamp>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
@@ -76,7 +77,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "ratings",
     group: "outside",
-    dir: paths.signals,
+    location: "memory/signals",
     files: "ratings.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
@@ -84,7 +85,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "claim-checks",
     group: "outside",
-    dir: () => ensureDir(resolve(paths.signals(), "claim-checks")),
+    location: "memory/signals/claim-checks",
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
@@ -92,7 +93,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "labelled-turns",
     group: "outside",
-    dir: paths.adaptation,
+    location: "memory/adaptation",
     files: "turns-<YYYY-MM>.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -100,7 +101,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "rule-events",
     group: "outside",
-    dir: paths.adaptation,
+    location: "memory/adaptation",
     files: "rule-events.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
@@ -108,7 +109,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "rule-candidates",
     group: "outside",
-    dir: paths.adaptation,
+    location: "memory/adaptation",
     files: "candidates.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -116,7 +117,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "run-estimates",
     group: "outside",
-    dir: paths.learning,
+    location: "memory/learning",
     files: "run-estimates.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
@@ -124,7 +125,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "reflections",
     group: "outside",
-    dir: () => ensureDir(dirname(paths.reflectionsFile())),
+    location: "memory/learning/reflections",
     files: "algorithm-reflections.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
@@ -132,7 +133,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "progress-tree",
     group: "outside",
-    dir: () => ensureDir(resolve(paths.memory(), "progress-tree")),
+    location: "memory/progress-tree",
     files: "events.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
@@ -140,7 +141,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "sessions-archive",
     group: "outside",
-    dir: () => ensureDir(resolve(paths.state(), "sessions-archive")),
+    location: "memory/state/sessions-archive",
     files: "<YYYY-MM or undated>.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
@@ -148,7 +149,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "project-history",
     group: "outside",
-    dir: paths.projectHistory,
+    location: "memory/projects",
     files: "<project>/history.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -156,7 +157,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "unbound-history",
     group: "outside",
-    dir: paths.unboundHistory,
+    location: "memory/state/unbound-history",
     files: "<slug>.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -164,7 +165,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "review-queue",
     group: "outside",
-    dir: paths.knowledge,
+    location: "memory/knowledge",
     files: "_review.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -172,7 +173,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "import-log",
     group: "outside",
-    dir: paths.state,
+    location: "memory/state",
     files: "import-log.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -196,6 +197,14 @@ export function storeNamed(name: string): RecordedStore {
   return store;
 }
 
-export function storeDir(name: StoreName): string {
-  return storeNamed(name).dir();
+export function storeLocation(name: StoreName, home: string = palHome()): string {
+  return resolve(home, ...storeNamed(name).location.split("/"));
 }
+
+/** The store's folder under `home`, created when missing. */
+export function storeDir(name: StoreName, home: string = palHome()): string {
+  return ensureDir(storeLocation(name, home));
+}
+
+export const reflectionsFile = () =>
+  resolve(storeDir("reflections"), "algorithm-reflections.jsonl");

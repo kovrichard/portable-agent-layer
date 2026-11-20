@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeDir } from "../src/bronze/bronze";
 import { eventsSince } from "../src/bronze/events";
 import { palHome, paths } from "../src/core/paths";
 import { reload } from "../src/core/settings";
@@ -71,7 +72,7 @@ describe("SecurityValidator under agy", () => {
 
   test("records the refusal against agy's workspace, not the folder it ran from", async () => {
     await runValidator(JSON.stringify(runCommand(DANGEROUS)));
-    const ledger = readFileSync(resolve(paths.ledger(), "actions.jsonl"), "utf-8");
+    const ledger = readFileSync(resolve(storeDir("ledger"), "actions.jsonl"), "utf-8");
     expect(JSON.parse(ledger.trim().split("\n")[0]).target).toBe(workspace);
   });
 

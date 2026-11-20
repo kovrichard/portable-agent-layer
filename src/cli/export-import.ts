@@ -1,12 +1,8 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import type AdmZipArchive from "adm-zip";
-import {
-  appendImportLog,
-  mergeArchive,
-  readManifest,
-  summarize,
-} from "../core/import-merge";
+import { appendImportLog } from "../bronze/import-log";
+import { mergeArchive, readManifest, summarize } from "../core/import-merge";
 import { logDebug } from "../core/log";
 import { ensureRegistered, writeRegistryEntry } from "../core/machine";
 import { palHome, toPath } from "../core/paths";

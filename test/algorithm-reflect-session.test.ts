@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync } from "node:fs";
-import { paths } from "../src/core/paths";
+import { reflectionsFile } from "../src/bronze/bronze";
 import { run } from "../src/tools/agent/algorithm-reflect";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
@@ -36,7 +36,7 @@ async function reflectInShell(env: ShellEnv): Promise<number> {
 }
 
 function lastReflection(): Record<string, unknown> {
-  const lines = readFileSync(paths.reflectionsFile(), "utf-8").trim().split("\n");
+  const lines = readFileSync(reflectionsFile(), "utf-8").trim().split("\n");
 
   return JSON.parse(lines[lines.length - 1]);
 }

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reflectionsFile } from "../src/bronze/bronze";
 import { appendEvent, EVENT_FIELDS } from "../src/bronze/events";
 import { paths } from "../src/core/paths";
 import { reload } from "../src/core/settings";
@@ -60,9 +61,9 @@ async function reflectIn(session: string | undefined): Promise<number> {
 }
 
 function reflectionLines(): number {
-  if (!existsSync(paths.reflectionsFile())) return 0;
+  if (!existsSync(reflectionsFile())) return 0;
 
-  return readFileSync(paths.reflectionsFile(), "utf-8").trim().split("\n").length;
+  return readFileSync(reflectionsFile(), "utf-8").trim().split("\n").length;
 }
 
 describe("the event type", () => {
