@@ -14,6 +14,8 @@ the single source of truth for skill quality.
 
 4. **Self-contained and portable.** Everything the skill needs lives inside its own folder — `SKILL.md` plus a `tools/` subdir for scripts and any reference files — so it travels intact on export/import. Don't reach into sibling skills or reference files outside the folder. Prefer `$HOME`/`~` or an env var over a hardcoded absolute path like `/Users/you/…` so the skill still works on another machine; `pal cli skill doctor` warns (never errors) on machine-specific absolute paths; `pal cli skill doctor --all` lints every installed skill at once, one line each.
 
+5. **Checks itself.** Every personal skill ends with the `## Self-check` section from the anatomy below, copied as written with `<name>` filled in. It keeps a log of what broke and which attempts worked, so the next run starts from the known workaround instead of rediscovering it.
+
 A personal skill **may** contain this user's own context — their paths, project names, preferences, conventions. That is the point of a personal skill; portability (rule 4) is a preference, not a hard rule — a deliberate machine-specific mount is fine.
 
 ## Skill anatomy
@@ -41,6 +43,12 @@ Exactly what the assistant returns — structure if it will be parsed, tone if a
 ## When to use / Do NOT use
 
 Two short lists; the "do not" list disambiguates this skill from neighbours.
+
+## Self-check
+
+1. Before the first workflow step, read `~/.pal/skills/<name>/attempts.md` if it exists and apply its workarounds.
+2. After the run, if a step failed, a command or tool behaved differently than written, an instruction was outdated, or you needed a workaround, append one entry to `~/.pal/skills/<name>/attempts.md`: the date, the step, what broke, each attempt with its result, and what finally worked (or that nothing did).
+3. Tell the user in one line what you recorded. If that step already had an entry, also say the skill itself needs a fix.
 ```
 
 The `description` should state **both what the skill does and when to invoke it**, in third person, with the trigger terms a model would match on. A vague description ("helps with documents") will not trigger reliably.
@@ -55,3 +63,4 @@ The first two triggers are fixed: the skill's own name, then its de-hyphenated f
 - **Step concreteness** — every step has a verb and an object.
 - **Output specification** — the caller knows what they get back.
 - **Scope discipline** — one skill, one job.
+- **Self-check** — the `## Self-check` section is present, names this skill's own folder, and is unchanged from the anatomy otherwise.
