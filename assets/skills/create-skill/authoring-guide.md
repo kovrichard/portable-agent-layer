@@ -46,8 +46,8 @@ Two short lists; the "do not" list disambiguates this skill from neighbours.
 
 ## Self-check
 
-1. Before the first workflow step, read `~/.pal/skills/<name>/attempts.md` if it exists and apply its workarounds.
-2. After the run, if a step failed, a command or tool behaved differently than written, an instruction was outdated, or you needed a workaround, append one entry to `~/.pal/skills/<name>/attempts.md`: the date, the step, what broke, each attempt with its result, and what finally worked (or that nothing did).
+1. Before the first workflow step, read `~/.pal/skills/<name>/improvements.md` if it exists and apply its workarounds.
+2. After the run, if a step failed, a command or tool behaved differently than written, an instruction was outdated, or you needed a workaround, append one entry to `~/.pal/skills/<name>/improvements.md`: the date, the step, what broke, each attempt with its result, and what finally worked (or that nothing did).
 3. Tell the user in one line what you recorded. If that step already had an entry, also say the skill itself needs a fix.
 ```
 
