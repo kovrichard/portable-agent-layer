@@ -14,7 +14,7 @@ the single source of truth for skill quality.
 
 4. **Self-contained and portable.** Everything the skill needs lives inside its own folder — `SKILL.md` plus a `tools/` subdir for scripts and any reference files — so it travels intact on export/import. Don't reach into sibling skills or reference files outside the folder. Prefer `$HOME`/`~` or an env var over a hardcoded absolute path like `/Users/you/…` so the skill still works on another machine; `pal cli skill doctor` warns (never errors) on machine-specific absolute paths; `pal cli skill doctor --all` lints every installed skill at once, one line each.
 
-5. **Checks itself.** Every personal skill ends with the `## Self-check` section from the anatomy below, copied as written with `<name>` filled in. It keeps a log of what broke and which attempts worked, so the next run starts from the known workaround instead of rediscovering it.
+5. **Checks itself.** Every personal skill ends with the `## Self-check` section from the anatomy below, copied as written with `<name>` filled in. It keeps a dated list of what broke and the proposed fix; only fixes the user approves are applied to the skill.
 
 A personal skill **may** contain this user's own context — their paths, project names, preferences, conventions. That is the point of a personal skill; portability (rule 4) is a preference, not a hard rule — a deliberate machine-specific mount is fine.
 
@@ -46,9 +46,12 @@ Two short lists; the "do not" list disambiguates this skill from neighbours.
 
 ## Self-check
 
-1. Before the first workflow step, read `~/.pal/skills/<name>/improvements.md` if it exists and apply its workarounds.
-2. After the run, if a step failed, a command or tool behaved differently than written, an instruction was outdated, or you needed a workaround, append one entry to `~/.pal/skills/<name>/improvements.md`: the date, the step, what broke, each attempt with its result, and what finally worked (or that nothing did).
-3. Tell the user in one line what you recorded. If that step already had an entry, also say the skill itself needs a fix.
+`~/.pal/skills/<name>/improvements.md` is a dated list, newest last, one entry per line:
+`- 2026-11-23 [proposed] step 3: what broke; tried X (failed), Y (worked); change: <the edit to this SKILL.md>`
+
+1. After the run, if a step failed, a command or tool behaved differently than written, an instruction was outdated, or you needed a workaround, append one `[proposed]` entry. Skip it if a `[proposed]` or `[denied]` entry already covers the same problem.
+2. Tell the user every entry you added this run and ask which to approve.
+3. For each approved entry, apply its change to this SKILL.md and mark it `[applied YYYY-MM-DD]`; mark a refused one `[denied YYYY-MM-DD]`. Never apply a `[proposed]` entry.
 ```
 
 The `description` should state **both what the skill does and when to invoke it**, in third person, with the trigger terms a model would match on. A vague description ("helps with documents") will not trigger reliably.
