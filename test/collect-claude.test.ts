@@ -177,6 +177,7 @@ describe("collecting every source", () => {
     try {
       expect(await collectEvents()).toEqual({
         claude: 1,
+        "claude-denials": 0,
         opencode: "failed",
         codex: 0,
         copilot: 0,

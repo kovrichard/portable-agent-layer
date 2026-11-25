@@ -135,7 +135,7 @@ function isSettled(filepath: string, now: Date): boolean {
   return now.getTime() - statSync(filepath).mtimeMs > SETTLE_MS;
 }
 
-interface Transcript {
+export interface Transcript {
   key: string;
   path: string;
   settled: boolean;
@@ -150,7 +150,7 @@ function liveTranscripts(projectsDir: string, now: Date): Transcript[] {
 }
 
 /** Lines past `offset`, or none without opening the file when it has not grown. */
-function hasGrown(transcript: Transcript, offset: number): boolean {
+export function hasGrown(transcript: Transcript, offset: number): boolean {
   return transcriptBytes(transcript.path) > offset;
 }
 
@@ -173,7 +173,7 @@ function copiesOfDeletedTranscripts(
 }
 
 /** Every transcript to read: the live ones, and PAL's copy of each one Claude Code already deleted. */
-function claudeTranscriptSources(
+export function claudeTranscriptSources(
   projectsDir: string,
   now: Date,
   copiesDir?: string

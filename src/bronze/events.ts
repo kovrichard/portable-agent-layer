@@ -175,6 +175,8 @@ export const EVENT_FIELDS = {
   tool_call: [
     "tool",
     "outcome",
+    "denial",
+    "toolUseId",
     "promptWaitSec",
     "durationMs",
     "inputChars",

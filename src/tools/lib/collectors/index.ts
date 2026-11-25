@@ -15,6 +15,7 @@ import { claudeBilling, claudeConfigFile } from "../../../usage/billing";
 import { opencodeDatabase } from "../agent-usage";
 import { antigravityDatabase, collectAntigravity } from "./antigravity";
 import { collectClaude } from "./claude";
+import { collectClaudeDenials } from "./claude-denials";
 import { collectCodex } from "./codex";
 import { collectCopilot, copilotDatabase } from "./copilot";
 import { collectOpencode } from "./opencode";
@@ -27,6 +28,12 @@ const COLLECTORS: Record<string, () => number | Promise<number>> = {
       resolve(platform.claudeDir(), "projects"),
       new Date(),
       claudeBilling(claudeConfigFile()),
+      storeLocation("transcripts")
+    ),
+  "claude-denials": () =>
+    collectClaudeDenials(
+      resolve(platform.claudeDir(), "projects"),
+      new Date(),
       storeLocation("transcripts")
     ),
   opencode: () => collectOpencode(opencodeDatabase()),

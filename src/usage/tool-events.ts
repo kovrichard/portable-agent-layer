@@ -5,7 +5,7 @@
 
 import { basename, extname } from "node:path";
 import { appendEvent, logQuietly } from "../bronze/events";
-import { unappliedVerdictOf } from "../bronze/ledger-hook";
+import { toolUseIdOf, unappliedVerdictOf } from "../bronze/ledger-hook";
 import { isSensitivePath } from "../bronze/sensitive-path";
 import { appendToolOutput, type ToolOutputRow } from "../bronze/tool-output";
 import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "../core/agent";
@@ -75,25 +75,45 @@ function subagentRun(result: unknown) {
   };
 }
 
-function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) {
+/** What a call's name and arguments say about it, whether it ran or not. */
+export function callTraits(call: ToolUseRequest) {
   const input = call.toolInput;
-  const result = resultOf(payload);
   const file = stringIn(input, FILE_TARGET_KEYS);
 
   return {
     tool: call.toolName,
-    outcome: outcomeOf(payload),
-    durationMs: numberIn(payload, DURATION_KEYS) ?? numberIn(result, ["totalDurationMs"]),
     inputChars: sizeOf(input),
-    outputChars: sizeOf(result),
     fileExt: file ? extname(file) || null : null,
     program: programOf(stringIn(input, COMMAND_KEYS)),
     skill: stringIn(input, ["skill"]),
     subagent: stringIn(input, ["subagent_type"]),
-    ...subagentRun(result),
     mcpServer: mcpServerOf(call.toolName),
     host: hostOf(stringIn(input, ["url"])),
   };
+}
+
+function deniedByAutoMode(payload: Record<string, unknown>): boolean {
+  return (payload.hook_event_name ?? payload.hookEventName) === "PermissionDenied";
+}
+
+function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) {
+  const result = resultOf(payload);
+
+  return {
+    ...callTraits(call),
+    outcome: outcomeOf(payload),
+    denial: deniedByAutoMode(payload) ? "classifier:auto-mode" : null,
+    toolUseId: toolUseIdOf(payload),
+    durationMs: numberIn(payload, DURATION_KEYS) ?? numberIn(result, ["totalDurationMs"]),
+    outputChars: sizeOf(result),
+    ...subagentRun(result),
+  };
+}
+
+function contentOf(payload: Record<string, unknown>, call: ToolUseRequest) {
+  const reason = unappliedVerdictOf(payload)?.reason;
+
+  return { tool: call.toolName, input: call.toolInput, ...(reason && { reason }) };
 }
 
 function outputUnlessSensitive(
@@ -120,7 +140,7 @@ export function logToolCall(payload: Record<string, unknown> | null): void {
     const id = appendEvent("tool_call", fields, {
       ts,
       session,
-      content: { tool: call.toolName, input: call.toolInput },
+      content: contentOf(payload, call),
     });
     const output = resultOf(payload);
     if (id && output !== undefined)
