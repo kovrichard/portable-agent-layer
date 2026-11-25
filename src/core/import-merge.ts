@@ -48,6 +48,9 @@ const NEVER_IMPORT = [
   "memory/learning/.retrieval-index.json",
 ];
 
+/** Folders that stay on their machine: its working state, and its raw transcripts. */
+const NEVER_IMPORT_FOLDERS = ["state/", "records/raw/"];
+
 function normalize(path: string): string {
   return path.replaceAll("\\", "/").replace(/^\.\//, "");
 }
@@ -57,6 +60,7 @@ export function isNeverImport(path: string): boolean {
 
   return (
     NEVER_IMPORT.some((deny) => rel === deny || rel.endsWith(`/${deny}`)) ||
+    NEVER_IMPORT_FOLDERS.some((folder) => rel.startsWith(folder)) ||
     isMachineLocalState(rel)
   );
 }
