@@ -11,9 +11,9 @@ import {
   loggedEventIds,
 } from "../../bronze/events";
 import { eventLogEnabled } from "../../core/settings";
+import { collectInChildProcess } from "../../hooks/lib/collect-trigger";
 import { scopeOf } from "../../progress/progress-tree";
 import { backfillGit } from "./backfill/git";
-import { collectEvents } from "./collectors";
 import { apiPriceOf } from "./cost-report";
 
 export interface RunWindow {
@@ -160,10 +160,10 @@ function readsRealAgentDirs(): boolean {
 /** Reads the agents' transcripts and the repo's commits into the log; false when another collect held it. */
 function catchUpEventLog(repo: string, since: string): boolean {
   if (!readsRealAgentDirs()) return true;
-  const collected = collectEvents();
+  const collected = collectInChildProcess();
   backfillGit([repo], loggedEventIds(), since);
 
-  return collected !== null;
+  return collected;
 }
 
 /** Null when the event log is off; `complete` is false when the agents' calls could not be read in first. */

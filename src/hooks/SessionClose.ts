@@ -10,7 +10,10 @@
  * rewrite the config of a session still in use, and opening PAL costs nothing.
  */
 
-import { spawnTranscriptPreserve } from "../bronze/transcript-preserve";
+import {
+  preserveSessionTranscript,
+  spawnTranscriptPreserve,
+} from "../bronze/transcript-preserve";
 import { logError } from "../core/log";
 import { isPalSpawnedInference } from "../core/spawn-guard";
 import { recordHookRunOnExit } from "../usage/hook-run";
@@ -25,10 +28,13 @@ if (isPalSpawnedInference()) process.exit(0);
 
 if (duplicatesCursorHooks()) process.exit(0);
 
+const input = await readStdinJSON<{ reason?: string; transcript_path?: string }>();
+
+await preserveSessionTranscript(input?.transcript_path);
+
 spawnTranscriptPreserve();
 
 try {
-  const input = await readStdinJSON<{ reason?: string }>();
   logSessionEnd(input);
   autoUpdateOnClose(input?.reason);
 } catch (err) {

@@ -8,7 +8,7 @@ import { appendEvent, logQuietly } from "../bronze/events";
 import { normalizeToolUse } from "../core/agent";
 import { hookSessionId } from "../core/hook-payload";
 import { isEnabled } from "../core/settings";
-import { COMMAND_KEYS, stringIn } from "../usage/tool-events";
+import { COMMAND_KEYS, stringIn } from "../usage/call-traits";
 import { chooseRepo, type RepoChoice, runsGit, runsGitCommit } from "./git-command-repo";
 import {
   type ChangedFile,

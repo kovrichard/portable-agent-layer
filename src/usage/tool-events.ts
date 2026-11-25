@@ -3,25 +3,18 @@
  * cheap facts about it. The call's arguments go to the content store.
  */
 
-import { basename, extname } from "node:path";
 import { appendEvent, logQuietly } from "../bronze/events";
-import { unappliedVerdictOf } from "../bronze/ledger-hook";
+import { toolUseIdOf, unappliedVerdictOf } from "../bronze/ledger-hook";
 import { isSensitivePath } from "../bronze/sensitive-path";
 import { appendToolOutput, type ToolOutputRow } from "../bronze/tool-output";
 import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "../core/agent";
 import { hookSessionId } from "../core/hook-payload";
 import { isPalSpawnedInference } from "../core/spawn-guard";
+import { callTraits, sizeOf, stringIn } from "./call-traits";
 import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];
 const DURATION_KEYS = ["duration_ms", "durationMs"];
-export const COMMAND_KEYS = ["command", "commandLine", "CommandLine", "script"];
-
-export function stringIn(input: Record<string, unknown>, keys: string[]): string | null {
-  const found = keys.map((k) => input[k]).find((v) => typeof v === "string" && v);
-
-  return (found as string | undefined) ?? null;
-}
 
 function numberIn(source: unknown, keys: string[]): number | null {
   if (typeof source !== "object" || source === null) return null;
@@ -33,32 +26,6 @@ function numberIn(source: unknown, keys: string[]): number | null {
 
 export function resultOf(payload: Record<string, unknown>): unknown {
   return RESULT_KEYS.map((k) => payload[k]).find((v) => v !== undefined);
-}
-
-function sizeOf(value: unknown): number {
-  if (value === undefined || value === null) return 0;
-
-  return typeof value === "string" ? value.length : JSON.stringify(value).length;
-}
-
-function hostOf(url: string | null): string | null {
-  if (!url) return null;
-
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return null;
-  }
-}
-
-function mcpServerOf(tool: string): string | null {
-  return tool.startsWith("mcp__") ? (tool.split("__")[1] ?? null) : null;
-}
-
-function programOf(command: string | null): string | null {
-  const first = command?.trim().split(/\s+/)[0];
-
-  return first ? basename(first) : null;
 }
 
 function outcomeOf(payload: Record<string, unknown>): string {
@@ -75,25 +42,28 @@ function subagentRun(result: unknown) {
   };
 }
 
+function deniedByAutoMode(payload: Record<string, unknown>): boolean {
+  return (payload.hook_event_name ?? payload.hookEventName) === "PermissionDenied";
+}
+
 function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) {
-  const input = call.toolInput;
   const result = resultOf(payload);
-  const file = stringIn(input, FILE_TARGET_KEYS);
 
   return {
-    tool: call.toolName,
+    ...callTraits(call),
     outcome: outcomeOf(payload),
+    denial: deniedByAutoMode(payload) ? "classifier:auto-mode" : null,
+    toolUseId: toolUseIdOf(payload),
     durationMs: numberIn(payload, DURATION_KEYS) ?? numberIn(result, ["totalDurationMs"]),
-    inputChars: sizeOf(input),
     outputChars: sizeOf(result),
-    fileExt: file ? extname(file) || null : null,
-    program: programOf(stringIn(input, COMMAND_KEYS)),
-    skill: stringIn(input, ["skill"]),
-    subagent: stringIn(input, ["subagent_type"]),
     ...subagentRun(result),
-    mcpServer: mcpServerOf(call.toolName),
-    host: hostOf(stringIn(input, ["url"])),
   };
+}
+
+function contentOf(payload: Record<string, unknown>, call: ToolUseRequest) {
+  const reason = unappliedVerdictOf(payload)?.reason;
+
+  return { tool: call.toolName, input: call.toolInput, ...(reason && { reason }) };
 }
 
 function outputUnlessSensitive(
@@ -120,7 +90,7 @@ export function logToolCall(payload: Record<string, unknown> | null): void {
     const id = appendEvent("tool_call", fields, {
       ts,
       session,
-      content: { tool: call.toolName, input: call.toolInput },
+      content: contentOf(payload, call),
     });
     const output = resultOf(payload);
     if (id && output !== undefined)

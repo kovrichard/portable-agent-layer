@@ -39,46 +39,46 @@ beforeEach(() => {
 });
 
 describe("preserveTranscripts", () => {
-  test("gzips every transcript, subagents and sidecar files included", () => {
+  test("gzips every transcript, subagents and sidecar files included", async () => {
     writeTranscript("-proj/s1.jsonl", '{"a":1}\n');
     writeTranscript("-proj/s1/subagents/agent-x.jsonl", '{"b":2}\n');
     writeTranscript("-proj/s1/tool-results/out.txt", "output");
-    expect(preserveTranscripts(at)).toEqual({ copied: 3, unchanged: 0, failed: 0 });
+    expect(await preserveTranscripts(at)).toEqual({ copied: 3, unchanged: 0, failed: 0 });
     expect(copied("-proj/s1.jsonl")).toBe('{"a":1}\n');
     expect(copied("-proj/s1/subagents/agent-x.jsonl")).toBe('{"b":2}\n');
     expect(copied("-proj/s1/tool-results/out.txt")).toBe("output");
   });
 
-  test("a second run copies nothing that has not changed", () => {
+  test("a second run copies nothing that has not changed", async () => {
     writeTranscript("-proj/s1.jsonl", '{"a":1}\n');
-    preserveTranscripts(at);
-    expect(preserveTranscripts(at)).toEqual({ copied: 0, unchanged: 1, failed: 0 });
+    await preserveTranscripts(at);
+    expect(await preserveTranscripts(at)).toEqual({ copied: 0, unchanged: 1, failed: 0 });
   });
 
-  test("a transcript that grew is copied again, whole", () => {
+  test("a transcript that grew is copied again, whole", async () => {
     const file = writeTranscript("-proj/s1.jsonl", '{"a":1}\n');
-    preserveTranscripts(at);
+    await preserveTranscripts(at);
     writeFileSync(file, '{"a":1}\n{"a":2}\n');
     utimesSync(file, new Date(), new Date(Date.now() + 5000));
-    expect(preserveTranscripts(at).copied).toBe(1);
+    expect((await preserveTranscripts(at)).copied).toBe(1);
     expect(copied("-proj/s1.jsonl")).toBe('{"a":1}\n{"a":2}\n');
   });
 
-  test("the copy outlives the original", () => {
+  test("the copy outlives the original", async () => {
     const file = writeTranscript("-proj/s1.jsonl", '{"a":1}\n');
-    preserveTranscripts(at);
+    await preserveTranscripts(at);
     removeOnceReleased(file);
     expect(existsSync(file)).toBe(false);
     expect(copied("-proj/s1.jsonl")).toBe('{"a":1}\n');
   });
 
-  test("no source folder copies nothing and does not throw", () => {
-    expect(preserveTranscripts(at)).toEqual({ copied: 0, unchanged: 0, failed: 0 });
+  test("no source folder copies nothing and does not throw", async () => {
+    expect(await preserveTranscripts(at)).toEqual({ copied: 0, unchanged: 0, failed: 0 });
   });
 });
 
 describe("PreserveTranscripts entrypoint", () => {
-  test("copies the configured Claude dir into the PAL home's content store", () => {
+  test("copies the configured Claude dir into the PAL home's content store", async () => {
     const claudeDir = resolve(root, "claude");
     const home = resolve(root, "home");
     mkdirSync(resolve(claudeDir, "projects", "-proj"), { recursive: true });
@@ -95,7 +95,7 @@ describe("PreserveTranscripts entrypoint", () => {
 });
 
 describe("transcriptArchive", () => {
-  test("is the Claude folder of the PAL home's content store, where usage reads deleted transcripts", () => {
+  test("is the Claude folder of the PAL home's content store, where usage reads deleted transcripts", async () => {
     process.env.PAL_HOME = root;
     expect(transcriptArchive()).toBe(resolve(root, "memory", "content", "claude"));
   });
@@ -105,21 +105,21 @@ describe("preserveTranscriptsOnce", () => {
   const lockIn = (home: string) =>
     resolve(home, "memory", "state", "transcript-preserve.lock");
 
-  test("a live lock means another copy is running, so this one skips", () => {
+  test("a live lock means another copy is running, so this one skips", async () => {
     process.env.PAL_HOME = root;
     mkdirSync(resolve(lockIn(root), ".."), { recursive: true });
     writeFileSync(lockIn(root), "");
-    expect(preserveTranscriptsOnce(at)).toBeNull();
+    expect(await preserveTranscriptsOnce(at)).toBeNull();
   });
 
-  test("a stale lock is taken over and released afterwards", () => {
+  test("a stale lock is taken over and released afterwards", async () => {
     process.env.PAL_HOME = root;
     mkdirSync(resolve(lockIn(root), ".."), { recursive: true });
     writeFileSync(lockIn(root), "");
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
     utimesSync(lockIn(root), hourAgo, hourAgo);
     writeTranscript("-proj/s1.jsonl", "{}\n");
-    expect(preserveTranscriptsOnce(at)?.copied).toBe(1);
+    expect((await preserveTranscriptsOnce(at))?.copied).toBe(1);
     expect(existsSync(lockIn(root))).toBe(false);
   });
 });

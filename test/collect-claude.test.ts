@@ -84,9 +84,9 @@ beforeEach(() => {
 });
 
 describe("collecting Claude Code's model calls", () => {
-  test("a message is one model_call, at the usage of its last line", () => {
+  test("a message is one model_call, at the usage of its last line", async () => {
     write(block("msg_1", 3), toolResult, block("msg_1", 818), block("msg_2", 40));
-    expect(collectClaude(projects, LATER)).toBe(2);
+    expect(await collectClaude(projects, LATER)).toBe(2);
     const [first] = streamed();
     expect(first).toMatchObject({
       ts: "2026-10-12T10:00:00.000Z",
@@ -112,50 +112,50 @@ describe("collecting Claude Code's model calls", () => {
     });
   });
 
-  test("a call collected with no billing source is billed as unknown, not left blank", () => {
+  test("a call collected with no billing source is billed as unknown, not left blank", async () => {
     write(block("msg_1", 3));
-    collectClaude(projects, LATER);
+    await collectClaude(projects, LATER);
     expect(streamed()).toEqual([
       expect.objectContaining({ billing: "unknown", plan: null, extraUsage: null }),
     ]);
   });
 
-  test("a second run emits nothing the first one did", () => {
+  test("a second run emits nothing the first one did", async () => {
     write(block("msg_1", 10), block("msg_2", 20));
-    collectClaude(projects, LATER);
-    expect(collectClaude(projects, LATER)).toBe(0);
+    await collectClaude(projects, LATER);
+    expect(await collectClaude(projects, LATER)).toBe(0);
     expect(streamed()).toHaveLength(2);
   });
 
-  test("only what was appended since the last run is emitted", () => {
+  test("only what was appended since the last run is emitted", async () => {
     write(block("msg_1", 10));
-    collectClaude(projects, LATER);
+    await collectClaude(projects, LATER);
     write(block("msg_2", 20));
-    expect(collectClaude(projects, LATER)).toBe(1);
+    expect(await collectClaude(projects, LATER)).toBe(1);
     expect(streamed().map((e) => e.outputTokens)).toEqual([10, 20]);
   });
 
-  test("the newest message of a file still being written waits for the next run", () => {
+  test("the newest message of a file still being written waits for the next run", async () => {
     write(block("msg_1", 10), block("msg_2", 3));
-    expect(collectClaude(projects, NOW())).toBe(1);
+    expect(await collectClaude(projects, NOW())).toBe(1);
     write(toolResult, block("msg_2", 500), block("msg_3", 7));
-    expect(collectClaude(projects, NOW())).toBe(1);
-    expect(collectClaude(projects, LATER)).toBe(1);
+    expect(await collectClaude(projects, NOW())).toBe(1);
+    expect(await collectClaude(projects, LATER)).toBe(1);
     expect(streamed().map((e) => e.outputTokens)).toEqual([10, 500, 7]);
   });
 
-  test("a line without usage or without a model is not a call", () => {
+  test("a line without usage or without a model is not a call", async () => {
     write(
       toolResult,
       JSON.stringify({ type: "assistant", message: { usage: {} } }),
       "{bad"
     );
-    expect(collectClaude(projects, LATER)).toBe(0);
+    expect(await collectClaude(projects, LATER)).toBe(0);
   });
 
-  test("the cursor is kept per source under memory/state", () => {
+  test("the cursor is kept per source under memory/state", async () => {
     write(block("msg_1", 10));
-    collectClaude(projects, LATER);
+    await collectClaude(projects, LATER);
     const cursors = JSON.parse(
       readFileSync(resolve(home, "memory", "state", "collector-cursors.json"), "utf-8")
     );
@@ -164,7 +164,7 @@ describe("collecting Claude Code's model calls", () => {
 });
 
 describe("collecting every source", () => {
-  test("a source that fails is reported and the others still collect", () => {
+  test("a source that fails is reported and the others still collect", async () => {
     const overrides = [...agentDirOverrides().map(({ env }) => env), "XDG_DATA_HOME"];
 
     for (const env of overrides) process.env[env] = resolve(home, env);
@@ -175,8 +175,9 @@ describe("collecting every source", () => {
     write(block("msg_1", 10), block("msg_2", 20));
 
     try {
-      expect(collectEvents()).toEqual({
+      expect(await collectEvents()).toEqual({
         claude: 1,
+        "claude-denials": 0,
         opencode: "failed",
         codex: 0,
         copilot: 0,
@@ -187,13 +188,13 @@ describe("collecting every source", () => {
     }
   });
 
-  test("collects nothing while the event log is off", () => {
+  test("collects nothing while the event log is off", async () => {
     writeFileSync(
       resolve(home, "memory", "pal-settings.json"),
       JSON.stringify({ eventLog: { enabled: false } })
     );
     reload();
-    expect(collectEvents()).toEqual({});
+    expect(await collectEvents()).toEqual({});
   });
 });
 
@@ -212,17 +213,17 @@ describe("a transcript Claude Code deleted", () => {
     copies = resolve(home, "memory", "content", "claude");
   });
 
-  test("is read on from PAL's copy where the cursor stopped, once", () => {
+  test("is read on from PAL's copy where the cursor stopped, once", async () => {
     write(block("msg_1", 10));
-    expect(collectClaude(projects, LATER, undefined, copies)).toBe(1);
+    expect(await collectClaude(projects, LATER, undefined, copies)).toBe(1);
     preserve(block("msg_1", 10), block("msg_2", 20));
     removeOnceReleased(transcript);
-    expect(collectClaude(projects, LATER, undefined, copies)).toBe(1);
-    expect(collectClaude(projects, LATER, undefined, copies)).toBe(0);
+    expect(await collectClaude(projects, LATER, undefined, copies)).toBe(1);
+    expect(await collectClaude(projects, LATER, undefined, copies)).toBe(0);
     expect(streamed().map((e) => e.outputTokens)).toEqual([10, 20]);
   });
 
-  test("pal cli events collect reads PAL's copies too", () => {
+  test("pal cli events collect reads PAL's copies too", async () => {
     const overrides = [...agentDirOverrides().map(({ env }) => env), "XDG_DATA_HOME"];
 
     for (const env of overrides) process.env[env] = resolve(home, env);
@@ -230,15 +231,15 @@ describe("a transcript Claude Code deleted", () => {
     preserve(block("msg_1", 10), block("msg_2", 20));
 
     try {
-      expect(collectEvents()).toMatchObject({ claude: 2 });
+      expect(await collectEvents()).toMatchObject({ claude: 2 });
     } finally {
       for (const env of overrides) delete process.env[env];
     }
   });
 
-  test("still on disk, it is read from the original, not the copy", () => {
+  test("still on disk, it is read from the original, not the copy", async () => {
     write(block("msg_1", 10));
     preserve(block("msg_1", 10), block("msg_2", 20));
-    expect(collectClaude(projects, LATER, undefined, copies)).toBe(1);
+    expect(await collectClaude(projects, LATER, undefined, copies)).toBe(1);
   });
 });

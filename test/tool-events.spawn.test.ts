@@ -95,6 +95,30 @@ describe("a tool call", () => {
     expect(toolCalls().map((e) => e.outcome)).toEqual(["failed", "denied"]);
   });
 
+  test("an auto-mode denial keeps its call id, and its reason beside the input", () => {
+    logToolCall({
+      hook_event_name: "PermissionDenied",
+      tool_use_id: "toolu_1",
+      tool_name: "Bash",
+      tool_input: { command: "rm -rf build" },
+      reason: "[Destructive] deletes a folder",
+    });
+    expect(toolCalls()[0]).toMatchObject({
+      denial: "classifier:auto-mode",
+      toolUseId: "toolu_1",
+    });
+    expect(lines(["content", "events"])[0]).toMatchObject({
+      input: { command: "rm -rf build" },
+      reason: "[Destructive] deletes a folder",
+    });
+  });
+
+  test("a call that ran is no denial and stores no reason", () => {
+    logToolCall({ tool_name: "Bash", tool_input: { command: "ls" } });
+    expect(toolCalls()[0]).toMatchObject({ denial: null });
+    expect(lines(["content", "events"])[0]).not.toHaveProperty("reason");
+  });
+
   test("reads Copilot's camelCase payload and Antigravity's nested call", () => {
     logToolCall({ sessionId: "c1", toolName: "bash", toolArgs: '{"command":"ls"}' });
     logToolCall({

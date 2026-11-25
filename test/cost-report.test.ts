@@ -94,10 +94,10 @@ const MAX_5X = {
 const label = (runtime: string) => runtime;
 
 describe("a month in the event log costs what pal cli usage says", () => {
-  test("the same transcripts price identically either way", () => {
+  test("the same transcripts price identically either way", async () => {
     const projects = claudeMonth();
     const usage = readClaudeCode(projects, undefined, NOW).buckets.total;
-    collectClaude(projects, NOW);
+    await collectClaude(projects, NOW);
     const month = costMonths(eventsSince("model_call", new Date(0)))
       .get("2026-10")
       ?.get("claude");
