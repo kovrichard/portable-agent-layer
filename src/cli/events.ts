@@ -1,3 +1,4 @@
+import { ANOTHER_COLLECT_RUNNING } from "../hooks/lib/collect-trigger";
 import { collectEvents } from "../tools/lib/collectors";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import { isNagStage, logDiscordNag, NAG_STAGES } from "../usage/discord-events";
@@ -30,12 +31,12 @@ function recordDiscordNag(
   console.log(id ? `Recorded ${id}` : "The event log is off; nothing recorded.");
 }
 
-function reportCollected(): undefined {
-  const emitted = collectEvents();
+async function reportCollected(): Promise<number | undefined> {
+  const emitted = await collectEvents();
   if (emitted === null) {
     console.log("Another collect is running; nothing collected.");
 
-    return;
+    return ANOTHER_COLLECT_RUNNING;
   }
 
   const sources = Object.entries(emitted);
@@ -46,6 +47,8 @@ function reportCollected(): undefined {
   }
 
   for (const [source, count] of sources) console.log(`${source}: ${count}`);
+
+  return undefined;
 }
 
 async function reportBackfilled(since: string | undefined): Promise<undefined> {

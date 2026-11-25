@@ -22,18 +22,18 @@ beforeEach(() => {
 });
 
 describe("when session stop collects", () => {
-  test("a first collect is always due", () => {
+  test("a first collect is always due", async () => {
     expect(collectDue(T0)).toBe(true);
   });
 
-  test("a collect is not due again for a quarter hour", () => {
+  test("a collect is not due again for a quarter hour", async () => {
     markCollected(T0);
     expect(collectDue(T0 + 14 * MINUTE)).toBe(false);
     expect(collectDue(T0 + 15 * MINUTE)).toBe(true);
   });
 
-  test("a collect run marks itself, so stop does not start another right after", () => {
-    collectEvents(T0);
+  test("a collect run marks itself, so stop does not start another right after", async () => {
+    await collectEvents(T0);
     expect(collectDue(T0 + MINUTE)).toBe(false);
   });
 });
@@ -41,20 +41,20 @@ describe("when session stop collects", () => {
 describe("one collect at a time", () => {
   const lock = () => resolve(home, "memory", "state", "collect.lock");
 
-  test("a collect already running holds off a second one", () => {
+  test("a collect already running holds off a second one", async () => {
     writeFileSync(lock(), "123");
-    expect(collectEvents(Date.now())).toBeNull();
+    expect(await collectEvents(Date.now())).toBeNull();
   });
 
-  test("a lock left behind by a crashed collect is taken over", () => {
+  test("a lock left behind by a crashed collect is taken over", async () => {
     writeFileSync(lock(), "123");
     const old = (Date.now() - 11 * MINUTE) / 1000;
     utimesSync(lock(), old, old);
-    expect(collectEvents(Date.now())).not.toBeNull();
+    expect(await collectEvents(Date.now())).not.toBeNull();
   });
 
-  test("the lock is released when the collect ends", () => {
-    collectEvents(Date.now());
-    expect(collectEvents(Date.now())).not.toBeNull();
+  test("the lock is released when the collect ends", async () => {
+    await collectEvents(Date.now());
+    expect(await collectEvents(Date.now())).not.toBeNull();
   });
 });

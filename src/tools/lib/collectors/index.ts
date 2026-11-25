@@ -21,7 +21,7 @@ import { collectOpencode } from "./opencode";
 
 const LOCK_STALE_MS = 10 * 60_000;
 
-const COLLECTORS: Record<string, () => number> = {
+const COLLECTORS: Record<string, () => number | Promise<number>> = {
   claude: () =>
     collectClaude(
       resolve(platform.claudeDir(), "projects"),
@@ -61,12 +61,12 @@ function takeLock(now: number): boolean {
   }
 }
 
-function runCollectors(): Record<string, number | "failed"> {
+async function runCollectors(): Promise<Record<string, number | "failed">> {
   const emitted: Record<string, number | "failed"> = {};
 
   for (const [source, collect] of Object.entries(COLLECTORS)) {
     try {
-      emitted[source] = collect();
+      emitted[source] = await collect();
     } catch (err) {
       logError(`collect:${source}`, err);
       emitted[source] = "failed";
@@ -77,9 +77,9 @@ function runCollectors(): Record<string, number | "failed"> {
 }
 
 /** Null while another collect holds the lock. */
-export function collectEvents(
+export async function collectEvents(
   now: number = Date.now()
-): Record<string, number | "failed"> | null {
+): Promise<Record<string, number | "failed"> | null> {
   if (!eventLogEnabled()) return {};
 
   if (!takeLock(now)) return null;
@@ -87,7 +87,7 @@ export function collectEvents(
   try {
     markCollected(now);
 
-    return runCollectors();
+    return await runCollectors();
   } finally {
     rmSync(lockPath(), { force: true });
   }
