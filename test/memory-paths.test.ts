@@ -16,11 +16,9 @@ const isFrozenMigration = (file: string) => file.startsWith("cli/migrations/");
  * a new path goes through `paths` or the store registry instead.
  */
 const KNOWN_TODAY: Record<string, number> = {
-  "cli/doctor/state.ts": 1,
   "cli/index.ts": 2,
-  "cli/leftovers.ts": 4,
+  "cli/leftovers.ts": 3,
   "cli/legacy-opinions.ts": 2,
-  "context/claude-md.ts": 1,
   "context/semi-static.ts": 1,
   "core/actor.ts": 2,
   "core/export.ts": 1,
@@ -29,7 +27,6 @@ const KNOWN_TODAY: Record<string, number> = {
   "core/settings.ts": 1,
   "progress/parked-history.ts": 1,
   "progress/scheduled-prompts.ts": 1,
-  "targets/scaffold.ts": 1,
   "tools/lib/backfill/promises.ts": 1,
 };
 
