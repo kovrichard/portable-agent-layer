@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "../../bronze/bronze";
-import { paths } from "../../core/paths";
+import { palHome, paths } from "../../core/paths";
 import { filesUnder } from "./file-hash";
 import { recordMemoryMove } from "./verified-move";
 
@@ -136,15 +136,14 @@ export function sizeOf(dir: string): number {
   return filesUnder(dir).reduce((sum, file) => sum + statSync(file).size, 0);
 }
 
-/** Why the filesystem holding memory/ is too full for a backup plus its verify copy, or null. */
+/** Why the filesystem holding the PAL home is too full for a backup plus its verify copy, or null. */
 export function diskShortfall(seams: Partial<GuardSeams> = {}): string | null {
   const all = { ...realSeams, ...seams };
-  const memory = paths.memory();
-  const needed = 2 * sizeOf(memory);
-  const free = all.freeBytes(memory);
+  const needed = 2 * paths.dataRoots().reduce((sum, root) => sum + sizeOf(root), 0);
+  const free = all.freeBytes(palHome());
 
   return free < needed
-    ? `${free} bytes free, the move needs ${needed} (twice memory/)`
+    ? `${free} bytes free, the move needs ${needed} (twice the data folders)`
     : null;
 }
 

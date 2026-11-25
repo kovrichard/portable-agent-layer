@@ -109,10 +109,14 @@ function pkg(...segments: string[]): string {
   return resolve(palPkg(), ...segments);
 }
 
+/** The folders under the PAL home that hold the user's data, by kind: learned, recorded, work, machine state. */
+const DATA_ROOTS = ["memory", "records", "work", "state"] as const;
+
 // User state paths (in PAL_HOME / repo root)
 export const paths = {
   telos: () => home("telos"),
   memory: () => home("memory"),
+  dataRoots: () => DATA_ROOTS.map((root) => home(root)),
   signals: () => ensureDir(home("memory", "signals")),
   state: () => ensureDir(home("memory", "state")),
   research: () => ensureDir(home("memory", "research")),

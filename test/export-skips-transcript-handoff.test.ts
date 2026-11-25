@@ -25,3 +25,30 @@ describe("the export and transcript hand-off files", () => {
     expect(collectExportFiles()).toContain("memory/state/kept.json");
   });
 });
+
+describe("the export and the data folders beside memory/", () => {
+  beforeEach(() => {
+    for (const [dir, file] of [
+      ["records/ledger", "actions.jsonl"],
+      ["records/raw/p", "t.gz"],
+      ["work", "commitments.json"],
+      ["state", "collector-cursors.json"],
+    ]) {
+      mkdirSync(resolve(home, dir), { recursive: true });
+      writeFileSync(resolve(home, dir, file), "x");
+    }
+  });
+
+  test("records/ and work/ travel", () => {
+    expect(collectExportFiles()).toEqual(
+      expect.arrayContaining(["records/ledger/actions.jsonl", "work/commitments.json"])
+    );
+  });
+
+  test("raw transcripts and machine state stay on the machine", () => {
+    const files = collectExportFiles();
+
+    expect(files.some((f) => f.startsWith("records/raw/"))).toBe(false);
+    expect(files.some((f) => f.startsWith("state/"))).toBe(false);
+  });
+});
