@@ -10,7 +10,7 @@ import { recordHookRunOnExit } from "../usage/hook-run";
 recordHookRunOnExit();
 
 try {
-  preserveTranscriptsOnce();
+  await preserveTranscriptsOnce();
 } catch (err) {
   logError("PreserveTranscripts", err);
 }

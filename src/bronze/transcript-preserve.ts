@@ -6,6 +6,8 @@
 import { spawn } from "node:child_process";
 import {
   closeSync,
+  createReadStream,
+  createWriteStream,
   existsSync,
   openSync,
   readdirSync,
@@ -14,7 +16,10 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
+import { rename, rm } from "node:fs/promises";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { pipeline } from "node:stream/promises";
+import { createGzip } from "node:zlib";
 import { logDebug, logError } from "../core/log";
 import { assets, ensureDir, paths, platform } from "../core/paths";
 import { storeLocation } from "./bronze";
@@ -67,16 +72,79 @@ function versionOf(file: string): string {
   return `${stat.size}:${Math.trunc(stat.mtimeMs)}`;
 }
 
-function gzipCopy(file: string, destination: string): void {
+/** Streamed, so a gigabyte transcript never sits in memory; renamed into place, so a killed copy leaves the old one whole. */
+async function gzipCopy(file: string, destination: string): Promise<void> {
   ensureDir(dirname(destination));
-  writeFileSync(destination, Bun.gzipSync(readFileSync(file)));
+  const partial = `${destination}.partial`;
+
+  try {
+    await pipeline(createReadStream(file), createGzip(), createWriteStream(partial));
+    await rename(partial, destination);
+  } finally {
+    await rm(partial, { force: true });
+  }
 }
 
-export function preserveTranscripts(at: PreserveLocations): PreserveResult {
+const MANIFEST_SAVE_MS = 5_000;
+
+function saveManifest(at: PreserveLocations, manifest: Manifest): void {
+  ensureDir(dirname(at.manifest));
+  writeFileSync(at.manifest, JSON.stringify(manifest), "utf-8");
+}
+
+export function preserveTranscripts(at: PreserveLocations): Promise<PreserveResult> {
+  return preserveFiles(at, filesUnder(at.source));
+}
+
+function isUnder(dir: string, file: string): boolean {
+  const rel = relative(dir, file);
+
+  return rel.length > 0 && !rel.startsWith("..") && !isAbsolute(rel);
+}
+
+/** The session's transcript and the folder beside it, which holds its subagents' transcripts. */
+function sessionFiles(transcriptPath: string): string[] {
+  const own = existsSync(transcriptPath) ? [transcriptPath] : [];
+
+  return [...own, ...filesUnder(transcriptPath.replace(/\.jsonl$/, ""))];
+}
+
+/**
+ * Copies one closing session's transcripts in the closing process itself. The
+ * full sweep runs detached, and whatever stops the session's process group
+ * (a systemd unit ending, a container exiting) stops the sweep with it.
+ */
+export async function preserveSessionTranscript(
+  transcriptPath: string | undefined,
+  at: PreserveLocations = defaultLocations()
+): Promise<PreserveResult | null> {
+  if (!transcriptPath?.endsWith(".jsonl") || !isUnder(at.source, transcriptPath))
+    return null;
+
+  try {
+    return await preserveFiles(at, sessionFiles(transcriptPath));
+  } catch (err) {
+    logError("transcript-preserve:session", err);
+
+    return null;
+  }
+}
+
+/** The manifest is saved every few seconds too, so a sweep stopped halfway does not copy everything again. */
+async function preserveFiles(
+  at: PreserveLocations,
+  files: string[]
+): Promise<PreserveResult> {
   const manifest = readManifest(at.manifest);
   const result: PreserveResult = { copied: 0, unchanged: 0, failed: 0 };
+  let savedAt = Date.now();
 
-  for (const file of filesUnder(at.source)) {
+  for (const file of files) {
+    if (Date.now() - savedAt > MANIFEST_SAVE_MS) {
+      saveManifest(at, manifest);
+      savedAt = Date.now();
+    }
+
     const key = relative(at.source, file).replaceAll("\\", "/");
 
     try {
@@ -86,7 +154,7 @@ export function preserveTranscripts(at: PreserveLocations): PreserveResult {
         continue;
       }
 
-      gzipCopy(file, resolve(at.target, `${key}.gz`));
+      await gzipCopy(file, resolve(at.target, `${key}.gz`));
       manifest[key] = version;
       result.copied++;
     } catch (err) {
@@ -95,8 +163,7 @@ export function preserveTranscripts(at: PreserveLocations): PreserveResult {
     }
   }
 
-  ensureDir(dirname(at.manifest));
-  writeFileSync(at.manifest, JSON.stringify(manifest), "utf-8");
+  saveManifest(at, manifest);
 
   return result;
 }
@@ -118,16 +185,16 @@ function takeLock(path: string, now = Date.now()): boolean {
   }
 }
 
-export function preserveTranscriptsOnce(
+export async function preserveTranscriptsOnce(
   at: PreserveLocations = defaultLocations()
-): PreserveResult | null {
+): Promise<PreserveResult | null> {
   const lock = lockPath();
   if (!takeLock(lock)) return null;
 
   try {
-    return preserveTranscripts(at);
+    return await preserveTranscripts(at);
   } finally {
-    rmSync(lock, { force: true });
+    await rm(lock, { force: true });
   }
 }
 

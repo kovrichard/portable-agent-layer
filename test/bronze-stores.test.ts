@@ -80,7 +80,7 @@ function registerProject(name: string): string {
   return dir;
 }
 
-function preserveOneTranscript(): void {
+async function preserveOneTranscript(): Promise<void> {
   const claudeDir = resolve(HOME, "claude-config");
   const project = resolve(claudeDir, "projects", "-work-app");
   mkdirSync(project, { recursive: true });
@@ -89,7 +89,7 @@ function preserveOneTranscript(): void {
   process.env.PAL_CLAUDE_DIR = claudeDir;
 
   try {
-    preserveTranscriptsOnce();
+    await preserveTranscriptsOnce();
   } finally {
     process.env.PAL_CLAUDE_DIR = previous;
   }
