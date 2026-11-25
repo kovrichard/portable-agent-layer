@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/kovrichard/portable-agent-layer/main/assets/schema/pal-settings.schema.json",
+  "$schema": "https://raw.githubusercontent.com/kovrichard/portable-agent-layer/main/assets/schema/settings.schema.json",
   "identity": {
     "ai": {
       "name": "",

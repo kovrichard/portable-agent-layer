@@ -87,10 +87,7 @@ export function unknownSettingsKeys(
 function readSettingsSchema(): SchemaNode | null {
   try {
     return JSON.parse(
-      readFileSync(
-        resolve(palPkg(), "assets", "schema", "pal-settings.schema.json"),
-        "utf-8"
-      )
+      readFileSync(resolve(palPkg(), "assets", "schema", "settings.schema.json"), "utf-8")
     );
   } catch {
     return null;

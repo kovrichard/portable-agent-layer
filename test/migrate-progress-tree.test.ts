@@ -241,7 +241,7 @@ describe("an install from before the rename", () => {
 describe("the schema and the template name no progress-tree switch", () => {
   const assets = resolve(import.meta.dir, "..", "assets");
   const schema = JSON.parse(
-    readFileSync(resolve(assets, "schema", "pal-settings.schema.json"), "utf-8")
+    readFileSync(resolve(assets, "schema", "settings.schema.json"), "utf-8")
   ).properties.dynamicContext.properties;
   const template = JSON.parse(
     readFileSync(resolve(assets, "templates", "settings.json"), "utf-8")
