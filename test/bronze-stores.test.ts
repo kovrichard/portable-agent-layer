@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 const LOCATION_TODAY: Record<StoreName, string> = {
-  transcripts: "memory/content/claude",
+  transcripts: "records/raw/claude",
   events: "memory/events",
   "event-text": "memory/content/events",
   "tool-output": "memory/content/tool-output",

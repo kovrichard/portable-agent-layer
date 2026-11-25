@@ -63,7 +63,7 @@ describe("the store registry", () => {
   test("storeLocation gives the same folder without creating it", () => {
     const location = storeLocation("transcripts");
 
-    expect(location).toBe(resolve(HOME, "memory", "content", "claude"));
+    expect(location).toBe(resolve(HOME, "records", "raw", "claude"));
     expect(existsSync(location)).toBe(false);
   });
 
@@ -73,12 +73,17 @@ describe("the store registry", () => {
     expect(storeDir("import-log", other)).toBe(resolve(other, "memory", "state"));
   });
 
-  test("every location is relative, with forward slashes", () => {
+  test("every location is relative to a data folder, with forward slashes", () => {
+    const underADataFolder = /^(memory|records|work|state)(\/[a-z-]+)+$/;
+
     for (const store of everyStore()) {
       expect({ name: store.name, location: store.location }).toEqual({
         name: store.name,
-        location: expect.stringMatching(/^memory(\/[a-z-]+)+$/),
+        location: expect.stringMatching(underADataFolder),
       });
+
+      if (store.formerLocation)
+        expect(store.formerLocation).toMatch(/^memory(\/[a-z-]+)+$/);
     }
   });
 

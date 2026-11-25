@@ -213,6 +213,7 @@ describe("readManifest", () => {
     os: "darwin",
     exportedAt: "2026-01-01",
     fileCount: 12,
+    layout: 2,
   };
 
   test("reads the manifest entry out of the archive", () => {
@@ -247,6 +248,7 @@ describe("readManifest", () => {
       os: "",
       exportedAt: "",
       fileCount: 0,
+      layout: 1,
     });
   });
 });

@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { relative, resolve } from "node:path";
 import { ensureDir, palHome } from "../core/paths";
 
 export type StoreGroup = "raw" | "bronze" | "outside";
@@ -28,6 +29,8 @@ export interface RecordedStore {
   group: StoreGroup;
   /** The store's folder, relative to the PAL home, with forward slashes. */
   location: string;
+  /** Where the store lived before a layout move; read until the owner runs that move. */
+  formerLocation?: string;
   files: string;
   appendOnly: boolean;
   alsoInEventLog: boolean;
@@ -37,7 +40,8 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "transcripts",
     group: "raw",
-    location: "memory/content/claude",
+    location: "records/raw/claude",
+    formerLocation: "memory/content/claude",
     files: "<project>/**/<file>.gz",
     appendOnly: false,
     alsoInEventLog: false,
@@ -197,8 +201,67 @@ export function storeNamed(name: string): RecordedStore {
   return store;
 }
 
+function at(home: string, location: string): string {
+  return resolve(home, ...location.split("/"));
+}
+
+/**
+ * The store's folder under `home`. A store whose move the owner has not run yet
+ * stays in its former folder; once the new folder exists it wins, so a late
+ * write to the old path never sends the store back.
+ */
 export function storeLocation(name: StoreName, home: string = palHome()): string {
-  return resolve(home, ...storeNamed(name).location.split("/"));
+  const store = storeNamed(name);
+  const current = at(home, store.location);
+  if (!store.formerLocation || existsSync(current)) return current;
+  const former = at(home, store.formerLocation);
+
+  return existsSync(former) ? former : current;
+}
+
+/** Stores that have a former folder, with both folders under `home`. */
+export function movedStores(
+  home: string = palHome()
+): { from: string; to: string; store: StoreName }[] {
+  return STORES.flatMap((store) =>
+    store.formerLocation
+      ? [
+          {
+            store: store.name,
+            from: at(home, store.formerLocation),
+            to: at(home, store.location),
+          },
+        ]
+      : []
+  );
+}
+
+/** An archive path from an older layout, rewritten to where its store lives now. */
+export function currentArchivePath(path: string): string {
+  const normalized = path.replaceAll("\\", "/");
+  const store = STORES.find(
+    (s) => s.formerLocation && normalized.startsWith(`${s.formerLocation}/`)
+  );
+
+  return store?.formerLocation
+    ? `${store.location}${normalized.slice(store.formerLocation.length)}`
+    : normalized;
+}
+
+/**
+ * Where an archive path from either layout lands in `home`: in its store's
+ * folder on this machine, so an import never splits a store across its old and
+ * new folder before the owner has run the move.
+ */
+export function archivePathIn(path: string, home: string = palHome()): string {
+  const current = currentArchivePath(path);
+  const store = STORES.find(
+    (s) => s.formerLocation && current.startsWith(`${s.location}/`)
+  );
+  if (!store) return current;
+  const here = relative(home, storeLocation(store.name, home)).replaceAll("\\", "/");
+
+  return `${here}${current.slice(store.location.length)}`;
 }
 
 /** The store's folder under `home`, created when missing. */

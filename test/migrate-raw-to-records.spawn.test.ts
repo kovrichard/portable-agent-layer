@@ -1,0 +1,116 @@
+import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { storeLocation } from "../src/bronze/bronze";
+import {
+  applyPendingMigrations,
+  checkPendingMigrations,
+  runMigrate,
+} from "../src/cli/migrate";
+import { reload } from "../src/core/settings";
+import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
+import { freshTestDir } from "./lib/test-home";
+
+setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
+
+const ID = "v12-raw-to-records";
+let HOME: string;
+
+const at = (...parts: string[]) => resolve(HOME, ...parts);
+const OLD = (...parts: string[]) => at("memory", "content", "claude", ...parts);
+const NEW = (...parts: string[]) => at("records", "raw", "claude", ...parts);
+
+function printedBy(args: string[]): string {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (...parts: unknown[]) => lines.push(parts.join(" "));
+
+  try {
+    runMigrate(args);
+  } finally {
+    console.log = original;
+  }
+
+  return lines.join("\n");
+}
+
+function writeRaw(rel: string, body: string): void {
+  mkdirSync(resolve(OLD(rel), ".."), { recursive: true });
+  writeFileSync(OLD(rel), body);
+}
+
+beforeEach(() => {
+  HOME = resolve(freshTestDir(import.meta.file), "home");
+  process.env.PAL_HOME = HOME;
+  mkdirSync(at("memory", "state"), { recursive: true });
+  reload();
+  writeRaw("-proj/s1.jsonl.gz", "first transcript");
+  writeRaw("-proj/s1/subagents/agent-a.jsonl.gz", "subagent transcript");
+});
+
+describe("before the owner runs it", () => {
+  test("install leaves raw transcripts where they are", () => {
+    expect(applyPendingMigrations().some((line) => line.startsWith(ID))).toBe(false);
+    expect(readFileSync(OLD("-proj/s1.jsonl.gz"), "utf-8")).toBe("first transcript");
+    expect(existsSync(NEW())).toBe(false);
+  });
+
+  test("the doctor lists it with the command that runs it", () => {
+    expect(checkPendingMigrations().find((m) => m.id === ID)?.detail).toBe(
+      `run it yourself: pal cli migrate ${ID}`
+    );
+  });
+
+  test("a bare migrate names it as waiting and moves nothing", () => {
+    expect(printedBy([])).toContain(`pal cli migrate ${ID}`);
+    expect(existsSync(NEW())).toBe(false);
+  });
+
+  test("a dry run names the move and moves nothing", () => {
+    expect(printedBy([ID, "--dry-run"])).toContain("records/raw/claude");
+    expect(existsSync(OLD("-proj/s1.jsonl.gz"))).toBe(true);
+    expect(existsSync(NEW())).toBe(false);
+  });
+});
+
+describe("run by its owner", () => {
+  test("moves every file, byte for byte, and the store reads the new folder", () => {
+    expect(printedBy([ID, "--force"])).toContain("hashes checked");
+    expect(readFileSync(NEW("-proj/s1.jsonl.gz"), "utf-8")).toBe("first transcript");
+    expect(readFileSync(NEW("-proj/s1/subagents/agent-a.jsonl.gz"), "utf-8")).toBe(
+      "subagent transcript"
+    );
+    expect(existsSync(OLD())).toBe(false);
+    expect(storeLocation("transcripts")).toBe(NEW());
+    expect(checkPendingMigrations().some((m) => m.id === ID)).toBe(false);
+  });
+
+  test("a transcript an old process wrote to the old folder afterwards is folded in by the next install", () => {
+    printedBy([ID, "--force"]);
+    writeRaw("-proj/late.jsonl.gz", "late write");
+    const swept = applyPendingMigrations().filter((line) => line.startsWith(ID));
+    expect(swept.join("\n")).toContain("swept");
+    expect(readFileSync(NEW("-proj/late.jsonl.gz"), "utf-8")).toBe("late write");
+    expect(storeLocation("transcripts")).toBe(NEW());
+  });
+
+  test("an install with nothing to sweep says nothing about it", () => {
+    printedBy([ID, "--force"]);
+    expect(applyPendingMigrations().filter((line) => line.startsWith(ID))).toEqual([]);
+  });
+
+  test("undo puts the folder back where it was", () => {
+    printedBy([ID, "--force"]);
+    printedBy(["--undo", ID]);
+    expect(readFileSync(OLD("-proj/s1.jsonl.gz"), "utf-8")).toBe("first transcript");
+    expect(existsSync(NEW())).toBe(false);
+    expect(storeLocation("transcripts")).toBe(OLD());
+  });
+});
+
+describe("an unknown name", () => {
+  test("lists the migrations there are and runs none", () => {
+    expect(printedBy(["v99-nothing"])).toContain(`No migration "v99-nothing"`);
+    expect(existsSync(NEW())).toBe(false);
+  });
+});

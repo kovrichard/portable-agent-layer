@@ -109,6 +109,18 @@ function quarantine(quarantineDir: string, rel: string, data: Buffer): void {
 }
 
 /**
+ * How archive paths meet this machine's folders: `canonical` rewrites an older
+ * layout's path to today's, which the deny list checks; `here` names where that
+ * store lives on this machine, which may still be its former folder.
+ */
+export interface ArchiveLayout {
+  canonical(path: string): string;
+  here(path: string): string;
+}
+
+const SAME_LAYOUT: ArchiveLayout = { canonical: (path) => path, here: (path) => path };
+
+/**
  * Merge every archive entry into `home`. `quarantineDir` receives the incoming
  * copy of any file that diverged from its local counterpart, so a conflict
  * loses neither side.
@@ -116,7 +128,8 @@ function quarantine(quarantineDir: string, rel: string, data: Buffer): void {
 export function mergeArchive(
   entries: ArchiveEntry[],
   home: string,
-  quarantineDir: string
+  quarantineDir: string,
+  layout: ArchiveLayout = SAME_LAYOUT
 ): MergeResult {
   const result: MergeResult = {
     created: [],
@@ -129,14 +142,15 @@ export function mergeArchive(
   };
 
   for (const entry of entries) {
-    const rel = normalize(entry.path);
-    if (rel.length === 0 || rel.endsWith("/")) continue;
+    const canonical = layout.canonical(normalize(entry.path));
+    if (canonical.length === 0 || canonical.endsWith("/")) continue;
 
-    if (isNeverImport(rel)) {
-      result.skipped.push(rel);
+    if (isNeverImport(canonical)) {
+      result.skipped.push(canonical);
       continue;
     }
 
+    const rel = layout.here(canonical);
     const target = resolve(home, rel);
     const incoming = entry.data();
 
@@ -190,6 +204,7 @@ export function readManifest(entries: ArchiveEntry[]): ExportManifest | null {
       os: parsed.os ?? "",
       exportedAt: parsed.exportedAt ?? "",
       fileCount: parsed.fileCount ?? 0,
+      layout: typeof parsed.layout === "number" ? parsed.layout : 1,
     };
   } catch {
     return null;
