@@ -90,6 +90,14 @@ describe("isNeverImport", () => {
     expect(isNeverImport("memory/signals/ratings.jsonl")).toBe(false);
     expect(isNeverImport("telos/GOALS.md")).toBe(false);
     expect(isNeverImport("skills/my-skill/SKILL.md")).toBe(false);
+    expect(isNeverImport("records/ledger/actions.jsonl")).toBe(false);
+    expect(isNeverImport("work/commitments.json")).toBe(false);
+  });
+
+  test("blocks the machine state folder and raw transcripts", () => {
+    expect(isNeverImport("state/collector-cursors.json")).toBe(true);
+    expect(isNeverImport("records/raw/p/t.gz")).toBe(true);
+    expect(isNeverImport("memory/state/kept.json")).toBe(false);
   });
 
   // A zip may spell paths with backslashes or a ./ prefix; the denylist still applies.

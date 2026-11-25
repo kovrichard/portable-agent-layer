@@ -130,16 +130,19 @@ describe("diskShortfall", () => {
     expect(sizeOf(at("memory"))).toBe(1000);
   });
 
-  test("refuses when free space is below twice the size of memory/", () => {
-    writeFile(at("memory", "a.jsonl"), "x".repeat(1000));
+  test("refuses when free space is below twice the size of every data folder", () => {
+    writeFile(at("memory", "a.jsonl"), "x".repeat(400));
+    writeFile(at("records", "raw", "t.gz"), "x".repeat(300));
+    writeFile(at("work", "w.json"), "x".repeat(200));
+    writeFile(at("state", "s.json"), "x".repeat(100));
 
     expect(diskShortfall({ ...idle, freeBytes: () => 1999 })).toBe(
-      "1999 bytes free, the move needs 2000 (twice memory/)"
+      "1999 bytes free, the move needs 2000 (twice the data folders)"
     );
     expect(diskShortfall({ ...idle, freeBytes: () => 2000 })).toBeNull();
   });
 
-  test("asks the filesystem that holds memory/", () => {
+  test("asks the filesystem that holds the PAL home", () => {
     writeFile(at("memory", "a.jsonl"), "x");
     const asked: string[] = [];
 
@@ -152,7 +155,7 @@ describe("diskShortfall", () => {
       },
     });
 
-    expect(asked).toEqual([at("memory")]);
+    expect(asked).toEqual([HOME]);
   });
 
   test("reads the real free space by default", () => {
@@ -211,7 +214,7 @@ describe("moveGuardRefusal", () => {
 
     expect(
       moveGuardRefusal("layout", { force: true, seams: { ...idle, freeBytes: () => 5 } })
-    ).toBe("not enough disk: 5 bytes free, the move needs 20 (twice memory/)");
+    ).toBe("not enough disk: 5 bytes free, the move needs 20 (twice the data folders)");
     expect(memoryMoveEvents(HOME).at(-1)).toMatchObject({ reason: "low disk" });
   });
 });
