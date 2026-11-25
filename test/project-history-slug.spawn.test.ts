@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -39,11 +39,11 @@ function entry(title: string) {
 }
 
 function projectHistory(name: string): string {
-  return resolve(HOME, "memory", "projects", name, "history.jsonl");
+  return resolve(HOME, "records", "project-history", name, "history.jsonl");
 }
 
 function parkedHistory(slug: string): string {
-  return resolve(HOME, "memory", "state", "unbound-history", `${slug}.jsonl`);
+  return resolve(HOME, "records", "unbound-history", `${slug}.jsonl`);
 }
 
 function folderInRegistry(slug: string): string {
@@ -184,6 +184,11 @@ describe("parked history finds its project", () => {
 });
 
 describe("v6 history-slugs", () => {
+  const projectHistory = (name: string) =>
+    resolve(HOME, "memory", "projects", name, "history.jsonl");
+  const parkedHistory = (slug: string) =>
+    resolve(HOME, "memory", "state", "unbound-history", `${slug}.jsonl`);
+
   /** History as the old writer left it: a folder named after the cwd. */
   function orphanFolder(slug: string, title: string): void {
     const dir = folderInRegistry(slug);
@@ -233,10 +238,11 @@ describe("v6 history-slugs", () => {
   });
 
   test("folds parked history back in once its project is registered", async () => {
-    const loose = resolve(HOME, "checkouts", "gamma");
-    mkdirSync(loose, { recursive: true });
-    const { appendProjectHistory } = await import("../src/progress/work-tracking");
-    appendProjectHistory(loose, entry("before registration"));
+    mkdirSync(dirname(parkedHistory("gamma")), { recursive: true });
+    writeFileSync(
+      parkedHistory("gamma"),
+      `${JSON.stringify(entry("before registration"))}\n`
+    );
 
     registerProject("gamma", "gamma");
     await run();

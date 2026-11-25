@@ -195,7 +195,7 @@ describe("recordCandidate", () => {
   test("a broken line is skipped", () => {
     recordCandidate({ ...candidate, when: "first" }, corrections);
     appendFileSync(
-      resolve(HOME, "memory", "adaptation", "candidates.jsonl"),
+      resolve(HOME, "records", "rule-candidates", "candidates.jsonl"),
       "{ broken\n"
     );
     recordCandidate({ ...candidate, when: "second" }, corrections);

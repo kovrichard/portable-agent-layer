@@ -73,8 +73,20 @@ describe("archivePathIn", () => {
   });
 
   test("a path no move touches is kept as it is", () => {
-    expect(archivePathIn("memory/signals/ratings.jsonl", HOME)).toBe(
+    expect(archivePathIn("memory/wisdom/frames.md", HOME)).toBe(
+      "memory/wisdom/frames.md"
+    );
+  });
+
+  test("a store's file from a shared folder follows the store on this machine", () => {
+    mkdirSync(resolve(HOME, "memory", "signals"), { recursive: true });
+    writeFileSync(resolve(HOME, "memory", "signals", "ratings.jsonl"), "{}\n");
+    expect(archivePathIn("records/ratings/ratings.jsonl", HOME)).toBe(
       "memory/signals/ratings.jsonl"
+    );
+    mkdirSync(resolve(HOME, "records", "ratings"), { recursive: true });
+    expect(archivePathIn("memory/signals/ratings.jsonl", HOME)).toBe(
+      "records/ratings/ratings.jsonl"
     );
   });
 });

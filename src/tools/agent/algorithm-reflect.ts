@@ -24,7 +24,7 @@ Example:
   pal cli algorithm-reflect --task "description" --criteria N --passed N --failed N --sentiment 1-10 \\
     --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection"
 
-Output: algorithm-reflections.jsonl in memory/learning/reflections/`;
+Output: algorithm-reflections.jsonl in records/reflections/`;
 
 const REQUIRED = ["task", "q1", "q2", "q3"] as const;
 

@@ -70,7 +70,7 @@ describe("the store registry", () => {
   test("storeDir resolves the same location under another home", () => {
     const other = resolve(HOME, "other-home");
 
-    expect(storeDir("import-log", other)).toBe(resolve(other, "memory", "state"));
+    expect(storeDir("import-log", other)).toBe(resolve(other, "records", "import-log"));
   });
 
   test("every location is relative to a data folder, with forward slashes", () => {

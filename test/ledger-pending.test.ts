@@ -28,7 +28,7 @@ const SNAPSHOT = {
 };
 
 function pendingFiles(): string[] {
-  const dir = resolve(HOME, "memory", "ledger", "pending");
+  const dir = resolve(HOME, "records", "ledger", "pending");
 
   return existsSync(dir) ? readdirSync(dir) : [];
 }
@@ -81,7 +81,7 @@ describe("savePending / claimPending", () => {
     savePending(SNAPSHOT);
     const [name] = pendingFiles();
     writeFileSync(
-      resolve(HOME, "memory", "ledger", "pending", name),
+      resolve(HOME, "records", "ledger", "pending", name),
       "{not json",
       "utf-8"
     );
@@ -101,7 +101,7 @@ describe("reapStalePending", () => {
   test("drops a snapshot nothing claimed, because that action never happened", async () => {
     const { savePending, reapStalePending } = await lib();
     savePending(SNAPSHOT);
-    const file = resolve(HOME, "memory", "ledger", "pending", pendingFiles()[0]);
+    const file = resolve(HOME, "records", "ledger", "pending", pendingFiles()[0]);
     const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     utimesSync(file, longAgo, longAgo);
 
@@ -114,7 +114,7 @@ describe("reapStalePending", () => {
   test("holds a snapshot for most of an hour before giving up on it", async () => {
     const { savePending, reapStalePending } = await lib();
     savePending(SNAPSHOT);
-    const file = resolve(HOME, "memory", "ledger", "pending", pendingFiles()[0]);
+    const file = resolve(HOME, "records", "ledger", "pending", pendingFiles()[0]);
 
     const halfAnHourAgo = new Date(Date.now() - 30 * 60 * 1000);
     utimesSync(file, halfAnHourAgo, halfAnHourAgo);
@@ -128,7 +128,7 @@ describe("reapStalePending", () => {
   test("reaps only the stale one when both are present", async () => {
     const { savePending, reapStalePending } = await lib();
     savePending(SNAPSHOT);
-    const stale = resolve(HOME, "memory", "ledger", "pending", pendingFiles()[0]);
+    const stale = resolve(HOME, "records", "ledger", "pending", pendingFiles()[0]);
     const longAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     utimesSync(stale, longAgo, longAgo);
     savePending({ ...SNAPSHOT, toolUseId: "toolu_fresh" });

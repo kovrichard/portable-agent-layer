@@ -302,17 +302,19 @@ memory/
 │   ├── last-responses.json        # Cached responses for rating correlation
 │   └── debug.log                  # Hook execution logs
 │
-├── signals/                       # User feedback
-│   └── ratings.jsonl              # Explicit + implicit ratings
-│
 ├── adaptation/                    # Rules drafted from corrections, and approved opinions
 │
 ├── relationship/
 │   └── opinions-context.md        # Approved opinions, rendered for native loading
 │
-├── projects/                      # Per-project session history
+├── projects/                      # Per-project ISA.md
 │
 └── failures/                      # Low-rating captures from older versions, no longer written
+
+records/                           # What happened, one folder per store
+├── ratings/ratings.jsonl          # Explicit + implicit ratings
+├── project-history/<slug>/        # Per-project session history
+└── ...                            # ledger, claim checks, labelled turns, rule events, reflections, ...
 ```
 
 ### Data Flow
@@ -320,9 +322,9 @@ memory/
 ```
 Session interaction
   │
-  ├─► [Prompt] Rating capture ──► signals/ratings.jsonl
+  ├─► [Prompt] Rating capture ──► records/ratings/ratings.jsonl
   │
-  ├─► [Stop] Session intelligence (Haiku) ──► projects/<slug>/ history, progress-tree stopped-at
+  ├─► [Stop] Session intelligence (Haiku) ──► records/project-history/<slug>/, progress-tree stopped-at
   │
   ├─► [Stop] Correction check ──► adaptation/ rule drafts, approved with `pal cli rule`
   │

@@ -268,7 +268,7 @@ describe("appendImportLog", () => {
   };
 
   function logLines(): string[] {
-    return read("memory/state/import-log.jsonl")
+    return read("records/import-log/import-log.jsonl")
       .split("\n")
       .filter((line) => line.trim());
   }

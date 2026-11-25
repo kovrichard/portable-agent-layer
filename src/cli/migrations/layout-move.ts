@@ -85,10 +85,16 @@ function moveRan(id: string): boolean {
   return existsSync(paths.backups()) && newestManifest(id) !== null;
 }
 
+const targetExists = (move: PlannedMove) => existsSync(move.to);
+
 /** Files that reappeared at an old path after the move, folded into the new one. */
-export function sweepLayoutMove(id: string, moves: PlannedMove[]): MigrationResult {
+export function sweepLayoutMove(
+  id: string,
+  moves: PlannedMove[],
+  hasMoved: (move: PlannedMove) => boolean = targetExists
+): MigrationResult {
   if (!moveRan(id)) return nothing([]);
-  const done = moves.filter((move) => existsSync(move.to) && existsSync(move.from));
+  const done = moves.filter((move) => hasMoved(move) && existsSync(move.from));
   if (done.length === 0) return nothing([]);
 
   const report = sweepLateWrites(id, done);

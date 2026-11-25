@@ -26,6 +26,7 @@ import { v10ThreadsToProgressTree } from "./migrations/v10-threads-to-progress-t
 import { v11MemoryBackups } from "./migrations/v11-memory-backups";
 import { v12RawToRecords } from "./migrations/v12-raw-to-records";
 import { v13SettingsToRoot } from "./migrations/v13-settings-to-root";
+import { v14RecordsStores } from "./migrations/v14-records-stores";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -67,6 +68,7 @@ const MIGRATIONS: Migration[] = [
   v11MemoryBackups,
   v12RawToRecords,
   v13SettingsToRoot,
+  v14RecordsStores,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 

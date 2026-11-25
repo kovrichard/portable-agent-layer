@@ -34,7 +34,7 @@ const CALL = {
 const SNAPSHOT = { ...CALL, before: "parked", ts: "2026-05-04T10:00:00.000Z" };
 
 function ledgerLines(): Record<string, unknown>[] {
-  const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
+  const file = resolve(HOME, "records", "ledger", "actions.jsonl");
 
   return readFileSync(file, "utf-8")
     .trim()

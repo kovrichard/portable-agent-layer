@@ -34,7 +34,7 @@ function approved(over: Partial<DraftInput>) {
 }
 
 function events() {
-  const path = resolve(HOME, "memory", "adaptation", "rule-events.jsonl");
+  const path = resolve(HOME, "records", "rule-events", "rule-events.jsonl");
   if (!existsSync(path)) return [];
 
   return readFileSync(path, "utf-8")

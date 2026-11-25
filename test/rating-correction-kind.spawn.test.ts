@@ -44,7 +44,7 @@ function childEnv(home: string): Record<string, string | undefined> {
 }
 
 function storedTurns(home: string) {
-  const dir = resolve(home, "memory", "adaptation");
+  const dir = resolve(home, "records", "labelled-turns");
 
   return readdirSync(dir)
     .filter((file) => file.startsWith("turns-"))

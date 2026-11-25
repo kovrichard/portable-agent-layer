@@ -38,7 +38,6 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
 
 <PAL package>/memory/              # Persistent memory (gitignored)
   state/                           # Runtime state (sessions, counts, caches)
-  signals/                         # Rating signals (ratings.jsonl)
   adaptation/                      # Rules drafted from corrections, and approved opinions
   relationship/                    # opinions-context.md, the opinions rendered for native loading
   failures/                        # Low-rating context dumps from older versions

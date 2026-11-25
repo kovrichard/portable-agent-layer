@@ -366,6 +366,14 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("echo 'x' > ~/.pal/memory/signals/foo.txt")).toBeTruthy();
   });
 
+  test("blocks writing to the records PAL keeps, and allows reading them", () => {
+    expect(
+      checkBashCommand("echo 'x' >> ~/.pal/records/ledger/actions.jsonl")
+    ).toBeTruthy();
+    expect(checkBashCommand("cat ~/.pal/records/ledger/actions.jsonl")).toBeNull();
+    expect(checkBashCommand("echo x > /src/MyRepo/records/a.txt")).toBeNull();
+  });
+
   test("allows reading from managed dirs under managed roots", () => {
     expect(checkBashCommand("cat ~/.pal/memory/signals/ratings.jsonl")).toBeNull();
     expect(checkBashCommand("ls ~/.pal/memory/learning/session")).toBeNull();
