@@ -269,3 +269,161 @@ describe("collecting Claude Code's permission denials", () => {
     expect(await collectClaudeDenials(projects, NOW, copies)).toBe(6);
   });
 });
+
+describe("telling a denial from everything else", () => {
+  const rejected = { toolDenialKind: "user-rejected" };
+
+  test("a hook's block is known by its source alone, or by its text alone", async () => {
+    write(
+      call("a", "Bash", { command: "x" }),
+      result("a", "Blocked by policy", {
+        toolDenialKind: "permission-rule",
+        permissionDecision: { source: "hook", reasonCode: "hook:PreToolUse" },
+      }),
+      call("b", "Bash", { command: "x" }),
+      result("b", "PreToolUse:Bash hook error: Blocked", {
+        toolDenialKind: "permission-rule",
+        permissionDecision: { source: "config", reasonCode: "rule:userSettings" },
+      })
+    );
+    expect(await collectClaudeDenials(projects, NOW)).toBe(0);
+  });
+
+  test("a refusal written as text parts keeps all of its text as the reason", async () => {
+    write(
+      call("t", "Bash", { command: "x" }),
+      JSON.stringify({
+        type: "user",
+        toolDenialKind: "user-rejected",
+        message: {
+          content: [
+            {
+              type: "tool_result",
+              is_error: true,
+              tool_use_id: "t",
+              content: [
+                { type: "text", text: "No," },
+                { type: "image" },
+                { text: "not now" },
+              ],
+            },
+          ],
+        },
+      })
+    );
+    await collectClaudeDenials(projects, NOW);
+    expect(streamed("content/events")[0]).toMatchObject({ reason: "No,  not now" });
+  });
+
+  test("a refusal whose content is neither text nor parts has an empty reason and is not logged", async () => {
+    write(
+      call("n", "Bash", { command: "x" }),
+      JSON.stringify({
+        type: "user",
+        toolDenialKind: "user-rejected",
+        message: {
+          content: [
+            { type: "tool_result", is_error: true, tool_use_id: "n", content: 7 },
+          ],
+        },
+      })
+    );
+    expect(await collectClaudeDenials(projects, NOW)).toBe(0);
+  });
+
+  test("a result that is not an error is no denial, even with a denial label", async () => {
+    write(
+      call("e", "Bash", { command: "x" }),
+      JSON.stringify({
+        type: "user",
+        toolDenialKind: "user-rejected",
+        message: {
+          content: [{ type: "tool_result", content: "fine", tool_use_id: "e" }],
+        },
+      })
+    );
+    expect(await collectClaudeDenials(projects, NOW)).toBe(0);
+  });
+
+  test("a call whose input is not an object is logged with an empty input", async () => {
+    write(
+      call("i", "Bash", ["not", "an", "object"] as unknown as Record<string, unknown>),
+      result("i", "No", rejected),
+      call("j", "Bash", null as unknown as Record<string, unknown>),
+      result("j", "No", rejected)
+    );
+    await collectClaudeDenials(projects, NOW);
+    expect(streamed("content/events").map((c) => c.input)).toEqual([{}, {}]);
+  });
+
+  test("calls and results on another kind of line are not read as calls or results", async () => {
+    write(
+      JSON.stringify({
+        type: "api-request-blob",
+        message: { content: [{ type: "tool_use", id: "x", name: "Bash", input: {} }] },
+      }),
+      result("x", "No", rejected),
+      JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "server_tool_use", id: "y", name: "web", input: {} }],
+        },
+      }),
+      result("y", "No", rejected),
+      call("z", "Bash", { command: "x" }),
+      JSON.stringify({
+        type: "assistant",
+        toolDenialKind: "user-rejected",
+        message: {
+          content: [
+            { type: "tool_result", content: "No", is_error: true, tool_use_id: "z" },
+          ],
+        },
+      })
+    );
+    expect(await collectClaudeDenials(projects, NOW)).toBe(0);
+  });
+
+  test("a broken line is skipped and the lines after it are still read", async () => {
+    write(
+      '{"type":"user","message":{"content":[{"type":"tool_use"',
+      ...dontAsk("k", "Bash", {})
+    );
+    expect(await collectClaudeDenials(projects, NOW)).toBe(1);
+  });
+
+  test("a denial keeps the folder its session ran in", async () => {
+    write(...dontAsk("c", "Bash", { command: "x" }));
+    await collectClaudeDenials(projects, NOW);
+    expect(denials()[0]).toMatchObject({ cwd: home });
+  });
+});
+
+describe("reading a transcript that is still being written", () => {
+  const rejected = { toolDenialKind: "user-rejected" };
+
+  test("a denial after a call still waiting is logged once that call is answered, not before", async () => {
+    write(call("wait", "Bash", { command: "git push" }), ...dontAsk("after", "Bash", {}));
+    expect(await collectClaudeDenials(projects, NOW)).toBe(0);
+    write(result("wait", "No", rejected));
+    expect(await collectClaudeDenials(projects, NOW)).toBe(2);
+    expect(await collectClaudeDenials(projects, NOW)).toBe(0);
+    expect(denials().map((e) => e.toolUseId)).toEqual(["after", "wait"]);
+  });
+
+  test("a denial whose call came before a waiting call is read again together with its call", async () => {
+    write(
+      call("first", "Bash", { command: "a" }),
+      call("wait", "Bash", { command: "b" }),
+      result("first", "No", rejected)
+    );
+    expect(await collectClaudeDenials(projects, NOW)).toBe(0);
+    write(result("wait", "No", rejected));
+    expect(await collectClaudeDenials(projects, NOW)).toBe(2);
+    expect(
+      denials()
+        .map((e) => e.toolUseId)
+        .sort()
+    ).toEqual(["first", "wait"]);
+  });
+});
