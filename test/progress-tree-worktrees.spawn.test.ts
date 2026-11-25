@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { appendEvent, readTree } from "../src/progress/progress-tree";
 import { attachGitProgress } from "../src/progress/progress-tree-git";
 import { settleAttachedPrs } from "../src/progress/progress-tree-prs";
+import { stopProgressTree } from "../src/progress/progress-tree-stop";
 import { cleanUpNodeWorktrees } from "../src/progress/progress-tree-worktrees";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -76,12 +77,20 @@ function openNode(id = "n1"): void {
   appendEvent(repo, id, "open", { title: id, parent: null }, file);
 }
 
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
+const stopIn = (shellCwd: string) =>
+  attachGitProgress(repo, file, undefined, undefined, shellCwd);
+
 describe("a worktree that appears during the work", () => {
   test("is attached to the active node with its branch", () => {
     openNode();
     attachGitProgress(repo, file);
     const path = worktree("feat/a");
-    attachGitProgress(repo, file);
+    stopIn(path);
 
     expect(worktreeArtifacts()).toEqual([[path, "feat/a"]]);
   });
@@ -89,9 +98,9 @@ describe("a worktree that appears during the work", () => {
   test("is attached once, however many turns follow", () => {
     openNode();
     attachGitProgress(repo, file);
-    worktree("feat/a");
-    attachGitProgress(repo, file);
-    attachGitProgress(repo, file);
+    const path = worktree("feat/a");
+    stopIn(path);
+    stopIn(resolve(path, "src"));
 
     expect(worktreeArtifacts()).toHaveLength(1);
   });
@@ -121,6 +130,151 @@ describe("a worktree that appears during the work", () => {
 
     expect(worktreeArtifacts()).toEqual([]);
     expect(readTree(repo, file).gitCursor?.worktrees).toHaveLength(1);
+  });
+});
+
+describe("worktree ownership across sessions", () => {
+  test("a worktree that existed before the node opened is attached to no node", () => {
+    appendEvent(
+      repo,
+      "",
+      "git-cursor",
+      { branch: "main", head: git(repo, "rev-parse", "HEAD"), worktrees: [] },
+      file
+    );
+    worktree("feat/theirs");
+    openNode();
+    attachGitProgress(repo, file);
+
+    expect(worktreeArtifacts()).toEqual([]);
+  });
+
+  test("a worktree that appears while the session stands elsewhere is attached to no node", () => {
+    openNode();
+    attachGitProgress(repo, file);
+    worktree("feat/theirs");
+    attachGitProgress(repo, file);
+
+    expect(worktreeArtifacts()).toEqual([]);
+  });
+
+  test("a session that moves into a worktree made before its node takes it on", () => {
+    const path = worktree("feat/taken-over");
+    openNode();
+    attachGitProgress(repo, file);
+    stopIn(path);
+
+    expect(worktreeArtifacts()).toEqual([[path, "feat/taken-over"]]);
+  });
+
+  test("the Stop hook attaches the worktree its payload's cwd stands in", () => {
+    const path = worktree("feat/from-payload");
+    const session = "s-stop";
+    const { CLAUDE_PROJECT_DIR, CLAUDE_CODE_SESSION_ID } = process.env;
+    process.env.CLAUDE_PROJECT_DIR = repo;
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+
+    try {
+      appendEvent(
+        repo,
+        "n1",
+        "open",
+        { title: "n1", parent: null },
+        undefined,
+        new Date(),
+        session
+      );
+      stopProgressTree({ session_id: session, cwd: resolve(path, "src") });
+      const artifacts = readTree(repo, undefined, session).nodes.get("n1")?.artifacts;
+
+      expect(artifacts?.map((a) => [a.kind, a.ref])).toEqual([["worktree", path]]);
+    } finally {
+      restoreEnv("CLAUDE_PROJECT_DIR", CLAUDE_PROJECT_DIR);
+      restoreEnv("CLAUDE_CODE_SESSION_ID", CLAUDE_CODE_SESSION_ID);
+    }
+  });
+
+  function heldByAnotherSession(artifact: { kind: "branch" | "worktree"; ref: string }) {
+    appendEvent(
+      "other-scope",
+      "m1",
+      "open",
+      { title: "owner", parent: null },
+      file,
+      new Date(),
+      "s-other"
+    );
+    appendEvent("other-scope", "m1", "attach", artifact, file, new Date(), "s-other");
+  }
+
+  test("done keeps a worktree whose branch an open node of another session holds", () => {
+    const path = worktree("feat/theirs");
+    heldByAnotherSession({ kind: "branch", ref: "feat/theirs" });
+    openNode();
+    appendEvent(
+      repo,
+      "n1",
+      "attach",
+      { kind: "worktree", ref: path, label: "feat/theirs" },
+      file
+    );
+
+    const cleanup = cleanUpNodeWorktrees(
+      repo,
+      node() as NonNullable<ReturnType<typeof node>>,
+      undefined,
+      file
+    );
+
+    expect(cleanup.removed).toEqual([]);
+    expect(cleanup.kept).toEqual([{ path, reason: "is held by owner [m1]" }]);
+    expect(existsSync(path)).toBe(true);
+  });
+
+  test("done keeps a worktree another open node attached under a differently written path", () => {
+    const path = worktree("feat/shared");
+    heldByAnotherSession({ kind: "worktree", ref: `${path}/` });
+    openNode();
+    appendEvent(
+      repo,
+      "n1",
+      "attach",
+      { kind: "worktree", ref: path, label: "feat/shared" },
+      file
+    );
+
+    const cleanup = cleanUpNodeWorktrees(
+      repo,
+      node() as NonNullable<ReturnType<typeof node>>,
+      undefined,
+      file
+    );
+
+    expect(cleanup.removed).toEqual([]);
+    expect(existsSync(path)).toBe(true);
+  });
+
+  test("a node already done holds nothing", () => {
+    const path = worktree("feat/finished");
+    heldByAnotherSession({ kind: "branch", ref: "feat/finished" });
+    appendEvent("other-scope", "m1", "done", {}, file, new Date(), "s-other");
+    openNode();
+    appendEvent(
+      repo,
+      "n1",
+      "attach",
+      { kind: "worktree", ref: path, label: "feat/finished" },
+      file
+    );
+
+    const cleanup = cleanUpNodeWorktrees(
+      repo,
+      node() as NonNullable<ReturnType<typeof node>>,
+      undefined,
+      file
+    );
+
+    expect(cleanup.removed).toEqual([{ path, branch: "feat/finished" }]);
   });
 });
 

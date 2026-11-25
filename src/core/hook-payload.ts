@@ -19,6 +19,7 @@ export interface HookTurnPayload {
 }
 
 export interface StopTurnPayload extends HookTurnPayload {
+  cwd?: string;
   transcript_path?: string | null;
   transcriptPath?: string | null;
   stop_hook_active?: boolean;
