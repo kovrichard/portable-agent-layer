@@ -6,7 +6,8 @@ import { unappliedVerdictOf } from "../bronze/ledger-hook";
 import { normalizeToolUse } from "../core/agent";
 import { hookSessionId } from "../core/hook-payload";
 import { sessionDir } from "../core/session-dir";
-import { COMMAND_KEYS, resultOf, stringIn } from "../usage/tool-events";
+import { COMMAND_KEYS, stringIn } from "../usage/call-traits";
+import { resultOf } from "../usage/tool-events";
 import { progressSession } from "./progress-session";
 import {
   type ArtifactKind,

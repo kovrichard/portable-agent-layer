@@ -3,7 +3,6 @@
  * cheap facts about it. The call's arguments go to the content store.
  */
 
-import { basename, extname } from "node:path";
 import { appendEvent, logQuietly } from "../bronze/events";
 import { toolUseIdOf, unappliedVerdictOf } from "../bronze/ledger-hook";
 import { isSensitivePath } from "../bronze/sensitive-path";
@@ -11,17 +10,11 @@ import { appendToolOutput, type ToolOutputRow } from "../bronze/tool-output";
 import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "../core/agent";
 import { hookSessionId } from "../core/hook-payload";
 import { isPalSpawnedInference } from "../core/spawn-guard";
+import { callTraits, sizeOf, stringIn } from "./call-traits";
 import { permissionWaitSec } from "./waiting-on-user";
 
 const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];
 const DURATION_KEYS = ["duration_ms", "durationMs"];
-export const COMMAND_KEYS = ["command", "commandLine", "CommandLine", "script"];
-
-export function stringIn(input: Record<string, unknown>, keys: string[]): string | null {
-  const found = keys.map((k) => input[k]).find((v) => typeof v === "string" && v);
-
-  return (found as string | undefined) ?? null;
-}
 
 function numberIn(source: unknown, keys: string[]): number | null {
   if (typeof source !== "object" || source === null) return null;
@@ -35,32 +28,6 @@ export function resultOf(payload: Record<string, unknown>): unknown {
   return RESULT_KEYS.map((k) => payload[k]).find((v) => v !== undefined);
 }
 
-function sizeOf(value: unknown): number {
-  if (value === undefined || value === null) return 0;
-
-  return typeof value === "string" ? value.length : JSON.stringify(value).length;
-}
-
-function hostOf(url: string | null): string | null {
-  if (!url) return null;
-
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return null;
-  }
-}
-
-function mcpServerOf(tool: string): string | null {
-  return tool.startsWith("mcp__") ? (tool.split("__")[1] ?? null) : null;
-}
-
-function programOf(command: string | null): string | null {
-  const first = command?.trim().split(/\s+/)[0];
-
-  return first ? basename(first) : null;
-}
-
 function outcomeOf(payload: Record<string, unknown>): string {
   const verdict = unappliedVerdictOf(payload);
   if (verdict) return verdict.outcome;
@@ -72,23 +39,6 @@ function subagentRun(result: unknown) {
   return {
     subagentTokens: numberIn(result, ["totalTokens"]),
     subagentTools: numberIn(result, ["totalToolUseCount"]),
-  };
-}
-
-/** What a call's name and arguments say about it, whether it ran or not. */
-export function callTraits(call: ToolUseRequest) {
-  const input = call.toolInput;
-  const file = stringIn(input, FILE_TARGET_KEYS);
-
-  return {
-    tool: call.toolName,
-    inputChars: sizeOf(input),
-    fileExt: file ? extname(file) || null : null,
-    program: programOf(stringIn(input, COMMAND_KEYS)),
-    skill: stringIn(input, ["skill"]),
-    subagent: stringIn(input, ["subagent_type"]),
-    mcpServer: mcpServerOf(call.toolName),
-    host: hostOf(stringIn(input, ["url"])),
   };
 }
 

@@ -9,7 +9,7 @@
 
 import { appendEvent } from "../../../bronze/events";
 import { transcriptLines } from "../../../bronze/transcript-lines";
-import { callTraits } from "../../../usage/tool-events";
+import { callTraits } from "../../../usage/call-traits";
 import { claudeTranscriptSources, hasGrown, type Transcript } from "./claude";
 import { readCursor, writeCursor } from "./cursors";
 
