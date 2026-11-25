@@ -2,7 +2,7 @@
  * The knobs behind the grid and the bell.
  *
  * These were constants in the source, which meant "gone quiet after 14 days"
- * was PAL's opinion rather than the user's. They live in pal-settings.json now,
+ * was PAL's opinion rather than the user's. They live in the settings file now,
  * with the old constants as the defaults so nothing changes until someone says
  * otherwise.
  */

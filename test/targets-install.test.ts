@@ -62,10 +62,20 @@ describe("scaffoldTelos", () => {
 });
 
 describe("scaffoldPalSettings", () => {
-  test("creates pal-settings.json from the template", () => {
+  test("a new home gets settings.json at its root, from the template", () => {
     scaffoldPalSettings();
 
-    expect(existsSync(resolve(HOME, "memory", "pal-settings.json"))).toBe(true);
+    expect(existsSync(resolve(HOME, "settings.json"))).toBe(true);
+    expect(existsSync(resolve(HOME, "memory", "pal-settings.json"))).toBe(false);
+  });
+
+  test("a home whose settings have not moved gets no second copy", () => {
+    mkdirSync(resolve(HOME, "memory"), { recursive: true });
+    writeFileSync(resolve(HOME, "memory", "pal-settings.json"), "{}");
+
+    scaffoldPalSettings();
+
+    expect(existsSync(resolve(HOME, "settings.json"))).toBe(false);
   });
 
   test("leaves an existing settings file's own keys intact", () => {

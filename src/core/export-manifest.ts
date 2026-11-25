@@ -6,7 +6,7 @@ export const MANIFEST_NAME = "export-manifest.json";
  * that moves a store, so an older PAL can tell an archive it cannot place.
  * Archives from before the field are layout 1.
  */
-export const DATA_LAYOUT = 2;
+export const DATA_LAYOUT = 3;
 
 export interface ExportManifest {
   machineId: string;

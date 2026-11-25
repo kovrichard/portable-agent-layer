@@ -49,6 +49,10 @@ $GIT_INDICATOR = if ($BRANCH) { "  (git: $BRANCH)" } else { "" }
 $COST_STR = '$' + ([math]::Round($COST, 2)).ToString("0.00")
 
 # PAL: Open ISC count - find project matching current directory
+# PAL settings: at the PAL home's root, or in memory\ until the owner moves it
+$palSettings = Join-Path $env:USERPROFILE ".pal\settings.json"
+if (-not (Test-Path $palSettings)) { $palSettings = Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json" }
+
 $OPEN_ISCS = 0
 $PROJECT_NAME = ""
 $projectsDir = Join-Path $env:USERPROFILE ".pal\memory\projects"
@@ -134,7 +138,6 @@ if (Test-Path $updateCache) {
       $versionStr = if ($uc.current -ne $uc.latest) { "$($uc.current) -> $($uc.latest)" } else { $uc.current + " (new commits)" }
       # With daily updates on, PAL applies this when the session closes — so the
       # next step is to restart, not to run the command yourself.
-      $palSettings = Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json"
       $autoUpdate = $false
       if (Test-Path $palSettings) {
         try { $autoUpdate = (Get-Content $palSettings -Raw | ConvertFrom-Json).autoUpdate.enabled -eq $true } catch {}
@@ -230,7 +233,7 @@ if (Test-Path $runDir) {
   try { $bindings = Get-Content (Join-Path $env:USERPROFILE ".pal\bindings.json") -Raw -ErrorAction Stop | ConvertFrom-Json } catch {}
   $principalZone = [TimeZoneInfo]::Utc
   try {
-    $zoneId = (Get-Content (Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json") -Raw -ErrorAction Stop | ConvertFrom-Json).identity.principal.timezone
+    $zoneId = (Get-Content $palSettings -Raw -ErrorAction Stop | ConvertFrom-Json).identity.principal.timezone
     if ($zoneId) {
       $principalZone = [TimeZoneInfo]::Local
       $principalZone = [TimeZoneInfo]::FindSystemTimeZoneById($zoneId)

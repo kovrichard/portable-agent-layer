@@ -1,7 +1,6 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import type AdmZipArchive from "adm-zip";
-import { archivePathIn, currentArchivePath } from "../bronze/bronze";
 import { appendImportLog } from "../bronze/import-log";
 import { newerLayoutRefusal } from "../core/export-manifest";
 import { mergeArchive, readManifest, summarize } from "../core/import-merge";
@@ -9,6 +8,7 @@ import { logDebug } from "../core/log";
 import { ensureRegistered, writeRegistryEntry } from "../core/machine";
 import { palHome, toPath } from "../core/paths";
 import { log } from "../targets/log";
+import { archiveLayoutFor } from "./archive-layout";
 
 export async function exportState(args: string[]) {
   const { collectExportFiles, exportZip, timestamp } = await import("../core/export");
@@ -237,10 +237,7 @@ function importByMerge(entries: ZipEntry[], home: string, zipPath: string) {
     archiveEntriesOf(entries),
     home,
     importQuarantineDir(home),
-    {
-      canonical: currentArchivePath,
-      here: (path) => archivePathIn(path, home),
-    }
+    archiveLayoutFor(home)
   );
   const source = readManifest(archiveEntriesOf(entries));
   if (source) {

@@ -101,12 +101,16 @@ describe.skipIf(process.platform === "win32")(
       expect(existsSync(at("home", "debug", "debug.log.1"))).toBe(true);
     });
 
-    test("the doctor finds nothing left to migrate or clean", () => {
+    test("the doctor finds nothing left to migrate or clean but its owner's moves", () => {
       expect(
         doctorIds.filter((id) =>
           /^migration\.|^settings\.unknown|hooks\.scripts/.test(id)
         )
       ).toEqual([]);
+    });
+
+    test("the settings move waits for its owner", () => {
+      expect(doctorIds).toContain("owner-migration.v13-settings-to-root");
     });
   }
 );

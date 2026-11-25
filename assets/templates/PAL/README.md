@@ -86,8 +86,8 @@ Hook-based security: validates Bash commands and file operations against dangero
 
 At session start, three things happen:
 1. **CLAUDE.md** loads natively (identity, modes, routing table)
-2. **`loadAtStartup` files** from `pal-settings.json` are loaded by `LoadContext.ts`
-3. **Dynamic context** injected by `LoadContext.ts`: crystallized principles, tracked opinions (≥85%), recent interaction notes, learning digest, signal trends, failure patterns, active work summary — each toggleable in `pal-settings.json → dynamicContext`
+2. **`loadAtStartup` files** from `~/.pal/settings.json` are loaded by `LoadContext.ts`
+3. **Dynamic context** injected by `LoadContext.ts`: crystallized principles, tracked opinions (≥85%), recent interaction notes, learning digest, signal trends, failure patterns, active work summary — each toggleable in `~/.pal/settings.json → dynamicContext`
 
 All other documentation loads on-demand via the routing table in CLAUDE.md.
 
@@ -118,6 +118,6 @@ PAL is designed to work identically across:
 ## Extending PAL
 
 - **Add a skill:** Use the `create-skill` skill or manually create `assets/skills/<name>/SKILL.md`
-- **Add startup files:** Append to `pal-settings.json → loadAtStartup.files`
+- **Add startup files:** Append to `~/.pal/settings.json → loadAtStartup.files`
 - **Add user context:** Create files in `~/.pal/telos/`
-- **Toggle dynamic context:** Set keys in `pal-settings.json → dynamicContext` to `false`
+- **Toggle dynamic context:** Set keys in `~/.pal/settings.json → dynamicContext` to `false`

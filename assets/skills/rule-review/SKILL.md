@@ -109,7 +109,7 @@ After each decision, output the CLI's result line (or error reason) verbatim and
 
 ## Do NOT use
 
-- To change the shipped contextual-steering hints. Those live under the `steering` key in `pal-settings.json`, not in rules.
+- To change the shipped contextual-steering hints. Those live under the `steering` key in `~/.pal/settings.json`, not in rules.
 - To write an opinion by hand or to end an approved rule or opinion. Those are `pal cli rule add-opinion` and `pal cli rule retire <id>`.
 - To edit, reword, or merge a draft. Editing is not supported; the only outcomes are approve or deny.
 - To approve or deny on the user's behalf because a draft "looks reasonable". Wait for the explicit decision.

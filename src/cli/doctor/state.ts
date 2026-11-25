@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { palHome, palPkg } from "../../core/paths";
+import { settingsPath } from "../../core/settings";
 import { telosStatus } from "../../opinions/telos-topics";
 import { auditBindings, type BindingIssue } from "../../progress/projects";
 import {
@@ -83,10 +84,6 @@ export function unknownSettingsKeys(
   });
 }
 
-function settingsPath(): string {
-  return resolve(palHome(), "memory", "pal-settings.json");
-}
-
 function readSettingsSchema(): SchemaNode | null {
   try {
     return JSON.parse(
@@ -125,7 +122,7 @@ function unknownKeysFinding(keys: UnknownKey[]): Finding {
 
   return warning(
     "settings.unknown",
-    `pal-settings.json has ${noun} PAL ignores: ${keys.map(describeUnknownKey).join(", ")}`,
+    `The settings file has ${noun} PAL ignores: ${keys.map(describeUnknownKey).join(", ")}`,
     { say: `Rename or remove them in ${settingsPath()}` }
   );
 }
@@ -134,7 +131,7 @@ function settingsFindings(): Finding[] {
   const path = settingsPath();
   if (!existsSync(path))
     return [
-      warning("settings.missing", "pal-settings.json is missing", {
+      warning("settings.missing", `The settings file is missing (${path})`, {
         say: "Recreate it",
         command: "pal cli install",
         external: false,
@@ -148,7 +145,7 @@ function settingsFindings(): Finding[] {
     return [
       failing(
         "settings.unreadable",
-        `pal-settings.json is not valid JSON: ${(error as Error).message}`,
+        `The settings file is not valid JSON: ${(error as Error).message}`,
         {
           say: `Fix the JSON in ${path} — PAL is running on defaults until then`,
         }
@@ -158,7 +155,7 @@ function settingsFindings(): Finding[] {
 
   if (!isPlainObject(settings))
     return [
-      failing("settings.unreadable", "pal-settings.json is not a JSON object", {
+      failing("settings.unreadable", "The settings file is not a JSON object", {
         say: `Fix ${path}`,
       }),
     ];

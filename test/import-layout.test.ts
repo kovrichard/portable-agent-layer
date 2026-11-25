@@ -1,24 +1,21 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { archivePathIn, currentArchivePath } from "../src/bronze/bronze";
+import { archivePathIn } from "../src/bronze/bronze";
+import { archiveLayoutFor as layoutFor } from "../src/cli/archive-layout";
+import { collectExportFiles } from "../src/core/export";
 import {
   buildManifest,
   DATA_LAYOUT,
   newerLayoutRefusal,
 } from "../src/core/export-manifest";
-import { type ArchiveLayout, mergeArchive } from "../src/core/import-merge";
+import { mergeArchive } from "../src/core/import-merge";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
 let QUARANTINE: string;
 
 const entry = (path: string, text: string) => ({ path, data: () => Buffer.from(text) });
-
-const layoutFor = (home: string): ArchiveLayout => ({
-  canonical: currentArchivePath,
-  here: (path) => archivePathIn(path, home),
-});
 
 beforeEach(() => {
   const dir = freshTestDir(import.meta.file);
@@ -79,6 +76,38 @@ describe("archivePathIn", () => {
     expect(archivePathIn("memory/signals/ratings.jsonl", HOME)).toBe(
       "memory/signals/ratings.jsonl"
     );
+  });
+});
+
+describe("the settings file across layouts", () => {
+  const settingsIn = (...parts: string[]) =>
+    readFileSync(resolve(HOME, ...parts), "utf-8");
+
+  test("an old archive's memory/pal-settings.json lands at the root of a moved home", () => {
+    mkdirSync(HOME, { recursive: true });
+    writeFileSync(resolve(HOME, "settings.json"), "{}");
+    mergeArchive(
+      [entry("memory/pal-settings.json", '{"a":1}')],
+      HOME,
+      QUARANTINE,
+      layoutFor(HOME)
+    );
+    expect(existsSync(resolve(HOME, "memory", "pal-settings.json"))).toBe(false);
+    expect(existsSync(resolve(QUARANTINE, "settings.json"))).toBe(true);
+  });
+
+  test("a new archive's settings.json lands in memory/ while this home has not moved", () => {
+    mkdirSync(resolve(HOME, "memory"), { recursive: true });
+    writeFileSync(resolve(HOME, "memory", "pal-settings.json"), '{"a":1}');
+    mergeArchive([entry("settings.json", '{"a":1}')], HOME, QUARANTINE, layoutFor(HOME));
+    expect(existsSync(resolve(HOME, "settings.json"))).toBe(false);
+    expect(settingsIn("memory", "pal-settings.json")).toBe('{"a":1}');
+  });
+
+  test("an export carries the settings file from the PAL home's root", () => {
+    mkdirSync(HOME, { recursive: true });
+    writeFileSync(resolve(HOME, "settings.json"), "{}");
+    expect(collectExportFiles()).toContain("settings.json");
   });
 });
 

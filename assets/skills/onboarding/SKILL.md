@@ -73,7 +73,7 @@ pal cli timezone                    # show what is configured
 pal cli timezone Europe/Budapest    # set it, IANA names only
 ```
 
-Install prefills it from the machine, so it is usually already right and usually not worth a question. Ask only when it reads as not set, or when the user has corrected you about the date or the hour in this session. Settings are hook-protected, so this command is the only way to change it — never edit `pal-settings.json`.
+Install prefills it from the machine, so it is usually already right and usually not worth a question. Ask only when it reads as not set, or when the user has corrected you about the date or the hour in this session. Settings are hook-protected, so this command is the only way to change it — never edit `~/.pal/settings.json`.
 
 ## Never invent an answer
 

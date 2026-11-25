@@ -7,6 +7,7 @@ import { lstatSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome, platform } from "../core/paths";
+import { SETTINGS_FILE } from "../core/settings";
 
 // PowerShell aliases rm, rmdir, del, erase, rd and ri all to Remove-Item, and
 // cmd ships its own rd and del — so the verb alone never says which shell ran it.
@@ -207,7 +208,17 @@ function managedDirAt(below: string): string | undefined {
   return HOOK_MANAGED_DIRS.find((dir) => `/${below}/`.includes(`/${comparable(dir)}/`));
 }
 
+/**
+ * The settings file at the PAL home's root. Matched by place, not name: every
+ * agent has a settings.json of its own, and those stay editable.
+ */
+function isPalSettingsFile(path: string): boolean {
+  return pathBelow(palHome(), path) === comparable(SETTINGS_FILE);
+}
+
 function managedPathReason(path: string): string | null {
+  if (isPalSettingsFile(path))
+    return `${SETTINGS_FILE} is managed automatically by hooks — do not edit directly`;
   const below = pathInsideManagedRoot(path);
   if (below === null) return null;
   const file = managedFileAt(below);

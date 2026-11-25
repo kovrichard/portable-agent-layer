@@ -81,7 +81,7 @@ describe("the progress tree's old settings", () => {
       quietly(() => runMigrate([]));
 
       expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
-      expect(checkPendingMigrations()).toEqual([]);
+      expect(pendingIds()).toEqual(["v13-settings-to-root"]);
     }
   );
 
@@ -244,7 +244,7 @@ describe("the schema and the template name no progress-tree switch", () => {
     readFileSync(resolve(assets, "schema", "pal-settings.schema.json"), "utf-8")
   ).properties.dynamicContext.properties;
   const template = JSON.parse(
-    readFileSync(resolve(assets, "templates", "pal-settings.json"), "utf-8")
+    readFileSync(resolve(assets, "templates", "settings.json"), "utf-8")
   ).dynamicContext;
 
   test.each(RETIRED_KEY_PAIRS)("%s and %s are in neither", (oldKey, newKey) => {

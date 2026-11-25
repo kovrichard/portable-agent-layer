@@ -89,7 +89,7 @@ Prompts should never replicate functionality that code can provide:
 - Hooks are TypeScript, not prompt instructions
 - Tools are CLI programs, not natural language procedures
 - Memory is structured JSON/JSONL, not freeform text
-- Configuration is `pal-settings.json`, not prose in CLAUDE.md
+- Configuration is `~/.pal/settings.json`, not prose in CLAUDE.md
 
 ### 7. Clear Thinking + Prompting is King
 
@@ -361,7 +361,7 @@ A rule the user states            A correction PAL detects
 - Progress tree, active projects
 - Changes per-session or is project-scoped — can't be pre-compiled
 - Injected as `<system-reminder>` block via stdout
-- Each section independently toggleable in `pal-settings.json → dynamicContext`
+- Each section independently toggleable in `~/.pal/settings.json → dynamicContext`
 
 ### Semi-Static Registry
 

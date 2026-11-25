@@ -77,6 +77,10 @@ if echo "$input" | jq -e '.cost.total_cost_usd != null' >/dev/null 2>&1; then
   fi
 fi
 
+# PAL settings: at the PAL home's root, or in memory/ until the owner moves it
+PAL_SETTINGS="$HOME/.pal/settings.json"
+[ -f "$PAL_SETTINGS" ] || PAL_SETTINGS="$HOME/.pal/memory/pal-settings.json"
+
 # PAL: Open ISC count — find project matching current directory
 OPEN_ISCS=0
 PROJECTS_DIR="$HOME/.pal/memory/projects"
@@ -182,7 +186,7 @@ if [ -f "$UPDATE_CACHE" ]; then
     fi
     # With daily updates on, PAL applies this when the session closes — so the
     # next step is to restart, not to run the command yourself.
-    AUTO_UPDATE=$(jq -r '.autoUpdate.enabled // false' "$HOME/.pal/memory/pal-settings.json" 2>/dev/null)
+    AUTO_UPDATE=$(jq -r '.autoUpdate.enabled // false' "$PAL_SETTINGS" 2>/dev/null)
     if [ "$AUTO_UPDATE" = "true" ]; then
       UPDATE_LINE="📦 update: $VERSION_STR  restart to apply"
     else
@@ -278,7 +282,7 @@ RUN_DIR="$HOME/.pal/cache/run-mode"
 if [ -d "$RUN_DIR" ]; then
   BINDINGS=$(jq -c 'if type == "object" then . else {} end' "$HOME/.pal/bindings.json" 2>/dev/null)
   [ -n "$BINDINGS" ] || BINDINGS='{}'
-  PRINCIPAL_TZ=$(jq -r '.identity.principal.timezone // empty' "$HOME/.pal/memory/pal-settings.json" 2>/dev/null)
+  PRINCIPAL_TZ=$(jq -r '.identity.principal.timezone // empty' "$PAL_SETTINGS" 2>/dev/null)
   for RUN_JSON in "$RUN_DIR"/*.json; do
     [ -f "$RUN_JSON" ] || continue
     RUN_LINE=$(TZ="${PRINCIPAL_TZ:-UTC}" jq -r --arg cwd "${CWD%/}" --argjson bindings "$BINDINGS" "$RUN_JQ" "$RUN_JSON" 2>/dev/null)

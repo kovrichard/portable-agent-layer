@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
+import { paths } from "../../core/paths";
 import { type BackupReport, backupDataVerified } from "./data-backup";
 import { sweepLateWrites } from "./late-write-sweep";
 import type { MigrationResult } from "./migration";
 import { type GuardSeams, moveGuardRefusal } from "./move-guards";
-import type { PlannedMove } from "./move-manifest";
+import { newestManifest, type PlannedMove } from "./move-manifest";
 import { moveVerified, previewMoves, undoVerifiedMove } from "./verified-move";
 
 export interface LayoutMoveOptions {
@@ -60,7 +61,7 @@ export function runLayoutMove(
     migrated: left.length,
     skipped: 0,
     results: [
-      `moved ${left.length} folder(s), ${report.files} files, hashes checked; manifest ${report.manifest}; backup ${backup.archive}`,
+      `moved ${left.length} path(s), ${report.files} files, hashes checked; manifest ${report.manifest}; backup ${backup.archive}`,
     ],
   };
 }
@@ -75,12 +76,18 @@ export function undoLayoutMove(id: string): MigrationResult {
   return {
     migrated: report.putBack,
     skipped: report.leftInPlace.length,
-    results: [`put back ${report.putBack} folder(s) from ${report.manifest}`, ...differ],
+    results: [`put back ${report.putBack} path(s) from ${report.manifest}`, ...differ],
   };
+}
+
+/** Only a move that ran leaves a manifest; a home where both paths merely exist was never moved. */
+function moveRan(id: string): boolean {
+  return existsSync(paths.backups()) && newestManifest(id) !== null;
 }
 
 /** Files that reappeared at an old path after the move, folded into the new one. */
 export function sweepLayoutMove(id: string, moves: PlannedMove[]): MigrationResult {
+  if (!moveRan(id)) return nothing([]);
   const done = moves.filter((move) => existsSync(move.to) && existsSync(move.from));
   if (done.length === 0) return nothing([]);
 

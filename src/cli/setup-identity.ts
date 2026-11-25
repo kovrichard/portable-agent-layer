@@ -1,5 +1,5 @@
 /**
- * Interactive identity setup — prompts for missing fields in pal-settings.json.
+ * Interactive identity setup — prompts for missing fields in the settings file.
  * Called during `pal install`. Skips fields that already have values.
  */
 

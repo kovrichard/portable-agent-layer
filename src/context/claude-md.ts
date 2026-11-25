@@ -103,7 +103,7 @@ export function needsRebuild(): boolean {
   const sources: string[] = [
     TEMPLATE_PATH,
     resolve(paths.state(), "setup.json"),
-    resolve(paths.memory(), "pal-settings.json"),
+    settingsPath(),
     environmentFile(),
     ...getSemiStaticSources().map((s) => s.path),
   ];
@@ -119,7 +119,7 @@ export function needsRebuild(): boolean {
   return latestMtime(...sources) > outputMtime;
 }
 
-import { identity } from "../core/settings";
+import { identity, settingsPath } from "../core/settings";
 
 /** Render AGENTS.md from the template using current state */
 export function buildClaudeMd(): string {

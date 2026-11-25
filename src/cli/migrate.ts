@@ -25,6 +25,7 @@ import { v9ProgressTreeNames } from "./migrations/v9-progress-tree-names";
 import { v10ThreadsToProgressTree } from "./migrations/v10-threads-to-progress-tree";
 import { v11MemoryBackups } from "./migrations/v11-memory-backups";
 import { v12RawToRecords } from "./migrations/v12-raw-to-records";
+import { v13SettingsToRoot } from "./migrations/v13-settings-to-root";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -65,6 +66,7 @@ const MIGRATIONS: Migration[] = [
   v10ThreadsToProgressTree,
   v11MemoryBackups,
   v12RawToRecords,
+  v13SettingsToRoot,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 
@@ -78,6 +80,7 @@ interface PendingMigration {
   id: string;
   description: string;
   detail?: string;
+  ownerRun: boolean;
 }
 
 interface RunKind {
@@ -174,7 +177,9 @@ export function checkPendingMigrations(): PendingMigration[] {
   return MIGRATIONS.flatMap((m) => {
     const { pending, detail } = m.check();
 
-    return pending ? [{ id: m.id, description: m.description, detail }] : [];
+    return pending
+      ? [{ id: m.id, description: m.description, detail, ownerRun: !runsOnInstall(m) }]
+      : [];
   });
 }
 

@@ -506,6 +506,18 @@ describe("checkFilePath", () => {
     expect(checkFilePath("/src/MyRepo/.pal/docs/README.md")).toBeNull();
   });
 
+  test("the settings file at the PAL home's root is hook-managed", () => {
+    expect(checkFilePath(home(".pal", "settings.json"))).toMatch(
+      /settings\.json is managed/
+    );
+  });
+
+  test("every other settings.json stays editable, an agent's own included", () => {
+    expect(checkFilePath(home(".claude", "settings.json"))).toBeNull();
+    expect(checkFilePath(home(".pal", "telos", "settings.json"))).toBeNull();
+    expect(checkFilePath("/home/user/project/.vscode/settings.json")).toBeNull();
+  });
+
   test("does not block .pal paths that don't match docs/skills/tools", () => {
     expect(checkFilePath(home(".pal", "telos", "GOALS.md"))).toBeNull();
     expect(checkFilePath(home(".pal", "memory", "pal-settings.json"))).toBeTruthy(); // caught by HOOK_MANAGED_FILES

@@ -19,7 +19,17 @@ const SESSION_JSON = JSON.stringify({
 
 let HOME: string;
 
-function fixture(autoUpdate: boolean): void {
+const FORMER_SETTINGS = ["memory", "pal-settings.json"];
+
+function writeSettings(autoUpdate: boolean, at: string[]): void {
+  writeFileSync(
+    resolve(HOME, ".pal", ...at),
+    JSON.stringify({ autoUpdate: { enabled: autoUpdate, decided: true } }),
+    "utf-8"
+  );
+}
+
+function fixture(autoUpdate: boolean, settingsAt: string[] = FORMER_SETTINGS): void {
   mkdirSync(resolve(HOME, ".pal", "cache"), { recursive: true });
   mkdirSync(resolve(HOME, ".pal", "memory"), { recursive: true });
   writeFileSync(
@@ -33,11 +43,7 @@ function fixture(autoUpdate: boolean): void {
     }),
     "utf-8"
   );
-  writeFileSync(
-    resolve(HOME, ".pal", "memory", "pal-settings.json"),
-    JSON.stringify({ autoUpdate: { enabled: autoUpdate, decided: true } }),
-    "utf-8"
-  );
+  writeSettings(autoUpdate, settingsAt);
 }
 
 function render(): string {
@@ -68,6 +74,17 @@ describe.skipIf(process.platform === "win32")("the update line", () => {
     const line = render();
     expect(line).toContain("run: pal cli update");
     expect(line).not.toContain("restart to apply");
+  });
+
+  test("reads the settings at the PAL home's root once they have moved", () => {
+    fixture(true, ["settings.json"]);
+    expect(render()).toContain("restart to apply");
+  });
+
+  test("the moved settings win over a late copy left in memory/", () => {
+    fixture(true, ["settings.json"]);
+    writeSettings(false, FORMER_SETTINGS);
+    expect(render()).toContain("restart to apply");
   });
 
   test("says nothing at all when no update is waiting", () => {
