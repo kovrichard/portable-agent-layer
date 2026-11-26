@@ -1,0 +1,28 @@
+name: label-user-reports
+
+# GitHub drops labels that a user without push access sets, so an issue filed by
+# `pal cli report send` from a user's machine arrives unlabelled. Its body ends
+# with the visible line `pal cli report` writes; this labels such issues.
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Label issues drafted by pal cli report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ github.event.issue.body }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if printf '%s' "$BODY" | grep -qF 'Drafted by `pal cli report`'; then
+            gh issue edit "$NUMBER" --repo "$GITHUB_REPOSITORY" --add-label user-report
+          fi

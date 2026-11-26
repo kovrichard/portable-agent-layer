@@ -82,6 +82,8 @@ Suggest one or more fixes, classified by approach:
 
 For each fix, note the specific file(s) to change and what the change would be.
 
+When the fix is a **code fix in PAL itself** (a hook, `pal cli` command, skill, migration or installed doc), end by offering to report it upstream with the `report-upstream` skill, so the fix reaches every PAL user. Offer once; do not draft until the user says yes.
+
 ## Output format
 
 ```
