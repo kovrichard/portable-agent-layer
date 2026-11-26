@@ -128,7 +128,7 @@ describe("what a named run prints", () => {
     const printed = printedBy([ID, "--force"]);
 
     expect(printed).toStartWith(`  Running: ${ID} — `);
-    expect(printed).toContain("\n    moved 1 folder(s)");
+    expect(printed).toContain("\n    moved 1 path(s)");
     expect(printed).toEndWith("\n");
   });
 

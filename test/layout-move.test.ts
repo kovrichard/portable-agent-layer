@@ -95,7 +95,7 @@ describe("runLayoutMove", () => {
 
     expect(result.migrated).toBe(1);
     expect(result.results).toHaveLength(1);
-    expect(result.results[0]).toStartWith("moved 1 folder(s), 2 files, hashes checked");
+    expect(result.results[0]).toStartWith("moved 1 path(s), 2 files, hashes checked");
     expect(result.results[0]).toEndWith("backup backup.tar");
     expect(readFileSync(resolve(TO, "a.jsonl"), "utf-8")).toBe('{"a":1}\n');
   });
@@ -117,7 +117,7 @@ describe("undoLayoutMove", () => {
     expect(result.migrated).toBe(1);
     expect(result.skipped).toBe(0);
     expect(result.results).toHaveLength(1);
-    expect(result.results[0]).toStartWith("put back 1 folder(s) from ");
+    expect(result.results[0]).toStartWith("put back 1 path(s) from ");
     expect(existsSync(resolve(FROM, "a.jsonl"))).toBe(true);
   });
 
