@@ -444,7 +444,9 @@ export function eventMonthFile(month: Date): string {
 }
 
 export function eventsInMonth(type: EventType, month: Date): LoggedEvent[] {
-  return parseLines(eventMonthFile(month)).filter((e) => e.type === type);
+  const file = eventMonthFile(month);
+
+  return parseLines(file).filter((e) => e.type === type);
 }
 
 export function allEventsSince(since: Date): LoggedEvent[] {

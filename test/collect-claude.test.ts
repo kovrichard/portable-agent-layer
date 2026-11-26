@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { parseLines } from "../src/bronze/events";
 import { agentDirOverrides } from "../src/core/paths";
 import { reload } from "../src/core/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
@@ -32,8 +33,7 @@ function streamed(): Record<string, unknown>[] {
 
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
-    .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
-    .map((l) => JSON.parse(l))
+    .flatMap((f) => parseLines<Record<string, unknown>>(resolve(dir, f)))
     .filter((e) => e.type === "model_call");
 }
 
@@ -126,6 +126,10 @@ describe("a subagent transcript copied into other sessions' folders (#375)", () 
     write(block("msg_1", 818));
     await collectClaude(projects, LATER);
     writeCursor("claude", {});
+    appendFileSync(
+      resolve(home, "records", "bronze", "events", "2026-10.jsonl"),
+      '{"type":"model_call", half\n'
+    );
 
     await collectClaude(projects, LATER);
 
