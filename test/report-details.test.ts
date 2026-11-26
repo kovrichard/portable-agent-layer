@@ -78,7 +78,7 @@ describe("the environment table", () => {
     );
     reload();
 
-    expect(reportMeta().contextOff).toEqual(["alpha", "zeta"]);
+    expect(reportMeta(() => "abc").contextOff).toEqual(["alpha", "zeta"]);
   });
 });
 
