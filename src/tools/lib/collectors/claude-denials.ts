@@ -12,6 +12,7 @@ import { transcriptLines } from "../../../bronze/transcript-lines";
 import { callTraits } from "../../../usage/call-traits";
 import { claudeTranscriptSources, hasGrown, type Transcript } from "./claude";
 import { readCursor, writeCursor } from "./cursors";
+import { alreadyLoggedCheck } from "./logged-keys";
 
 /**
  * Auto mode's denials fire PermissionDenied, which the post-tool hook already
@@ -211,6 +212,9 @@ export async function collectClaudeDenials(
   copiesDir?: string
 ): Promise<number> {
   const cursor = readCursor("claude-denials");
+  const alreadyLogged = alreadyLoggedCheck("tool_call", (event) =>
+    String(event.toolUseId)
+  );
   let emitted = 0;
 
   for (const transcript of claudeTranscriptSources(projectsDir, now, copiesDir)) {
@@ -220,10 +224,14 @@ export async function collectClaudeDenials(
     const resumeAt = resumePoint(read);
     if (resumeAt === offset) continue;
 
-    const ready = read.denials.filter((d) => d.start < resumeAt);
+    for (const denial of read.denials.filter((d) => d.start < resumeAt)) {
+      const ts = denial.line.timestamp ?? new Date().toISOString();
+      const seen = { ts, toolUseId: denial.toolUseId };
+      if (await alreadyLogged(seen)) continue;
+      emitDenial(denial);
+      emitted += 1;
+    }
 
-    for (const denial of ready) emitDenial(denial);
-    emitted += ready.length;
     cursor[transcript.key] = resumeAt;
     writeCursor("claude-denials", cursor);
   }

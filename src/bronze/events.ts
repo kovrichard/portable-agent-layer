@@ -439,8 +439,12 @@ export function loggedEventIds(): Set<string> {
   );
 }
 
+export function eventMonthFile(month: Date): string {
+  return resolve(eventsDir(), `${monthOf(month.toISOString())}.jsonl`);
+}
+
 export function eventsInMonth(type: EventType, month: Date): LoggedEvent[] {
-  const file = resolve(eventsDir(), `${monthOf(month.toISOString())}.jsonl`);
+  const file = eventMonthFile(month);
 
   return parseLines(file).filter((e) => e.type === type);
 }
