@@ -110,7 +110,7 @@ export function loginExpiryFindings(
 }
 
 const MOVES_EXPLAINED =
-  "they move your data, so they run only when you start them: PAL must be idle, a verified backup is taken first, every file is hash-checked, and pal cli migrate --undo <id> puts it back. PAL reads the old folders until then. PAL 1.0 will not start until every one has run";
+  "they move your data, so they run only when you start them: PAL must be idle, a verified backup is taken first, every file is hash-checked, and pal cli migrate --undo <id> puts it back. PAL reads the old folders until then. PAL 1.0 needs every one of them";
 
 function ownerMovesFinding(pending: PendingMigration[]): Finding[] {
   const count = pending.filter((migration) => migration.ownerRun).length;
