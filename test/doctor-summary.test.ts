@@ -41,7 +41,18 @@ describe("the health summary", () => {
       failing: 2,
       warnings: 3,
       worst: "first failure",
+      notice: null,
     });
+  });
+
+  test("carries the first finding's notice for the status bars", () => {
+    const findings = [
+      finding("warn", "plain"),
+      { ...finding("warn", "moves"), notice: "2 data moves wait" },
+      { ...finding("warn", "later"), notice: "another" },
+    ];
+
+    expect(healthSummary(findings, NOW).notice).toBe("2 data moves wait");
   });
 
   test("names no worst finding when nothing fails", () => {
@@ -50,6 +61,7 @@ describe("the health summary", () => {
       failing: 0,
       warnings: 1,
       worst: null,
+      notice: null,
     });
   });
 
@@ -103,14 +115,27 @@ describe("saving the health summary", () => {
   });
 
   test("the write replaces an older summary in one rename", () => {
-    writeHealthSummary({ checkedAt: "old", failing: 5, warnings: 0, worst: "old" });
-    writeHealthSummary({ checkedAt: "new", failing: 0, warnings: 0, worst: null });
+    writeHealthSummary({
+      checkedAt: "old",
+      failing: 5,
+      warnings: 0,
+      worst: "old",
+      notice: null,
+    });
+    writeHealthSummary({
+      checkedAt: "new",
+      failing: 0,
+      warnings: 0,
+      worst: null,
+      notice: null,
+    });
 
     expect(JSON.parse(readFileSync(healthFile(), "utf-8"))).toEqual({
       checkedAt: "new",
       failing: 0,
       warnings: 0,
       worst: null,
+      notice: null,
     });
   });
 });

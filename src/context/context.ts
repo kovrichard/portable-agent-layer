@@ -12,6 +12,7 @@ import { opinionsContext } from "../opinions/adaptation-rules";
 import { loadProgressTreeContext } from "../progress/progress-tree-context";
 import { loadActiveProjectsContext } from "../progress/projects-context";
 import { lastSessionTitle } from "../progress/work-tracking";
+import { readHealthNotice } from "../usage/health-cache";
 import { dueNudgeSections } from "./daily-nudge";
 import { loadSteeringRules } from "./semi-static";
 
@@ -35,6 +36,14 @@ function loadStartupFiles(): string {
   }
 
   return sections.join("\n\n---\n\n");
+}
+
+function healthNoticeSection(): string {
+  const notice = readHealthNotice();
+
+  return notice
+    ? `## PAL notice\n${notice}. Tell the user once in this session, and point them to \`pal cli doctor\` for what to run and why.`
+    : "";
 }
 
 /**
@@ -76,7 +85,10 @@ export function buildSystemReminder(
   const steering = skipSemiStatic ? "" : loadSteeringRules();
   const progressTree = loadProgressTreeContext(sessionDir(), opts.sessionId);
   const dueNudges = opts.agent === "cursor" ? dueNudgeSections() : [];
+  const notice = healthNoticeSection();
   const parts: string[] = [];
+
+  if (notice) parts.push(notice);
 
   if (startup) parts.push(startup);
 

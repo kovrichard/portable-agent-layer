@@ -9,6 +9,7 @@ export interface HealthSummary {
   failing: number;
   warnings: number;
   worst: string | null;
+  notice: string | null;
 }
 
 const MINUTE_MS = 60_000;
@@ -35,6 +36,17 @@ function checkedAt(): number {
     return Date.parse(JSON.parse(readFileSync(healthFile(), "utf-8")).checkedAt);
   } catch {
     return Number.NaN;
+  }
+}
+
+/** The doctor's standing notice, or null when there is none or the cache is unreadable. */
+export function readHealthNotice(): string | null {
+  try {
+    const { notice } = JSON.parse(readFileSync(healthFile(), "utf-8"));
+
+    return typeof notice === "string" && notice !== "" ? notice : null;
+  } catch {
+    return null;
   }
 }
 

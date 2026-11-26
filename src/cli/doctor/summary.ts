@@ -22,6 +22,7 @@ export function healthSummary(
     failing: failing.length,
     warnings: withSeverity(findings, "warn").length,
     worst: failing.length > 0 ? findingLabel(failing[0].title) : null,
+    notice: findings.find((finding) => finding.notice)?.notice ?? null,
   };
 }
 

@@ -153,6 +153,7 @@ $palCache = Join-Path $env:USERPROFILE ".pal\cache"
 $healthFailing = 0
 $healthWarnings = 0
 $healthWorst = ""
+$healthNotice = ""
 $isCount = { param($v) ($v -is [int] -or $v -is [long] -or $v -is [double] -or $v -is [decimal]) -and $v -gt 0 }
 $healthCache = Join-Path $palCache "health.json"
 if (Test-Path $healthCache) {
@@ -161,6 +162,7 @@ if (Test-Path $healthCache) {
     if (& $isCount $health.failing) { $healthFailing = [long][math]::Floor([double]$health.failing) }
     if (& $isCount $health.warnings) { $healthWarnings = [long][math]::Floor([double]$health.warnings) }
     if ($health.worst -is [string]) { $healthWorst = $health.worst }
+    if ($health.notice -is [string]) { $healthNotice = $health.notice }
   } catch {}
 }
 
@@ -183,6 +185,9 @@ if ($rejectedLabel) {
 } elseif ($healthFailing -gt 0) {
   $healthLabel = if ($healthWorst) { $healthWorst } else { "Doctor found a failure" }
   $healthMore = $healthFailing - 1
+} elseif ($healthNotice) {
+  $healthLabel = $healthNotice
+  $HEALTH_COLOR = $YELLOW
 } elseif ($healthWarnings -gt 0) {
   $healthLabel = if ($healthWarnings -eq 1) { "1 warning" } else { "$healthWarnings warnings" }
   $HEALTH_COLOR = $YELLOW

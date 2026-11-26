@@ -202,9 +202,10 @@ fi
 # PAL: Health — what the doctor (health.json) and a rejected Claude call (login-rejected.json) left
 PAL_CACHE="$HOME/.pal/cache"
 HEALTH_JQ='def count(f): f | if type == "number" and . > 0 then floor else 0 end;
-  count(.failing), count(.warnings), (.worst | if type == "string" then . else "" end)'
+  def text(f): f | if type == "string" then . else "" end;
+  count(.failing), count(.warnings), text(.worst), text(.notice)'
 HEALTH_FIELDS=$(jq -r "$HEALTH_JQ" "$PAL_CACHE/health.json" 2>/dev/null)
-{ read -r HEALTH_FAILING; read -r HEALTH_WARNINGS; IFS= read -r HEALTH_WORST; } <<< "$HEALTH_FIELDS"
+{ read -r HEALTH_FAILING; read -r HEALTH_WARNINGS; IFS= read -r HEALTH_WORST; IFS= read -r HEALTH_NOTICE; } <<< "$HEALTH_FIELDS"
 [[ "$HEALTH_FAILING" =~ ^[0-9]+$ ]] || HEALTH_FAILING=0
 [[ "$HEALTH_WARNINGS" =~ ^[0-9]+$ ]] || HEALTH_WARNINGS=0
 
@@ -221,6 +222,9 @@ if [ -f "$PAL_CACHE/login-rejected.json" ]; then
 elif [ "$HEALTH_FAILING" -gt 0 ]; then
   HEALTH_LABEL=${HEALTH_WORST:-Doctor found a failure}
   HEALTH_MORE=$(( HEALTH_FAILING - 1 ))
+elif [ -n "$HEALTH_NOTICE" ]; then
+  HEALTH_LABEL=$HEALTH_NOTICE
+  HEALTH_COLOR=$YELLOW
 elif [ "$HEALTH_WARNINGS" -eq 1 ]; then
   HEALTH_LABEL="1 warning"
   HEALTH_COLOR=$YELLOW

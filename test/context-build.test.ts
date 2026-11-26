@@ -8,6 +8,25 @@ import { freshPalHomeEachTest } from "./lib/context-build-fixture";
 const { write } = freshPalHomeEachTest(import.meta.file);
 
 describe("buildSystemReminder", () => {
+  test("opens with the doctor's notice and asks the model to pass it on", () => {
+    write(
+      "cache/health.json",
+      JSON.stringify({ failing: 0, warnings: 3, notice: "2 data moves wait for you" })
+    );
+
+    const reminder = buildSystemReminder({ agent: "claude" });
+
+    expect(reminder).toContain(
+      "## PAL notice\n2 data moves wait for you. Tell the user once"
+    );
+  });
+
+  test("carries no notice section when the doctor left none", () => {
+    write("cache/health.json", JSON.stringify({ failing: 0, warnings: 3, notice: null }));
+
+    expect(buildSystemReminder({ agent: "claude" })).not.toContain("PAL notice");
+  });
+
   function optInToDueReminders() {
     write(
       "memory/pal-settings.json",
