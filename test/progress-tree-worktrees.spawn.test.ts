@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent, readTree } from "../src/progress/progress-tree";
+import { type ArtifactKind, appendEvent, readTree } from "../src/progress/progress-tree";
 import { attachGitProgress } from "../src/progress/progress-tree-git";
 import { settleAttachedPrs } from "../src/progress/progress-tree-prs";
 import { stopProgressTree } from "../src/progress/progress-tree-stop";
@@ -121,6 +121,15 @@ describe("a worktree that appears during the work", () => {
     expect(readTree(repo, file).gitCursor?.worktrees).toHaveLength(1);
   });
 
+  test("with no active node, a Stop inside it attaches it nowhere", () => {
+    openNode();
+    attachGitProgress(repo, file);
+    appendEvent(repo, "n1", "park", {}, file);
+    stopIn(worktree("feat/a"));
+
+    expect(worktreeArtifacts()).toEqual([]);
+  });
+
   test("with no active node it is only remembered", () => {
     openNode();
     attachGitProgress(repo, file);
@@ -194,7 +203,42 @@ describe("worktree ownership across sessions", () => {
     }
   });
 
-  function heldByAnotherSession(artifact: { kind: "branch" | "worktree"; ref: string }) {
+  test("a Stop payload without a usable cwd falls back to the hook's own folder", () => {
+    const path = worktree("feat/hook-folder");
+    const session = "s-fallback";
+    const { CLAUDE_PROJECT_DIR, CLAUDE_CODE_SESSION_ID } = process.env;
+    const before = process.cwd();
+    process.env.CLAUDE_PROJECT_DIR = repo;
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+
+    try {
+      appendEvent(
+        repo,
+        "n1",
+        "open",
+        { title: "n1", parent: null },
+        undefined,
+        new Date(),
+        session
+      );
+      process.chdir(path);
+      const unusable = { session_id: session, cwd: 7 } as unknown as Parameters<
+        typeof stopProgressTree
+      >[0];
+      stopProgressTree(unusable);
+      const artifacts = readTree(repo, undefined, session).nodes.get("n1")?.artifacts;
+
+      expect(artifacts?.map((a) => [a.kind, a.ref])).toEqual([["worktree", path]]);
+    } finally {
+      process.chdir(before);
+      restoreEnv("CLAUDE_PROJECT_DIR", CLAUDE_PROJECT_DIR);
+      restoreEnv("CLAUDE_CODE_SESSION_ID", CLAUDE_CODE_SESSION_ID);
+    }
+  });
+
+  function heldByAnotherSession(
+    ...artifacts: { kind: ArtifactKind; ref: string; label?: string }[]
+  ) {
     appendEvent(
       "other-scope",
       "m1",
@@ -204,8 +248,53 @@ describe("worktree ownership across sessions", () => {
       new Date(),
       "s-other"
     );
-    appendEvent("other-scope", "m1", "attach", artifact, file, new Date(), "s-other");
+
+    for (const artifact of artifacts)
+      appendEvent("other-scope", "m1", "attach", artifact, file, new Date(), "s-other");
   }
+
+  function doneWith(path: string, branch: string) {
+    openNode();
+    appendEvent(
+      repo,
+      "n1",
+      "attach",
+      { kind: "worktree", ref: path, label: branch },
+      file
+    );
+
+    return cleanUpNodeWorktrees(
+      repo,
+      node() as NonNullable<ReturnType<typeof node>>,
+      undefined,
+      file
+    );
+  }
+
+  test("done keeps a worktree another open node attached at another path under the same branch", () => {
+    const path = worktree("feat/relabelled");
+    heldByAnotherSession(
+      { kind: "link", ref: "https://example.com" },
+      { kind: "worktree", ref: resolve(root, "elsewhere"), label: "feat/relabelled" }
+    );
+
+    expect(doneWith(path, "feat/relabelled").kept).toEqual([
+      { path, reason: "is held by owner [m1]" },
+    ]);
+  });
+
+  test("an artifact of another kind that names the path or the branch holds nothing", () => {
+    const path = worktree("feat/named");
+    heldByAnotherSession(
+      { kind: "file", ref: path },
+      { kind: "commit", ref: "feat/named" },
+      { kind: "branch", ref: "feat/other" }
+    );
+
+    expect(doneWith(path, "feat/named").removed).toEqual([
+      { path, branch: "feat/named" },
+    ]);
+  });
 
   test("done keeps a worktree whose branch an open node of another session holds", () => {
     const path = worktree("feat/theirs");
