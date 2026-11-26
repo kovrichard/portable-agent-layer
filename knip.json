@@ -27,7 +27,8 @@
         "promptfoo",
         "@stryker-mutator/bun-runner",
         "@stryker-mutator/api",
-        "@secretlint/secretlint-rule-preset-recommend"
+        "@secretlint/secretlint-rule-preset-recommend",
+        "claude-code"
       ]
     },
     "src/tools/control-room/ui": {
