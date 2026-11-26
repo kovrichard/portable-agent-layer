@@ -20,7 +20,7 @@ interface PendingMigration {
 
 interface ErrorContext {
   now: number;
-  lastClaudeSuccessAt?: number;
+  lastClaudeSuccessAt?: () => number;
 }
 
 const MINUTE_MS = 60_000;
@@ -40,7 +40,7 @@ function claudeLoginExpiredFinding(
   group: HookErrorGroup,
   context: ErrorContext
 ): Finding {
-  if ((context.lastClaudeSuccessAt ?? 0) > group.lastAt)
+  if ((context.lastClaudeSuccessAt?.() ?? 0) > group.lastAt)
     return passed(
       `hook-errors.${group.source}`,
       `Background calls to Claude log in again — the last failed login was ${ago(group.lastAt, context.now)}`
@@ -172,18 +172,14 @@ export function lastClaudeSuccessAt(now: number): number {
     .reduce((latest, call) => Math.max(latest, Date.parse(call.ts)), 0);
 }
 
-function errorContext(groups: HookErrorGroup[]): ErrorContext {
-  const now = Date.now();
-  const loginRejected = groups.some((group) => CLAUDE_LOGIN_REJECTED.test(group.last));
-
-  return loginRejected ? { now, lastClaudeSuccessAt: lastClaudeSuccessAt(now) } : { now };
-}
-
 export function healthFindings(): Finding[] {
-  const hookErrors = recentHookErrors();
+  const now = Date.now();
 
   return [
-    ...hookErrorFindings(hookErrors, errorContext(hookErrors)),
+    ...hookErrorFindings(recentHookErrors(), {
+      now,
+      lastClaudeSuccessAt: () => lastClaudeSuccessAt(now),
+    }),
     ...loginExpiryFindings(readLoginCache()),
     ...migrationFindings(checkPendingMigrations()),
     updateFinding(cachedStatus()),

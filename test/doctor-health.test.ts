@@ -92,7 +92,7 @@ describe("hook errors", () => {
   });
 
   test("a background call that succeeded after the last rejection clears it", () => {
-    const loggedInAgain = { ...noToken, lastClaudeSuccessAt: at(10) };
+    const loggedInAgain = { ...noToken, lastClaudeSuccessAt: () => at(10) };
     const [finding] = hookErrorFindings([rejectedBy("native")], loggedInAgain);
 
     expect(finding.severity).toBe("ok");
@@ -100,12 +100,33 @@ describe("hook errors", () => {
     expect(finding.title).toContain("log in again");
   });
 
-  test("a success from before the last rejection does not clear it", () => {
-    const stillFailing = { ...noToken, lastClaudeSuccessAt: at(90) };
+  test.each([
+    ["before", 90],
+    ["at the same moment as", 75],
+  ])("a success %s the last rejection does not clear it", (_, minutesAgo) => {
+    const stillFailing = { ...noToken, lastClaudeSuccessAt: () => at(minutesAgo) };
 
     expect(hookErrorFindings([rejectedBy("native")], stillFailing)[0].severity).toBe(
       "fail"
     );
+  });
+
+  test("looks up the last success only for a rejected login", () => {
+    let lookups = 0;
+    const counting = {
+      ...noToken,
+      lastClaudeSuccessAt: () => {
+        lookups += 1;
+
+        return 0;
+      },
+    };
+    hookErrorFindings(
+      [{ source: "rating", count: 1, last: "boom", lastAt: at(5) }],
+      counting
+    );
+
+    expect(lookups).toBe(0);
   });
 
   test("a rejected token fails and says to renew it", () => {
