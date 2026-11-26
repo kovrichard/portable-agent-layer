@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { RecordAttribution } from "../../core/actor";
-import { ensureDir, paths } from "../../core/paths";
+import { paths } from "../../core/paths";
 
 export interface Thread extends RecordAttribution {
   id: string;
@@ -19,7 +19,7 @@ export interface Thread extends RecordAttribution {
 }
 
 function threadsFile(): string {
-  return resolve(ensureDir(paths.state()), "threads.jsonl");
+  return resolve(paths.formerState(), "threads.jsonl");
 }
 
 function parseThreads(content: string): Thread[] {

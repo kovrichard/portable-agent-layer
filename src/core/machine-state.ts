@@ -4,7 +4,7 @@
  * Export skips them, import refuses them, and the move to `state/` takes them.
  * A folder ends in "/".
  */
-const STATE_FILES = [
+export const STATE_FILES = [
   "collector-cursors.json",
   "transcript-copies.json",
   "antigravity-conversations.json",
@@ -21,6 +21,11 @@ const STATE_FILES = [
   "captured-learnings.json",
   "entity-extraction.json",
   "scheduled-prompts-fired.json",
+  "transcript-preserve.lock",
+  "algorithm-review.json",
+  "last-analyze.json",
+  "attention-read.json",
+  "snoozed.json",
   "last-exchange/",
   "transcript-handoff/",
   "waiting-on-user/",

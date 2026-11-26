@@ -128,7 +128,7 @@ export function stateDir(): string {
 /** A file that left the state folder for `dir`: its old copy is read until the owner's move takes it. */
 export function movedOutOfState(dir: string, name: string): string {
   const current = resolve(dir, name);
-  const former = resolve(stateDir(), name);
+  const former = resolve(formerStateDir(), name);
 
   return existsSync(current) || !existsSync(former) ? current : former;
 }
