@@ -65,7 +65,7 @@ export const EVENT_FIELDS = {
   session_end: ["reason", "durationSec", "turns", "messages", "status"],
   upstream_report: ["action", "report", "leaks", "via"],
   doctor_run: ["failing", "warnings"],
-  pal_bug_signal: ["trigger", "surface"],
+  pal_bug_signal: ["trigger", "surface", "verdict"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
   context_injected: ["instructionsChars", "semiStaticChars", "dynamicChars"],
   hook_timing: ["hook", "totalMs", "handlers"],

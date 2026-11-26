@@ -7,7 +7,8 @@ import { isSystemText, stripInjectedTags } from "../../core/prompt-text";
 import { spawnDetachedInference } from "../../inference/detached-inference";
 import { canInfer } from "../../inference/inference";
 import { judge } from "../../inference/judge";
-import { namesPalSurface, palBugJudgment } from "../../report/pal-bug";
+import { namesPalSurface, palBugJudgment, parsePalBug } from "../../report/pal-bug";
+import { recordMessageVerdict } from "../../report/signals";
 
 interface SignalDeps {
   spawn: typeof spawnDetachedInference;
@@ -41,7 +42,8 @@ export async function judgePalBug(
   sessionId?: string,
   deps?: Parameters<typeof judge>[1]
 ): Promise<void> {
-  await judge(palBugJudgment(message, sessionId), deps);
+  const result = await judge(palBugJudgment(message, sessionId), deps);
+  recordMessageVerdict(message, parsePalBug(result.fallbackOutput), sessionId);
 }
 
 if (process.argv[2] === "--pal-bug") {

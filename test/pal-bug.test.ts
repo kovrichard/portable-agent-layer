@@ -12,6 +12,7 @@ import {
   palBugUser,
   parsePalBug,
 } from "../src/report/pal-bug";
+import { listSignals } from "../src/report/signals";
 import { freshTestDir } from "./lib/test-home";
 
 const CONFIG = resolve(import.meta.dir, "../eval/pal-bug/promptfoo.yaml");
@@ -121,6 +122,26 @@ describe("the judgment", () => {
         route: "fallback",
         fallbackAnswers: { pal_bug: { noul: true } },
       }),
+    ]);
+    expect(listSignals(new Date(0))).toEqual([
+      expect.objectContaining({
+        trigger: "message",
+        surface: "doctor",
+        verdict: true,
+        message: "doctor fails badly",
+      }),
+    ]);
+  });
+
+  test("a judge that gives no answer still leaves the message to label", async () => {
+    const infer = (async () => ({
+      success: false,
+      output: "",
+    })) as unknown as typeof inference;
+    await judgePalBug("the hook hangs", "s1", { infer });
+
+    expect(listSignals(new Date(0))).toEqual([
+      expect.objectContaining({ verdict: null, surface: "", message: "the hook hangs" }),
     ]);
   });
 });
