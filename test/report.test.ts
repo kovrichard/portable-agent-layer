@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
 import type { Identifiers } from "../src/report/leaks";
 import type { ReportMeta } from "../src/report/meta";
-import { renderMeta, reportMeta } from "../src/report/meta";
+import { renderMeta, repoChannel, reportMeta } from "../src/report/meta";
 import {
   declineReport,
   draftReport,
@@ -63,6 +63,11 @@ describe("drafting", () => {
     expect(listReports().map((r) => r.id)).toEqual([report.id]);
   });
 
+  test("a repo checkout names its commit, since its package.json lags the releases", () => {
+    expect(repoChannel(() => "abc1234")).toBe("repo @ abc1234");
+    expect(repoChannel(() => "")).toBe("repo");
+  });
+
   test("ends with a visible line saying the tool drafted it and a workflow may label it", () => {
     const lastLine = draft().body.trim().split("\n").at(-1) ?? "";
 
@@ -71,7 +76,9 @@ describe("drafting", () => {
   });
 
   test("the environment holds only the allowlisted fields", () => {
-    expect(Object.keys(reportMeta()).sort()).toEqual(Object.keys(META).sort());
+    expect(Object.keys(reportMeta(() => "abc1234")).sort()).toEqual(
+      Object.keys(META).sort()
+    );
     expect(
       renderMeta(META)
         .split("\n")

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { type Identifiers, type Leak, machineIdentifiers } from "../report/leaks";
+import { type ReportMeta, reportMeta } from "../report/meta";
 import { type Git, gitIn, openPullRequest, type PrOutcome } from "../report/pull-request";
 import {
   declineReport,
@@ -19,6 +20,7 @@ import { group, type Leaf, leaf, UsageError } from "../tools/lib/command";
 export interface ReportDeps {
   gh?: Gh;
   git?: (dir: string) => Git;
+  meta?: () => ReportMeta;
   ids: () => Identifiers;
 }
 
@@ -87,7 +89,8 @@ function draftLeaf(deps: ReportDeps): Leaf {
         throw new UsageError("Pass --title and --body-file");
       const report = draftReport(
         values.title,
-        readFileSync(values["body-file"], "utf-8")
+        readFileSync(values["body-file"], "utf-8"),
+        (deps.meta ?? reportMeta)()
       );
       console.log(
         `Drafted report ${report.id}. Show it to the user: pal cli report show ${report.id}`

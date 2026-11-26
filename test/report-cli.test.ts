@@ -4,11 +4,22 @@ import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
 import { reportCommandWith } from "../src/cli/report";
 import type { Identifiers } from "../src/report/leaks";
+import type { ReportMeta } from "../src/report/meta";
 import type { Git } from "../src/report/pull-request";
 import { draftReport, type Gh, listReports, readReport } from "../src/report/report";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
+const META: ReportMeta = {
+  palVersion: "0.118.0",
+  channel: "repo @ abc1234",
+  os: "Ubuntu 26.04 LTS",
+  arch: "x64",
+  agent: "claude",
+  bun: "1.4.4",
+  language: "en-US",
+  contextOff: [],
+};
 const IDS: Identifiers = {
   home: "/home/ada",
   words: [{ kind: "project", value: "acme-billing" }],
@@ -49,7 +60,8 @@ async function run(
   });
 
   try {
-    const code = await runCommand(reportCommandWith({ gh, git, ids: () => IDS }), args, [
+    const deps = { gh, git, meta: () => META, ids: () => IDS };
+    const code = await runCommand(reportCommandWith(deps), args, [
       "pal",
       "cli",
       "report",
@@ -71,7 +83,7 @@ function bodyFile(text: string): string {
 }
 
 const drafted = (prose = "## What happened\nThe hook crashed.") =>
-  draftReport("Hook crashes", prose, undefined, "/home/ada");
+  draftReport("Hook crashes", prose, META, "/home/ada");
 
 describe("pal cli report", () => {
   test("draft writes the report and says the leak check found nothing", async () => {
