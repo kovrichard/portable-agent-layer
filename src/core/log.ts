@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { palHome, paths } from "./paths";
+import { paths, stateDir } from "./paths";
 
 const MAX_LOG_SIZE = 50_000; // ~50KB per file
 const MAX_ROTATED = 5; // keep up to 5 rotated files (.1 newest → .5 oldest)
@@ -151,7 +151,7 @@ export function recentHookErrors(now: number = Date.now()): HookErrorGroup[] {
 }
 
 function isDebugEnabled(): boolean {
-  return existsSync(resolve(palHome(), "memory", "state", "debug-enabled"));
+  return existsSync(resolve(stateDir(), "debug-enabled"));
 }
 
 /** Log a debug message (only when debug is enabled via `pal cli debug on`) */

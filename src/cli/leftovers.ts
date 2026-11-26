@@ -285,8 +285,8 @@ const CACHES_MOVED_OUT_OF_STATE = [
   "synthesis.json",
 ];
 
-const oldStateCache = (name: string) => resolve(paths.state(), name);
-const oldRunModeFolder = () => resolve(paths.state(), "run-mode");
+const oldStateCache = (name: string) => resolve(paths.formerState(), name);
+const oldRunModeFolder = () => resolve(paths.formerState(), "run-mode");
 
 function isEmptyFolder(dir: string): boolean {
   return existsSync(dir) && lstatSync(dir).isDirectory() && readdirSync(dir).length === 0;

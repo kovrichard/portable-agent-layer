@@ -130,8 +130,8 @@ export async function withFakeSpawn<T>(
 /** A fresh PAL_HOME with debug logging on, and a reader for its debug.log. */
 export function debugHome(file: string): { home: string; log: () => string } {
   const home = freshTestDir(file);
-  mkdirSync(resolve(home, "memory", "state"), { recursive: true });
-  writeFileSync(resolve(home, "memory", "state", "debug-enabled"), "");
+  mkdirSync(resolve(home, "state"), { recursive: true });
+  writeFileSync(resolve(home, "state", "debug-enabled"), "");
   process.env.PAL_HOME = home;
   const path = resolve(home, "debug", "debug.log");
 

@@ -54,7 +54,7 @@ export function replyFiledFor(session: string): TurnEvent["reply"] {
 }
 
 export function trackedReply(session: string): { words: number } | undefined {
-  const file = resolve(paths.home, "memory", "state", "interaction-sessions.json");
+  const file = resolve(paths.home, "state", "interaction-sessions.json");
   if (!existsSync(file)) return undefined;
 
   return JSON.parse(readFileSync(file, "utf-8"))[session]?.reply;

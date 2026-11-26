@@ -103,6 +103,12 @@ describe("machine-local state never crosses machines", () => {
     "memory/state/transcript-copies.json",
     "memory/state/last-exchange/abc.json",
     "memory/state/auto-update.lock",
+    "memory/state/sessions.json",
+    "memory/state/session-names.json",
+    "memory/state/scheduled-prompts-fired.json",
+    "memory/state/waiting-on-user/notified-s1.json",
+    "state/collector-cursors.json",
+    "state/anything-new.json",
   ])("%s is refused by import", (path) => {
     expect(isMachineLocalState(path)).toBe(true);
     expect(isNeverImport(path)).toBe(true);
@@ -114,10 +120,12 @@ describe("machine-local state never crosses machines", () => {
   });
 
   test.each([
-    "memory/state/sessions.json",
+    "memory/state/sessions-archive/2026-11.jsonl",
+    "memory/state/import-log.jsonl",
     "memory/state/last-exchange-notes.json",
     "memory/state/auto-update.json.old",
     "memory/progress-tree/events.jsonl",
+    "work/progress-tree/events.jsonl",
   ])("%s still travels", (path) => {
     expect(isMachineLocalState(path)).toBe(false);
     expect(isNeverImport(path)).toBe(false);
@@ -128,10 +136,14 @@ describe("machine-local state never crosses machines", () => {
     write(at("memory", "state", "last-exchange", "s1.json"), "{}");
     write(at("memory", "content", "claude", "t.gz"), "x");
     write(at("memory", "state", "sessions.json"), "{}");
+    write(at("memory", "state", "sessions-archive", "2026-11.jsonl"), "{}");
+    write(at("state", "collector-cursors.json"), "{}");
 
     const files = collectExportFiles();
 
-    expect(files).toContain("memory/state/sessions.json");
+    expect(files).toContain("memory/state/sessions-archive/2026-11.jsonl");
+    expect(files.filter((f) => f.includes("sessions.json"))).toEqual([]);
+    expect(files.filter((f) => f.startsWith("state/"))).toEqual([]);
     expect(files.filter((f) => f.includes("collector-cursors"))).toEqual([]);
     expect(files.filter((f) => f.includes("last-exchange"))).toEqual([]);
     expect(files.filter((f) => f.startsWith("memory/content"))).toEqual([]);

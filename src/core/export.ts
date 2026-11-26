@@ -28,7 +28,6 @@ const SKIP_PATTERNS = [
   "records/bronze/event-text",
   "records/bronze/tool-output",
   "records/raw",
-  "memory/state/transcript-handoff",
 ];
 
 function shouldSkip(relPath: string): boolean {

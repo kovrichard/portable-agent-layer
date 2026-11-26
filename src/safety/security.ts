@@ -142,6 +142,7 @@ const HOOK_MANAGED_DIRS = [
   "memory/projects",
   "work/projects",
   "memory/state/progress",
+  "state/progress",
   "records",
   "debug",
 ];

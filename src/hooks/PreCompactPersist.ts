@@ -5,7 +5,7 @@
  * exchange after compaction completes. The compaction summary often glosses over the
  * immediate prior turn; this preserves it verbatim.
  *
- * Storage: ~/.pal/memory/state/last-exchange/{session_id}.json + latest.json.
+ * Storage: ~/.pal/state/last-exchange/{session_id}.json + latest.json.
  * Path lives under PAL_HOME so other agents (OpenCode, Copilot, Cursor) can read the
  * same state if/when they grow equivalent compaction-recovery hooks. Cursor, Copilot
  * and Codex run it too, which logs their compactions.

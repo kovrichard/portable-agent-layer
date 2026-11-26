@@ -128,7 +128,7 @@ describe("measuring a turn", () => {
   });
 
   test("the session tracks are replaced in one step, so a reader never sees half a file", () => {
-    const tracks = resolve(TEST_HOME, "memory", "state", "interaction-sessions.json");
+    const tracks = resolve(TEST_HOME, "state", "interaction-sessions.json");
     observeTurn("first question here", "s1", T0);
     recordReply("s1", "an answer", at(10));
     const before = statSync(tracks).ino;
@@ -136,7 +136,7 @@ describe("measuring a turn", () => {
     recordReply("s1", "a second answer", at(20));
 
     expect(statSync(tracks).ino).not.toBe(before);
-    expect(readdirSync(resolve(TEST_HOME, "memory", "state"))).not.toContainEqual(
+    expect(readdirSync(resolve(TEST_HOME, "state"))).not.toContainEqual(
       expect.stringContaining(".tmp")
     );
   });

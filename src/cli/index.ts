@@ -243,15 +243,15 @@ async function probeInference(): Promise<void> {
 // ── Commands ──
 
 /**
- * memory/state is scaffolded here, not left to generateSkillIndex: that returns
+ * The state folder is scaffolded here, not left to generateSkillIndex: that returns
  * early when ~/.pal/skills is absent, so an init that installs no skills would
- * leave every writer of memory/state with nowhere to write.
+ * leave every writer of the state folder with nowhere to write.
  */
 async function createPalHome(): Promise<void> {
   const { scaffoldTelos } = await import("../targets/scaffold");
   const home = palHome();
   mkdirSync(resolve(home, "telos"), { recursive: true });
-  mkdirSync(resolve(home, "memory", "state"), { recursive: true });
+  paths.state();
   scaffoldTelos();
 }
 
@@ -386,14 +386,12 @@ async function update(flags: { canary?: boolean; stable?: boolean; major?: boole
 }
 
 function cliDebug(state: DebugState) {
-  const stateDir = resolve(palHome(), "memory", "state");
-  const flagFile = resolve(stateDir, "debug-enabled");
+  const flagFile = resolve(paths.state(), "debug-enabled");
   // Must match log.ts's logFile() — reporting a different path sends anyone
   // debugging a hook to an empty file.
   const logFile = resolve(paths.debug(), "debug.log");
 
   if (state === "on") {
-    mkdirSync(stateDir, { recursive: true });
     writeFileSync(flagFile, "");
     log.success(`Debug logging enabled → ${logFile}`);
   } else if (state === "off") {
