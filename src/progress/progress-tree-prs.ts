@@ -219,13 +219,17 @@ function checkCandidates(scope: string, cwd: string, options: SettleOptions): vo
     const writesLine =
       newest.has(result) && !lineIsNewer(lineTs, result.settled.outcome.at);
     recordSettled(scope, result, writesLine, options.file, now);
-    removeMergedPrWorktree(cwd, result);
+    removeMergedPrWorktree(cwd, result, options.file);
   }
 }
 
-function removeMergedPrWorktree(cwd: string, { candidate, settled }: Result): void {
+function removeMergedPrWorktree(
+  cwd: string,
+  { candidate, settled }: Result,
+  file: string | undefined
+): void {
   if (settled.outcome.state === "merged" && settled.branch)
-    cleanUpNodeWorktrees(cwd, candidate.node, settled.branch);
+    cleanUpNodeWorktrees(cwd, candidate.node, settled.branch, file);
 }
 
 export function settleAttachedPrs(
