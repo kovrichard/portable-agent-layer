@@ -19,7 +19,7 @@ let codexDir: string;
 let rollout: string;
 
 function streamed(): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
 
   return readdirSync(dir)

@@ -128,7 +128,7 @@ async function lib() {
 }
 
 function prunedEvents(): Record<string, unknown>[] {
-  const dir = resolve(ROOT, "pal", "memory", "events");
+  const dir = resolve(ROOT, "pal", "records", "bronze", "events");
   if (!existsSync(dir)) return [];
 
   return readdirSync(dir)

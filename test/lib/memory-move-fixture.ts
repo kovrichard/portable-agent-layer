@@ -16,11 +16,11 @@ function linesMentioning(dir: string, type: string): Record<string, unknown>[] {
 }
 
 export function memoryMoveEvents(home: string): Record<string, unknown>[] {
-  return linesMentioning(resolve(home, "memory", "events"), "memory_move");
+  return linesMentioning(resolve(home, "records", "bronze", "events"), "memory_move");
 }
 
 export function memoryMoveDetails(home: string): Record<string, unknown>[] {
-  return linesMentioning(resolve(home, "memory", "content", "events"), "memory_move");
+  return linesMentioning(resolve(home, "records", "bronze", "event-text"), "memory_move");
 }
 
 export function manifestsIn(home: string): string[] {

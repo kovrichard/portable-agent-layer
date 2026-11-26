@@ -221,7 +221,8 @@ describe("a run that fails", () => {
 function updateEvents(): Record<string, unknown>[] {
   const file = resolve(
     HOME,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );

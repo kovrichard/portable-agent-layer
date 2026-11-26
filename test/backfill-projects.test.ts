@@ -37,7 +37,7 @@ beforeEach(() => {
 });
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -46,7 +46,7 @@ function logLines(dir: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const ofType = (type: string) => logLines("memory").filter((e) => e.type === type);
+const ofType = (type: string) => logLines("events").filter((e) => e.type === type);
 
 describe("project history becomes events", () => {
   test("a project is registered at its creation time", () => {
@@ -92,8 +92,8 @@ describe("project history becomes events", () => {
       expect.objectContaining({ ts: "2026-08-05T00:00:00.000Z", words: 3 }),
       expect.objectContaining({ ts: "2026-08-06T00:00:00.000Z", words: 3 }),
     ]);
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content").map((c) => c.text)).toEqual(
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text").map((c) => c.text)).toEqual(
       expect.arrayContaining(["A private decision", "a private done criterion"])
     );
   });
@@ -118,12 +118,12 @@ describe("project history streams live", () => {
   test("creating a project and recording a decision log what the backfill would", async () => {
     await cli("create", "cart", "--path", resolve(home, "cart"));
     await cli("add-decision", "cart", "Use a queue", "it retries");
-    const live = logLines("memory").filter((e) => e.project === "cart");
+    const live = logLines("events").filter((e) => e.project === "cart");
     expect(live.map((e) => [e.type, e.change ?? e.words])).toEqual([
       ["project", "registered"],
       ["decision", 5],
     ]);
     expect(backfillEvents()).toMatchObject({ projects: 5 });
-    expect(logLines("memory").filter((e) => e.project === "cart")).toHaveLength(2);
+    expect(logLines("events").filter((e) => e.project === "cart")).toHaveLength(2);
   });
 });

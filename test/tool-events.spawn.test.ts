@@ -17,7 +17,7 @@ function month(): string {
 }
 
 function lines(dir: string[]): Record<string, unknown>[] {
-  const file = resolve(home, "memory", ...dir, `${month()}.jsonl`);
+  const file = resolve(home, "records", "bronze", ...dir, `${month()}.jsonl`);
   if (!existsSync(file)) return [];
 
   return readFileSync(file, "utf-8")
@@ -107,7 +107,7 @@ describe("a tool call", () => {
       denial: "classifier:auto-mode",
       toolUseId: "toolu_1",
     });
-    expect(lines(["content", "events"])[0]).toMatchObject({
+    expect(lines(["event-text"])[0]).toMatchObject({
       input: { command: "rm -rf build" },
       reason: "[Destructive] deletes a folder",
     });
@@ -116,7 +116,7 @@ describe("a tool call", () => {
   test("a call that ran is no denial and stores no reason", () => {
     logToolCall({ tool_name: "Bash", tool_input: { command: "ls" } });
     expect(toolCalls()[0]).toMatchObject({ denial: null });
-    expect(lines(["content", "events"])[0]).not.toHaveProperty("reason");
+    expect(lines(["event-text"])[0]).not.toHaveProperty("reason");
   });
 
   test("reads Copilot's camelCase payload and Antigravity's nested call", () => {
@@ -140,7 +140,7 @@ describe("a tool call", () => {
   test("the arguments go to the content store, never the stream", () => {
     logToolCall({ tool_name: "Bash", tool_input: { command: "echo secret-ish words" } });
     expect(JSON.stringify(toolCalls())).not.toContain("secret-ish");
-    expect(JSON.stringify(lines(["content", "events"]))).toContain("secret-ish");
+    expect(JSON.stringify(lines(["event-text"]))).toContain("secret-ish");
   });
 
   test("a payload that names no tool is ignored", () => {

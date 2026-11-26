@@ -35,7 +35,7 @@ function session(
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -44,7 +44,7 @@ function logLines(dir: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const ends = () => logLines("memory").filter((e) => e.type === "session_end");
+const ends = () => logLines("events").filter((e) => e.type === "session_end");
 
 describe("session records become session_end events", () => {
   test("a recorded session is logged at its last state, its text kept as content", () => {
@@ -62,8 +62,8 @@ describe("session records become session_end events", () => {
         status: "completed",
       }),
     ]);
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content")).toEqual([
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text")).toEqual([
       expect.objectContaining({
         id: "session:s1",
         name: "Private session name",

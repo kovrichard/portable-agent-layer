@@ -114,7 +114,7 @@ function write(...lines: string[]) {
 }
 
 function streamed(dir = "events"): Record<string, unknown>[] {
-  const path = resolve(home, "memory", ...dir.split("/"));
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -165,7 +165,7 @@ describe("collecting Claude Code's permission denials", () => {
   test("the full input and the reason go to the content store", async () => {
     write(...EVENING_LEADS);
     await collectClaudeDenials(projects, NOW);
-    const [first] = streamed("content/events");
+    const [first] = streamed("event-text");
     expect(first).toMatchObject({
       tool: "Bash",
       input: { command: "mkdir -p out && cd out && python3 -I discover.py" },
@@ -312,7 +312,7 @@ describe("telling a denial from everything else", () => {
       })
     );
     await collectClaudeDenials(projects, NOW);
-    expect(streamed("content/events")[0]).toMatchObject({ reason: "No,  not now" });
+    expect(streamed("event-text")[0]).toMatchObject({ reason: "No,  not now" });
   });
 
   test("a refusal whose content is neither text nor parts has an empty reason and is not logged", async () => {
@@ -353,7 +353,7 @@ describe("telling a denial from everything else", () => {
       result("j", "No", rejected)
     );
     await collectClaudeDenials(projects, NOW);
-    expect(streamed("content/events").map((c) => c.input)).toEqual([{}, {}]);
+    expect(streamed("event-text").map((c) => c.input)).toEqual([{}, {}]);
   });
 
   test("calls and results on another kind of line are not read as calls or results", async () => {

@@ -49,8 +49,8 @@ const MAX_5X = {
 };
 
 function everythingWritten(): string {
-  const dirs = ["memory/events", "memory/content", "memory/state"].map((d) =>
-    resolve(home, d)
+  const dirs = ["records/bronze/events", "records/bronze/event-text", "memory/state"].map(
+    (d) => resolve(home, d)
   );
 
   return dirs
@@ -61,7 +61,7 @@ function everythingWritten(): string {
 }
 
 function modelCalls(): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
 
   return readdirSync(dir)

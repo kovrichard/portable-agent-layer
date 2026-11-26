@@ -14,7 +14,7 @@ function month(): string {
 }
 
 function rowsIn(...dir: string[]): Record<string, unknown>[] {
-  const file = resolve(home, "memory", ...dir, `${month()}.jsonl`);
+  const file = resolve(home, "records", "bronze", ...dir, `${month()}.jsonl`);
   if (!existsSync(file)) return [];
 
   return readFileSync(file, "utf-8")
@@ -24,8 +24,8 @@ function rowsIn(...dir: string[]): Record<string, unknown>[] {
 }
 
 const toolCalls = () => rowsIn("events").filter((e) => e.type === "tool_call");
-const outputs = () => rowsIn("content", "tool-output");
-const eventText = () => rowsIn("content", "events");
+const outputs = () => rowsIn("tool-output");
+const eventText = () => rowsIn("event-text");
 
 function readCall(
   response: unknown,
@@ -78,7 +78,7 @@ describe("the text a tool returns", () => {
     logToolCall({ session_id: "s1", tool_name: "Grep", tool_input: {} });
 
     expect(toolCalls()).toHaveLength(1);
-    expect(existsSync(resolve(home, "memory", "content", "tool-output"))).toBe(false);
+    expect(existsSync(resolve(home, "records", "bronze", "tool-output"))).toBe(false);
   });
 
   test("a result of 700,000 characters is stored whole", () => {

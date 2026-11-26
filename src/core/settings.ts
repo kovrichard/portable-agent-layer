@@ -34,7 +34,7 @@ export interface PalSettingsData {
    * paths whose contents are never stored; it cannot shrink it.
    */
   ledger?: { redactPaths?: string[] };
-  /** Local event log (memory/events) and content store (memory/content). On unless disabled. */
+  /** Local event log and its content store (records/bronze/). On unless disabled. */
   eventLog?: { enabled?: boolean };
   /** Daily anonymous heartbeat that counts installs. On unless disabled. */
   telemetry?: { enabled?: boolean; noticeShown?: boolean };

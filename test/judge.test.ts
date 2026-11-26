@@ -61,7 +61,8 @@ function settings(systemOne: Record<string, unknown> | undefined) {
 function events(type: string): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );

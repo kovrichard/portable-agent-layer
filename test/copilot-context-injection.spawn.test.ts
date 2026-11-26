@@ -79,7 +79,7 @@ describe("LoadContext on Copilot", () => {
 });
 
 function injectedEvents(): Record<string, number>[] {
-  const dir = resolve(sandbox, "home", "memory", "events");
+  const dir = resolve(sandbox, "home", "records", "bronze", "events");
 
   return readdirSync(dir)
     .flatMap((file) => readFileSync(resolve(dir, file), "utf-8").trim().split("\n"))

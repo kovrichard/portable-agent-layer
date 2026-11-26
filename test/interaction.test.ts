@@ -20,7 +20,7 @@ function at(sec: number): Date {
 }
 
 function eventsDir(): string {
-  return resolve(TEST_HOME, "memory", "events");
+  return resolve(TEST_HOME, "records", "bronze", "events");
 }
 
 function loggedEvents(): TurnEvent[] {
@@ -61,7 +61,13 @@ describe("measuring a turn", () => {
     const raw = readFileSync(resolve(eventsDir(), "2026-09.jsonl"), "utf-8");
     expect(raw).not.toContain("credentials");
     expect(lastEvent()).toMatchObject({ session: "s1", words: 5, channel: "mobile" });
-    const content = resolve(TEST_HOME, "memory", "content", "events", "2026-09.jsonl");
+    const content = resolve(
+      TEST_HOME,
+      "records",
+      "bronze",
+      "event-text",
+      "2026-09.jsonl"
+    );
     expect(readFileSync(content, "utf-8")).toContain(
       "please rotate the staging credentials"
     );

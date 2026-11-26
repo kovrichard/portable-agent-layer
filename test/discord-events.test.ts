@@ -12,7 +12,8 @@ let home: string;
 function nags(): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );

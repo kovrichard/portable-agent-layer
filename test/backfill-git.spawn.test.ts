@@ -63,7 +63,7 @@ function commitFiles(message: string, files: Record<string, string>): string {
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, "pal", dir, "events");
+  const path = resolve(home, "pal", "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -72,7 +72,7 @@ function logLines(dir: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const commits = () => logLines("memory").filter((e) => e.type === "commit");
+const commits = () => logLines("events").filter((e) => e.type === "commit");
 
 describe("git history becomes commit events", () => {
   test("a commit carries its counts, type and AI co-author, stamped at its author date", () => {
@@ -122,11 +122,11 @@ describe("git history becomes commit events", () => {
   test("names, emails and the subject stay in the content store, out of the event", () => {
     const hash = commitFiles("fix: a private subject line", { a: "1\n" });
     backfillEvents();
-    const events = JSON.stringify(logLines("memory"));
+    const events = JSON.stringify(logLines("events"));
     expect(events).not.toContain(AUTHOR);
     expect(events).not.toContain("ada@example.test");
     expect(events).not.toContain("a private subject line");
-    expect(logLines("memory/content")).toEqual([
+    expect(logLines("event-text")).toEqual([
       expect.objectContaining({
         id: `git:${hash}`,
         author: AUTHOR,

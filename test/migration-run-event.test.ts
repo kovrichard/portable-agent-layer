@@ -38,7 +38,7 @@ function linesOf(dir: string, type: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const runEvents = () => linesOf(at("memory", "events"), "migration_run");
+const runEvents = () => linesOf(at("records", "bronze", "events"), "migration_run");
 
 function quietly(run: () => void): void {
   const log = spyOn(console, "log").mockImplementation(() => {});
@@ -120,7 +120,7 @@ describe("migration_run events", () => {
       false
     );
 
-    const stored = linesOf(at("memory", "content", "events"), "migration_run");
+    const stored = linesOf(at("records", "bronze", "event-text"), "migration_run");
     expect(stored).toEqual([
       expect.objectContaining({ results: ["moved a thing"], type: "migration_run" }),
     ]);

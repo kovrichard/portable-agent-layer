@@ -35,9 +35,9 @@ describe("a store whose move the owner has not run yet", () => {
     expect(storeLocation("transcripts")).toBe(NEW());
   });
 
-  test("a store that never moved has one folder", () => {
+  test("a store with nothing in its former folder reads its current one", () => {
     mkdirSync(at("memory", "content", "claude"), { recursive: true });
-    expect(storeLocation("events")).toBe(at("memory", "events"));
+    expect(storeLocation("events")).toBe(at("records", "bronze", "events"));
   });
 });
 

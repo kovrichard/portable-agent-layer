@@ -57,7 +57,8 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "events",
     group: "bronze",
-    location: "memory/events",
+    location: "records/bronze/events",
+    formerLocation: "memory/events",
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
@@ -65,7 +66,8 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "event-text",
     group: "bronze",
-    location: "memory/content/events",
+    location: "records/bronze/event-text",
+    formerLocation: "memory/content/events",
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,
@@ -73,7 +75,8 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "tool-output",
     group: "bronze",
-    location: "memory/content/tool-output",
+    location: "records/bronze/tool-output",
+    formerLocation: "memory/content/tool-output",
     files: "<YYYY-MM>.jsonl",
     appendOnly: true,
     alsoInEventLog: true,

@@ -295,8 +295,8 @@ The user's data sits in four folders under `~/.pal/`. Each holds one kind of dat
 
 | Folder | Holds | Export | Backup before a layout move |
 |---|---|---|---|
-| `memory/` | What PAL learned and recalls: knowledge, relationship, self-model, wisdom, adaptation rules, and the bronze event log until its own move | yes | yes |
-| `records/` | What happened, one folder per store: copied agent transcripts (`raw/claude/`), the ledger, ratings, claim checks, the sessions archive | yes, except `records/raw/` | yes |
+| `memory/` | What PAL learned and recalls: knowledge, relationship, self-model, wisdom, adaptation rules | yes | yes |
+| `records/` | What happened, one folder per store: copied agent transcripts (`raw/claude/`), the bronze event log (`bronze/`), the ledger, ratings, claim checks, the sessions archive | yes, except `records/raw/` and the event text and tool output in `records/bronze/` | yes |
 | `work/` | The user's work, one folder per store: projects with their session history (`projects/`), history from unregistered folders (`unbound-history/`), the progress tree, task ISAs (`tasks/`), scheduled prompts (`schedules/`) | yes | yes |
 | `state/` | This machine's working state that is not cache. Empty until those files move | no | yes |
 

@@ -17,7 +17,7 @@ function setEventLog(enabled: boolean): void {
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -26,7 +26,7 @@ function logLines(dir: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const seen = () => logLines("memory").filter((e) => e.type === "entity_first_seen");
+const seen = () => logLines("events").filter((e) => e.type === "entity_first_seen");
 
 function createdBeforeStreaming(name: string): string {
   setEventLog(false);
@@ -56,7 +56,7 @@ describe("knowledge entities become events", () => {
       }),
     ]);
     expect(JSON.stringify(seen())).not.toContain("Ada");
-    expect(logLines("memory/content").map((c) => c.name)).toEqual(["Ada Example"]);
+    expect(logLines("event-text").map((c) => c.name)).toEqual(["Ada Example"]);
   });
 
   test("an entity already seen live is not logged again", () => {

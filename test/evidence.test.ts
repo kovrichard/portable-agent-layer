@@ -34,7 +34,7 @@ function exchange(prompt: string, reply: string, session = "s1", start = T0) {
 }
 
 const storeFile = (month: string) =>
-  resolve(home, "memory", "content", "events", `${month}.jsonl`);
+  resolve(home, "records", "bronze", "event-text", `${month}.jsonl`);
 
 describe("the evidence read", () => {
   test("a turn comes with its text and the reply it got", () => {

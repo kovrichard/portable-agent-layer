@@ -10,7 +10,7 @@ let home: string;
 const NOW = new Date("2026-09-10T10:00:00.000Z");
 
 function injected(): Record<string, unknown>[] {
-  const file = resolve(home, "memory", "events", "2026-09.jsonl");
+  const file = resolve(home, "records", "bronze", "events", "2026-09.jsonl");
   if (!existsSync(file)) return [];
 
   return readFileSync(file, "utf-8")
@@ -21,7 +21,7 @@ function injected(): Record<string, unknown>[] {
 }
 
 function storedText(): Record<string, unknown>[] {
-  const file = resolve(home, "memory", "content", "events", "2026-09.jsonl");
+  const file = resolve(home, "records", "bronze", "event-text", "2026-09.jsonl");
   if (!existsSync(file)) return [];
 
   return readFileSync(file, "utf-8")

@@ -19,9 +19,6 @@ memory/
 ├── signals/
 │   └── interaction/YYYY-MM.jsonl       # Measured features of each user turn (never the text)
 │
-├── content/tool-output/YYYY-MM.jsonl   # Whole result of each tool call, keyed by its tool_call event id
-│                                       # (withheld for a call on a sensitive path)
-│
 ├── relationship/
 │   └── opinions-context.md             # Approved opinions, rendered for native loading
 │
@@ -33,6 +30,8 @@ memory/
 ```
 
 `~/.pal/records/` holds what happened, one folder per store: `ratings/`, `claim-checks/`, `ledger/`, `labelled-turns/`, `rule-events/`, `rule-candidates/`, `run-estimates/`, `reflections/`, `sessions-archive/`, `review-queue/`, `import-log/`, and `raw/claude/` for transcript copies. A home that has not run `pal cli migrate v14-records-stores` keeps these stores in their former folders under `memory/`, and PAL reads them there.
+
+`~/.pal/records/bronze/` holds the bronze event log: `events/YYYY-MM.jsonl`, the text events point to in `event-text/`, and the whole result of each tool call in `tool-output/`, keyed by its tool_call event id (withheld for a call on a sensitive path). Export leaves out `event-text/` and `tool-output/`. A home that has not run `pal cli migrate v16-bronze-to-records` keeps them in `memory/events/` and `memory/content/`.
 
 `~/.pal/work/` holds the user's work, one folder per store: `projects/<slug>/` (ISA.md and session history), `unbound-history/`, `progress-tree/`, `tasks/` for task ISAs and `schedules/`. A home that has not run `pal cli migrate v15-work-stores` keeps them under `memory/`, and PAL reads them there. `commitments.json` stays in `memory/` until the Discord checker reads it through `pal cli`.
 
