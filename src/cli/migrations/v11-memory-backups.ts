@@ -34,7 +34,7 @@ const newFolder = () => paths.backups();
 const manifestPrefix = "memory-backups-";
 
 function entriesToMove(): string[] {
-  return existsSync(oldFolder()) ? readdirSync(oldFolder()) : [];
+  return existsSync(oldFolder()) ? readdirSync(oldFolder()).sort() : [];
 }
 
 function describeEntry(entry: string): ManifestLine[] {
