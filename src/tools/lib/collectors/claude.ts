@@ -9,7 +9,7 @@
 
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
-import { appendEvent } from "../../../bronze/events";
+import { appendEvent, eventMonthFile } from "../../../bronze/events";
 import { transcriptBytes, transcriptLines } from "../../../bronze/transcript-lines";
 import { cacheWritesOf, type TranscriptUsage } from "../../../inference/transcript-usage";
 import { type Billing, UNKNOWN } from "../../../usage/billing";
@@ -131,6 +131,71 @@ function emitModelCall(line: ClaudeLine, billing: Billing): void {
   );
 }
 
+interface CallKeyParts {
+  ts: unknown;
+  model: unknown;
+  inputTokens: unknown;
+  outputTokens: unknown;
+  cacheRead: unknown;
+}
+
+function callKey(call: CallKeyParts): string {
+  return [call.ts, call.model, call.inputTokens, call.outputTokens, call.cacheRead].join(
+    "|"
+  );
+}
+
+function keyOfLine(line: ModelCallLine): string {
+  const usage = line.message?.usage ?? {};
+
+  return callKey({
+    ts: line.timestamp,
+    model: line.message?.model,
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    cacheRead: usage.cache_read_input_tokens,
+  });
+}
+
+/**
+ * The calls already in the log, keyed without the session: a forked session copies
+ * earlier calls under a new session id, and Claude Code copies subagent transcripts
+ * into other sessions' folders.
+ */
+function loggedCalls(): (line: ModelCallLine) => Promise<boolean> {
+  const months = new Map<string, Set<string>>();
+  const monthKeys = async (ts: string) => {
+    const month = ts.slice(0, 7);
+    const known = months.get(month) ?? (await callKeysIn(eventMonthFile(new Date(ts))));
+    months.set(month, known);
+
+    return known;
+  };
+
+  return async (line) => {
+    const known = await monthKeys(line.timestamp);
+    const key = keyOfLine(line);
+    if (known.has(key)) return true;
+    known.add(key);
+
+    return false;
+  };
+}
+
+async function callKeysIn(monthFile: string): Promise<Set<string>> {
+  const keys = new Set<string>();
+
+  if (!existsSync(monthFile)) return keys;
+
+  for await (const { text } of transcriptLines(monthFile)) {
+    if (!text.includes('"type":"model_call"')) continue;
+    const event = parsed(text) as CallKeyParts | null;
+    if (event) keys.add(callKey(event));
+  }
+
+  return keys;
+}
+
 function isSettled(filepath: string, now: Date): boolean {
   return now.getTime() - statSync(filepath).mtimeMs > SETTLE_MS;
 }
@@ -192,6 +257,7 @@ export async function collectClaude(
   copiesDir?: string
 ): Promise<number> {
   const cursor = readCursor("claude");
+  const alreadyLogged = loggedCalls();
   let emitted = 0;
 
   for (const transcript of claudeTranscriptSources(projectsDir, now, copiesDir)) {
@@ -200,8 +266,12 @@ export async function collectClaude(
     const read = await settledMessages(transcript, offset);
     if (read.resumeAt === offset) continue;
 
-    for (const line of read.messages) emitModelCall(line, billingAt(line.timestamp));
-    emitted += read.messages.length;
+    for (const line of read.messages) {
+      if (await alreadyLogged(line)) continue;
+      emitModelCall(line, billingAt(line.timestamp));
+      emitted += 1;
+    }
+
     cursor[transcript.key] = read.resumeAt;
     writeCursor("claude", cursor);
   }

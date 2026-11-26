@@ -439,10 +439,12 @@ export function loggedEventIds(): Set<string> {
   );
 }
 
-export function eventsInMonth(type: EventType, month: Date): LoggedEvent[] {
-  const file = resolve(eventsDir(), `${monthOf(month.toISOString())}.jsonl`);
+export function eventMonthFile(month: Date): string {
+  return resolve(eventsDir(), `${monthOf(month.toISOString())}.jsonl`);
+}
 
-  return parseLines(file).filter((e) => e.type === type);
+export function eventsInMonth(type: EventType, month: Date): LoggedEvent[] {
+  return parseLines(eventMonthFile(month)).filter((e) => e.type === type);
 }
 
 export function allEventsSince(since: Date): LoggedEvent[] {
