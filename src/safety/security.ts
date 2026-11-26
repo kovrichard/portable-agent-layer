@@ -118,7 +118,6 @@ const HOOK_MANAGED_FILES = [
   "ratings.jsonl",
   "sessions.json",
   "captured-learnings.json",
-  "counts.json",
   "session-names.json",
   "last-responses.json",
   "pending-failure.json",

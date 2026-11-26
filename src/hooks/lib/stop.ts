@@ -46,7 +46,6 @@ import { persistLastExchange } from "../handlers/persist-last-exchange";
 import { projectTouch } from "../handlers/project-touch";
 import { runSynthesis } from "../handlers/synthesis";
 import { resetTab } from "../handlers/tab";
-import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
 import { spawnCollectIfDue } from "./collect-trigger";
 import { fileFinalReply } from "./hook-turn";
@@ -208,7 +207,6 @@ export async function runStopHandlers(
   const handlers: Record<string, unknown> = {
     "work-session": captureWorkSession(transcript, options.sessionId),
     tab: resetTab(),
-    "update-counts": updateCounts(),
     backup: autoBackup(),
     synthesis: runSynthesis(),
     "project-touch": projectTouch(),
