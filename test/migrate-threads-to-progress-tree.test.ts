@@ -128,6 +128,7 @@ describe(MIGRATION, () => {
     writeThreads(thread("t1"));
     pendingIds();
     expect(existsSync(resolve(HOME, "memory", "progress-tree"))).toBe(false);
+    expect(existsSync(resolve(HOME, "work", "progress-tree"))).toBe(false);
   });
 
   test("a dry run names the thread and writes nothing", () => {

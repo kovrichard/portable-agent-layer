@@ -92,7 +92,7 @@ describe("v4 paths-to-bindings", () => {
       updated: "2026-02-02",
       goal: "Ship it.",
     });
-    const file = resolve(HOME, "memory", "projects", "beta", "ISA.md");
+    const file = resolve(HOME, "work", "projects", "beta", "ISA.md");
     const before = readFileSync(file, "utf-8");
 
     const p = readProject("beta");

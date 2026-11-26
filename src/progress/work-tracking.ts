@@ -219,7 +219,7 @@ interface ProjectHistoryEntry {
 }
 
 /**
- * A directory under `memory/projects/` is what `list`, `resume` and the export
+ * A directory under `work/projects/` is what `list`, `resume` and the export
  * read as a project, so only a registered one may own a folder there. Writer and
  * readers share this resolver: keying them apart is what filed a project's
  * history under its parent directory's name.

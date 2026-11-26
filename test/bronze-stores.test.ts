@@ -25,9 +25,11 @@ import { appendTurn } from "../src/opinions/adaptation-turns";
 import { watchClaims } from "../src/opinions/claim-log";
 import { writeBinding } from "../src/progress/bindings";
 import { appendEvent as appendProgressEvent } from "../src/progress/progress-tree";
+import { addSchedule, newSchedule } from "../src/progress/scheduled-prompts";
 import { appendProjectHistory, writeSession } from "../src/progress/work-tracking";
 import { recordRunEstimate } from "../src/safety/run-estimates";
 import { run as algorithmReflect } from "../src/tools/agent/algorithm-reflect";
+import { taskIsaCommands } from "../src/tools/agent/project-task-isa";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -52,10 +54,12 @@ const LOCATION_TODAY: Record<StoreName, string> = {
   "rule-candidates": "records/rule-candidates",
   "run-estimates": "records/run-estimates",
   reflections: "records/reflections",
-  "progress-tree": "memory/progress-tree",
+  "progress-tree": "work/progress-tree",
   "sessions-archive": "records/sessions-archive",
-  "project-history": "memory/projects",
-  "unbound-history": "memory/state/unbound-history",
+  "project-history": "work/projects",
+  "unbound-history": "work/unbound-history",
+  "task-isas": "work/tasks",
+  schedules: "work/schedules",
   "review-queue": "records/review-queue",
   "import-log": "records/import-log",
 };
@@ -204,6 +208,15 @@ const WRITE_ONE: Record<StoreName, () => unknown> = {
   "sessions-archive": archiveOneSession,
   "project-history": () => appendProjectHistory(registerProject("alpha"), historyEntry),
   "unbound-history": () => appendProjectHistory(checkout("loose"), historyEntry),
+  "task-isas": () =>
+    taskIsaCommands["scaffold-task-isa"].run({
+      values: {},
+      positionals: ["Fix", "it"],
+      passedThrough: [],
+      argv: [],
+    }),
+  schedules: () =>
+    addSchedule(newSchedule({ scope: "user", from: "09:00", text: "Stand up." })),
   "review-queue": () =>
     queueForReview([
       {

@@ -432,13 +432,13 @@ describe("pal cli migrate --undo", () => {
 
   test("names the undoable migrations when the id cannot be undone", () => {
     expect(printedBy(["--undo", "v1-projects"])).toEqual([
-      '  Nothing to undo for "v1-projects". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores',
+      '  Nothing to undo for "v1-projects". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores, v15-work-stores',
     ]);
   });
 
   test("names them too when no id is given", () => {
     expect(printedBy(["--undo"])[0]).toBe(
-      '  Nothing to undo for "". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores'
+      '  Nothing to undo for "". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores, v15-work-stores'
     );
   });
 });

@@ -17,7 +17,7 @@ beforeEach(() => {
 function registerProject(name: string, dirName: string): string {
   const checkout = resolve(HOME, "checkouts", dirName);
   mkdirSync(checkout, { recursive: true });
-  const record = resolve(HOME, "memory", "projects", name);
+  const record = resolve(HOME, "work", "projects", name);
   mkdirSync(record, { recursive: true });
   writeFileSync(
     resolve(record, "ISA.md"),
@@ -39,15 +39,15 @@ function entry(title: string) {
 }
 
 function projectHistory(name: string): string {
-  return resolve(HOME, "memory", "projects", name, "history.jsonl");
+  return resolve(HOME, "work", "projects", name, "history.jsonl");
 }
 
 function parkedHistory(slug: string): string {
-  return resolve(HOME, "memory", "state", "unbound-history", `${slug}.jsonl`);
+  return resolve(HOME, "work", "unbound-history", `${slug}.jsonl`);
 }
 
 function folderInRegistry(slug: string): string {
-  return resolve(HOME, "memory", "projects", slug);
+  return resolve(HOME, "work", "projects", slug);
 }
 
 describe("history routing", () => {

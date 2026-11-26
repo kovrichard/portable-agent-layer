@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { storeLocation } from "../../bronze/bronze";
 import { readProject, writeProject } from "../../progress/projects";
 import type { Migration, MigrationResult } from "./migration";
 
@@ -12,7 +12,7 @@ function rewriteSoTheWriterMovesThePathToABinding(
 
 /** Records written before bindings existed carry their own `path:` in frontmatter. */
 function recordsCarryingAPath(): string[] {
-  const base = paths.projectHistory();
+  const base = storeLocation("project-history");
   if (!existsSync(base)) return [];
   const out: string[] = [];
 

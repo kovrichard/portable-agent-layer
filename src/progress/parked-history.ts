@@ -13,7 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
-import { storeDir } from "../bronze/bronze";
+import { storeDir, storeLocation } from "../bronze/bronze";
 import { mergeJsonlLines } from "../core/import-merge";
 import { logError } from "../core/log";
 
@@ -37,7 +37,7 @@ function projectBoundUnder(slug: string, bindings: Bindings): string | null {
 }
 
 function recordedProjectDir(home: string, project: string): string | null {
-  const dir = resolve(home, "memory", "projects", project);
+  const dir = resolve(storeLocation("project-history", home), project);
 
   return existsSync(resolve(dir, "ISA.md")) ? dir : null;
 }

@@ -1,7 +1,7 @@
 /**
  * Projects — registry of user-curated projects backed by ISA.md files.
  *
- * Each project lives in `~/.pal/memory/projects/{slug}/ISA.md`. Frontmatter
+ * Each project lives in `~/.pal/work/projects/{slug}/ISA.md`. Frontmatter
  * holds operational state; the body holds ISA spec sections. The CLI
  * (`src/tools/agent/project.ts`) is the primary writer; the Stop hook
  * auto-touches `updated` when cwd resolves into a registered project.
@@ -18,8 +18,9 @@ import {
 } from "node:fs";
 import * as hostPath from "node:path";
 import { basename, resolve } from "node:path";
+import { storeDir } from "../bronze/bronze";
 import { parse, stringify } from "../core/frontmatter";
-import { palHome, paths } from "../core/paths";
+import { palHome } from "../core/paths";
 import {
   type Bindings,
   type PlatformPath,
@@ -131,12 +132,14 @@ function extractSections(body: string): Partial<ProjectProgress> {
   return out;
 }
 
+const projectsDir = () => storeDir("project-history");
+
 function isaFilePath(slug: string): string {
-  return resolve(paths.projectHistory(), slug, "ISA.md");
+  return resolve(projectsDir(), slug, "ISA.md");
 }
 
 function ensureAndGetIsaFile(slug: string): string {
-  const dir = resolve(paths.projectHistory(), slug);
+  const dir = resolve(projectsDir(), slug);
   mkdirSync(dir, { recursive: true });
 
   return resolve(dir, "ISA.md");
@@ -177,7 +180,7 @@ export function looksLikeProjectRoot(cwd: string): boolean {
  * something, so the steady-state cost is the one `bindings.json` read below.
  */
 export function readAllProjects(): ProjectProgress[] {
-  const base = paths.projectHistory();
+  const base = projectsDir();
   if (!existsSync(base)) return [];
   const bindings = readBindings();
   const out: ProjectProgress[] = [];
@@ -271,7 +274,7 @@ export function deleteProject(name: string): boolean {
   unlinkSync(file);
 
   try {
-    rmdirSync(resolve(paths.projectHistory(), name));
+    rmdirSync(resolve(projectsDir(), name));
   } catch {
     /* dir not empty or already gone */
   }

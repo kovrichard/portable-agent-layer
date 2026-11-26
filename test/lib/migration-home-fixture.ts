@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeLocation } from "../../src/bronze/bronze";
 import { palHome } from "../../src/core/paths";
 import { writeProject } from "../../src/progress/projects";
 
@@ -14,7 +15,8 @@ export function writeAt(file: string, content: string): string {
 
 export const homeFile = (...segments: string[]) => resolve(palHome(), ...segments);
 
-export const isaFile = (slug: string) => homeFile("memory", "projects", slug, "ISA.md");
+export const isaFile = (slug: string) =>
+  resolve(storeLocation("project-history"), slug, "ISA.md");
 
 /** A project checked out in an existing folder; the remote is preset so no git call is made. */
 export function boundProject(name: string, criteria?: string, folder = name): string {

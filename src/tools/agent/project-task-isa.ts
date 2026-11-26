@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { storeDir } from "../../bronze/bronze";
 import { leaf } from "../lib/command";
 import { taskSlug } from "../lib/project-isc";
 import { fail, joined, nonBlank, ok } from "./project-io";
 
 function taskIsaPath(slug: string): string {
-  const dir = resolve(paths.work(), slug);
+  const dir = resolve(storeDir("task-isas"), slug);
   mkdirSync(dir, { recursive: true });
 
   return resolve(dir, "ISA.md");
@@ -38,7 +38,7 @@ function cmdScaffoldTaskIsa(text: string): undefined {
 }
 
 function cmdCompleteTaskIsa(slug: string): undefined {
-  const filePath = resolve(paths.work(), slug, "ISA.md");
+  const filePath = resolve(storeDir("task-isas"), slug, "ISA.md");
   if (!existsSync(filePath)) fail(`Task ISA not found: ${slug}`);
   const content = readFileSync(filePath, "utf-8");
   const updated = content
@@ -50,7 +50,7 @@ function cmdCompleteTaskIsa(slug: string): undefined {
 
 export const taskIsaCommands = {
   "scaffold-task-isa": leaf({
-    summary: "Create a one-shot task ISA in memory/work/",
+    summary: "Create a one-shot task ISA in work/tasks/",
     args: "<title...>",
     run: ({ positionals }) => cmdScaffoldTaskIsa(joined(positionals)),
   }),

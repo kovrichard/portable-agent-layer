@@ -55,7 +55,8 @@ if (-not (Test-Path $palSettings)) { $palSettings = Join-Path $env:USERPROFILE "
 
 $OPEN_ISCS = 0
 $PROJECT_NAME = ""
-$projectsDir = Join-Path $env:USERPROFILE ".pal\memory\projects"
+$projectsDir = Join-Path $env:USERPROFILE ".pal\work\projects"
+if (-not (Test-Path $projectsDir)) { $projectsDir = Join-Path $env:USERPROFILE ".pal\memory\projects" }
 if (Test-Path $projectsDir) {
   try {
     $CWD_NORM = $CWD.Replace('/', '\').TrimEnd('\')

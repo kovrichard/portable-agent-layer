@@ -60,10 +60,10 @@ describe("movedStores", () => {
   test("names each file of a store that shared its folder, and nothing else there", () => {
     touch("memory", "adaptation", "rules.json");
     touch("memory", "adaptation", "turns-2026-10.jsonl");
-    touch("memory", "projects", "p", "ISA.md");
-    touch("memory", "projects", "p", "history.jsonl");
+    touch("memory", "schedules.json");
+    touch("memory", "commitments.json");
     const moves = movedStores().filter((m) =>
-      ["labelled-turns", "rule-events", "project-history"].includes(m.store)
+      ["labelled-turns", "rule-events", "schedules"].includes(m.store)
     );
 
     expect(moves).toEqual([
@@ -71,6 +71,11 @@ describe("movedStores", () => {
         store: "labelled-turns",
         from: at("memory", "adaptation", "turns-2026-10.jsonl"),
         to: at("records", "labelled-turns", "turns-2026-10.jsonl"),
+      },
+      {
+        store: "schedules",
+        from: at("memory", "schedules.json"),
+        to: at("work", "schedules", "schedules.json"),
       },
     ]);
   });
@@ -90,9 +95,10 @@ describe("currentArchivePath", () => {
     expect(currentArchivePath("memory/signals/ratings.jsonl")).toBe(
       "records/ratings/ratings.jsonl"
     );
-    expect(currentArchivePath("memory/projects/p/history.jsonl")).toBe(
-      "memory/projects/p/history.jsonl"
+    expect(currentArchivePath("memory/schedules.json")).toBe(
+      "work/schedules/schedules.json"
     );
+    expect(currentArchivePath("memory/commitments.json")).toBe("memory/commitments.json");
     expect(currentArchivePath("memory/adaptation/rules.json")).toBe(
       "memory/adaptation/rules.json"
     );

@@ -33,11 +33,11 @@ const groupOf = (stores: RecordedStore[]): StoreGroup[] => [
 ];
 
 describe("the store registry", () => {
-  test("lists 18 stores under unique names", () => {
+  test("lists 20 stores under unique names", () => {
     const names = everyStore().map((store) => store.name);
 
-    expect(names).toHaveLength(18);
-    expect(new Set(names).size).toBe(18);
+    expect(names).toHaveLength(20);
+    expect(new Set(names).size).toBe(20);
   });
 
   test("each group function returns only its own group", () => {
@@ -56,7 +56,7 @@ describe("the store registry", () => {
     const name: StoreName = "progress-tree";
     const dir = storeDir(name);
 
-    expect(dir).toBe(resolve(HOME, "memory", "progress-tree"));
+    expect(dir).toBe(resolve(HOME, "work", "progress-tree"));
     expect(existsSync(dir)).toBe(true);
   });
 
@@ -83,7 +83,7 @@ describe("the store registry", () => {
       });
 
       if (store.formerLocation)
-        expect(store.formerLocation).toMatch(/^memory(\/[a-z-]+)+$/);
+        expect(store.formerLocation).toMatch(/^memory(\/[a-z-]+)*$/);
     }
   });
 

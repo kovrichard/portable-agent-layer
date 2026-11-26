@@ -23,7 +23,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  const dir = resolve(TEST_HOME, "memory", "projects");
+  const dir = resolve(TEST_HOME, "work", "projects");
   removeOnceReleased(dir);
 });
 
