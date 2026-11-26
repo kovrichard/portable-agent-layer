@@ -106,7 +106,7 @@ describe("before the owner runs it", () => {
     const printed = printedBy([ID, "--dry-run"]).replaceAll(/\\+/g, "/");
     expect(printed).toContain("records/ratings/ratings.jsonl");
     expect(printed).not.toContain("rules.json");
-    expect(existsSync(at("records"))).toBe(false);
+    expect(existsSync(at("records", "ratings"))).toBe(false);
   });
 });
 
@@ -157,7 +157,7 @@ describe("run by its owner", () => {
 
     for (const [rel, body] of Object.entries(OLD_FILES))
       expect(readFileSync(at(rel), "utf-8")).toBe(body);
-    expect(existsSync(at("records"))).toBe(false);
+    expect(existsSync(at("records", "ratings"))).toBe(false);
     expect(storeLocation("ratings")).toBe(at("memory", "signals"));
   });
 });

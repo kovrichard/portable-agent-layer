@@ -31,7 +31,7 @@ function medianAppendMs(runs: number): number {
 }
 
 function streamLines(month: string): Record<string, unknown>[] {
-  const file = resolve(home, "memory", "events", `${month}.jsonl`);
+  const file = resolve(home, "records", "bronze", "events", `${month}.jsonl`);
   if (!existsSync(file)) return [];
 
   return readFileSync(file, "utf-8")
@@ -170,11 +170,11 @@ describe("the content store", () => {
       { ts: "2026-09-10T10:00:00.000Z", content: { prompt: "secret plan" } }
     );
     const stream = readFileSync(
-      resolve(home, "memory", "events", "2026-09.jsonl"),
+      resolve(home, "records", "bronze", "events", "2026-09.jsonl"),
       "utf-8"
     );
     const content = readFileSync(
-      resolve(home, "memory", "content", "events", "2026-09.jsonl"),
+      resolve(home, "records", "bronze", "event-text", "2026-09.jsonl"),
       "utf-8"
     );
     expect(stream).not.toContain("secret plan");
@@ -195,14 +195,14 @@ describe("opting out", () => {
       { ts: "2026-09-10T10:00:00.000Z", content: { prompt: "x" } }
     );
     expect(id).toBeNull();
-    expect(existsSync(resolve(home, "memory", "events"))).toBe(false);
+    expect(existsSync(resolve(home, "records", "bronze", "events"))).toBe(false);
     expect(existsSync(resolve(home, "memory", "content"))).toBe(false);
   });
 });
 
 describe("a failed write", () => {
   test.skipIf(process.platform === "win32")("is swallowed and reported as no id", () => {
-    const dir = resolve(home, "memory", "events");
+    const dir = resolve(home, "records", "bronze", "events");
     mkdirSync(dir, { recursive: true });
     chmodSync(dir, 0o500);
 

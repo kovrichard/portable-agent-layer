@@ -25,6 +25,8 @@ const EXPORT_DIRS = ["telos", "memory", "records", "work", "skills", "agents"];
 const SKIP_PATTERNS = [
   "memory/downloads",
   "memory/content",
+  "records/bronze/event-text",
+  "records/bronze/tool-output",
   "records/raw",
   "memory/state/transcript-handoff",
 ];

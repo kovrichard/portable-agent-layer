@@ -47,7 +47,10 @@ function unsandboxedEnv(): Record<string, string | undefined> {
 function loggedPayloads(): unknown[] {
   const month = new Date().toISOString().slice(0, 7);
 
-  return readFileSync(resolve(home, "memory", "events", `${month}.jsonl`), "utf-8")
+  return readFileSync(
+    resolve(home, "records", "bronze", "events", `${month}.jsonl`),
+    "utf-8"
+  )
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line))

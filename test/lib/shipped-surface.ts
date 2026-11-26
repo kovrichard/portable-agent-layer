@@ -54,6 +54,7 @@ const NOT_SURFACE = [
   /^home\/telos\//,
   /^home\/memory\/actors\//,
   /^home\/memory\/(content\/)?events\//,
+  /^home\/records\/bronze\/(events|event-text)\//,
   /^home\/machine\.json$/,
   /^home\/debug\/debug\.log(\.\d)?$/,
   /\/node_modules\//,

@@ -73,7 +73,7 @@ export interface LoggedEvent {
 }
 
 export function eventsOf(home: string, type: string): LoggedEvent[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
 
   return readdirSync(dir)

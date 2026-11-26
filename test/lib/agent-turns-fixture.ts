@@ -28,7 +28,7 @@ export function startEachTestInACleanHome(testFile: string) {
 export type PromptPayload = HookTurnPayload & { prompt: string };
 
 export function loggedTurns(): TurnEvent[] {
-  const dir = resolve(paths.home, "memory", "events");
+  const dir = resolve(paths.home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
   const month = new Date().toISOString().slice(0, 7);
 

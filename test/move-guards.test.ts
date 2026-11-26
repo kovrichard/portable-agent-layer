@@ -70,7 +70,7 @@ describe("busyReasons", () => {
     eventAt(1);
     const old = (NOW - 10 * MINUTE) / 1000;
     const month = new Date(NOW - MINUTE).toISOString().slice(0, 7);
-    utimesSync(at("memory", "events", `${month}.jsonl`), old, old);
+    utimesSync(at("records", "bronze", "events", `${month}.jsonl`), old, old);
 
     expect(busyReasons(idle)).toEqual([]);
   });

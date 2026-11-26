@@ -51,7 +51,7 @@ function beforeStreaming<T>(record: () => T): T {
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, "pal", dir, "events");
+  const path = resolve(home, "pal", "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -60,7 +60,7 @@ function logLines(dir: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const actions = () => logLines("memory").filter((e) => e.type === "action");
+const actions = () => logLines("events").filter((e) => e.type === "action");
 
 const anEdit = () =>
   recordAction({
@@ -90,7 +90,7 @@ describe("ledger entries stream live as action events", () => {
         afterBytes: 6,
       }),
     ]);
-    expect(JSON.stringify(logLines("memory"))).not.toContain("secret-name");
+    expect(JSON.stringify(logLines("events"))).not.toContain("secret-name");
     expect(backfillEvents()).toMatchObject({ ledger: 0 });
   });
 
@@ -111,8 +111,8 @@ describe("ledger entries stream live as action events", () => {
         linesAdded: null,
       }),
     ]);
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content")).toEqual([
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text")).toEqual([
       expect.objectContaining({
         command: "rm -rf ./private-dir",
         reason: "a private reason",

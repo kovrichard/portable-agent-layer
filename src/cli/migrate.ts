@@ -28,6 +28,7 @@ import { v12RawToRecords } from "./migrations/v12-raw-to-records";
 import { v13SettingsToRoot } from "./migrations/v13-settings-to-root";
 import { v14RecordsStores } from "./migrations/v14-records-stores";
 import { v15WorkStores } from "./migrations/v15-work-stores";
+import { v16BronzeToRecords } from "./migrations/v16-bronze-to-records";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -71,6 +72,7 @@ const MIGRATIONS: Migration[] = [
   v13SettingsToRoot,
   v14RecordsStores,
   v15WorkStores,
+  v16BronzeToRecords,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 

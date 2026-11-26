@@ -8,10 +8,11 @@ import { freshTestDir } from "./lib/test-home";
 const savedHome = process.env.PAL_HOME;
 let home: string;
 
-function lines(store: "events" | "content/events"): Record<string, unknown>[] {
+function lines(store: "events" | "event-text"): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     store,
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
@@ -47,7 +48,7 @@ describe("an entity", () => {
   test("keeps its name in the content store, out of the event", () => {
     getOrCreate({ domain: "People", name: "Ada Example" });
     expect(JSON.stringify(lines("events"))).not.toContain("Ada");
-    expect(lines("content/events")[0]?.name).toBe("Ada Example");
+    expect(lines("event-text")[0]?.name).toBe("Ada Example");
   });
 
   test("saved into a store of its own is not first seen in the user's", () => {

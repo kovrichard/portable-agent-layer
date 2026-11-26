@@ -23,7 +23,7 @@ function at(sec: number): Date {
 }
 
 function streamed(type: string): Record<string, unknown>[] {
-  const file = resolve(home, "memory", "events", "2026-09.jsonl");
+  const file = resolve(home, "records", "bronze", "events", "2026-09.jsonl");
   if (!existsSync(file)) return [];
 
   return readFileSync(file, "utf-8")
@@ -283,7 +283,7 @@ describe("the PreCompact hook", () => {
     await proc.exited;
     const month = new Date().toISOString().slice(0, 7);
     const lines = readFileSync(
-      resolve(home, "memory", "events", `${month}.jsonl`),
+      resolve(home, "records", "bronze", "events", `${month}.jsonl`),
       "utf-8"
     );
     expect(lines).toContain('"type":"compaction"');

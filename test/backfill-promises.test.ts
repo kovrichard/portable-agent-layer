@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -64,7 +64,7 @@ function logLines(dir: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const promises = () => logLines("memory").filter((e) => e.type === "promise");
+const promises = () => logLines("events").filter((e) => e.type === "promise");
 
 describe("the bot's promises become events", () => {
   test("each promise is made, and a closed one is done or dropped", () => {
@@ -88,8 +88,8 @@ describe("the bot's promises become events", () => {
 
   test("the title stays in the content store", () => {
     backfillEvents();
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content").map((c) => c.title)).toContain(
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text").map((c) => c.title)).toContain(
       "a private kept promise"
     );
   });

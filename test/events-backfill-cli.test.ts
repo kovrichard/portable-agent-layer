@@ -38,7 +38,8 @@ async function backfill(...args: string[]): Promise<string[]> {
 beforeEach(() => {
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
-  mkdirSync(resolve(home, "memory", "events"), { recursive: true });
+  mkdirSync(resolve(home, "records", "bronze", "events"), { recursive: true });
+  mkdirSync(resolve(home, "memory"), { recursive: true });
   reload();
   writeFileSync(
     resolve(home, "memory", "commitments.json"),
@@ -58,7 +59,7 @@ describe("pal cli events backfill", () => {
 
   test("an id in a file that is not a month log does not count as logged", async () => {
     writeFileSync(
-      resolve(home, "memory", "events", "notes.txt"),
+      resolve(home, "records", "bronze", "events", "notes.txt"),
       `${JSON.stringify({ id: promiseEventId })}\n`
     );
     expect(await backfill()).toContain("promises: 1");

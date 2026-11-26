@@ -12,7 +12,7 @@ const CLI = resolve(import.meta.dir, "../src/cli/index.ts");
 test("pal cli usage reads judge_call events from the event log", () => {
   const home = freshTestDir(import.meta.file);
   const ts = new Date().toISOString();
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   mkdirSync(dir, { recursive: true });
   const line = {
     v: 1,

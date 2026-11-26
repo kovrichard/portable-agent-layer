@@ -41,7 +41,7 @@ function writeRatings(...rows: object[]): void {
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
 
   return readdirSync(path)
@@ -50,7 +50,7 @@ function logLines(dir: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
-const ratings = () => logLines("memory").filter((e) => e.type === "rating");
+const ratings = () => logLines("events").filter((e) => e.type === "rating");
 
 describe("rating signals become rating events", () => {
   test("a rating keeps its score, source and origin; its text goes to content", () => {
@@ -67,8 +67,8 @@ describe("rating signals become rating events", () => {
         source: "implicit",
       }),
     ]);
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content")).toEqual([
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text")).toEqual([
       expect.objectContaining({
         context: "a private rated context",
         responsePreview: "a private reply preview",
