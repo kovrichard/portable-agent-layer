@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { eventsSince } from "../src/hooks/lib/events";
+import { eventsSince } from "../src/bronze/events";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -30,6 +30,7 @@ function transcriptWith(tokens: number): string {
   const path = resolve(home, "t.jsonl");
   const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
   writeFileSync(path, `${JSON.stringify({ message: { usage } })}\n`);
+
   return path;
 }
 
@@ -54,6 +55,7 @@ function submit(tokens: number, prompt = "please continue with the work") {
     encoding: "utf-8",
     timeout: SPAWN_HEAVY_TEST_MS - 2000,
   });
+
   return result.stdout ?? "";
 }
 

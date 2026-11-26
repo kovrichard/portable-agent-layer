@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { timeboxCommand, unattendedCommand } from "../src/cli/run-mode";
-import { appendEvent } from "../src/hooks/lib/events";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
+import { allEventsSince, appendEvent } from "../src/bronze/events";
+import { minimumCommand, timeboxCommand, unattendedCommand } from "../src/cli/run-mode";
+import { scopeOf } from "../src/progress/progress-tree";
 import {
   type RunEstimateRecord,
   runEstimateRecord,
   runEstimatesFile,
-} from "../src/hooks/lib/run-estimates";
+} from "../src/safety/run-estimates";
 import {
   DEFAULT_UNATTENDED_RULES,
   describeRun,
@@ -16,7 +16,7 @@ import {
   type Run,
   readRun,
   untilLabel,
-} from "../src/hooks/lib/run-mode";
+} from "../src/safety/run-mode";
 import { type Command, runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
@@ -54,6 +54,7 @@ function startNight(): Promise<number> {
 function estimateRecords(): RunEstimateRecord[] {
   const file = runEstimatesFile();
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -180,6 +181,7 @@ describe("pal cli unattended", () => {
     expect(printed).toEqual(["Logged (1 entries).", "Logged (2 entries)."]);
     const log = stored()?.log ?? [];
     expect(log.map((l) => l.entry)).toEqual(["parser fixed", "tests added"]);
+
     for (const { at } of log) {
       expect(Date.parse(at)).toBeGreaterThanOrEqual(before);
       expect(Date.parse(at)).toBeLessThanOrEqual(after);
@@ -289,5 +291,102 @@ describe("estimated against actual time", () => {
     expect(runEstimateRecord(run, new Date("2026-10-31T17:14:40Z")).actualMinutes).toBe(
       75
     );
+  });
+});
+
+describe("pal cli minimum", () => {
+  const GOAL = "a migration plan the team can follow";
+  const BAR = "failure modes: each step has a rollback, checked by a skeptic pass";
+
+  function minimum(...args: string[]): Promise<number> {
+    return runCommand(minimumCommand as Command, args, ["pal", "cli", "minimum"]);
+  }
+
+  function startFloor(): Promise<number> {
+    return minimum("start", "--for", "30m", "--goal", GOAL, "--bar", BAR, "--bar", "b2");
+  }
+
+  function minimumEvents() {
+    return allEventsSince(new Date(Date.now() - 60_000)).filter(
+      (e) => e.type === "minimum_run"
+    );
+  }
+
+  test("start stores the goal and bar, prints them and records the start", async () => {
+    expect(await startFloor()).toBe(0);
+    expect(stored()).toMatchObject({
+      kind: "minimum",
+      goal: GOAL,
+      bar: [BAR, "b2"],
+      rounds: [],
+      sessions: [RUN_SESSION],
+    });
+    expect(printed.join("\n")).toContain(BAR);
+    expect(printed.join("\n")).toContain("pal cli minimum round");
+    expect(minimumEvents()).toMatchObject([{ change: "started", bar: 2, floorMin: 30 }]);
+  });
+
+  test("start needs a goal and at least one bar dimension", async () => {
+    expect(await minimum("start", "--for", "30m", "--bar", BAR)).toBe(1);
+    expect(await minimum("start", "--for", "30m", "--goal", GOAL)).toBe(1);
+    expect(errors.join("\n")).toContain("--goal");
+    expect(errors.join("\n")).toContain("--bar");
+    expect(stored()).toBeNull();
+  });
+
+  test("start refuses while another run is on", async () => {
+    await timebox("start", "--for", "15m");
+    expect(await startFloor()).toBe(1);
+    expect(errors.join("\n")).toContain("A timebox run until");
+  });
+
+  test("round appends the pass and records it", async () => {
+    await startFloor();
+    printed = [];
+    expect(
+      await minimum("round", "--scores", "fm: 6/10", "--weakest", "step 3", "--did", "x")
+    ).toBe(0);
+    expect(printed).toEqual(["Round 1 logged."]);
+    expect(stored()?.rounds).toMatchObject([
+      { scores: "fm: 6/10", weakest: "step 3", did: "x" },
+    ]);
+    expect(minimumEvents().map((e) => [e.change, e.rounds])).toEqual([
+      ["started", 0],
+      ["round", 1],
+    ]);
+  });
+
+  test("round needs every field and a minimum run", async () => {
+    await startFloor();
+    expect(await minimum("round", "--scores", "s", "--weakest", "w")).toBe(1);
+    expect(errors.join("\n")).toContain("--did");
+    await minimum("end");
+    errors = [];
+    expect(await minimum("round", "--scores", "s", "--weakest", "w", "--did", "d")).toBe(
+      1
+    );
+    expect(errors).toEqual([`No minimum run in ${scopeOf(process.cwd())}.`]);
+  });
+
+  test("status prints the run", async () => {
+    await startFloor();
+    printed = [];
+    expect(await minimum("status")).toBe(0);
+    expect(printed).toEqual([describeRun(stored() as Run)]);
+  });
+
+  test("end before the floor clears the run and records it as early", async () => {
+    await startFloor();
+    printed = [];
+    expect(await minimum("end")).toBe(0);
+    expect(printed[0]).toContain("Ended the minimum run before its floor");
+    expect(stored()).toBeNull();
+    expect(minimumEvents().at(-1)).toMatchObject({ change: "ended", early: true });
+  });
+
+  test("end leaves another kind of run alone", async () => {
+    await timebox("start", "--for", "15m");
+    expect(await minimum("end")).toBe(1);
+    expect(stored()?.kind).toBe("timebox");
   });
 });

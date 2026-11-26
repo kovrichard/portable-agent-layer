@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { lookupCompanyRegister } from "../src/hooks/lib/company-register-router";
-import { hungarianRegister } from "../src/hooks/lib/hungarian-registry";
+import { lookupCompanyRegister } from "../src/knowledge/company-register-router";
+import { hungarianRegister } from "../src/knowledge/hungarian-registry";
 
 const HOME = `<form action="https://ceginfo.hu/cegkereso/rapid" method="post">
 <input type="hidden" name="ceginfo_csrf_token" value="tok123"></form>`;
@@ -57,8 +57,10 @@ function registrySites(results: string, home = HOME, record = RECORD) {
       cookie: headers.get("cookie") ?? "",
       body: String(init.body ?? ""),
     });
+
     return fakeRegistryResponse(url, { home, results, record });
   };
+
   return { seen, fetchImpl };
 }
 
@@ -73,15 +75,20 @@ function fakeRegistryResponse(
         ["set-cookie", "lang=hu; path=/"],
       ],
     });
+
   if (url.endsWith("/cegkereso/rapid"))
     return new Response(null, {
       status: 303,
       headers: { location: "/ceglista/cegek" },
     });
+
   if (url === "https://ceginfo.hu/ceglista/cegek") return new Response(pages.results);
+
   if (RECORD_BY_NUMBER_RE.test(url))
     return new Response(null, { status: 301, headers: { location: RECORD_URL } });
+
   if (url === RECORD_URL) return new Response(pages.record);
+
   return new Response("not found", { status: 404 });
 }
 
@@ -251,6 +258,7 @@ describe("looking a company up in the Hungarian register", () => {
     let requests = 0;
     const loop = async () => {
       requests++;
+
       return new Response(null, { status: 302, headers: { location: "/again" } });
     };
     await expect(lookupCompanyRegister(NAME, loop)).rejects.toThrow(
@@ -263,6 +271,7 @@ describe("looking a company up in the Hungarian register", () => {
     const urls: string[] = [];
     const located = (status: number) => async (url: string) => {
       urls.push(url);
+
       return new Response(HOME, { status, headers: { location: "/elsewhere" } });
     };
     await expect(lookupCompanyRegister(NAME, located(404))).rejects.toThrow("HTTP 404");

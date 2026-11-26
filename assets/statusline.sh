@@ -77,23 +77,14 @@ if echo "$input" | jq -e '.cost.total_cost_usd != null' >/dev/null 2>&1; then
   fi
 fi
 
-# PAL: Hook health — count ERROR lines in debug.log from last 24h
-HOOK_ERRORS=0
-DEBUG_LOG="$HOME/.pal/debug/debug.log"
-if [ -f "$DEBUG_LOG" ]; then
-  # Cross-platform 24h cutoff: macOS uses date -v, GNU Linux uses date -d
-  CUTOFF=$(date -v-24H "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -d '24 hours ago' "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
-  if [ -n "$CUTOFF" ]; then
-    # Log format: [YYYY-MM-DD HH:MM:SS] LEVEL ... — split on [ or ] to get $2 = timestamp
-    HOOK_ERRORS=$(grep '\] ERROR ' "$DEBUG_LOG" | awk -F'[][]]' '$2 > "'"$CUTOFF"'"' | wc -l | tr -d ' ')
-  else
-    HOOK_ERRORS=$(grep -c '\] ERROR ' "$DEBUG_LOG" 2>/dev/null || echo 0)
-  fi
-fi
+# PAL settings: at the PAL home's root, or in memory/ until the owner moves it
+PAL_SETTINGS="$HOME/.pal/settings.json"
+[ -f "$PAL_SETTINGS" ] || PAL_SETTINGS="$HOME/.pal/memory/pal-settings.json"
 
 # PAL: Open ISC count — find project matching current directory
 OPEN_ISCS=0
-PROJECTS_DIR="$HOME/.pal/memory/projects"
+PROJECTS_DIR="$HOME/.pal/work/projects"
+[ -d "$PROJECTS_DIR" ] || PROJECTS_DIR="$HOME/.pal/memory/projects"
 if [ -d "$PROJECTS_DIR" ]; then
   CWD_NORM="${CWD%/}"
   for ISA in "$PROJECTS_DIR"/*/ISA.md; do
@@ -181,27 +172,9 @@ if [ ${#RATE_PARTS[@]} -gt 0 ]; then
   RATE_STR=" │ ${RATE_JOINED}"
 fi
 
-# PAL: Signal trend (reads 10-min cache written by session intelligence)
-SIGNAL_STR=""
-SIGNAL_CACHE="$HOME/.pal/memory/state/signal-cache.json"
-if [ -f "$SIGNAL_CACHE" ]; then
-  SC_TODAY=$(jq -r '.today // empty' "$SIGNAL_CACHE" 2>/dev/null)
-  SC_TREND=$(jq -r '.trend // empty' "$SIGNAL_CACHE" 2>/dev/null)
-  if [ -n "$SC_TODAY" ]; then
-    case "$SC_TREND" in
-      up)     ARROW="↑"; SIG_COLOR=$GREEN ;;
-      down)   ARROW="↓"; SIG_COLOR=$RED ;;
-      stable) ARROW="→"; SIG_COLOR=$DIM ;;
-      *)      ARROW="?"; SIG_COLOR=$DIM ;;
-    esac
-    SIG_TODAY=$(printf "%.1f" "$SC_TODAY")
-    SIGNAL_STR="  ${SIG_COLOR}sig: ${SIG_TODAY}/10 ${ARROW}${RESET}"
-  fi
-fi
-
 # PAL: Update available check (reads cached result, no network call)
 UPDATE_LINE=""
-UPDATE_CACHE="$HOME/.pal/memory/state/update-available.json"
+UPDATE_CACHE="$HOME/.pal/cache/update-available.json"
 if [ -f "$UPDATE_CACHE" ]; then
   UC_AVAIL=$(jq -r '.available // false' "$UPDATE_CACHE" 2>/dev/null)
   if [ "$UC_AVAIL" = "true" ]; then
@@ -214,14 +187,52 @@ if [ -f "$UPDATE_CACHE" ]; then
     fi
     # With daily updates on, PAL applies this when the session closes — so the
     # next step is to restart, not to run the command yourself.
-    AUTO_UPDATE=$(jq -r '.autoUpdate.enabled // false' "$HOME/.pal/memory/pal-settings.json" 2>/dev/null)
-    if [ "$AUTO_UPDATE" = "true" ]; then
+    AUTO_UPDATE=$(jq -r '.autoUpdate.enabled // false' "$PAL_SETTINGS" 2>/dev/null)
+    UC_MAJOR=$(jq -r '.major // false' "$UPDATE_CACHE" 2>/dev/null)
+    if [ "$UC_MAJOR" = "true" ]; then
+      UPDATE_LINE="📦 new major: $VERSION_STR  run: pal cli update --major"
+    elif [ "$AUTO_UPDATE" = "true" ]; then
       UPDATE_LINE="📦 update: $VERSION_STR  restart to apply"
     else
       UPDATE_LINE="📦 update: $VERSION_STR  run: pal cli update"
     fi
   fi
 fi
+
+# PAL: Health — what the doctor (health.json) and a rejected Claude call (login-rejected.json) left
+PAL_CACHE="$HOME/.pal/cache"
+HEALTH_JQ='def count(f): f | if type == "number" and . > 0 then floor else 0 end;
+  def text(f): f | if type == "string" then . else "" end;
+  count(.failing), count(.warnings), text(.worst), text(.notice)'
+HEALTH_FIELDS=$(jq -r "$HEALTH_JQ" "$PAL_CACHE/health.json" 2>/dev/null)
+{ read -r HEALTH_FAILING; read -r HEALTH_WARNINGS; IFS= read -r HEALTH_WORST; IFS= read -r HEALTH_NOTICE; } <<< "$HEALTH_FIELDS"
+[[ "$HEALTH_FAILING" =~ ^[0-9]+$ ]] || HEALTH_FAILING=0
+[[ "$HEALTH_WARNINGS" =~ ^[0-9]+$ ]] || HEALTH_WARNINGS=0
+
+HEALTH_LABEL=""
+HEALTH_MORE=0
+HEALTH_COLOR=$RED
+if [ -f "$PAL_CACHE/login-rejected.json" ]; then
+  if [ "$(jq -r '.auth // empty' "$PAL_CACHE/login-rejected.json" 2>/dev/null)" = "token" ]; then
+    HEALTH_LABEL="Claude token rejected"
+  else
+    HEALTH_LABEL="Claude login rejected"
+  fi
+  HEALTH_MORE=$HEALTH_FAILING
+elif [ "$HEALTH_FAILING" -gt 0 ]; then
+  HEALTH_LABEL=${HEALTH_WORST:-Doctor found a failure}
+  HEALTH_MORE=$(( HEALTH_FAILING - 1 ))
+elif [ -n "$HEALTH_NOTICE" ]; then
+  HEALTH_LABEL=$HEALTH_NOTICE
+  HEALTH_COLOR=$YELLOW
+elif [ "$HEALTH_WARNINGS" -eq 1 ]; then
+  HEALTH_LABEL="1 warning"
+  HEALTH_COLOR=$YELLOW
+elif [ "$HEALTH_WARNINGS" -gt 1 ]; then
+  HEALTH_LABEL="$HEALTH_WARNINGS warnings"
+  HEALTH_COLOR=$YELLOW
+fi
+[ "$HEALTH_MORE" -gt 0 ] && HEALTH_LABEL="$HEALTH_LABEL (+$HEALTH_MORE more)"
 
 # Dark factory: one line per task that is building or waiting on the user.
 # Reads the tail of each task's own event log, so it stays fast as logs grow.
@@ -237,7 +248,9 @@ $task[0] as $t
     | (map(select(.event == "gate")) | last) as $gate
     | last as $latest
     | "🏭 \($name)"
-      + (if $run then " · \($run.role) \($run.ts | mins)m" else " · starting" end)
+      + (if $run == null then " · starting"
+         elif $run.step != null and $run.planned != null then " · \($run.step)/\($run.planned) \($run.role) \($run.ts | mins)m"
+         else " · \($run.role) \($run.ts | mins)m" end)
       + (if $gate == null then "" elif $gate.result == "pass" then " · gate ✓" else " · gate ✗" end)
       + (if $pr != "" then " · PR #\($pr)" else "" end)
       + (if $latest != null and ($latest.ts | mins) >= 35 then " · ⚠ no activity \($latest.ts | mins)m" else "" end)
@@ -257,14 +270,40 @@ if [ -d "$FACTORY_TASKS" ]; then
   done
 fi
 
+# PAL: The timebox, unattended or minimum run of this folder or of the project it is in
+RUN_JQ='
+def left: if . >= 60 then "\(. / 60 | floor)h\(. % 60)m" else "\(.)m" end;
+.scope as $scope
+| ($bindings[$scope] // "") as $root
+| (.until | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $until
+| select(.done != true and $until > now)
+| select($scope == $cwd or ($root != "" and ($cwd == $root or ($cwd | startswith($root + "/")))))
+| (($until - now) / 60 | ceil | left) as $left
+| ($until | strflocaltime("%H:%M")) as $at
+| if .kind == "minimum" then
+    (.rounds // [] | length) as $n
+    | "🔁 minimum run · floor \($at) · \($left) left · \($n) round\(if $n == 1 then "" else "s" end)"
+  elif .kind == "unattended" then "🌙 unattended until \($at) · \($left) left"
+  else "⏱ timebox until \($at) · \($left) left" end'
+RUN_LINES=()
+RUN_DIR="$HOME/.pal/cache/run-mode"
+if [ -d "$RUN_DIR" ]; then
+  BINDINGS=$(jq -c 'if type == "object" then . else {} end' "$HOME/.pal/bindings.json" 2>/dev/null)
+  [ -n "$BINDINGS" ] || BINDINGS='{}'
+  PRINCIPAL_TZ=$(jq -r '.identity.principal.timezone // empty' "$PAL_SETTINGS" 2>/dev/null)
+  for RUN_JSON in "$RUN_DIR"/*.json; do
+    [ -f "$RUN_JSON" ] || continue
+    RUN_LINE=$(TZ="${PRINCIPAL_TZ:-UTC}" jq -r --arg cwd "${CWD%/}" --argjson bindings "$BINDINGS" "$RUN_JQ" "$RUN_JSON" 2>/dev/null)
+    [ -n "$RUN_LINE" ] && RUN_LINES+=("$RUN_LINE")
+  done
+fi
+
 # Build PAL indicators
-HOOK_STR=""
-[ "$HOOK_ERRORS" -gt 0 ] && HOOK_STR="  ${RED}⚠️  ${HOOK_ERRORS} hook err${RESET}"
 ISC_STR=""
 [ "$OPEN_ISCS" -gt 0 ] && ISC_STR="  ${DIM}📋 ${OPEN_ISCS} open ISCs${RESET}"
 
-# Line 1: Model, Directory, Git Branch, Hook Health, Open ISCs, Signal
-echo -e "${CYAN}[${MODEL}]${RESET} 📁 ${DIR_DISPLAY}${DIM}${GIT_INDICATOR}${RESET}${HOOK_STR}${ISC_STR}${SIGNAL_STR}"
+# Line 1: Model, Directory, Git Branch, Open ISCs
+echo -e "${CYAN}[${MODEL}]${RESET} 📁 ${DIR_DISPLAY}${DIM}${GIT_INDICATOR}${RESET}${ISC_STR}"
 
 # Line 2: Context bar; cost segment only when Claude sends it
 if [ -n "$COST_STR" ]; then
@@ -276,9 +315,17 @@ fi
 # Line 3: Update available (only when cache says available AND versions differ)
 [ -n "$UPDATE_LINE" ] && echo -e "${YELLOW}${UPDATE_LINE}${RESET}"
 
+# Line 3a: Health — the worst failure or the warning count, pointing to the doctor
+[ -n "$HEALTH_LABEL" ] && printf '%b%s%b\n' "$HEALTH_COLOR" "⚠️  $HEALTH_LABEL — pal cli doctor" "$RESET"
+
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 for FACTORY_LINE in "${FACTORY_LINES[@]}"; do
   echo -e "${CYAN}${FACTORY_LINE}${RESET}"
+done
+
+# Line 3c: The run this session works under
+for RUN_LINE in "${RUN_LINES[@]}"; do
+  echo -e "${YELLOW}${RUN_LINE}${RESET}"
 done
 
 # Line 4: Rotating quote (changes every 30 minutes)

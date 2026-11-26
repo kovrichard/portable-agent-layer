@@ -1,17 +1,6 @@
 #!/usr/bin/env bun
-// presentation skill — build a deck folder to a self-contained HTML.
-//
-// Usage:
-//   bun build.ts <deck-dir> [--out <dir>] [--force]
-//
-// Output:
-//   <out>/<deck-name>/<deck-name>.md     concatenated slides (written first)
-//   <out>/<deck-name>/<deck-name>.html   self-contained presentation
-//
-// --out defaults to the deck-dir itself (output lands at <deck-dir>/<deck-name>/,
-// which the scaffolder gitignores). The deck-name subdir is always created
-// inside --out, even when --out is explicitly provided. Existing files in
-// the subdir are preserved unless --force is passed.
+// Build a deck folder into <deck-name>.md and a self-contained <deck-name>.html; SKILL.md has the layout.
+// Usage: pal cli skill run presentation build <deck-dir> [--out <dir>] [--force]
 
 import { constants as fsConst } from "node:fs";
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -20,67 +9,69 @@ import { dataUri, escapeForTextarea, readText } from "./lib/inline";
 import { THEME_BASE, VENDOR_REVEAL } from "./lib/paths";
 import { getTemplate } from "./lib/registry";
 
-// Walk markdown line-by-line, skipping fenced code blocks, applying `transform`
-// to each non-fenced line. Used by both the concat-step path rewrite and the
-// HTML-step image inliner so neither touches example image syntax inside ``` blocks.
 async function mapMarkdownOutsideFences(
   md: string,
   transform: (line: string) => string | Promise<string>
 ): Promise<string> {
   const out: string[] = [];
   let inFence = false;
+
   for (const line of md.split("\n")) {
     if (/^```/.test(line)) {
       inFence = !inFence;
       out.push(line);
       continue;
     }
+
     out.push(inFence ? line : await transform(line));
   }
+
   return out.join("\n");
 }
 
-// Rewrite `../assets/X` (the natural relative path from a `slides/*.md` file)
-// to `assets/X` so the concatenated markdown — which lives at the deck root —
-// resolves images correctly when previewed directly. Bare `X.png` references
-// (no path) are left to the doctor to flag; we don't guess where they live.
+// `../assets/X` from a slide becomes `assets/X` for the concat at the deck root;
+// a bare `X.png` is left for the doctor to flag.
 function rewriteImageRefsForConcat(md: string): Promise<string> {
   return mapMarkdownOutsideFences(md, (line) =>
     line.replace(/(!\[[^\]]*\]\()([^)]+)(\))/g, (whole, open, ref, close) => {
       const trimmed = ref.trim();
       if (/^(https?:|data:)/i.test(trimmed)) return whole;
+
       if (trimmed.startsWith("../assets/")) {
         return `${open}${trimmed.slice(3)}${close}`;
       }
+
       return whole;
     })
   );
 }
 
-// Inline every local image reference in the concatenated markdown as a data: URI
-// so the resulting HTML is truly self-contained (emailable, USB-stickable).
-// Resolves refs against `deckDir` (the concat-md's location). Missing files are
-// left untouched — the doctor flags them; build doesn't crash on author errors.
+// A missing image stays as written for the doctor to flag, so build never crashes
+// on an author's mistake.
 async function inlineImagesInMarkdown(md: string, deckDir: string): Promise<string> {
   return mapMarkdownOutsideFences(md, async (line) => {
     const matches = [...line.matchAll(/(!\[[^\]]*\]\()([^)]+)(\))/g)];
     if (matches.length === 0) return line;
     let result = line;
+
     for (const m of matches) {
       const [whole, open, ref, close] = m;
       const trimmed = ref.trim();
       if (/^(https?:|data:)/i.test(trimmed)) continue;
       const abs = resolve(deckDir, trimmed);
+
       try {
         await access(abs, fsConst.F_OK);
       } catch {
         continue;
       }
+
       // dataUri returns `url("data:...")` for CSS use; strip the `url("…")` wrapper for <img>.
       const wrapped = await dataUri(abs);
       const inner = wrapped.replace(/^url\("/, "").replace(/"\)$/, "");
       result = result.replace(whole, `${open}${inner}${close}`);
     }
+
     return result;
   });
 }
@@ -91,9 +82,9 @@ const ASPECTS: Record<string, [number, number]> = {
   "4:3": [1440, 1080],
 };
 
-// Minimal YAML reader — only handles flat key: value lines (sufficient for slides.config.yml + template.yml).
 function parseSimpleYaml(s: string): Record<string, string> {
   const out: Record<string, string> = {};
+
   for (const raw of s.split("\n")) {
     const line = raw.replace(/\s+#.*$/, "").trim();
     if (!line || line.startsWith("#")) continue;
@@ -110,14 +101,17 @@ function parseSimpleYaml(s: string): Record<string, string> {
         v = v.slice(1, -1);
       }
     }
+
     out[m[1]] = v;
   }
+
   return out;
 }
 
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConst.F_OK);
+
     return true;
   } catch {
     return false;
@@ -125,18 +119,14 @@ async function exists(p: string): Promise<boolean> {
 }
 
 function deckSlug(deckDir: string): string {
-  // Filesystem-safe name. Falls back to "deck" if basename is empty (shouldn't happen).
   const raw = basename(resolve(deckDir));
   const slug = raw.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+
   return slug || "deck";
 }
 
-// Build-time injection: code-layout slides with > 15 lines of code get a
-// `style="--code-scale: X"` attribute baked into the slide directive. CSS in
-// layouts.css multiplies the base code font by this variable. Linear from 1.0
-// at 15 lines to 0.6 at 25 lines; clamped at 0.6 beyond. Build-time keeps the
-// attribute on the rendered <section>, so navigation/Highlight re-runs cannot
-// strip it.
+// Baked in at build time so reveal.js navigation and Highlight re-runs cannot strip it;
+// layouts.css scales code from 1.0 at 15 lines down to 0.6 at 25.
 function injectCodeScale(slideMarkdown: string): string {
   const layoutRe = /<!--\s*\.slide:\s*data-layout="code"([^>]*)-->/i;
   const layoutMatch = layoutRe.exec(slideMarkdown);
@@ -150,20 +140,17 @@ function injectCodeScale(slideMarkdown: string): string {
   if (lines <= 15) return slideMarkdown;
 
   const scale = Math.max(0.6, 1 - (lines - 15) * 0.04).toFixed(2);
-  // Don't double-inject if a previous build already set it.
   const extras = layoutMatch[1].replace(/\s+style="--code-scale:\s*[^"]+"/i, "").trim();
   const attrs = extras
     ? `${extras} style="--code-scale: ${scale}"`
     : `style="--code-scale: ${scale}"`;
   const newDirective = `<!-- .slide: data-layout="code" ${attrs} -->`;
+
   return slideMarkdown.replace(layoutMatch[0], newDirective);
 }
 
-// Build-time injection: table-layout slides with > 4 rows get a
-// `style="--table-scale: X"` attribute baked into the slide directive. CSS
-// multiplies cell font-size AND cell padding by this var so both shrink
-// together (font-only shrinking is dampened by static padding). Linear from
-// 1.0 at 4 rows to 0.6 at ≥10 rows. Mirrors `injectCodeScale`.
+// Like injectCodeScale: font and padding shrink together, from 1.0 at 4 rows to
+// 0.6 at 10, because shrinking only the font is dampened by fixed padding.
 function injectTableScale(slideMarkdown: string): string {
   const layoutRe = /<!--\s*\.slide:\s*data-layout="table"([^>]*)-->/i;
   const layoutMatch = layoutRe.exec(slideMarkdown);
@@ -173,9 +160,11 @@ function injectTableScale(slideMarkdown: string): string {
   // separator (`| --- | --- |`) which doesn't render as a row.
   const sepRe = /^\s*\|(\s*:?-+:?\s*\|)+\s*$/;
   let rows = 0;
+
   for (const line of slideMarkdown.split("\n")) {
     if (/^\s*\|/.test(line) && !sepRe.test(line)) rows++;
   }
+
   if (rows <= 4) return slideMarkdown;
 
   const scale = Math.max(0.6, 1 - (rows - 4) * 0.067).toFixed(2);
@@ -184,6 +173,7 @@ function injectTableScale(slideMarkdown: string): string {
     ? `${extras} style="--table-scale: ${scale}"`
     : `style="--table-scale: ${scale}"`;
   const newDirective = `<!-- .slide: data-layout="table" ${attrs} -->`;
+
   return slideMarkdown.replace(layoutMatch[0], newDirective);
 }
 
@@ -194,14 +184,18 @@ async function buildConcat(deckDir: string): Promise<string> {
     if (files.length === 0) {
       throw new Error(`slides/ is empty at ${slidesDir}`);
     }
+
     const parts = await Promise.all(files.map((f) => readText(join(slidesDir, f))));
     const joined = `${parts.map((p) => injectTableScale(injectCodeScale(p.trim()))).join("\n\n---\n\n")}\n`;
+
     return rewriteImageRefsForConcat(joined);
   }
+
   const legacy = join(deckDir, "content.md");
   if (await exists(legacy)) {
     return await readText(legacy);
   }
+
   throw new Error(`no slides/ directory or content.md found in ${deckDir}`);
 }
 
@@ -215,10 +209,12 @@ function parseBuildArgs(argv: string[]) {
   const deckDir = resolve(argv[0]);
   let outRoot = deckDir;
   let force = false;
+
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === "--out") outRoot = resolve(argv[++i]);
     else if (argv[i] === "--force") force = true;
   }
+
   return { deckDir, outRoot, force };
 }
 
@@ -227,102 +223,131 @@ async function readDeckConfig(deckDir: string) {
   if (!(await exists(cfgPath))) fail(`slides.config.yml not found at ${cfgPath}`);
   const cfg = parseSimpleYaml(await readText(cfgPath));
   if (!cfg.template) fail("slides.config.yml missing 'template'");
+
   return { cfg, templateName: cfg.template };
 }
 
 async function refuseOverwrite(paths: string[]): Promise<void> {
   const collisions: string[] = [];
+
   for (const p of paths) if (await exists(p)) collisions.push(p);
+
   if (collisions.length === 0) return;
   console.error("refusing to overwrite existing output (pass --force to replace):");
+
   for (const p of collisions) console.error(`  - ${p}`);
   process.exit(1);
 }
 
-async function main() {
-  const { deckDir, outRoot, force } = parseBuildArgs(process.argv.slice(2));
-  const { cfg, templateName } = await readDeckConfig(deckDir);
-
+// Flat in the deck folder by default; under <slug>/ for any other --out, so decks
+// can share one folder.
+function deckOutputPaths(deckDir: string, outRoot: string) {
   const slug = deckSlug(deckDir);
-  // When --out is the deck-dir itself (the default), write directly into it —
-  // no extra <slug>/ subdir. Otherwise create the subdir so multiple decks
-  // can coexist under one shared --out.
   const outDir = resolve(outRoot) === deckDir ? deckDir : join(outRoot, slug);
-  const concatPath = join(outDir, `${slug}.md`);
-  const htmlPath = join(outDir, `${slug}.html`);
 
-  if (!force) await refuseOverwrite([concatPath, htmlPath]);
+  return {
+    outDir,
+    concatPath: join(outDir, `${slug}.md`),
+    htmlPath: join(outDir, `${slug}.html`),
+  };
+}
 
-  // Step 1 — concatenate slides to a single on-disk markdown artifact.
-  const concatMd = await buildConcat(deckDir);
-  await mkdir(outDir, { recursive: true });
-  await writeFile(concatPath, concatMd, "utf8");
-
-  // Step 2 — build self-contained HTML, sourcing content from the on-disk concat.
+async function readTemplateAssets(templateName: string) {
   const template = await getTemplate(templateName);
   const tplYml = parseSimpleYaml(await readText(join(template.path, "template.yml")));
   const tplCss = await readText(join(template.path, "template.css"));
   const logoFile = join(template.path, tplYml.logo || "logo.svg");
   const logoUri = await dataUri(logoFile);
 
-  const aspect = cfg.aspect || tplYml.aspect || "16:9";
-  const [width, height] = ASPECTS[aspect] || ASPECTS["16:9"];
+  return { tplYml, tplCss, logoUri };
+}
 
-  const baseCss = await readText(join(THEME_BASE, "base.css"));
-  const layoutsCss = await readText(join(THEME_BASE, "layouts.css"));
-  const skeleton = await readText(join(THEME_BASE, "skeleton.html"));
-  const revealCss = await readText(join(VENDOR_REVEAL, "reveal.css"));
-  const highlightCss = await readText(
-    join(VENDOR_REVEAL, "plugin", "highlight", "github-dark.css")
-  );
-  const revealJs = await readText(join(VENDOR_REVEAL, "reveal.js"));
-  const markdownJs = await readText(
-    join(VENDOR_REVEAL, "plugin", "markdown", "markdown.js")
-  );
-  const highlightJs = await readText(
-    join(VENDOR_REVEAL, "plugin", "highlight", "highlight.js")
-  );
-  const notesJs = await readText(join(VENDOR_REVEAL, "plugin", "notes", "notes.js"));
+async function readVendorAssets() {
+  return {
+    baseCss: await readText(join(THEME_BASE, "base.css")),
+    layoutsCss: await readText(join(THEME_BASE, "layouts.css")),
+    skeleton: await readText(join(THEME_BASE, "skeleton.html")),
+    revealCss: await readText(join(VENDOR_REVEAL, "reveal.css")),
+    highlightCss: await readText(
+      join(VENDOR_REVEAL, "plugin", "highlight", "github-dark.css")
+    ),
+    revealJs: await readText(join(VENDOR_REVEAL, "reveal.js")),
+    markdownJs: await readText(join(VENDOR_REVEAL, "plugin", "markdown", "markdown.js")),
+    highlightJs: await readText(
+      join(VENDOR_REVEAL, "plugin", "highlight", "highlight.js")
+    ),
+    notesJs: await readText(join(VENDOR_REVEAL, "plugin", "notes", "notes.js")),
+  };
+}
 
-  // Read the concat back from disk, then inline image refs as data: URIs so
-  // the HTML is self-contained. The on-disk concat keeps plain `assets/X` paths
-  // for direct markdown preview; only the HTML embeds full image bytes.
-  const contentMdRaw = await readFile(concatPath, "utf8");
-  const contentMd = await inlineImagesInMarkdown(contentMdRaw, deckDir);
-
-  let deckOverridesCss = "";
+async function readDeckOverridesCss(deckDir: string): Promise<string> {
   const overridesPath = join(deckDir, "overrides.css");
   if (await exists(overridesPath)) {
-    deckOverridesCss = `<style>${await readText(overridesPath)}</style>`;
+    return `<style>${await readText(overridesPath)}</style>`;
   }
 
-  const fontsLink =
-    tplYml.fonts && tplYml.fonts !== "system"
-      ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${tplYml.fonts}">`
-      : "";
+  return "";
+}
 
-  // Use a function for replacements so $-sequences in the inserted text aren't interpreted by JS.
+function fontsLinkFor(tplYml: Record<string, string>): string {
+  return tplYml.fonts && tplYml.fonts !== "system"
+    ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="${tplYml.fonts}">`
+    : "";
+}
+
+// Only the HTML embeds image bytes; the concat on disk keeps `assets/X` paths for
+// previewing the markdown directly.
+async function renderDeckHtml(
+  deckDir: string,
+  concatPath: string,
+  cfg: Record<string, string>,
+  templateName: string
+): Promise<string> {
+  const { tplYml, tplCss, logoUri } = await readTemplateAssets(templateName);
+  const aspect = cfg.aspect || tplYml.aspect || "16:9";
+  const [width, height] = ASPECTS[aspect] || ASPECTS["16:9"];
+  const { skeleton, ...vendor } = await readVendorAssets();
+  const contentMd = await inlineImagesInMarkdown(
+    await readFile(concatPath, "utf8"),
+    deckDir
+  );
+
   const subs: Record<string, string> = {
     LANG: cfg.lang || "en",
     TITLE: cfg.title || "Presentation",
-    FONTS_LINK: fontsLink,
-    REVEAL_CSS: revealCss,
-    HIGHLIGHT_CSS: highlightCss,
-    BASE_CSS: baseCss,
-    LAYOUTS_CSS: layoutsCss,
+    FONTS_LINK: fontsLinkFor(tplYml),
+    REVEAL_CSS: vendor.revealCss,
+    HIGHLIGHT_CSS: vendor.highlightCss,
+    BASE_CSS: vendor.baseCss,
+    LAYOUTS_CSS: vendor.layoutsCss,
     TEMPLATE_CSS: tplCss,
     LOGO_DATA_URI: logoUri,
-    DECK_OVERRIDES_CSS: deckOverridesCss,
+    DECK_OVERRIDES_CSS: await readDeckOverridesCss(deckDir),
     CONTENT_MD: escapeForTextarea(contentMd),
-    REVEAL_JS: revealJs,
-    MARKDOWN_PLUGIN_JS: markdownJs,
-    HIGHLIGHT_PLUGIN_JS: highlightJs,
-    NOTES_PLUGIN_JS: notesJs,
+    REVEAL_JS: vendor.revealJs,
+    MARKDOWN_PLUGIN_JS: vendor.markdownJs,
+    HIGHLIGHT_PLUGIN_JS: vendor.highlightJs,
+    NOTES_PLUGIN_JS: vendor.notesJs,
     WIDTH: String(width),
     HEIGHT: String(height),
   };
 
-  const html = skeleton.replace(/\{\{(\w+)\}\}/g, (_, k) => subs[k] ?? "");
+  // A function replacer keeps $-sequences in the inserted text from being interpreted.
+  return skeleton.replace(/\{\{(\w+)\}\}/g, (_, k) => subs[k] ?? "");
+}
+
+async function main() {
+  const { deckDir, outRoot, force } = parseBuildArgs(process.argv.slice(2));
+  const { cfg, templateName } = await readDeckConfig(deckDir);
+  const { outDir, concatPath, htmlPath } = deckOutputPaths(deckDir, outRoot);
+
+  if (!force) await refuseOverwrite([concatPath, htmlPath]);
+
+  const concatMd = await buildConcat(deckDir);
+  await mkdir(outDir, { recursive: true });
+  await writeFile(concatPath, concatMd, "utf8");
+
+  const html = await renderDeckHtml(deckDir, concatPath, cfg, templateName);
   await writeFile(htmlPath, html, "utf8");
 
   const sizeMb = (Buffer.byteLength(html) / 1024 / 1024).toFixed(2);

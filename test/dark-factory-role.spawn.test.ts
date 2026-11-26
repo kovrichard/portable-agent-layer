@@ -49,6 +49,7 @@ function envWith(...dirs: string[]) {
   const base = Object.fromEntries(
     Object.entries(process.env).filter(([key]) => key.toLowerCase() !== "path")
   );
+
   return {
     ...base,
     DARK_FACTORY_HOME: home,
@@ -95,6 +96,7 @@ const finishedEvents = () =>
   readEvents(envWith(bin)).filter((e: { event: string }) => e.event === "role_finished");
 const valueAfter = (argv: string[], flag: string) => {
   if (!argv.includes(flag)) throw new Error(`argv has no ${flag}`);
+
   return argv[argv.indexOf(flag) + 1] as string;
 };
 const listAfter = (argv: string[], flag: string) => valueAfter(argv, flag).split(",");
@@ -173,9 +175,11 @@ describe("invocation", () => {
     );
     const allowed = listAfter(argv, "--allowedTools");
     expect(allowed).not.toContain("Bash");
+
     for (const rule of allowed.filter((entry) => entry.startsWith("Bash"))) {
       expect(rule).toMatch(/^Bash\((git|gh) /);
     }
+
     for (const part of [
       "t1",
       join(home, "tasks", "t1", "spec.md"),
@@ -185,6 +189,7 @@ describe("invocation", () => {
     ]) {
       expect(stdin).toContain(part);
     }
+
     expect(stdin).not.toContain("[Workflow harness");
   });
 
@@ -253,6 +258,7 @@ describe("invocation", () => {
   test("no role runs with a spending cap", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
+
     for (const role of Object.keys(ROLE_POLICIES)) {
       expect(claudeInvocation(task, role, { env }).args).not.toContain(
         "--max-budget-usd"
@@ -263,11 +269,13 @@ describe("invocation", () => {
   test("no argument holds a newline or a double quote, and the prompt is not in argv", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
+
     for (const role of Object.keys(ROLE_POLICIES)) {
       const { args, prompt } = claudeInvocation(task, role, { env });
       args.forEach((arg: string, index: number) => {
         const isSchema = args[index - 1] === "--json-schema";
         expect(arg).not.toContain("\n");
+
         if (!isSchema) expect(arg).not.toContain('"');
         expect(arg).not.toBe(prompt);
       });
@@ -434,6 +442,7 @@ describe("isolation", () => {
   test("every role loads only the repo's setting sources and the plugin as its only plugin dir", () => {
     const env = envWith(bin);
     const task = readTask("t1", env);
+
     for (const role of Object.keys(ROLE_POLICIES)) {
       const { args } = claudeInvocation(task, role, { env });
       expect(valueAfter(args, "--setting-sources")).toBe("local");
@@ -517,6 +526,7 @@ describe("structured output", () => {
   const schemaOf = (role: string) => {
     const env = envWith(bin);
     const { args } = claudeInvocation(readTask("t1", env), role, { env });
+
     return JSON.parse(valueAfter(args, "--json-schema"));
   };
 
@@ -579,6 +589,7 @@ describe("structured output", () => {
 describe("prompt", () => {
   test("every role's prompt tells it to run one command per Bash call", () => {
     const task = readTask("t1", envWith(bin));
+
     for (const role of Object.keys(ROLE_POLICIES)) {
       expect(roleModule.rolePrompt(task, role)).toContain(ONE_COMMAND_SENTENCE);
     }

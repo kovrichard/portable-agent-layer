@@ -3,6 +3,14 @@ import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { removeOnceReleased } from "./remove-once-released";
 
+const strykerWorker = process.env.STRYKER_MUTATOR_WORKER;
+
+if (strykerWorker && !process.env.PAL_TEST_ROOT)
+  process.env.PAL_TEST_ROOT = resolve(
+    import.meta.dir,
+    `../../.test/stryker-worker-${strykerWorker}`
+  );
+
 export const TEST_ROOT =
   process.env.PAL_TEST_ROOT ?? resolve(import.meta.dir, "../../.test");
 
@@ -17,6 +25,7 @@ function suiteName(file: string): string {
 function processIsGone(pid: number): boolean {
   try {
     process.kill(pid, 0);
+
     return false;
   } catch (err) {
     return (err as NodeJS.ErrnoException).code === "ESRCH";
@@ -29,6 +38,7 @@ function processIsGone(pid: number): boolean {
  */
 export function redirectTempIntoTestFolder(): void {
   const systemTmp = tmpdir();
+
   for (const name of readdirSync(systemTmp)) {
     if (!name.startsWith(TEMP_PREFIX)) continue;
     const pid = Number(name.slice(TEMP_PREFIX.length));
@@ -36,6 +46,7 @@ export function redirectTempIntoTestFolder(): void {
       removeOnceReleased(resolve(systemTmp, name));
     }
   }
+
   ownTemp = resolve(systemTmp, `${TEMP_PREFIX}${process.pid}`);
   mkdirSync(ownTemp, { recursive: true });
   process.env.TMPDIR = ownTemp;
@@ -70,6 +81,7 @@ export function outsideRepoHome(file: string): string {
 export function leftoverTestDirs(file: string): string[] {
   const tmp = testHome(file, "tmp");
   if (!existsSync(tmp)) return [];
+
   return readdirSync(tmp).map((name) => resolve(tmp, name));
 }
 
@@ -83,5 +95,6 @@ export function freshTestDir(file: string): string {
   handedOut.set(tmp, count + 1);
   const dir = resolve(tmp, String(count + 1));
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }

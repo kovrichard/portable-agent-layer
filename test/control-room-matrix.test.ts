@@ -54,6 +54,7 @@ function registerProject(slug: string, opts: ProjectFixture = {}): string {
     `---\n${front}\n---\n\n## Goal\n\nnone\n`,
     "utf-8"
   );
+
   return path;
 }
 
@@ -67,6 +68,7 @@ function find(grid: Matrix, id: string): { quadrant: string; item: MatrixItem } 
     const item = grid[quadrant].find((i) => i.id === id);
     if (item) return { quadrant, item };
   }
+
   throw new Error(`${id} is in no quadrant`);
 }
 

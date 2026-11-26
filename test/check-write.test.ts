@@ -14,6 +14,7 @@ describe("fingerprint", () => {
   test("changes when the bytes change", () => {
     const dir = freshTestDir(import.meta.file);
     const file = resolve(dir, "a.ts");
+
     try {
       writeFileSync(file, "const a=1", "utf-8");
       const before = fingerprint([file]);
@@ -29,6 +30,7 @@ describe("fingerprint", () => {
   test("is stable when a rewrite produced identical bytes", () => {
     const dir = freshTestDir(import.meta.file);
     const file = resolve(dir, "a.ts");
+
     try {
       writeFileSync(file, "const a = 1;", "utf-8");
       const before = fingerprint([file]);

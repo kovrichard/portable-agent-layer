@@ -7,7 +7,7 @@ import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 setDefaultTimeout(SPAWN_HEAVY_TEST_MS);
 
 async function lib() {
-  return await import("../src/hooks/lib/bindings");
+  return await import("../src/core/project-bindings");
 }
 
 let HOME: string;
@@ -36,7 +36,7 @@ describe("an export carries no filesystem paths", () => {
     await addProject("alpha", dir);
 
     const record = readFileSync(
-      resolve(HOME, "memory", "projects", "alpha", "ISA.md"),
+      resolve(HOME, "work", "projects", "alpha", "ISA.md"),
       "utf-8"
     );
     expect(record).toContain('name: "alpha"');

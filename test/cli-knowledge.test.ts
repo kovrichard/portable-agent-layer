@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
-import { exists, getOrCreate, load, save } from "../src/tools/knowledge/lib";
+import { exists, getOrCreate, load, save } from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -31,6 +31,7 @@ function captureOutput(): {
   const errSpy = spyOn(console, "error").mockImplementation((...a: unknown[]) => {
     lines.push(a.join(" "));
   });
+
   return {
     flush: () => lines.join("\n"),
     logSpy,
@@ -185,7 +186,7 @@ describe("search", () => {
     // ID has a unique sentinel string that does NOT appear in title/tags/prose.
     // Search for the sentinel must return 0 matches — otherwise PAL's own
     // bookkeeping markers leak into user-facing search results.
-    const { ingestEntities } = await import("../src/tools/knowledge/ingest");
+    const { ingestEntities } = await import("../src/knowledge/ingest");
     ingestEntities(
       { people: [{ name: "Alice Example", role: "author" }] },
       "leakguard-sentinel-xyz",
@@ -203,7 +204,7 @@ describe("search", () => {
   test("user-written ### headings still count toward body score (ISC-22)", async () => {
     // Anti-criterion: only PAL-emitted date headings get stripped. User prose
     // headings like '### Background' must remain in the search corpus.
-    const { save, getOrCreate } = await import("../src/tools/knowledge/lib");
+    const { save, getOrCreate } = await import("../src/knowledge/lib");
     const e = getOrCreate({ domain: "Ideas", name: "Note With Heading" });
     save({
       ...e,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
-import { ingestEntities } from "../src/tools/knowledge/ingest";
-import { exists, load, save } from "../src/tools/knowledge/lib";
+import { ingestEntities } from "../src/knowledge/ingest";
+import { exists, load, save } from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

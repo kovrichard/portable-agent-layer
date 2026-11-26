@@ -3,12 +3,12 @@
  * hook parked to the prompt the model receives.
  */
 
-import { recordHookRunOnExit } from "./lib/hook-run";
+import { isPalSpawnedInference } from "../core/spawn-guard";
 import {
   type TransformedPromptPayload,
   transformedPromptResponse,
-} from "./lib/parked-context";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
+} from "../progress/parked-context";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

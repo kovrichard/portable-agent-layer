@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -16,7 +17,7 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { resolve } from "node:path";
+import { delimiter, dirname, resolve } from "node:path";
 import { linkDir, linkFile } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { outsideRepoHome } from "./lib/test-home";
@@ -35,7 +36,8 @@ interface Sandbox {
 }
 
 const REPO = resolve(import.meta.dir, "..");
-const PROVING = process.env.PAL_FIX_PROOFS === "1" && process.platform !== "win32";
+const PROVING = process.env.PAL_FIX_PROOFS === "1";
+const WINDOWS = process.platform === "win32";
 const AGENT_DIRS = [".claude", ".opencode", ".cursor", ".copilot", ".codex", ".agents"];
 const STATE_DIRS = ["home", "user", ...AGENT_DIRS];
 
@@ -49,7 +51,14 @@ function bunCache(): string {
   return spawnSync("bun", ["pm", "cache"], { encoding: "utf-8" }).stdout.trim();
 }
 
-function sandboxEnv(root: string): Record<string, string> {
+function systemDirs(): string[] {
+  if (!WINDOWS) return ["/usr/bin", "/bin"];
+  const windows = process.env.SystemRoot ?? "C:\\Windows";
+
+  return [resolve(windows, "System32"), windows, dirname(Bun.which("git") ?? "git")];
+}
+
+function inheritedWithoutPath(): Record<string, string> {
   const {
     PAL_SKIP_DOCTOR: _skip,
     PAL_PKG: _pkg,
@@ -57,15 +66,26 @@ function sandboxEnv(root: string): Record<string, string> {
     CLAUDE_CODE_OAUTH_TOKEN: _token,
     ...inherited
   } = process.env;
+
+  return Object.fromEntries(
+    Object.entries(inherited as Record<string, string>).filter(
+      ([key]) => key.toUpperCase() !== "PATH"
+    )
+  );
+}
+
+function sandboxEnv(root: string): Record<string, string> {
   const dirs = Object.fromEntries(
     AGENT_DIRS.map((dir) => [`PAL_${dir.slice(1).toUpperCase()}_DIR`, resolve(root, dir)])
   );
+
   return {
-    ...(inherited as Record<string, string>),
+    ...inheritedWithoutPath(),
     ...dirs,
     HOME: resolve(root, "user"),
-    PATH: [resolve(root, "bin"), resolve(root, ".bun", "bin"), "/usr/bin", "/bin"].join(
-      ":"
+    USERPROFILE: resolve(root, "user"),
+    PATH: [resolve(root, "bin"), resolve(root, ".bun", "bin"), ...systemDirs()].join(
+      delimiter
     ),
     BUN_INSTALL: resolve(root, ".bun"),
     BUN_INSTALL_CACHE_DIR: bunCache(),
@@ -75,23 +95,37 @@ function sandboxEnv(root: string): Record<string, string> {
 }
 
 function sh(root: string, command: string, cwd = root) {
-  const result = spawnSync("sh", ["-c", command], {
+  const result = spawnSync(command, {
+    shell: true,
     cwd,
     env: sandboxEnv(root),
     encoding: "utf-8",
     timeout: 120_000,
   });
+
   return { ok: result.status === 0, output: `${result.stdout}${result.stderr}` };
 }
 
 function fakeAgentsOnPath(root: string): void {
   const bin = resolve(root, "bin");
   mkdirSync(bin, { recursive: true });
-  for (const agent of ["claude", "opencode", "cursor-agent", "copilot", "codex"]) {
-    writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
-    chmodSync(resolve(bin, agent), 0o755);
+
+  for (const agent of ["claude", "opencode", "cursor-agent", "copilot", "codex"])
+    fakeAgent(bin, agent);
+
+  if (WINDOWS) copyFileSync(process.execPath, resolve(bin, "bun.exe"));
+  else linkFile(process.execPath, resolve(bin, "bun"));
+}
+
+function fakeAgent(bin: string, agent: string): void {
+  if (WINDOWS) {
+    writeFileSync(resolve(bin, `${agent}.cmd`), "@echo 1.0.0\r\n");
+
+    return;
   }
-  linkFile(process.execPath, resolve(bin, "bun"));
+
+  writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
+  chmodSync(resolve(bin, agent), 0o755);
 }
 
 function installFromTarball(root: string): string {
@@ -103,6 +137,7 @@ function installFromTarball(root: string): string {
   const tarball = readdirSync(root).find((file) => file.endsWith(".tgz"));
   const added = sh(root, `bun add -g ${resolve(root, tarball as string)}`);
   if (!added.ok) throw new Error(`bun add -g failed: ${added.output}`);
+
   return resolve(
     root,
     ".bun",
@@ -128,18 +163,21 @@ function trackedAndNewFiles(): string[] {
 
 function checkOut(root: string): string {
   const pkg = resolve(root, "checkout");
+
   for (const file of trackedAndNewFiles())
     cpSync(resolve(REPO, file), resolve(pkg, file), { verbatimSymlinks: true });
   mkdirSync(resolve(pkg, ".git"));
   linkDir(resolve(REPO, "node_modules"), resolve(pkg, "node_modules"));
   const linked = sh(root, "bun link", pkg);
   if (!linked.ok) throw new Error(`bun link failed: ${linked.output}`);
+
   return pkg;
 }
 
 function doctor(sandbox: Sandbox): Finding[] {
   const cli = resolve(sandbox.pkg, "src", "cli", "index.ts");
   const { output } = sh(sandbox.root, `bun ${cli} cli doctor --json`);
+
   return JSON.parse(output.slice(output.indexOf("{"))).findings.filter(
     (f: Finding) => f.severity === "fail" || f.severity === "warn"
   );
@@ -160,7 +198,7 @@ function editJson(path: string, edit: (data: Record<string, unknown>) => void): 
 }
 
 function knowEachOther(root: string): void {
-  editJson(resolve(root, "home", "memory", "pal-settings.json"), (settings) => {
+  editJson(resolve(root, "home", "settings.json"), (settings) => {
     settings.identity = {
       principal: { name: "Ada", timezone: "UTC" },
       ai: { name: "Hal", catchphrase: "Ready." },
@@ -189,14 +227,17 @@ function restore(root: string): void {
 function prepare(mode: Mode): Sandbox {
   const root = resolve(outsideRepoHome(import.meta.file), mode);
   removeOnceReleased(root);
+
   for (const dir of STATE_DIRS) mkdirSync(resolve(root, dir), { recursive: true });
   fakeAgentsOnPath(root);
   const pkg = mode === "package" ? installFromTarball(root) : checkOut(root);
   const installed = sh(root, "pal cli install");
-  if (!existsSync(resolve(root, "home", "memory", "pal-settings.json")))
+
+  if (!existsSync(resolve(root, "home", "settings.json")))
     throw new Error(`pal cli install failed: ${installed.output}`);
   knowEachOther(root);
   snapshot(root);
+
   return { root, pkg };
 }
 
@@ -215,7 +256,10 @@ function undeclared(path: string): void {
 function retiredHookScript(sandbox: Sandbox): void {
   editJson(at(sandbox, ".claude", "settings.json"), (settings) => {
     const hooks = settings.hooks as Record<string, unknown[]>;
-    const script = resolve(sandbox.pkg, "src", "hooks", "RetiredHook.ts");
+    const script = resolve(sandbox.pkg, "src", "hooks", "RetiredHook.ts").replaceAll(
+      "\\",
+      "/"
+    );
     hooks.Stop.push({
       hooks: [{ type: "command", command: `bun run ${script} --agent=claude` }],
     });
@@ -233,7 +277,7 @@ interface Breakage {
 const BREAKAGES: Breakage[] = [
   {
     id: "settings.missing",
-    break: (s) => removeOnceReleased(at(s, "home", "memory", "pal-settings.json")),
+    break: (s) => removeOnceReleased(at(s, "home", "settings.json")),
   },
   {
     id: "telos.missing",
@@ -246,6 +290,7 @@ const BREAKAGES: Breakage[] = [
     },
     path: (s) => {
       mkdirSync(at(s, "demo"), { recursive: true });
+
       return at(s, "demo");
     },
   },
@@ -298,7 +343,10 @@ const BREAKAGES: Breakage[] = [
   {
     id: "pal.path",
     modes: ["repo"],
-    break: (s) => removeOnceReleased(at(s, ".bun", "bin", "pal")),
+    break: (s) => {
+      for (const name of ["pal", "pal.exe", "pal.bunx"])
+        removeOnceReleased(at(s, ".bun", "bin", name));
+    },
   },
   {
     id: "dependencies",
@@ -340,7 +388,12 @@ describe.skipIf(!PROVING).each(["package", "repo"] as Mode[])(
         const ran = sh(sandbox.root, command);
         expect(ran.output).toBeString();
 
-        expect(doctor(sandbox).map((f) => f.id)).not.toContain(breakage.id);
+        const left = doctor(sandbox).map((f) => f.id);
+        if (left.includes(breakage.id))
+          console.error(
+            `"${command}" left ${breakage.id} failing. Its output:\n${ran.output}`
+          );
+        expect(left).not.toContain(breakage.id);
       }, 120_000);
     }
   }

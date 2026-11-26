@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
+import { appendEvent } from "../src/bronze/events";
+import type { Finding } from "../src/cli/doctor/finding";
 import {
   hookErrorFindings,
+  lastClaudeSuccessAt,
+  loginExpiryFindings,
   migrationFindings,
   updateFinding,
 } from "../src/cli/doctor/health";
@@ -12,10 +16,18 @@ import {
   oauthTokenFindings,
   routeFinding,
 } from "../src/cli/doctor/inference";
-import { palEnvPath } from "../src/hooks/lib/pal-env";
+import { palEnvPath } from "../src/core/pal-env";
+import { reload } from "../src/core/settings";
+import { loginCacheFile, readLoginCache } from "../src/inference/login-cache";
+import { debugHome } from "./lib/fake-spawn";
 import { freshTestDir } from "./lib/test-home";
 
 const NOW = Date.parse("2026-10-04T19:00:00Z");
+const LOG_IN_AGAIN = {
+  say: "Log the Claude CLI in again",
+  command: "claude auth login",
+  external: true,
+};
 const MINUTE = 60_000;
 const at = (minutesAgo: number) => NOW - minutesAgo * MINUTE;
 const noToken = { now: NOW };
@@ -71,8 +83,7 @@ describe("hook errors", () => {
 
     expect(finding.severity).toBe("fail");
     expect(finding.title).toContain("38");
-    expect(finding.fix?.command).toBe("claude auth login");
-    expect(finding.fix?.say).not.toContain("TOKEN");
+    expect(finding.fix).toEqual(LOG_IN_AGAIN);
   });
 
   test("a line logged before spawns were tagged reads as the native login", () => {
@@ -80,13 +91,116 @@ describe("hook errors", () => {
     expect(finding.fix?.command).toBe("claude auth login");
   });
 
-  test("a rejected token warns and says to renew it", () => {
+  test("a background call that succeeded after the last rejection clears it", () => {
+    const loggedInAgain = { ...noToken, lastClaudeSuccessAt: () => at(10) };
+    const [finding] = hookErrorFindings([rejectedBy("native")], loggedInAgain);
+
+    expect(finding.severity).toBe("ok");
+    expect(finding.id).toBe("hook-errors.inference");
+    expect(finding.title).toContain("log in again");
+  });
+
+  test.each([
+    ["before", 90],
+    ["at the same moment as", 75],
+  ])("a success %s the last rejection does not clear it", (_, minutesAgo) => {
+    const stillFailing = { ...noToken, lastClaudeSuccessAt: () => at(minutesAgo) };
+
+    expect(hookErrorFindings([rejectedBy("native")], stillFailing)[0].severity).toBe(
+      "fail"
+    );
+  });
+
+  test("looks up the last success only for a rejected login", () => {
+    let lookups = 0;
+    const counting = {
+      ...noToken,
+      lastClaudeSuccessAt: () => {
+        lookups += 1;
+
+        return 0;
+      },
+    };
+    hookErrorFindings(
+      [{ source: "rating", count: 1, last: "boom", lastAt: at(5) }],
+      counting
+    );
+
+    expect(lookups).toBe(0);
+  });
+
+  test("a rejected token fails and says to renew it", () => {
     const [finding] = hookErrorFindings([rejectedBy("token")], noToken);
 
-    expect(finding.severity).toBe("warn");
+    expect(finding.severity).toBe("fail");
+    expect(finding.id).toBe("hook-errors.inference");
+    expect(finding.fix).toMatchObject({ external: true });
     expect(finding.title).toContain("last 1h ago");
     expect(finding.fix?.command).toBe("claude setup-token");
     expect(finding.fix?.say).toContain("CLAUDE_CODE_OAUTH_TOKEN was rejected");
+  });
+});
+
+describe("the Claude login expiry", () => {
+  const HOUR_S = 3600;
+  const DAY_S = 24 * HOUR_S;
+  const login = (secondsLeft: number | null) => ({
+    checkedAt: new Date(NOW).toISOString(),
+    loggedIn: true,
+    authMethod: "claude.ai",
+    expiresAt: null,
+    expiresAtEpoch: secondsLeft === null ? null : Math.floor(NOW / 1000) + secondsLeft,
+  });
+  const expiry = (secondsLeft: number | null) =>
+    loginExpiryFindings(login(secondsLeft), NOW);
+  const expiringWarning = (title: string): Finding[] => [
+    { id: "claude-login.expiry", severity: "warn", title, fix: LOG_IN_AGAIN },
+  ];
+
+  test("more than 7 days left says nothing", () => {
+    expect(expiry(8 * DAY_S)).toEqual([]);
+    expect(expiry(7 * DAY_S + 1)).toEqual([]);
+  });
+
+  test("7 days or fewer left warns in days", () => {
+    expect(expiry(7 * DAY_S)).toEqual(expiringWarning("Claude login expires in 7d"));
+    expect(expiry(3 * DAY_S + 5 * 60)).toEqual(
+      expiringWarning("Claude login expires in 3d")
+    );
+  });
+
+  test("under a day left warns in hours", () => {
+    expect(expiry(DAY_S - 1)).toEqual(expiringWarning("Claude login expires in 23h"));
+    expect(expiry(5 * HOUR_S + 5 * 60)).toEqual(
+      expiringWarning("Claude login expires in 5h")
+    );
+  });
+
+  test("an expired login fails and says to log in again", () => {
+    const expired: Finding[] = [
+      {
+        id: "claude-login.expiry",
+        severity: "fail",
+        title: "Claude login expired",
+        fix: LOG_IN_AGAIN,
+      },
+    ];
+
+    expect(expiry(-HOUR_S)).toEqual(expired);
+    expect(expiry(0)).toEqual(expired);
+    expect(expiry(1)).toEqual(expiringWarning("Claude login expires in 0h"));
+  });
+
+  test("no cache or no expiry says nothing", () => {
+    expect(loginExpiryFindings(null, NOW)).toEqual([]);
+    expect(expiry(null)).toEqual([]);
+  });
+
+  test("measures against the current time when given none", () => {
+    debugHome(import.meta.file);
+    writeFileSync(loginCacheFile(), JSON.stringify(login(-HOUR_S)), "utf-8");
+
+    expect(loginExpiryFindings(readLoginCache())[0].severity).toBe("fail");
   });
 });
 
@@ -135,12 +249,63 @@ describe("the optional CLAUDE_CODE_OAUTH_TOKEN", () => {
 describe("pending migrations", () => {
   test("each warns, with the command that runs it", () => {
     const [finding] = migrationFindings([
-      { id: "v9-x", description: "Move the thing", detail: "2 files" },
+      { id: "v9-x", description: "Move the thing", detail: "2 files", ownerRun: false },
     ]);
 
     expect(finding.severity).toBe("warn");
     expect(finding.title).toContain("Move the thing (2 files)");
     expect(finding.fix?.command).toBe("pal cli migrate");
+  });
+
+  test("one its owner runs warns apart, with the command that runs only it", () => {
+    const [, finding] = migrationFindings([
+      { id: "v13-x", description: "Move the file", ownerRun: true },
+    ]);
+
+    expect(finding.severity).toBe("warn");
+    expect(finding.id).toBe("owner-migration.v13-x");
+    expect(finding.fix?.command).toBe("pal cli migrate v13-x");
+  });
+
+  test("the owner's moves get one summary that says why they are manual and that 1.0 needs them", () => {
+    const findings = migrationFindings([
+      { id: "v9-x", description: "Move the thing", ownerRun: false },
+      { id: "v13-x", description: "Move the file", ownerRun: true },
+      { id: "v14-x", description: "Move the stores", ownerRun: true },
+    ]);
+
+    expect(findings.map((f) => f.id)).toEqual([
+      "owner-migrations",
+      "migration.v9-x",
+      "owner-migration.v13-x",
+      "owner-migration.v14-x",
+    ]);
+    expect(findings[0].title).toStartWith(
+      "2 data moves wait for you, required before PAL 1.0"
+    );
+    expect(findings[0].title).toContain("a verified backup is taken first");
+    expect(findings[0].title).toContain("pal cli migrate --undo <id>");
+    expect(findings[0].fix?.say).toBe(
+      "Close your other agent sessions, then run each one below"
+    );
+    expect(findings[0].notice).toBe("2 data moves wait for you, required before PAL 1.0");
+    expect(findings.slice(1).every((f) => f.notice === undefined)).toBe(true);
+  });
+
+  test("one waiting move is named in the singular", () => {
+    const [summary] = migrationFindings([
+      { id: "v13-x", description: "Move the file", ownerRun: true },
+    ]);
+
+    expect(summary.notice).toStartWith("1 data move waits for you");
+  });
+
+  test("moves PAL runs on its own get no summary", () => {
+    const findings = migrationFindings([
+      { id: "v9-x", description: "Move the thing", ownerRun: false },
+    ]);
+
+    expect(findings.map((f) => f.id)).toEqual(["migration.v9-x"]);
   });
 });
 
@@ -329,5 +494,31 @@ describe("~/.pal/.env", () => {
 
     expect(byId("key.PAL_GEMINI_API_KEY")?.severity).toBe("ok");
     expect(byId("key.PAL_XAI_API_KEY")).toBeUndefined();
+  });
+});
+
+describe("the last background call to Claude that logged in", () => {
+  beforeEach(() => {
+    process.env.PAL_HOME = freshTestDir(import.meta.file);
+    reload();
+  });
+
+  const call = (minutesAgo: number, fields: Record<string, unknown>) =>
+    appendEvent("inference_call", fields, {
+      ts: new Date(Date.now() - minutesAgo * MINUTE).toISOString(),
+    });
+
+  test("is the newest Claude call without a failure", () => {
+    call(30, { route: "claude-spawn", failure: null });
+    call(5, { route: "claude-spawn", failure: "login rejected" });
+    call(3, { route: "codex-spawn", failure: null });
+
+    expect(Math.round((Date.now() - lastClaudeSuccessAt(Date.now())) / MINUTE)).toBe(30);
+  });
+
+  test("is 0 when none did in the last day", () => {
+    call(25 * 60, { route: "claude-spawn", failure: null });
+
+    expect(lastClaudeSuccessAt(Date.now())).toBe(0);
   });
 });

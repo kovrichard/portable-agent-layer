@@ -1,27 +1,27 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import {
+  isSideStop,
+  latestUserRequest,
+  withTranscriptReply,
+} from "../src/bronze/antigravity-transcript";
+import { eventsSince } from "../src/bronze/events";
+import { landedCalls, ledgeredCalls } from "../src/bronze/ledger-hook";
+import { readTranscriptFile } from "../src/bronze/transcript";
+import {
   blockResponse,
   declaredAgent,
   normalizeToolUse,
   stopBlockResponse,
-} from "../src/hooks/lib/agent";
-import {
-  isSideStop,
-  latestUserRequest,
-  withTranscriptReply,
-} from "../src/hooks/lib/antigravity-transcript";
-import { commandsThisTurn } from "../src/hooks/lib/claim-check";
-import { claimChecksSince, watchClaims } from "../src/hooks/lib/claim-log";
-import { eventsSince } from "../src/hooks/lib/events";
-import { enterHookWorkspace } from "../src/hooks/lib/hook-turn";
+} from "../src/core/agent";
+import { enterHookWorkspace } from "../src/core/hook-payload";
+import { paths } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
-import { landedCalls, ledgeredCalls } from "../src/hooks/lib/ledger-hook";
-import { paths } from "../src/hooks/lib/paths";
-import { decideRefusal } from "../src/hooks/lib/security-gate";
-import { alreadySentBack, rememberSendBack } from "../src/hooks/lib/send-back-guard";
-import { reload } from "../src/hooks/lib/settings";
-import { readTranscriptFile } from "../src/hooks/lib/transcript";
+import { commandsThisTurn } from "../src/opinions/claim-check";
+import { claimChecksSince, watchClaims } from "../src/opinions/claim-log";
+import { alreadySentBack, rememberSendBack } from "../src/opinions/send-back-guard";
+import { decideRefusal } from "../src/safety/security-gate";
 import {
   agyPayload,
   CONVERSATION,

@@ -17,6 +17,7 @@ describe("reinstallInFreshProcess", () => {
   function fakeEntry(body: string): string {
     const entry = resolve(dir, "entry.ts");
     writeFileSync(entry, body);
+
     return entry;
   }
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { decideRefusal } from "../src/hooks/lib/security-gate";
+import { decideRefusal } from "../src/safety/security-gate";
 import { freshTestDir } from "./lib/test-home";
 
 // The gate used to live inside a spawned entrypoint, so none of this was

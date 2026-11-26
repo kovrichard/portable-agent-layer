@@ -177,6 +177,15 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run {{PKG_ROOT}}/src/hooks/PostGitInfo.ts --agent=claude"
+          }
+        ]
       }
     ],
     "PostToolUseFailure": [
@@ -276,6 +285,7 @@
     }
   },
   "enabledPlugins": {
-    "dark-factory@pal": false
+    "dark-factory@pal": false,
+    "pal-status@pal": true
   }
 }

@@ -13,10 +13,11 @@ export async function freshLedgerHome(file: string): Promise<string> {
   process.env.PAL_HOME = home;
   delete process.env.PAL_SPAWNED_INFERENCE;
   delete process.env.PAL_AGENT;
-  (await import("../../src/hooks/lib/settings")).reload();
+  (await import("../../src/core/settings")).reload();
+
   return home;
 }
 
 export async function ledgerLib() {
-  return await import("../../src/hooks/lib/ledger");
+  return await import("../../src/bronze/ledger");
 }

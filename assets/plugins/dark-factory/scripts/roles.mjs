@@ -19,6 +19,7 @@ export function rolesFor(category) {
     throw new Error(
       `unknown category "${category}"; use one of ${Object.keys(CATEGORIES).join(", ")}`
     );
+
   return roles;
 }
 
@@ -147,6 +148,7 @@ export function policyFor(role) {
     throw new Error(
       `unknown role "${role}"; use one of ${Object.keys(ROLE_POLICIES).join(", ")}`
     );
+
   return ROLE_POLICIES[role];
 }
 
@@ -250,6 +252,7 @@ export function rolesAfterDiff(category, changedFiles, config) {
   const after = [...rolesFor(category).after];
   if (!after.includes("tester") && touchesUi(changedFiles, config.uiPaths))
     after.push("tester");
+
   return after;
 }
 
@@ -260,6 +263,7 @@ export function changedFilesSince(repo, base, env) {
     env,
   });
   if (result.status !== 0) throw new Error(`git diff failed: ${result.stderr}`);
+
   return result.stdout.split("\n").filter(Boolean);
 }
 
@@ -276,6 +280,7 @@ export function rolesAfter(
 export function rolesAfterChanges(category, changedFiles, config) {
   const roles = rolesAfterDiff(category, changedFiles, config);
   const added = roles.filter((role) => !rolesFor(category).after.includes(role));
+
   return { roles, added };
 }
 

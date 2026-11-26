@@ -1,6 +1,7 @@
-import { isNagStage, logDiscordNag, NAG_STAGES } from "../hooks/lib/discord-events";
+import { ANOTHER_COLLECT_RUNNING } from "../hooks/lib/collect-trigger";
 import { collectEvents } from "../tools/lib/collectors";
 import { group, leaf, UsageError } from "../tools/lib/command";
+import { isNagStage, logDiscordNag, NAG_STAGES } from "../usage/discord-events";
 
 function secondsFrom(raw: string | undefined): number | null {
   if (raw === undefined) return null;
@@ -8,6 +9,7 @@ function secondsFrom(raw: string | undefined): number | null {
   if (!Number.isFinite(seconds) || seconds < 0) {
     throw new UsageError(`--after-sec must be a number of seconds, got "${raw}"`);
   }
+
   return Math.round(seconds);
 }
 
@@ -19,26 +21,34 @@ function recordDiscordNag(
   if (!isNagStage(stage)) {
     throw new UsageError(`the stage is one of ${NAG_STAGES.join(", ")}`);
   }
+
   const responseSec = secondsFrom(afterSec);
   if (stage === "answered" && responseSec === null) {
     throw new UsageError("an answered nag needs --after-sec");
   }
+
   const id = logDiscordNag(stage, kind ?? null, responseSec);
   console.log(id ? `Recorded ${id}` : "The event log is off; nothing recorded.");
 }
 
-function reportCollected(): undefined {
-  const emitted = collectEvents();
+async function reportCollected(): Promise<number | undefined> {
+  const emitted = await collectEvents();
   if (emitted === null) {
     console.log("Another collect is running; nothing collected.");
-    return;
+
+    return ANOTHER_COLLECT_RUNNING;
   }
+
   const sources = Object.entries(emitted);
   if (sources.length === 0) {
     console.log("The event log is off; nothing collected.");
+
     return;
   }
+
   for (const [source, count] of sources) console.log(`${source}: ${count}`);
+
+  return undefined;
 }
 
 async function reportBackfilled(since: string | undefined): Promise<undefined> {
@@ -47,8 +57,10 @@ async function reportBackfilled(since: string | undefined): Promise<undefined> {
   const sources = Object.entries(appended);
   if (sources.length === 0) {
     console.log("The event log is off; nothing backfilled.");
+
     return;
   }
+
   for (const [source, count] of sources) console.log(`${source}: ${count}`);
 }
 

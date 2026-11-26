@@ -6,11 +6,11 @@
  * is decided in lib/invocation-context.ts, where a test can import it.
  */
 
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
+import { enterHookWorkspace } from "../core/hook-payload";
+import { logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { type InvocationPayload, invocationContext } from "./lib/invocation-context";
-import { logError } from "./lib/log";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

@@ -9,8 +9,8 @@ import {
   type MergedWorktree,
   mergedWorktrees,
   pruneMergedWorktrees,
-} from "../hooks/lib/merged-worktrees";
-import { log } from "../targets/lib";
+} from "../progress/merged-worktrees";
+import { log } from "../targets/log";
 import { group, leaf } from "../tools/lib/command";
 
 function forgetBranchesDeletedOnRemote(cwd: string): void {
@@ -19,17 +19,22 @@ function forgetBranchesDeletedOnRemote(cwd: string): void {
 
 function report(verb: string, worktrees: MergedWorktree[], failed: FailedRemoval[] = []) {
   if (worktrees.length === 0 && failed.length === 0) log.info("No merged worktrees.");
+
   for (const { path, branch } of worktrees) {
     console.log(`${verb} ${path} (${branch}); undo: git worktree add ${path} ${branch}`);
   }
+
   for (const { path, reason } of failed) log.error(`Could not remove ${path}: ${reason}`);
+
   return failed.length === 0 ? 0 : 1;
 }
 
 export function prune(cwd: string, dryRun: boolean): number {
   forgetBranchesDeletedOnRemote(cwd);
+
   if (dryRun) return report("Would remove", mergedWorktrees(cwd));
   const { removed, failed } = pruneMergedWorktrees(cwd);
+
   return report("Removed", removed, failed);
 }
 

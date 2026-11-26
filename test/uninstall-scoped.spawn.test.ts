@@ -143,6 +143,7 @@ describe.skipIf(process.platform === "win32")(
         const store = at(".pal", "skills");
         mkdirSync(store, { recursive: true });
         chmodSync(store, 0o500);
+
         try {
           const result = runPal("install", "--claude");
           expect(result.status).toBe(1);

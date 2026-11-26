@@ -35,7 +35,7 @@ Determine which PAL subsystem owns this behavior:
 |------|-----------|-----------|
 | **Hook-automated** | Runs automatically via StopOrchestrator or UserPromptOrchestrator | `hooks/StopOrchestrator.ts`, `hooks/UserPromptOrchestrator.ts`, `hooks/lib/stop.ts` |
 | **Instruction-driven** | AI is told to do it via CLAUDE.md / AGENTS.md instructions | `~/.claude/CLAUDE.md`, project CLAUDE.md files |
-| **Context-dependent** | Requires specific context to be loaded at session start | `hooks/LoadContext.ts`, `hooks/lib/context.ts` |
+| **Context-dependent** | Requires specific context to be loaded at session start | `hooks/LoadContext.ts`, `context/context.ts` |
 | **Skill-triggered** | Should have been invoked via a skill | `~/.pal/skills/*/SKILL.md` |
 
 ## 3. Trace the execution path
@@ -56,7 +56,7 @@ Based on the type, investigate the relevant chain:
 4. Consider whether the conversation context made it unlikely the AI would prioritize this action (e.g., too focused on the user's task, no natural pause point)
 
 ### For context-dependent behaviors:
-1. Check `hooks/LoadContext.ts` and `hooks/lib/context.ts`
+1. Check `hooks/LoadContext.ts` and `context/context.ts`
 2. Verify the expected context was actually injected (check system-reminder content in conversation)
 3. Check if context was truncated or missing
 

@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { eventsSince } from "../src/hooks/lib/events";
-import { hasApiKey, inference, loggedClaudeAuthMode } from "../src/hooks/lib/inference";
-import { recentHookErrors } from "../src/hooks/lib/log";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { eventsSince } from "../src/bronze/events";
+import { recentHookErrors } from "../src/core/log";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
+import { hasApiKey, inference } from "../src/inference/inference";
+import { loggedClaudeAuthMode } from "../src/inference/inference-agents";
 import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { restoreEnv, savedEnv } from "./lib/inference-dispatch-fixture";
 import { removeOnceReleased } from "./lib/remove-once-released";

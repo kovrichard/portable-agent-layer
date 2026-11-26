@@ -38,11 +38,13 @@ function fakeClaudeOnPath(): string {
   mkdirSync(bin, { recursive: true });
   writeFileSync(resolve(bin, "claude"), "#!/bin/sh\necho 1.0.0\n");
   chmodSync(resolve(bin, "claude"), 0o755);
+
   return [bin, dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
 }
 
 function pal(...args: string[]) {
   const { PAL_SKIP_DOCTOR: _skip, ...env } = process.env;
+
   return spawnSync("bun", ["run", CLI, "cli", ...args], {
     env: {
       ...env,
@@ -99,12 +101,16 @@ describe.skipIf(process.platform === "win32")(
       expect(existsSync(at("home", "debug", "debug.log.1"))).toBe(true);
     });
 
-    test("the doctor finds nothing left to migrate or clean", () => {
+    test("the doctor finds nothing left to migrate or clean but its owner's moves", () => {
       expect(
         doctorIds.filter((id) =>
           /^migration\.|^settings\.unknown|hooks\.scripts/.test(id)
         )
       ).toEqual([]);
+    });
+
+    test("the settings move waits for its owner", () => {
+      expect(doctorIds).toContain("owner-migration.v13-settings-to-root");
     });
   }
 );

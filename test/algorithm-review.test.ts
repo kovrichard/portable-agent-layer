@@ -8,7 +8,7 @@ import {
   loadAlgorithmReviewNudge,
   readReviewMark,
   writeReviewMark,
-} from "../src/hooks/lib/algorithm-review";
+} from "../src/opinions/algorithm-review";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -25,6 +25,7 @@ const NOW = new Date("2026-06-01T00:00:00Z");
 
 function addReflections(n: number, ts: string) {
   mkdirSync(resolve(TEST_HOME, "memory", "learning", "reflections"), { recursive: true });
+
   for (let i = 0; i < n; i++) {
     appendFileSync(
       REFL_FILE,

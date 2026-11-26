@@ -89,7 +89,7 @@ Prompts should never replicate functionality that code can provide:
 - Hooks are TypeScript, not prompt instructions
 - Tools are CLI programs, not natural language procedures
 - Memory is structured JSON/JSONL, not freeform text
-- Configuration is `pal-settings.json`, not prose in CLAUDE.md
+- Configuration is `~/.pal/settings.json`, not prose in CLAUDE.md
 
 ### 7. Clear Thinking + Prompting is King
 
@@ -289,6 +289,21 @@ Hooks are registered in the agent's settings file during `pal cli install`. Each
 
 ## Memory System Architecture
 
+### Data Folders
+
+The user's data sits in four folders under `~/.pal/`. Each holds one kind of data:
+
+| Folder | Holds | Export | Backup before a layout move |
+|---|---|---|---|
+| `memory/` | What PAL learned and recalls: knowledge, relationship, self-model, wisdom, adaptation rules | yes | yes |
+| `records/` | What happened, one folder per store: copied agent transcripts (`raw/claude/`), the bronze event log (`bronze/`), the ledger, ratings, claim checks, the sessions archive | yes, except `records/raw/` and the event text and tool output in `records/bronze/` | yes |
+| `work/` | The user's work, one folder per store: projects with their session history (`projects/`), history from unregistered folders (`unbound-history/`), the progress tree, task ISAs (`tasks/`), scheduled prompts (`schedules/`) | yes | yes |
+| `state/` | This machine's working state that is not cache. Empty until those files move | no | yes |
+
+Beside them, `settings.json` is the user's configuration, `cache/` holds what is rebuilt on the next read, and `backups/` holds the archives and manifests that migrations write.
+
+A store moves between folders only through an owner-run migration (`pal cli migrate <id>`), and reads its former folder until that runs. Every store PAL records to, with its group and folder, is listed in `src/bronze/bronze.ts`.
+
 ### Directory Structure
 
 ```
@@ -300,17 +315,21 @@ memory/
 │   ├── last-responses.json        # Cached responses for rating correlation
 │   └── debug.log                  # Hook execution logs
 │
-├── signals/                       # User feedback
-│   └── ratings.jsonl              # Explicit + implicit ratings
-│
 ├── adaptation/                    # Rules drafted from corrections, and approved opinions
 │
 ├── relationship/
 │   └── opinions-context.md        # Approved opinions, rendered for native loading
 │
-├── projects/                      # Per-project session history
-│
 └── failures/                      # Low-rating captures from older versions, no longer written
+
+records/                           # What happened, one folder per store
+├── ratings/ratings.jsonl          # Explicit + implicit ratings
+└── ...                            # ledger, claim checks, labelled turns, rule events, reflections, ...
+
+work/                              # The user's work, one folder per store
+├── projects/<slug>/               # Per-project ISA.md and session history
+├── progress-tree/events.jsonl     # The progress tree's event log
+└── ...                            # unbound history, task ISAs, schedules
 ```
 
 ### Data Flow
@@ -318,7 +337,7 @@ memory/
 ```
 Session interaction
   │
-  ├─► [Prompt] Rating capture ──► signals/ratings.jsonl
+  ├─► [Prompt] Rating capture ──► records/ratings/ratings.jsonl
   │
   ├─► [Stop] Session intelligence (Haiku) ──► projects/<slug>/ history, progress-tree stopped-at
   │
@@ -359,11 +378,11 @@ A rule the user states            A correction PAL detects
 - Progress tree, active projects
 - Changes per-session or is project-scoped — can't be pre-compiled
 - Injected as `<system-reminder>` block via stdout
-- Each section independently toggleable in `pal-settings.json → dynamicContext`
+- Each section independently toggleable in `~/.pal/settings.json → dynamicContext`
 
 ### Semi-Static Registry
 
-All semi-static sources are defined in `src/hooks/lib/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to every consumer — no other files need to change.
+All semi-static sources are defined in `src/context/semi-static.ts` via `getSemiStaticSources()`. Adding one entry there propagates automatically to every consumer — no other files need to change.
 
 ### Dynamic Injection Order
 
@@ -406,7 +425,7 @@ PAL's background inference (session naming, summaries, correction checks, etc.) 
 
 ### Routing Table
 
-The active agent is detected via `getActiveAgent()` in `src/hooks/lib/agent.ts` (driven by the `PAL_AGENT` env var set per-target). The dispatcher in `src/hooks/lib/inference.ts` then routes to the matching CLI:
+The active agent is detected via `getActiveAgent()` in `src/core/agent.ts` (driven by the `PAL_AGENT` env var set per-target). The dispatcher in `src/inference/inference.ts` then routes to the matching CLI:
 
 | Active agent | CLI invoked | Notes |
 |--------------|-------------|-------|
@@ -507,7 +526,7 @@ All five targets install hooks, skills, and AGENTS.md. Codex does not yet suppor
 
 ### Path Resolution
 
-All paths resolve through `src/hooks/lib/paths.ts`:
+All paths resolve through `src/core/paths.ts`:
 
 | Path | Default | Override |
 |------|---------|----------|

@@ -2,17 +2,13 @@
  * The knobs behind the grid and the bell.
  *
  * These were constants in the source, which meant "gone quiet after 14 days"
- * was PAL's opinion rather than the user's. They live in pal-settings.json now,
+ * was PAL's opinion rather than the user's. They live in the settings file now,
  * with the old constants as the defaults so nothing changes until someone says
  * otherwise.
  */
 
-import { PROJECT_STALE_DAYS_DEFAULT } from "../../hooks/lib/projects";
-import {
-  raw as rawSettings,
-  reload,
-  write as writeSettings,
-} from "../../hooks/lib/settings";
+import { raw as rawSettings, reload, write as writeSettings } from "../../core/settings";
+import { PROJECT_STALE_DAYS_DEFAULT } from "../../progress/projects";
 
 const ATTENTION_SOURCES = ["refusals", "waiting", "unranked", "rules"] as const;
 export type AttentionSource = (typeof ATTENTION_SOURCES)[number];
@@ -35,6 +31,7 @@ const DAY_LIMIT = 365;
 
 function storedPrefs(): Partial<ControlRoomPrefs> {
   const stored = rawSettings().controlRoom;
+
   return (stored ?? {}) as Partial<ControlRoomPrefs>;
 }
 
@@ -49,6 +46,7 @@ function positiveDays(value: unknown, fallback: number): number {
 
 export function readPrefs(): ControlRoomPrefs {
   const stored = storedPrefs();
+
   return {
     quietAfterDays: positiveDays(stored.quietAfterDays, PREF_DEFAULTS.quietAfterDays),
     urgentWithinDays: positiveDays(
@@ -66,19 +64,24 @@ export function validatePrefs(update: PrefUpdate): string | null {
   for (const key of ["quietAfterDays", "urgentWithinDays"] as const) {
     const value = update[key];
     if (value === undefined) continue;
+
     if (positiveDays(value, -1) === -1) {
       return `${key} must be a whole number of days, 1..${DAY_LIMIT}`;
     }
   }
+
   if (update.rankGoals !== undefined && typeof update.rankGoals !== "boolean") {
     return "rankGoals must be true or false";
   }
+
   for (const [key, value] of Object.entries(update.attention ?? {})) {
     if (!(ATTENTION_SOURCES as readonly string[]).includes(key)) {
       return `unknown attention source: ${key}`;
     }
+
     if (typeof value !== "boolean") return `attention.${key} must be true or false`;
   }
+
   return null;
 }
 
@@ -92,5 +95,6 @@ export function writePrefs(update: PrefUpdate): ControlRoomPrefs {
   };
   writeSettings({ ...data, controlRoom: { ...next } });
   reload();
+
   return next;
 }

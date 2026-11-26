@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { claimChecksSince } from "../src/hooks/lib/claim-log";
-import { eventsSince } from "../src/hooks/lib/events";
+import { storeDir } from "../src/bronze/bronze";
+import { eventsSince } from "../src/bronze/events";
+import { palHome, paths } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import { invocationContext } from "../src/hooks/lib/invocation-context";
-import { palHome, paths } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
+import { claimChecksSince } from "../src/opinions/claim-log";
 import {
   CONVERSATION,
   DANGEROUS,
@@ -59,6 +60,7 @@ describe("SecurityValidator under agy", () => {
       }
     );
     const out = await new Response(proc.stdout).text();
+
     return { out: out.trim(), code: await proc.exited };
   }
 
@@ -70,7 +72,7 @@ describe("SecurityValidator under agy", () => {
 
   test("records the refusal against agy's workspace, not the folder it ran from", async () => {
     await runValidator(JSON.stringify(runCommand(DANGEROUS)));
-    const ledger = readFileSync(resolve(paths.ledger(), "actions.jsonl"), "utf-8");
+    const ledger = readFileSync(resolve(storeDir("ledger"), "actions.jsonl"), "utf-8");
     expect(JSON.parse(ledger.trim().split("\n")[0]).target).toBe(workspace);
   });
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
-import { mergedButOpen, similarNodes } from "../src/hooks/lib/progress-tree-tidy";
+import { appendEvent, readTree } from "../src/progress/progress-tree";
+import { mergedButOpen, similarNodes } from "../src/progress/progress-tree-tidy";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;
@@ -14,6 +14,7 @@ beforeEach(() => {
 
 function at(): Date {
   clock += 1000;
+
   return new Date(clock);
 }
 

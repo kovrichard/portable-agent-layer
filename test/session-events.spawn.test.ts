@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent } from "../src/hooks/lib/events";
+import { appendEvent } from "../src/bronze/events";
+import { reload } from "../src/core/settings";
 import {
   contextTokensOf,
   gitBranchOf,
   logCompaction,
   logSessionEnd,
   logSessionStart,
-} from "../src/hooks/lib/session-events";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/usage/session-events";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -23,8 +23,9 @@ function at(sec: number): Date {
 }
 
 function streamed(type: string): Record<string, unknown>[] {
-  const file = resolve(home, "memory", "events", "2026-09.jsonl");
+  const file = resolve(home, "records", "bronze", "events", "2026-09.jsonl");
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -100,6 +101,7 @@ describe("what a session ran with", () => {
     writeFileSync(resolve(home, "repo", ".git", "HEAD"), "ref: refs/heads/feat/x\n");
     const cwd = process.cwd();
     process.chdir(resolve(home, "repo"));
+
     try {
       logSessionStart({ session_id: "s1", model: "claude-opus-5-5" }, T0);
     } finally {
@@ -107,6 +109,7 @@ describe("what a session ran with", () => {
       delete process.env.CLAUDE_EFFORT;
       delete process.env.CLAUDE_CODE_ENTRYPOINT;
     }
+
     expect(streamed("session_start")[0]).toMatchObject({
       model: "claude-opus-5-5",
       effort: "high",
@@ -280,7 +283,7 @@ describe("the PreCompact hook", () => {
     await proc.exited;
     const month = new Date().toISOString().slice(0, 7);
     const lines = readFileSync(
-      resolve(home, "memory", "events", `${month}.jsonl`),
+      resolve(home, "records", "bronze", "events", `${month}.jsonl`),
       "utf-8"
     );
     expect(lines).toContain('"type":"compaction"');

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
-import type { Reaction } from "../src/hooks/lib/interaction-reaction";
-import { keepSample, readSamples } from "../src/hooks/lib/interaction-samples";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
+import { observeTurn, recordReply } from "../src/opinions/interaction";
+import type { Reaction } from "../src/opinions/interaction-reaction";
+import { keepSample, readSamples } from "../src/opinions/interaction-samples";
 import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;
@@ -63,6 +63,7 @@ describe("sampling messages for the rule audit", () => {
 
   test("frequent approvals never push out the rarer corrections", () => {
     sample("corrected", 0);
+
     for (let i = 1; i <= 30; i++) sample("approved", i);
 
     const kept = readSamples();

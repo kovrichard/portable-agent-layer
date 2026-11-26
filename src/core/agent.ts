@@ -1,0 +1,351 @@
+/**
+ * Agent detection and output format adapters.
+ *
+ * Each supported agent (Claude Code, Cursor, Codex, Copilot, opencode) uses a
+ * different JSON contract for hook I/O and a different mechanism for spawning
+ * one-shot subscription-backed inference. These helpers identify which agent
+ * is currently running PAL so downstream code can dispatch accordingly.
+ *
+ * Detection reads PAL_AGENT first (set in-process by
+ * `src/targets/opencode/plugin.ts`), then the host's own environment, and only
+ * then the `--agent=` flag the install templates in `assets/templates/*` put
+ * on the hook command line. See declaredAgent for why that order. When nothing
+ * declares an agent at all, getActiveAgent falls back to the agent CLIs found
+ * on PATH rather than assuming claude.
+ */
+
+import {
+  AGENT_REGISTRY,
+  type AgentName,
+  INFERENCE_PRIORITY,
+  isAgentName,
+} from "./agent-registry";
+import { findBinaryOnPath } from "./which";
+
+export type AgentType = AgentName | "vscode";
+
+function asAgentType(value: string | undefined): AgentType | undefined {
+  if (!value) return undefined;
+
+  return value === "vscode" || isAgentName(value) ? value : undefined;
+}
+
+function agentFromEnv(): AgentType | undefined {
+  return asAgentType(process.env.PAL_AGENT);
+}
+
+/**
+ * `--agent=<name>` on the hook's own command line.
+ *
+ * An `PAL_AGENT=x cmd` prefix is POSIX-only and an `$env:PAL_AGENT='x'; cmd`
+ * prefix is PowerShell-only, so a hook config that guesses the host's shell
+ * wrong fails before the hook ever runs. An argv flag is shell-agnostic.
+ */
+export function agentFromArgv(): AgentType | undefined {
+  const flag = process.argv.find((a) => a.startsWith("--agent="));
+
+  return asAgentType(flag?.slice("--agent=".length));
+}
+
+/**
+ * cursor-agent's own session env. CURSOR_VERSION is kept because it costs
+ * nothing and appears on no other surface, but it is not the primary signal —
+ * it is absent from the session env that hook children inherit.
+ */
+export function inCursorAgent(): boolean {
+  return Boolean(
+    process.env.CURSOR_AGENT ??
+      process.env.CURSOR_VERSION ??
+      (process.env.CURSOR_INVOKED_AS === "cursor-agent" || undefined)
+  );
+}
+
+function inCodex(): boolean {
+  return Boolean(process.env.CODEX_CLI_VERSION ?? process.env.OPENAI_CODEX);
+}
+
+/**
+ * Set by every Claude Code host — cli, claude-vscode, claude-desktop — and by
+ * none of the others. The Cursor extension carries CURSOR_SPAWN_CHAIN and
+ * friends but no CURSOR_AGENT, so it lands here rather than on cursor.
+ */
+function inClaudeCode(): boolean {
+  return Boolean(process.env.CLAUDE_CODE_ENTRYPOINT);
+}
+
+/** Exported into every hook and tool process agy spawns. */
+function inAntigravity(): boolean {
+  return Boolean(process.env.ANTIGRAVITY_CONVERSATION_ID);
+}
+
+/**
+ * Which host is running this process, read from what the host itself exported.
+ *
+ * cursor-agent is tested first on purpose: it emulates Claude Code closely
+ * enough to inject CLAUDE_PROJECT_DIR and CLAUDE_CODE_AUTO_COMPACT_WINDOW, so
+ * a CLAUDE_* variable is evidence of Claude Code only once Cursor is ruled out.
+ * Antigravity comes last because its variable leaks into any agent it runs.
+ */
+function agentFromRuntimeEnv(): AgentType | undefined {
+  if (inCursorAgent()) return "cursor";
+
+  if (inCodex()) return "codex";
+
+  if (inClaudeCode()) return "claude";
+
+  if (inAntigravity()) return "antigravity";
+
+  return undefined;
+}
+
+/**
+ * Cursor and VS Code both load ~/.claude/settings.json alongside their own
+ * config, so a `--agent=claude` flag names a file three hosts share and cannot
+ * by itself say which one is running. Every other flag comes from a config only
+ * its own agent reads.
+ */
+const SHARED_CONFIG_AGENTS: ReadonlySet<AgentType> = new Set(["claude", "vscode"]);
+
+/**
+ * The agent something actually said was running, or undefined if nothing did.
+ *
+ * Host evidence outranks the flag only for the shared config, because one
+ * cursor-agent edit runs both ~/.cursor/hooks.json and ~/.claude/settings.json
+ * and the winner of that race used to decide the recorded runtime. It must not
+ * outrank an unambiguous flag: a Copilot or Codex session started from a Claude
+ * Code terminal inherits CLAUDE_CODE_ENTRYPOINT, and ambient inheritance is
+ * weaker evidence than an agent's own registration.
+ */
+export function declaredAgent(): AgentType | undefined {
+  const explicit = agentFromEnv();
+  if (explicit) return explicit;
+  const flag = agentFromArgv();
+  if (flag && !SHARED_CONFIG_AGENTS.has(flag)) return flag;
+
+  return agentFromRuntimeEnv() ?? flag;
+}
+
+/**
+ * The CLI each agent spawns for inference, in the order inference.ts routes
+ * them. vscode is absent because it has no CLI of its own — it runs Claude's.
+ */
+const AGENT_BINARIES: ReadonlyArray<readonly [AgentType, string]> =
+  INFERENCE_PRIORITY.map((agent) => [agent, AGENT_REGISTRY[agent].binary] as const);
+
+/**
+ * Which agent this machine actually has, for the case where nothing declared
+ * one — a plain terminal running `pal cli`, a cron child, a detached spawn.
+ * Assuming claude there names an agent that may not be installed, which routes
+ * inference to a binary that isn't on PATH and reports a host that isn't there.
+ */
+function agentFromInstalledBinary(): AgentType | undefined {
+  return AGENT_BINARIES.find(([, binary]) => findBinaryOnPath(binary) !== null)?.[0];
+}
+
+/**
+ * Which agent's conventions to follow.
+ *
+ * A declaration always wins; claude remains the last resort so a machine with
+ * no agent CLI at all behaves as it always has.
+ */
+export function getActiveAgent(): AgentType {
+  return declaredAgent() ?? agentFromInstalledBinary() ?? "claude";
+}
+
+export const isClaude = () => getActiveAgent() === "claude";
+export const isCursor = () => getActiveAgent() === "cursor";
+export const isCodex = () => getActiveAgent() === "codex";
+export const isCopilot = () => getActiveAgent() === "copilot";
+export const isOpencode = () => getActiveAgent() === "opencode";
+export const isAntigravity = () => getActiveAgent() === "antigravity";
+const isVscode = () => getActiveAgent() === "vscode";
+
+/** Normalized preToolUse request — one shape for every agent's payload. */
+export interface ToolUseRequest {
+  toolName: string;
+  toolInput: Record<string, unknown>;
+  hookEventName?: string;
+}
+
+/** Every spelling agents use for the file a write tool changes. */
+export const FILE_TARGET_KEYS = ["file_path", "filePath", "path", "TargetFile"];
+
+/** Antigravity's file-writing tools, all of which name their file `TargetFile`. */
+export const ANTIGRAVITY_WRITE_TOOLS = [
+  "write_to_file",
+  "replace_file_content",
+  "multi_replace_file_content",
+];
+
+function firstString(...values: unknown[]): string | undefined {
+  return values.find((v): v is string => typeof v === "string" && v.length > 0);
+}
+
+function firstObject(...values: unknown[]): Record<string, unknown> | undefined {
+  return values.find(
+    (v): v is Record<string, unknown> =>
+      typeof v === "object" && v !== null && !Array.isArray(v)
+  );
+}
+
+/** Copilot's CLI sends toolArgs as JSON text where the others send an object. */
+function parsedObject(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== "string") return undefined;
+
+  try {
+    const parsed = JSON.parse(value);
+
+    return firstObject(parsed);
+  } catch {
+    return undefined;
+  }
+}
+
+function toolInputOf(payload: Record<string, unknown>): Record<string, unknown> {
+  const candidates = [payload.tool_input, payload.toolArgs, payload.toolInput];
+
+  return firstObject(...candidates) ?? candidates.map(parsedObject).find(Boolean) ?? {};
+}
+
+/** Antigravity nests the call as `toolCall: { name, args }`. */
+function nestedToolCall(payload: Record<string, unknown>): ToolUseRequest | null {
+  const call = firstObject(payload.toolCall);
+  const toolName = firstString(call?.name);
+  if (!call || !toolName) return null;
+
+  return { toolName, toolInput: firstObject(call.args) ?? {} };
+}
+
+/**
+ * Normalize a preToolUse payload across agents.
+ *
+ * Claude Code, Cursor, Codex — and Copilot's VS Code-compatible mode — send
+ * snake_case `tool_name` + `tool_input`. Copilot's native CLI payload sends
+ * camelCase `toolName` + `toolArgs`. A hook reading only one shape matches
+ * nothing on the other, which for a security hook silently means "allow".
+ */
+export function normalizeToolUse(raw: unknown): ToolUseRequest | null {
+  const payload = firstObject(raw);
+  if (!payload) return null;
+  const toolName = firstString(payload.tool_name, payload.toolName);
+  if (!toolName) return nestedToolCall(payload);
+
+  return {
+    toolName,
+    toolInput: toolInputOf(payload),
+    hookEventName: firstString(payload.hook_event_name, payload.hookEventName),
+  };
+}
+
+/**
+ * Format a "block this action" response for the current agent.
+ * Claude Code / VS Code: both spellings at once — see claudeBlock below
+ * Cursor preToolUse:     { permission: "deny", user_message }
+ * Copilot preToolUse:    { permissionDecision: "deny", permissionDecisionReason }
+ * Copilot agentStop:     { decision: "block", reason }
+ * Codex PreToolUse:      { hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: reason } }
+ * Antigravity PreToolUse: { decision: "deny", reason }
+ *
+ * A stop event denies the whole turn, not one tool call, so it carries a
+ * decision rather than a permission — callers must name the event to get it.
+ */
+function isStopEvent(hookEventName?: string): boolean {
+  return hookEventName === "Stop" || hookEventName === "agentStop";
+}
+
+/**
+ * One payload both Claude Code and VS Code's own Copilot build accept.
+ *
+ * VS Code reads every decision from inside hookSpecificOutput and ignores the
+ * top-level keys; Claude Code reads the top-level keys and ignores the extra
+ * object (verified against `claude -p`: a turn carrying both is still blocked).
+ * Since VS Code also executes the hooks registered in ~/.claude/settings.json,
+ * carrying both spellings here is what lets one registration serve both — a
+ * second VS Code-specific hooks file made every event run twice.
+ */
+function sharesClaudeSettingsFile(): boolean {
+  return isClaude() || isVscode();
+}
+
+function claudeBlock(reason: string, hookEventName?: string): string {
+  return JSON.stringify({
+    decision: "block",
+    reason,
+    hookSpecificOutput: isStopEvent(hookEventName)
+      ? { hookEventName: "Stop", decision: "block", reason }
+      : {
+          hookEventName: "PreToolUse",
+          permissionDecision: "deny",
+          permissionDecisionReason: reason,
+        },
+  });
+}
+
+/** Cursor's beforeSubmitPrompt documents no context field. */
+export const hearsPromptContext = () => !isCursor();
+
+/**
+ * How a prompt hook hands context to the model, in the shape this agent reads.
+ * Null for the Copilot CLI, which drops a userPromptSubmitted hook's output and
+ * takes the context on userPromptTransformed instead.
+ */
+export function promptContextResponse(context: string): string | null {
+  if (isCopilot()) return null;
+
+  if (isCursor()) return JSON.stringify({ additional_context: context });
+
+  if (isCodex() || isVscode()) {
+    return JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "UserPromptSubmit",
+        additionalContext: context,
+      },
+    });
+  }
+
+  return `${context}\n`;
+}
+
+/** Stops the agent from ending its turn and hands it the reason as its next input. */
+export function stopBlockResponse(reason: string): string {
+  if (isCursor()) return JSON.stringify({ followup_message: reason });
+
+  if (isCodex()) return JSON.stringify({ additionalContext: reason });
+
+  if (isAntigravity()) return JSON.stringify({ decision: "continue", reason });
+
+  return blockResponse(reason, "Stop");
+}
+
+export function blockResponse(reason: string, hookEventName?: string): string {
+  if (isAntigravity()) {
+    return JSON.stringify({ decision: "deny", reason });
+  }
+
+  if (isCursor()) {
+    return JSON.stringify({ permission: "deny", user_message: reason });
+  }
+
+  if (isCopilot()) {
+    return isStopEvent(hookEventName)
+      ? JSON.stringify({ decision: "block", reason })
+      : JSON.stringify({
+          permissionDecision: "deny",
+          permissionDecisionReason: reason,
+        });
+  }
+
+  if (isCodex() && hookEventName === "PreToolUse") {
+    return JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: reason,
+      },
+    });
+  }
+
+  if (sharesClaudeSettingsFile()) return claudeBlock(reason, hookEventName);
+
+  return JSON.stringify({ decision: "block", reason });
+}

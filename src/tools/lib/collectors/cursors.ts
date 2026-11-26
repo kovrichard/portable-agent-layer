@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "../../../hooks/lib/paths";
+import { paths } from "../../../core/paths";
 
 export type SourceCursor = Record<string, number | string>;
 
@@ -15,6 +15,7 @@ function cursorsFile(): string {
 
 function readAll(): Record<string, SourceCursor> {
   if (!existsSync(cursorsFile())) return {};
+
   try {
     return JSON.parse(readFileSync(cursorsFile(), "utf-8"));
   } catch {

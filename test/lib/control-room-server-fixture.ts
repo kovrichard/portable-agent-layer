@@ -28,6 +28,7 @@ export function runningServer(): ReturnType<typeof Bun.serve> | null {
 export async function listen(): Promise<string> {
   const { startControlRoom } = await import("../../src/tools/control-room/server");
   server = startControlRoom(0);
+
   return `http://127.0.0.1:${server.port}`;
 }
 

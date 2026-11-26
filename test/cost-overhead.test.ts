@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { costCommand } from "../src/cli/cost";
-import { appendEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { contextOverhead } from "../src/tools/lib/cost/overhead";
 import { overheadLines } from "../src/tools/lib/cost/render";
@@ -74,6 +74,7 @@ describe("pal cli cost", () => {
       { session: "s" }
     );
     const log = spyOn(console, "log").mockImplementation(() => {});
+
     try {
       expect(await runCommand(costCommand, [], ["pal", "cli", "cost"])).toBe(0);
       expect(log.mock.calls.join("\n")).toContain("    Total              60 chars");

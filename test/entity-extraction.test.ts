@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import { extractSessionEntities } from "../src/hooks/handlers/entity-extraction";
-import { loadKnownEntities, loadNameIndex } from "../src/hooks/lib/entity-cards";
+import { loadKnownEntities, loadNameIndex } from "../src/knowledge/entity-cards";
 import {
   type ExtractedEntity,
   extractionSchema,
@@ -12,15 +13,14 @@ import {
   seenCursor,
   unseenUserText,
   worthExtracting,
-} from "../src/hooks/lib/entity-extraction";
+} from "../src/knowledge/entity-extraction";
 import {
   buildNameIndex,
   type NamedEntity,
   type NameIndex,
-} from "../src/hooks/lib/entity-names";
-import { reload } from "../src/hooks/lib/settings";
-import { ingestEntities } from "../src/tools/knowledge/ingest";
-import { load } from "../src/tools/knowledge/lib";
+} from "../src/knowledge/entity-names";
+import { ingestEntities } from "../src/knowledge/ingest";
+import { load } from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -101,6 +101,7 @@ describe("extractionSchema", () => {
     const { properties } = extractionSchema().properties.entities.items;
     expect(properties.kind).toEqual({ type: "string", enum: ["person", "company"] });
     expect(properties.aliases).toEqual({ type: "array", items: { type: "string" } });
+
     for (const field of ["name", "existing", "role", "organization", "relation", "fact"])
       expect(properties[field as keyof typeof properties]).toEqual({ type: "string" });
   });

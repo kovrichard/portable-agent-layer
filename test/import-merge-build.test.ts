@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ArchiveEntry } from "../src/hooks/lib/import-merge";
+import { appendImportLog } from "../src/bronze/import-log";
+import type { ArchiveEntry } from "../src/core/import-merge";
 import {
-  appendImportLog,
   isNeverImport,
   mergeArchive,
   mergeJsonlLines,
   readManifest,
   summarize,
-} from "../src/hooks/lib/import-merge";
+} from "../src/core/import-merge";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -90,6 +90,14 @@ describe("isNeverImport", () => {
     expect(isNeverImport("memory/signals/ratings.jsonl")).toBe(false);
     expect(isNeverImport("telos/GOALS.md")).toBe(false);
     expect(isNeverImport("skills/my-skill/SKILL.md")).toBe(false);
+    expect(isNeverImport("records/ledger/actions.jsonl")).toBe(false);
+    expect(isNeverImport("work/commitments.json")).toBe(false);
+  });
+
+  test("blocks the machine state folder and raw transcripts", () => {
+    expect(isNeverImport("state/collector-cursors.json")).toBe(true);
+    expect(isNeverImport("records/raw/p/t.gz")).toBe(true);
+    expect(isNeverImport("memory/state/kept.json")).toBe(false);
   });
 
   // A zip may spell paths with backslashes or a ./ prefix; the denylist still applies.
@@ -205,6 +213,7 @@ describe("readManifest", () => {
     os: "darwin",
     exportedAt: "2026-01-01",
     fileCount: 12,
+    layout: 2,
   };
 
   test("reads the manifest entry out of the archive", () => {
@@ -239,6 +248,7 @@ describe("readManifest", () => {
       os: "",
       exportedAt: "",
       fileCount: 0,
+      layout: 1,
     });
   });
 });
@@ -258,7 +268,7 @@ describe("appendImportLog", () => {
   };
 
   function logLines(): string[] {
-    return read("memory/state/import-log.jsonl")
+    return read("records/import-log/import-log.jsonl")
       .split("\n")
       .filter((line) => line.trim());
   }

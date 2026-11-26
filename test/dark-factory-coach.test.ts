@@ -268,6 +268,7 @@ describe("the po skill and the readme (criteria 11, 14)", () => {
 
   test("the readme describes the coach, the store, the commands and the approval flow", () => {
     expect(readme).toContain("## Coach");
+
     for (const part of [
       "findings.jsonl",
       "coach.mjs",

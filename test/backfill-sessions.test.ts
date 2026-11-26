@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logSessionEnd } from "../src/hooks/lib/session-events";
-import { reload } from "../src/hooks/lib/settings";
-import { type SessionRecord, writeSession } from "../src/hooks/lib/work-tracking";
+import { reload } from "../src/core/settings";
+import { type SessionRecord, writeSession } from "../src/progress/work-tracking";
 import { backfillEvents } from "../src/tools/lib/backfill";
+import { logSessionEnd } from "../src/usage/session-events";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -35,15 +35,16 @@ function session(
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
     .map((line) => JSON.parse(line));
 }
 
-const ends = () => logLines("memory").filter((e) => e.type === "session_end");
+const ends = () => logLines("events").filter((e) => e.type === "session_end");
 
 describe("session records become session_end events", () => {
   test("a recorded session is logged at its last state, its text kept as content", () => {
@@ -61,8 +62,8 @@ describe("session records become session_end events", () => {
         status: "completed",
       }),
     ]);
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content")).toEqual([
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text")).toEqual([
       expect.objectContaining({
         id: "session:s1",
         name: "Private session name",
@@ -73,6 +74,7 @@ describe("session records become session_end events", () => {
 
   test("an archived session resumed later is logged once, at its newest state", () => {
     writeSession(session("s1", { messageCount: 4 }));
+
     for (let i = 0; i < 50; i++) writeSession(session(`filler-${i}`));
     writeSession(session("s1", { ts: "2026-09-11T10:00:00.000Z", messageCount: 30 }));
 

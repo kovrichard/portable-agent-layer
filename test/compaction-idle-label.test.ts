@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { runCompaction } from "../src/cli/compaction";
-import { appendEvent } from "../src/hooks/lib/events";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];
@@ -31,6 +31,7 @@ async function labelsAfterGap(gapMinutes: number) {
     { ts: new Date(BASE + gapMinutes * MIN).toISOString(), session }
   );
   await runCompaction(["backtest", "--window", "500000", "--json"]);
+
   return (JSON.parse(printed[0] ?? "{}") as { labels: Record<string, number> }).labels;
 }
 

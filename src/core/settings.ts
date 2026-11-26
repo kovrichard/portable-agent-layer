@@ -1,0 +1,175 @@
+/**
+ * PalSettings — single source of truth for the settings file (see settingsPath).
+ *
+ * Reads once, caches in memory for the process lifetime.
+ * All consumers import from here instead of reading the file directly.
+ */
+
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { palHome } from "./paths";
+
+// ── Types ──
+
+interface Identity {
+  ai: { name: string; fullName: string; displayName: string; catchphrase: string };
+  principal: { name: string; timezone: string };
+}
+
+export interface PalSettingsData {
+  identity?: {
+    ai?: { name?: string; fullName?: string; displayName?: string; catchphrase?: string };
+    principal?: { name?: string; timezone?: string };
+  };
+  loadAtStartup?: { files?: string[] };
+  dynamicContext?: Record<string, boolean>;
+  /** Git co-author attribution opt-in. `decided` gates the one-time prompt. */
+  attribution?: { enabled?: boolean; decided?: boolean };
+  /** Daily unattended self-update opt-in. `decided` gates the one-time prompt. */
+  autoUpdate?: { enabled?: boolean; decided?: boolean };
+  /** Release channel plain and unattended updates follow. Absent means stable. */
+  updateChannel?: "stable" | "canary";
+  /**
+   * Action-ledger user extension. `redactPaths` adds to the built-in set of
+   * paths whose contents are never stored; it cannot shrink it.
+   */
+  ledger?: { redactPaths?: string[] };
+  /** Local event log and its content store (records/bronze/). On unless disabled. */
+  eventLog?: { enabled?: boolean };
+  /** Daily anonymous heartbeat that counts installs. On unless disabled. */
+  telemetry?: { enabled?: boolean; noticeShown?: boolean };
+  /** Control-room ranking knobs and attention sources — see src/tools/control-room/prefs.ts. */
+  controlRoom?: Record<string, unknown>;
+  /** Contextual-steering user extension: personal rules + shipped rules to suppress by tag. */
+  steering?: {
+    disable?: string[];
+    rules?: Array<{ tag: string; pattern: string; snippet: string }>;
+  };
+  /** System One judgments: provider, pinned model and the callers in shadow or live. Absent means every caller is off. */
+  systemOne?: {
+    provider?: string;
+    model?: string;
+    callers?: Record<string, "shadow" | "live">;
+  };
+  [key: string]: unknown;
+}
+
+const IDENTITY_DEFAULTS: Identity = {
+  ai: {
+    name: "Assistant",
+    fullName: "AI Assistant",
+    displayName: "ASSISTANT",
+    catchphrase: "",
+  },
+  principal: { name: "User", timezone: "" },
+};
+
+// ── Singleton ──
+
+let cached: { path: string; data: PalSettingsData } | null = null;
+
+export const SETTINGS_FILE = "settings.json";
+
+/** Where settings lived before they moved to the PAL home's root. */
+export function formerSettingsPath(home: string = palHome()): string {
+  return resolve(home, "memory", "pal-settings.json");
+}
+
+/**
+ * The settings file: `~/.pal/settings.json`, or the former
+ * `memory/pal-settings.json` while the owner has not run the move. Once the new
+ * file exists it wins, so a late write to the old path never sends it back.
+ */
+export function settingsPath(home: string = palHome()): string {
+  const current = resolve(home, SETTINGS_FILE);
+  if (existsSync(current)) return current;
+  const former = formerSettingsPath(home);
+
+  return existsSync(former) ? former : current;
+}
+
+function readSettingsFile(p: string): PalSettingsData {
+  if (!existsSync(p)) return {};
+
+  try {
+    return JSON.parse(readFileSync(p, "utf-8")) as PalSettingsData;
+  } catch {
+    return {};
+  }
+}
+
+function load(): PalSettingsData {
+  const p = settingsPath();
+  if (cached?.path !== p) cached = { path: p, data: readSettingsFile(p) };
+
+  return cached.data;
+}
+
+/** Force re-read from disk (useful after writes) */
+export function reload(): PalSettingsData {
+  cached = null;
+
+  return load();
+}
+
+// ── Public API ──
+
+/** Get the raw settings data */
+export function raw(): PalSettingsData {
+  return load();
+}
+
+/** Get resolved identity with defaults */
+export function identity(): Identity {
+  const data = load();
+  const ai = data.identity?.ai ?? {};
+  const principal = data.identity?.principal ?? {};
+  const name = ai.name || IDENTITY_DEFAULTS.ai.name;
+  const catchphrase = (ai.catchphrase || "").replace("{name}", name);
+
+  return {
+    ai: {
+      name,
+      fullName: ai.fullName || IDENTITY_DEFAULTS.ai.fullName,
+      displayName: ai.displayName || IDENTITY_DEFAULTS.ai.displayName,
+      catchphrase,
+    },
+    principal: {
+      name: principal.name || IDENTITY_DEFAULTS.principal.name,
+      timezone: principal.timezone || IDENTITY_DEFAULTS.principal.timezone,
+    },
+  };
+}
+
+/** Check if a dynamic context section is enabled (defaults to true) */
+export function isEnabled(key: string): boolean {
+  return load().dynamicContext?.[key] !== false;
+}
+
+/** Check if an opt-in dynamic context section is enabled (defaults to false) */
+export function isOptedIn(key: string): boolean {
+  return load().dynamicContext?.[key] === true;
+}
+
+export function eventLogEnabled(): boolean {
+  return load().eventLog?.enabled !== false;
+}
+
+export function telemetryEnabled(): boolean {
+  return load().telemetry?.enabled !== false;
+}
+
+export function systemOneSettings(): PalSettingsData["systemOne"] {
+  return load().systemOne;
+}
+
+/** Get the loadAtStartup file list */
+export function startupFiles(): string[] {
+  return load().loadAtStartup?.files ?? [];
+}
+
+/** Write settings back to disk and bust cache */
+export function write(data: PalSettingsData): void {
+  writeFileSync(settingsPath(), `${JSON.stringify(data, null, 2)}\n`, "utf-8");
+  cached = null;
+}

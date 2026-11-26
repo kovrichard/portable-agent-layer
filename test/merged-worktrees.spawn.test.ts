@@ -20,7 +20,7 @@ beforeEach(async () => {
   ROOT = realpathSync(freshTestDir(import.meta.file));
   process.env.PAL_HOME = resolve(ROOT, "pal");
   mkdirSync(resolve(ROOT, "pal", "memory"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 function git(dir: string, ...args: string[]): string {
@@ -38,6 +38,7 @@ function git(dir: string, ...args: string[]): string {
     { cwd: dir, encoding: "utf-8" }
   );
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -57,6 +58,7 @@ function checkout(): string {
   commit(dir, "a");
   git(dir, "remote", "add", "origin", remote);
   git(dir, "push", "-q", "-u", "origin", "main");
+
   return dir;
 }
 
@@ -65,6 +67,7 @@ function pushedWorktree(dir: string, branch: string): string {
   git(dir, "worktree", "add", "-q", "-b", branch, path, "origin/main");
   commit(path, `${branch.replace("/", "-")}.txt`);
   git(path, "push", "-q", "-u", "origin", branch);
+
   return path;
 }
 
@@ -86,6 +89,7 @@ function withGitThatOnRemove<T>(action: string, run: () => T): T {
   );
   const savedPath = process.env.PATH;
   process.env.PATH = `${bin}:${savedPath}`;
+
   try {
     return run();
   } finally {
@@ -101,16 +105,18 @@ async function runPrune(
   dryRun: boolean
 ): Promise<{ code: number; lines: string[] }> {
   const { prune } = await import("../src/cli/worktree");
-  const { capturingLog } = await import("../src/targets/lib");
+  const { capturingLog } = await import("../src/targets/log");
   const lines: string[] = [];
   const printed = spyOn(console, "log").mockImplementation((line: string) => {
     lines.push(line);
   });
+
   try {
     const code = await capturingLog(
       (level, message) => lines.push(`${level}: ${message}`),
       async () => prune(dir, dryRun)
     );
+
     return { code, lines };
   } finally {
     printed.mockRestore();
@@ -118,12 +124,13 @@ async function runPrune(
 }
 
 async function lib() {
-  return import("../src/hooks/lib/merged-worktrees");
+  return import("../src/progress/merged-worktrees");
 }
 
 function prunedEvents(): Record<string, unknown>[] {
-  const dir = resolve(ROOT, "pal", "memory", "events");
+  const dir = resolve(ROOT, "pal", "records", "bronze", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
     .filter(Boolean)
@@ -314,18 +321,16 @@ describe("the repo line", () => {
     const dir = checkout();
     pushedWorktree(dir, "feat/done");
     mergeAndDeleteOnRemote(dir, "feat/done");
-    const { getRepoStateReminder } = await import("../src/hooks/lib/repo-state");
+    const { observeRepoState } = await import("../src/context/repo-state");
 
-    expect(getRepoStateReminder(dir)).toContain(
-      "1 merged worktree: pal cli worktree prune"
-    );
+    expect(observeRepoState(dir)).toContain("1 merged worktree: pal cli worktree prune");
   });
 
   test("says nothing about worktrees when none is merged", async () => {
     const dir = checkout();
     pushedWorktree(dir, "feat/open");
-    const { getRepoStateReminder } = await import("../src/hooks/lib/repo-state");
+    const { observeRepoState } = await import("../src/context/repo-state");
 
-    expect(getRepoStateReminder(dir)).not.toContain("worktree");
+    expect(observeRepoState(dir)).not.toContain("worktree");
   });
 });

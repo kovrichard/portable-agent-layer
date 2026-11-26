@@ -4,14 +4,14 @@
  * Repo mode: auto-detected when a .git directory exists at palPkg() root.
  * Package mode: fallback when no .git is present (global bun install).
  *
- * Caches result in state/update-available.json. Checked at most once per hour.
+ * Caches result in cache/update-available.json. Checked at most once per hour.
  */
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logDebug } from "../lib/log";
-import { ensureDir, palPkg, paths } from "../lib/paths";
-import { raw as rawSettings, write as writeSettings } from "../lib/settings";
+import { logDebug } from "../../core/log";
+import { palPkg, paths } from "../../core/paths";
+import { raw as rawSettings, write as writeSettings } from "../../core/settings";
 
 export interface UpdateCache {
   checkedAt: string;
@@ -19,12 +19,14 @@ export interface UpdateCache {
   current: string;
   latest: string;
   mode: "repo" | "package";
+  /** Set by the check so the statusline scripts need no version logic of their own. */
+  major?: boolean;
 }
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function cachePath(): string {
-  return resolve(ensureDir(paths.state()), "update-available.json");
+  return resolve(paths.cache(), "update-available.json");
 }
 
 /** The last check's result whatever its age — the notice and the page read this, not the TTL. */
@@ -32,6 +34,7 @@ export function cachedStatus(): UpdateCache | null {
   try {
     const fp = cachePath();
     if (!existsSync(fp)) return null;
+
     return JSON.parse(readFileSync(fp, "utf-8")) as UpdateCache;
   } catch {
     return null;
@@ -42,6 +45,7 @@ function readCache(): UpdateCache | null {
   const cache = cachedStatus();
   if (!cache) return null;
   const fresh = Date.now() - new Date(cache.checkedAt).getTime() < CACHE_TTL_MS;
+
   return fresh ? cache : null;
 }
 
@@ -60,6 +64,7 @@ export function isRepoMode(): boolean {
 export function getInstalledVersion(): string {
   try {
     const pkg = JSON.parse(readFileSync(resolve(palPkg(), "package.json"), "utf-8"));
+
     return pkg.version || "0.0.0";
   } catch {
     return "0.0.0";
@@ -68,55 +73,67 @@ export function getInstalledVersion(): string {
 
 const PULLED_BRANCH = "@{upstream}";
 
+async function gitOutput(repoDir: string, args: string[]): Promise<string> {
+  const git = Bun.spawn(["git", ...args], {
+    cwd: repoDir,
+    stdout: "pipe",
+    stderr: "ignore",
+    windowsHide: true,
+  });
+
+  return await new Response(git.stdout).text();
+}
+
+async function gitFetch(repoDir: string): Promise<void> {
+  const fetch = Bun.spawn(["git", "fetch", "--quiet"], {
+    cwd: repoDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    windowsHide: true,
+  });
+  await fetch.exited;
+}
+
+// "Ahead" (local unpushed commits) is not an update — only remote commits we
+// lack are. Count HEAD..upstream so being ahead or diverged never nags.
+async function commitsBehind(repoDir: string): Promise<number> {
+  const count = await gitOutput(repoDir, [
+    "rev-list",
+    "--count",
+    `HEAD..${PULLED_BRANCH}`,
+  ]);
+
+  return Number.parseInt(count.trim(), 10) || 0;
+}
+
+async function upstreamVersion(
+  repoDir: string,
+  current: string,
+  remoteHash: string
+): Promise<string> {
+  try {
+    const remotePkg = JSON.parse(
+      await gitOutput(repoDir, ["show", `${PULLED_BRANCH}:package.json`])
+    );
+
+    return remotePkg.version || current;
+  } catch {
+    return `${remoteHash.slice(0, 7)} (ahead)`;
+  }
+}
+
 async function checkRepo(): Promise<UpdateCache> {
   const repoDir = palPkg();
   const current = getInstalledVersion();
 
   try {
-    const fetch = Bun.spawn(["git", "fetch", "--quiet"], {
-      cwd: repoDir,
-      stdout: "ignore",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-    await fetch.exited;
-
-    const remote = Bun.spawn(["git", "rev-parse", PULLED_BRANCH], {
-      cwd: repoDir,
-      stdout: "pipe",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-    const remoteHash = (await new Response(remote.stdout).text()).trim();
-
-    // "Ahead" (local unpushed commits) is not an update — only remote commits we
-    // lack are. Count HEAD..upstream so being ahead or diverged never nags.
-    const behind = Bun.spawn(["git", "rev-list", "--count", `HEAD..${PULLED_BRANCH}`], {
-      cwd: repoDir,
-      stdout: "pipe",
-      stderr: "ignore",
-      windowsHide: true,
-    });
-    const behindCount =
-      Number.parseInt((await new Response(behind.stdout).text()).trim(), 10) || 0;
-
+    await gitFetch(repoDir);
+    const remoteHash = (await gitOutput(repoDir, ["rev-parse", PULLED_BRANCH])).trim();
+    const behindCount = await commitsBehind(repoDir);
     const available = behindCount > 0 && remoteHash.length > 0;
-
-    let latest = current;
-    if (available) {
-      try {
-        const show = Bun.spawn(["git", "show", `${PULLED_BRANCH}:package.json`], {
-          cwd: repoDir,
-          stdout: "pipe",
-          stderr: "ignore",
-          windowsHide: true,
-        });
-        const remotePkg = JSON.parse(await new Response(show.stdout).text());
-        latest = remotePkg.version || current;
-      } catch {
-        latest = `${remoteHash.slice(0, 7)} (ahead)`;
-      }
-    }
+    const latest = available
+      ? await upstreamVersion(repoDir, current, remoteHash)
+      : current;
 
     return {
       checkedAt: new Date().toISOString(),
@@ -139,6 +156,22 @@ async function checkRepo(): Promise<UpdateCache> {
 /** npm's latest tag lags a fresh release by seconds; an older latest is never an update. */
 export function isNewerRelease(latest: string, current: string): boolean {
   return Bun.semver.order(latest, current) === 1;
+}
+
+export const MAJOR_UPDATE_COMMAND = "pal cli update --major";
+
+function majorOf(version: string): number | null {
+  const major = /^(\d+)\./.exec(version)?.[1];
+
+  return major === undefined ? null : Number(major);
+}
+
+/** A release in a later major than the installed one: installed only when the user asks. */
+export function startsNewMajor(update: UpdateCache): boolean {
+  const from = majorOf(update.current);
+  const to = majorOf(update.latest);
+
+  return update.available && from !== null && to !== null && to > from;
 }
 
 /** latest is the stable release from main; canary is the prerelease from the canary branch. */
@@ -199,17 +232,22 @@ export function checkPackage(
 /** Run update check. Caches result. Use force=true to skip cache (e.g. for `pal cli update`). */
 export async function checkForUpdate(
   force = false,
-  channel: UpdateChannel = updateChannel()
+  channel: UpdateChannel = updateChannel(),
+  fetchImpl: typeof fetch = fetch
 ): Promise<UpdateCache> {
   if (!force) {
     const cached = readCache();
     if (cached) {
       logDebug("update-check", "Using cached result");
+
       return cached;
     }
   }
 
-  const result = isRepoMode() ? await checkRepo() : await checkPackage(channel);
+  const checked = isRepoMode()
+    ? await checkRepo()
+    : await checkPackage(channel, fetchImpl);
+  const result = { ...checked, major: startsNewMajor(checked) };
   writeCache(result);
 
   if (result.available) {
@@ -235,5 +273,9 @@ export function clearUpdateCache(): void {
 export function getUpdateNotice(): string | null {
   const cache = cachedStatus();
   if (!cache?.available) return null;
+
+  if (startsNewMajor(cache))
+    return `📦 PAL ${cache.latest} is a new major release, installed only on request: ${MAJOR_UPDATE_COMMAND}`;
+
   return `📦 Update available: ${cache.current} → ${cache.latest} (pal cli update)`;
 }

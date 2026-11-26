@@ -2,20 +2,20 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
-import { loadKnownEntities, loadNameIndex } from "../src/hooks/lib/entity-cards";
+import { reload } from "../src/core/settings";
+import { loadKnownEntities, loadNameIndex } from "../src/knowledge/entity-cards";
 import {
   type ExtractedEntity,
   planExtraction,
   queueForReview,
-} from "../src/hooks/lib/entity-extraction";
+} from "../src/knowledge/entity-extraction";
 import {
   acceptReview,
   pendingReviews,
   rejectReview,
-} from "../src/hooks/lib/entity-review";
-import { reload } from "../src/hooks/lib/settings";
-import { ingestEntities } from "../src/tools/knowledge/ingest";
-import { load } from "../src/tools/knowledge/lib";
+} from "../src/knowledge/entity-review";
+import { ingestEntities } from "../src/knowledge/ingest";
+import { load } from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -39,6 +39,7 @@ function queue(...items: ExtractedEntity[]): string[] {
   const index = loadNameIndex(loadKnownEntities());
   const { review } = planExtraction(items, index, [], "chat test");
   queueForReview(review);
+
   return review.map((r) => r.id);
 }
 
@@ -47,6 +48,7 @@ function captureLog(): { text: () => string; restore: () => void } {
   const spy = spyOn(console, "log").mockImplementation((...a: unknown[]) => {
     lines.push(a.join(" "));
   });
+
   return { text: () => lines.join("\n"), restore: () => spy.mockRestore() };
 }
 

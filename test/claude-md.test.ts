@@ -47,13 +47,13 @@ beforeAll(async () => {
   );
 
   process.env.PAL_HOME = TEST_HOME;
-  const { reload } = await import("../src/hooks/lib/settings");
+  const { reload } = await import("../src/core/settings");
   reload();
 });
 
 describe("buildClaudeMd", () => {
   test("resolves identity variables from pal-settings.json", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeMd } = await import("../src/context/claude-md");
     const result = buildClaudeMd();
 
     expect(result).toContain("You are TestBot");
@@ -62,7 +62,7 @@ describe("buildClaudeMd", () => {
   });
 
   test("includes mode definitions", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeMd } = await import("../src/context/claude-md");
     const result = buildClaudeMd();
 
     expect(result).toContain("MINIMAL");
@@ -70,7 +70,7 @@ describe("buildClaudeMd", () => {
   });
 
   test("includes context routing", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeMd } = await import("../src/context/claude-md");
     const result = buildClaudeMd();
 
     // Context routing is now inlined in AGENTS.md.template (no separate file).
@@ -80,19 +80,20 @@ describe("buildClaudeMd", () => {
   });
 
   test("always carries the progress-tree rule", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeMd } = await import("../src/context/claude-md");
     expect(buildClaudeMd()).toContain("\n- **Keep the progress tree true** —");
   });
 
   test("omits setup prompt when setup is complete", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeMd } = await import("../src/context/claude-md");
     const result = buildClaudeMd();
 
     expect(result).not.toContain("SETUP_PROMPT");
   });
 
   test("carries the environment detected at install, right after the identity", async () => {
-    const envFile = resolve(TEST_HOME, "memory", "state", "environment.json");
+    mkdirSync(resolve(TEST_HOME, "cache"), { recursive: true });
+    const envFile = resolve(TEST_HOME, "cache", "environment.json");
     writeFileSync(
       envFile,
       JSON.stringify({
@@ -103,8 +104,9 @@ describe("buildClaudeMd", () => {
         detectedAt: "2026-11-05",
       })
     );
+
     try {
-      const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+      const { buildClaudeMd } = await import("../src/context/claude-md");
       const result = buildClaudeMd();
       expect(result).toContain("ready to test.\n\n## Environment\n");
       expect(result).toContain("- OS: Windows 11 (build 22631), x64\n");
@@ -115,7 +117,7 @@ describe("buildClaudeMd", () => {
   });
 
   test("leaves no placeholder when nothing was detected yet", async () => {
-    const { buildClaudeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeMd } = await import("../src/context/claude-md");
     const result = buildClaudeMd();
     expect(result).not.toContain("{{ENVIRONMENT}}");
     expect(result).toContain("ready to test.\n\n## Modes");
@@ -124,7 +126,7 @@ describe("buildClaudeMd", () => {
 
 describe("buildClaudeCodeMd", () => {
   test("includes template content", async () => {
-    const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeCodeMd } = await import("../src/context/claude-md");
     const result = buildClaudeCodeMd();
     expect(result).toContain("You are TestBot");
     expect(result).toContain("MINIMAL");
@@ -135,7 +137,7 @@ describe("buildClaudeCodeMd", () => {
     mkdirSync(relationshipDir, { recursive: true });
     writeFileSync(resolve(relationshipDir, "opinions-context.md"), "## Opinions\n- a");
 
-    const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeCodeMd } = await import("../src/context/claude-md");
     const result = buildClaudeCodeMd();
     expect(result).toMatch(/^@.*relationship.*opinions-context\.md/);
 
@@ -143,7 +145,7 @@ describe("buildClaudeCodeMd", () => {
   });
 
   test("omits @import when the opinions digest does not exist", async () => {
-    const { buildClaudeCodeMd } = await import("../src/hooks/lib/claude-md");
+    const { buildClaudeCodeMd } = await import("../src/context/claude-md");
     const result = buildClaudeCodeMd();
     expect(result).not.toContain("@");
   });
@@ -158,7 +160,7 @@ describe("needsRebuild", () => {
     mkdirSync(resolve(TEST_HOME, ".claude-empty"), { recursive: true });
     mkdirSync(resolve(TEST_HOME, ".opencode-empty"), { recursive: true });
 
-    const { needsRebuild } = await import("../src/hooks/lib/claude-md");
+    const { needsRebuild } = await import("../src/context/claude-md");
     expect(needsRebuild()).toBe(true);
 
     delete process.env.PAL_CLAUDE_DIR;
@@ -184,7 +186,7 @@ describe("needsRebuild", () => {
     writeFileSync(staleTarget, "# stale\n", "utf-8");
     linkFile(staleTarget, codexAgents);
 
-    const { regenerateIfNeeded } = await import("../src/hooks/lib/claude-md");
+    const { regenerateIfNeeded } = await import("../src/context/claude-md");
     regenerateIfNeeded();
 
     expect(resolve(codexDir, readlinkSync(codexAgents))).toBe(expectedTarget);
@@ -209,7 +211,7 @@ describe("ensureAntigravityRule", () => {
   test("writes AGENTS.md as an always-on plugin rule", async () => {
     mkdirSync(pluginDir, { recursive: true });
 
-    const { ensureAntigravityRule } = await import("../src/hooks/lib/claude-md");
+    const { ensureAntigravityRule } = await import("../src/context/claude-md");
     ensureAntigravityRule();
 
     const rule = readFileSync(rulePath, "utf-8");
@@ -218,7 +220,7 @@ describe("ensureAntigravityRule", () => {
   });
 
   test("leaves agy alone when the PAL plugin is not installed", async () => {
-    const { ensureAntigravityRule } = await import("../src/hooks/lib/claude-md");
+    const { ensureAntigravityRule } = await import("../src/context/claude-md");
     ensureAntigravityRule();
 
     expect(existsSync(geminiDir)).toBe(false);

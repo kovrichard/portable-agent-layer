@@ -23,17 +23,20 @@ function legacyRecord(name: string, path: string) {
       `created: "2026-01-01"\nupdated: "2026-02-02"\n---\n\n` +
       `## Goal\nShip the thing.\n\n## Criteria\n- [ ] ISC-1: works\n`
   );
+
   return resolve(dir, "ISA.md");
 }
 
 function checkout(name: string): string {
   const dir = resolve(HOME, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
 async function migration() {
   const { checkPendingMigrations } = await import("../src/cli/migrate");
+
   return checkPendingMigrations().find((m) => m.id === "v4-paths-to-bindings");
 }
 
@@ -52,7 +55,7 @@ describe("v4 paths-to-bindings", () => {
     const dir = checkout("alpha");
     const file = legacyRecord("alpha", dir);
     const { runMigrate } = await import("../src/cli/migrate");
-    const { bindingFor } = await import("../src/hooks/lib/bindings");
+    const { bindingFor } = await import("../src/core/project-bindings");
 
     runMigrate([]);
 
@@ -80,7 +83,7 @@ describe("v4 paths-to-bindings", () => {
 
   test("a record already in canonical form comes back byte-identical apart from the path", async () => {
     const dir = checkout("beta");
-    const { writeProject, readProject } = await import("../src/hooks/lib/projects");
+    const { writeProject, readProject } = await import("../src/progress/projects");
     writeProject({
       name: "beta",
       path: dir,
@@ -89,7 +92,7 @@ describe("v4 paths-to-bindings", () => {
       updated: "2026-02-02",
       goal: "Ship it.",
     });
-    const file = resolve(HOME, "memory", "projects", "beta", "ISA.md");
+    const file = resolve(HOME, "work", "projects", "beta", "ISA.md");
     const before = readFileSync(file, "utf-8");
 
     const p = readProject("beta");
@@ -102,7 +105,7 @@ describe("v4 paths-to-bindings", () => {
     const file = legacyRecord("alpha", checkout("alpha"));
     const before = readFileSync(file, "utf-8");
     const { runMigrate } = await import("../src/cli/migrate");
-    const { bindingsFilePath } = await import("../src/hooks/lib/bindings");
+    const { bindingsFilePath } = await import("../src/core/project-bindings");
 
     runMigrate(["--dry-run"]);
 

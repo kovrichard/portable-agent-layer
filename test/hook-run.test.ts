@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
 import {
   logHookRun,
   noteHookPayload,
   noteHookPayloadText,
   recordHookRunOnExit,
-} from "../src/hooks/lib/hook-run";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/usage/hook-run";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -21,8 +21,9 @@ beforeEach(() => {
 });
 
 function hookRuns(): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
     .filter(Boolean)
@@ -118,6 +119,7 @@ describe("recording a run on exit", () => {
     recordHookRunOnExit("/x/SkillGuard.ts", (listener) => listeners.push(listener));
 
     expect(hookRuns()).toEqual([]);
+
     for (const listener of listeners) listener(3);
     expect(hookRuns()).toEqual([
       expect.objectContaining({ hook: "SkillGuard", exitCode: 3 }),

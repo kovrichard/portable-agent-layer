@@ -19,6 +19,7 @@ export function runCheck(command, cwd, env = process.env) {
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
+
   return {
     exitCode: result.status ?? 1,
     output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
@@ -41,6 +42,7 @@ export function runGate(
       },
       env
     );
+
     return { name, exitCode, output: output.slice(-OUTPUT_TAIL) };
   });
   const failed = checks.filter((check) => check.exitCode !== 0);
@@ -53,6 +55,7 @@ export function runGate(
     },
     env
   );
+
   return { passed: failed.length === 0, failed };
 }
 

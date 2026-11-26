@@ -14,20 +14,21 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { readTranscriptFile } from "../bronze/transcript";
+import { logDebug, logError } from "../core/log";
+import { paths } from "../core/paths";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { logCompaction } from "../usage/session-events";
 import { persistLastExchange } from "./handlers/persist-last-exchange";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { logDebug, logError } from "./lib/log";
-import { paths } from "./lib/paths";
-import { logCompaction } from "./lib/session-events";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
-import { readTranscriptFile } from "./lib/transcript";
 
 recordHookRunOnExit();
 
 // Recursion guard — spawned subprocesses don't compact, so nothing to persist.
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 interface PreCompactInput {
@@ -41,6 +42,7 @@ interface PreCompactInput {
 const main = async () => {
   const input = await readStdinJSON<PreCompactInput>();
   logCompaction(input);
+
   if (!input?.transcript_path) {
     logDebug("PreCompactPersist", "No transcript_path in input — skipping");
     process.exit(0);
@@ -52,6 +54,7 @@ const main = async () => {
       logDebug("PreCompactPersist", "Transcript empty or unreadable");
       process.exit(0);
     }
+
     const sessionId = input.session_id ?? "unknown";
 
     // Stop fires after every response and is authoritative. Skip if it already

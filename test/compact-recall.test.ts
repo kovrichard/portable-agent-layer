@@ -8,7 +8,7 @@ import {
   recallBudget,
   type SavedExchange,
   truncate,
-} from "../src/hooks/lib/compact-recall";
+} from "../src/context/compact-recall";
 import { freshTestDir } from "./lib/test-home";
 
 // This runs once per compaction and its output is the only surviving copy of the
@@ -26,6 +26,7 @@ beforeEach(() => {
 function saveExchange(name: string): string {
   const path = resolve(HOME, "memory", "state", "last-exchange", `${name}.json`);
   writeFileSync(path, JSON.stringify({ sessionId: name }), "utf-8");
+
   return path;
 }
 

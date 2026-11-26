@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
+import { scopeOf } from "../src/progress/progress-tree";
 import {
   addSchedule,
   dueSchedules,
@@ -13,7 +13,7 @@ import {
   type Schedule,
   scheduledPromptsReminder,
   USER_SCOPE,
-} from "../src/hooks/lib/scheduled-prompts";
+} from "../src/progress/scheduled-prompts";
 import { freshTestDir } from "./lib/test-home";
 
 const HERE = "/work/game";
@@ -45,6 +45,7 @@ function schedule(
     ...fields,
   });
   addSchedule(made);
+
   return made;
 }
 

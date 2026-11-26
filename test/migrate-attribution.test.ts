@@ -13,6 +13,7 @@ function writeJsonl(relPath: string, lines: string[]): string {
   const file = resolve(HOME, relPath);
   mkdirSync(resolve(file, ".."), { recursive: true });
   writeFileSync(file, `${lines.join("\n")}\n`, "utf-8");
+
   return file;
 }
 
@@ -31,6 +32,7 @@ beforeEach(() => {
 
 async function migration() {
   const { checkPendingMigrations, runMigrate } = await import("../src/cli/migrate");
+
   return { pendingMigrations: checkPendingMigrations, runMigrate };
 }
 

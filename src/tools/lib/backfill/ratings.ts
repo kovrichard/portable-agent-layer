@@ -8,7 +8,7 @@ import {
   type RatingSignal,
   ratingEventId,
   readRatings,
-} from "../../../hooks/lib/signals";
+} from "../../../bronze/signals";
 import { emitUnseen, recordedAttribution } from "./rows";
 
 function emitRating(row: RatingSignal): void {

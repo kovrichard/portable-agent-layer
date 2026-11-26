@@ -10,7 +10,7 @@ import {
   removeAgentsFromCopilot,
   removeAgentsFromCursor,
   removeAgentsFromOpencode,
-} from "../src/targets/lib";
+} from "../src/targets/shipped-agents";
 import { freshTestDir } from "./lib/test-home";
 
 function tmp(): string {

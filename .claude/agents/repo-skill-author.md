@@ -20,7 +20,7 @@ You author a single new SHARED skill that ships WITH the PAL repo — committed 
    ```bash
    bun src/tools/skill-doctor.ts assets/skills/<name>
    ```
-6. Do **not** run `pal cli skill link` — repo skills ship via the install symlink loop (`copySkills` in `src/targets/lib.ts`), not manual linking. Being present in `assets/skills/` is what ships it.
+6. Do **not** run `pal cli skill link` — repo skills ship via the install symlink loop (`copySkills` in `src/targets/skills.ts`), not manual linking. Being present in `assets/skills/` is what ships it.
 7. Hand-check what the doctor can't: trigger clarity, step concreteness (every step has a verb and an object), output specification, scope discipline (one skill, one job), and a personal-info grep of the new files.
 
 ## Output

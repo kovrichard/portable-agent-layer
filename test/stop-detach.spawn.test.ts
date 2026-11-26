@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { assets } from "../src/hooks/lib/paths";
+import { assets } from "../src/core/paths";
 import { runStopHandlers } from "../src/hooks/lib/stop";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { freshTestDir } from "./lib/test-home";
@@ -37,6 +37,7 @@ describe("runStopHandlers — Stop hook non-blocking contract", () => {
   // type checker and only shows up as a hook that quietly stopped running.
   test("every handler the stop hook spawns by path is on disk", () => {
     const spawned = ["agenda", "session-intelligence", "entity-extraction"];
+
     for (const name of spawned) {
       expect(
         existsSync(resolve(assets.hooks(), "handlers", `${name}.ts`)),

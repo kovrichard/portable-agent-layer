@@ -71,6 +71,7 @@ function transcript() {
       assistantLine("msg_2", "2026-11-08T08:00:04.000Z", second, REPLY),
     ].join("\n")
   );
+
   return file;
 }
 

@@ -3,12 +3,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 // Imported at file load, before PAL_HOME is set below: these functions resolve
 // their directories per call, so the env set in beforeEach still takes effect.
-import {
-  countAgents,
-  countMd,
-  countSkills,
-  listPersonalSubagents,
-} from "../src/targets/lib";
+import { countAgents, countMd } from "../src/targets/claude/agents";
+import { listPersonalSubagents } from "../src/targets/personal-subagents";
+import { countSkills } from "../src/targets/skills";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -17,6 +14,7 @@ const CLAUDE = resolve(HOME, ".claude");
 
 function skill(name: string, withManifest = true) {
   mkdirSync(resolve(HOME, "skills", name), { recursive: true });
+
   if (withManifest) writeFileSync(resolve(HOME, "skills", name, "SKILL.md"), "x");
 }
 

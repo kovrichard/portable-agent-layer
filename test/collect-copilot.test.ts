@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { COPILOT_ALLOW_LIST, collectCopilot } from "../src/tools/lib/collectors/copilot";
 import { assertNoCredentials } from "../src/tools/lib/collectors/sqlite";
 import { freshTestDir } from "./lib/test-home";
@@ -15,8 +15,9 @@ let home: string;
 let dbPath: string;
 
 function streamed(): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
@@ -35,6 +36,7 @@ function fixtureDb(): Database {
   db.run(
     "INSERT INTO sessions (id, cwd, host_type, summary, created_at) VALUES ('ses_local', '/work/repo', NULL, 'a summary', '2026-10-12T09:00:00.000Z'), ('ses_cloud', '/runner/repo', 'github', NULL, '2026-10-12T09:00:00.000Z')"
   );
+
   return db;
 }
 

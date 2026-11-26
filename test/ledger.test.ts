@@ -78,6 +78,7 @@ describe("recordAction", () => {
       recordAction(APPLIED).id,
     ];
     expect(new Set(ids).size).toBe(3);
+
     for (const id of ids) expect(id.length).toBeGreaterThan(0);
   });
 
@@ -200,7 +201,7 @@ describe("rotation", () => {
     const { recordAction, ledgerPath } = await lib();
     recordAction(APPLIED);
     recordAction(APPLIED);
-    expect(readdirSync(resolve(HOME, "memory", "ledger"))).toEqual(["actions.jsonl"]);
+    expect(readdirSync(resolve(HOME, "records", "ledger"))).toEqual(["actions.jsonl"]);
     expect(entries(ledgerPath())).toHaveLength(2);
   });
 
@@ -209,7 +210,7 @@ describe("rotation", () => {
   // boundary undefined.
   test("rotates a file sitting exactly on the cap, but not one byte under", async () => {
     const { recordAction, ledgerPath } = await lib();
-    const dir = resolve(HOME, "memory", "ledger");
+    const dir = resolve(HOME, "records", "ledger");
 
     writeFileSync(ledgerPath(), "x".repeat(4 * 1024 * 1024 - 1), "utf-8");
     recordAction(APPLIED);
@@ -226,7 +227,7 @@ describe("rotation", () => {
     writeFileSync(ledgerPath(), "x".repeat(4 * 1024 * 1024 + 1), "utf-8");
     recordAction(APPLIED);
 
-    const files = readdirSync(resolve(HOME, "memory", "ledger")).sort();
+    const files = readdirSync(resolve(HOME, "records", "ledger")).sort();
     expect(files).toHaveLength(2);
     expect(files).toContain("actions.jsonl");
     expect(files.some((f) => /^actions-.+\.jsonl$/.test(f))).toBe(true);
@@ -238,7 +239,7 @@ describe("rotation", () => {
     writeFileSync(ledgerPath(), marker, "utf-8");
     recordAction(APPLIED);
 
-    const dir = resolve(HOME, "memory", "ledger");
+    const dir = resolve(HOME, "records", "ledger");
     const rotated = readdirSync(dir).find((f) => f !== "actions.jsonl");
     expect(rotated).toBeDefined();
     expect(readFileSync(resolve(dir, rotated as string), "utf-8")).toContain("KEEP-ME");
@@ -258,9 +259,10 @@ describe("rotation", () => {
   // to survive, forced rather than waited for.
   test("a second rotation in the same instant archives beside the first, not over it", async () => {
     setSystemTime(new Date("2026-05-04T10:00:00.000Z"));
+
     try {
       const { recordAction, ledgerPath } = await lib();
-      const dir = resolve(HOME, "memory", "ledger");
+      const dir = resolve(HOME, "records", "ledger");
       const fill = (marker: string) =>
         writeFileSync(
           ledgerPath(),
@@ -289,9 +291,9 @@ describe("rotation", () => {
   });
 
   test("creates the ledger directory on first use", async () => {
-    expect(existsSync(resolve(HOME, "memory", "ledger"))).toBe(false);
+    expect(existsSync(resolve(HOME, "records", "ledger"))).toBe(false);
     const { recordAction } = await lib();
     recordAction(APPLIED);
-    expect(existsSync(resolve(HOME, "memory", "ledger", "actions.jsonl"))).toBe(true);
+    expect(existsSync(resolve(HOME, "records", "ledger", "actions.jsonl"))).toBe(true);
   });
 });

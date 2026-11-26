@@ -11,7 +11,7 @@ import {
   readEvents,
   readTree,
   type WorkEvent,
-} from "../src/hooks/lib/progress-tree";
+} from "../src/progress/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;
@@ -24,6 +24,7 @@ beforeEach(() => {
 
 function at(): Date {
   clock += 1000;
+
   return new Date(clock);
 }
 
@@ -115,6 +116,7 @@ describe("progress tree", () => {
 
   test("PRs with the same number in two repositories stay apart", () => {
     open("a", "one");
+
     for (const ref of ["https://github.com/o/a/pull/7", "https://github.com/o/b/pull/7"])
       appendEvent("pal", "a", "attach", { kind: "pr", ref }, file, at());
     expect(readTree("pal", file).nodes.get("a")?.artifacts).toHaveLength(2);

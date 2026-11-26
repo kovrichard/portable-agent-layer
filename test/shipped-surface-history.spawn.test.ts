@@ -17,15 +17,22 @@ function git(...args: string[]): string {
   const result = spawnSync("git", args, { cwd: REPO, encoding: "utf-8" });
   if (result.status !== 0)
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
+
   return result.stdout;
 }
 
 function everyListedItem(json: string): Set<string> {
-  const { current, retired } = JSON.parse(json) as {
+  const {
+    current,
+    retired,
+    ownerRun = [],
+  } = JSON.parse(json) as {
     current: string[];
     retired: string[];
+    ownerRun?: string[];
   };
-  return new Set([...current, ...retired]);
+
+  return new Set([...current, ...retired, ...ownerRun]);
 }
 
 function isShallowClone(): boolean {
@@ -35,6 +42,7 @@ function isShallowClone(): boolean {
 function pullRequestBase(baseBranch: string): string {
   if (isShallowClone()) git("fetch", "--depth=1", "origin", baseBranch);
   else git("fetch", "origin", baseBranch);
+
   return "FETCH_HEAD";
 }
 
@@ -45,6 +53,7 @@ function localBase(): string {
 function baseManifest(): Set<string> {
   const pullRequestBranch = process.env.GITHUB_BASE_REF;
   const base = pullRequestBranch ? pullRequestBase(pullRequestBranch) : localBase();
+
   return everyListedItem(git("show", `${base}:${MANIFEST}`));
 }
 

@@ -1,0 +1,6 @@
+{
+  "name": "pal-status",
+  "version": "0.1.0",
+  "description": "PAL's status above the prompt. Today it holds PAL's standing notice (such as data moves required before 1.0) until it is fixed.",
+  "types": "./types/index.d.ts"
+}

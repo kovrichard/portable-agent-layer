@@ -16,6 +16,7 @@ let ran: string[];
 
 const run = (command: string) => {
   ran.push(command);
+
   return { exitCode: 0, output: "" };
 };
 

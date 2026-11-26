@@ -43,6 +43,7 @@ function scenario(setup: Setup) {
       )
         return { status: 128, stdout: "", stderr: "fatal" };
     }
+
     if (
       command === "git" &&
       args[0] === "diff" &&
@@ -50,14 +51,17 @@ function scenario(setup: Setup) {
       args[2]?.startsWith("tree-")
     ) {
       const same = args[2] === args[3];
+
       return {
         status: 0,
         stdout: same ? "" : `${(setup.treeDiff ?? [TEST_FILE]).join("\n")}\n`,
         stderr: "",
       };
     }
+
     return realSpawn(command, args);
   }) as never;
+
   return world;
 }
 

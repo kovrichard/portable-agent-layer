@@ -9,7 +9,7 @@
  * ledger.ts claims the snapshots those leave behind.
  */
 
-import { reapStalePending } from "./ledger";
+import { reapStalePending } from "../../bronze/ledger";
 import {
   commitApplied,
   commitUnapplied,
@@ -17,11 +17,11 @@ import {
   ledgeredCalls,
   type UnappliedVerdict,
   unappliedVerdictOf,
-} from "./ledger-hook";
-import { logDebug } from "./log";
-import { attachProgressFromToolCall } from "./progress-tree-tool";
-import { recordSlurpCheck } from "./slurp-check";
-import { logToolCall } from "./tool-events";
+} from "../../bronze/ledger-hook";
+import { logDebug } from "../../core/log";
+import { attachProgressFromToolCall } from "../../progress/progress-tree-tool";
+import { recordSlurpCheck } from "../../safety/slurp-check";
+import { logToolCall } from "../../usage/tool-events";
 
 type Payload = Record<string, unknown>;
 
@@ -35,10 +35,12 @@ function recordApplied(payload: Payload): void {
 function recordUnapplied(payload: Payload, verdict: UnappliedVerdict): void {
   const calls = ledgeredCalls(payload);
   if (calls.length === 0) return;
+
   for (const call of calls) {
     const entry = commitUnapplied(call, verdict);
     logDebug("post-tool", `${entry.outcome} ${entry.id} ${entry.target}`);
   }
+
   reapStalePending();
 }
 
@@ -68,6 +70,7 @@ export function runPostToolHandlers(
   argv: string[] = process.argv
 ): void {
   const only = argv.find((a) => a.startsWith("--only="))?.slice("--only=".length);
+
   for (const [name, handle] of Object.entries(HANDLERS)) {
     if (!only || only === name) handle(payload);
   }

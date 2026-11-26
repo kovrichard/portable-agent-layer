@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { assets } from "../src/hooks/lib/paths";
+import { assets } from "../src/core/paths";
 import { lintSubagent, resolveSubagentFile } from "../src/tools/subagent-doctor";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
@@ -22,6 +22,7 @@ function fixture(content: string, stem?: string): string {
   mkdirSync(dir, { recursive: true });
   const file = resolve(dir, `${name}.md`);
   writeFileSync(file, content);
+
   return file;
 }
 
@@ -210,6 +211,7 @@ describe("subagent-doctor", () => {
   test("every shipped subagent's antigravity block is clean", () => {
     const shipped = readdirSync(assets.agents()).filter((f) => f.endsWith(".md"));
     expect(shipped.length).toBeGreaterThan(0);
+
     for (const file of shipped) {
       const report = lintSubagent(resolve(assets.agents(), file));
       const antigravity = report.findings.filter((f) =>

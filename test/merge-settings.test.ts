@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { loadSettingsTemplate, mergeSettings, unmergeSettings } from "../src/targets/lib";
+import {
+  loadSettingsTemplate,
+  mergeSettings,
+  unmergeSettings,
+} from "../src/targets/settings-merge";
 
 const PAL_TEMPLATE = {
   hooks: {
@@ -47,6 +51,7 @@ describe("mergeSettings", () => {
       "/pkg"
     );
     const merged = mergeSettings({}, shipped);
+
     for (const key of Object.keys(shipped)) expect(merged).toHaveProperty(key);
   });
 
@@ -277,6 +282,7 @@ describe("the Antigravity command allowlist", () => {
   function fixedPrefixCommands(claudeAllow: string[]): string[] {
     return claudeAllow.flatMap((rule) => {
       const prefix = /^Bash\((.+?) (?:\/\/)?\*\)$/.exec(rule)?.[1];
+
       return prefix && !prefix.includes("*") ? [prefix] : [];
     });
   }
@@ -306,7 +312,10 @@ describe("PAL's plugin marketplace", () => {
       "/pkg"
     );
     expect(shipped.extraKnownMarketplaces).toEqual(marketplace("/pkg"));
-    expect(shipped.enabledPlugins).toEqual({ "dark-factory@pal": false });
+    expect(shipped.enabledPlugins).toEqual({
+      "dark-factory@pal": false,
+      "pal-status@pal": true,
+    });
   });
 
   test("install adds the marketplace and the plugin beside the user's own", () => {

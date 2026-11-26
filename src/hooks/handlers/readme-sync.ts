@@ -6,9 +6,9 @@
  */
 
 import { execSync } from "node:child_process";
-import { logDebug } from "../lib/log";
-import { palPkg } from "../lib/paths";
-import { validateReadmeSync, WATCHED_PATHS } from "../lib/readme-sync";
+import { logDebug } from "../../core/log";
+import { palPkg } from "../../core/paths";
+import { validateReadmeSync, WATCHED_PATHS } from "../../core/readme-sync";
 
 /** Check if any watched files have uncommitted changes. */
 function hasDocumentableChanges(): boolean {
@@ -42,11 +42,13 @@ interface ReadmeSyncDecision {
 export async function checkReadmeSync(): Promise<ReadmeSyncDecision> {
   if (!hasDocumentableChanges()) {
     logDebug("readme-sync", "No documentable changes detected");
+
     return {};
   }
 
   logDebug("readme-sync", "Documentable files changed — validating README");
   const { adminCommandNames } = await import("../../cli/tree");
+
   return readmeDecision(adminCommandNames());
 }
 
@@ -55,6 +57,7 @@ function readmeDecision(cliCommands: string[]): ReadmeSyncDecision {
   if (!result.ok) {
     logDebug("readme-sync", `README out of sync: ${result.issues.join("; ")}`);
     const issueList = result.issues.map((i) => `- ${i}`).join("\n");
+
     return {
       decision: "block",
       reason: `README.md is out of date. Please update it before finishing:\n${issueList}`,
@@ -62,5 +65,6 @@ function readmeDecision(cliCommands: string[]): ReadmeSyncDecision {
   }
 
   logDebug("readme-sync", "README is in sync");
+
   return {};
 }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { spawnDetachedInference } from "../src/hooks/lib/detached-inference";
+import { spawnDetachedInference } from "../src/inference/detached-inference";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -16,8 +16,10 @@ async function readWhenWritten(path: string, attempts = 50): Promise<string> {
     } catch {
       /* child hasn't written it yet */
     }
+
     await new Promise((r) => setTimeout(r, 100));
   }
+
   return "";
 }
 
@@ -100,7 +102,7 @@ writeFileSync(${JSON.stringify(markerFile)}, process.argv.slice(2).join(" "));
       childScript,
       `import { writeFileSync } from "node:fs";
 delete process.env.PAL_AGENT;
-const { getActiveAgent } = await import(${JSON.stringify(resolve(import.meta.dir, "../src/hooks/lib/agent.ts"))});
+const { getActiveAgent } = await import(${JSON.stringify(resolve(import.meta.dir, "../src/core/agent.ts"))});
 writeFileSync(${JSON.stringify(markerFile)}, getActiveAgent());
 `,
       "utf-8"

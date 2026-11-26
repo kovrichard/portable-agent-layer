@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
-import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
-import { loadProgressTreeContext } from "../src/hooks/lib/progress-tree-context";
-import { ghPrView } from "../src/hooks/lib/progress-tree-prs";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
+import { appendEvent, readTree } from "../src/progress/progress-tree";
+import { loadProgressTreeContext } from "../src/progress/progress-tree-context";
+import { ghPrView } from "../src/progress/progress-tree-prs";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
@@ -43,8 +43,10 @@ function writeFakeGhLauncher(bin: string) {
   if (process.platform === "win32") {
     writeFileSync(resolve(bin, "gh.js"), fakeGhScript());
     writeFileSync(resolve(bin, "gh.cmd"), `@echo off\r\nbun "%~dp0gh.js" %*\r\n`);
+
     return;
   }
+
   writeFileSync(resolve(bin, "gh"), `#!/usr/bin/env bun\n${fakeGhScript()}`);
   chmodSync(resolve(bin, "gh"), 0o755);
 }
@@ -75,6 +77,7 @@ function prState(n: number, state: "MERGED" | "CLOSED" | "OPEN") {
 
 function ghCalls(): string[] {
   if (!existsSync(ghLog)) return [];
+
   return readFileSync(ghLog, "utf-8").split("\n").filter(Boolean);
 }
 

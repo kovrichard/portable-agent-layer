@@ -1,0 +1,102 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { paths } from "../core/paths";
+import { isEnabled, isOptedIn } from "../core/settings";
+import { localDay } from "../core/wall-clock";
+import { loadEntityReviewNudge } from "../knowledge/entity-review";
+import { loadAlgorithmReviewNudge } from "../opinions/algorithm-review";
+import { loadAnalyzeNudge } from "../opinions/analyze-nudge";
+import { loadReactionAuditNudge } from "../opinions/reaction-audit";
+
+type ShownOn = Record<string, string>;
+
+interface DueNudge {
+  key: string;
+  command: string;
+  load: () => string;
+  enabled?: () => boolean;
+}
+
+const DUE_NUDGES: DueNudge[] = [
+  {
+    key: "algorithm-review",
+    command: "/algorithm-update",
+    load: loadAlgorithmReviewNudge,
+  },
+  { key: "reaction-audit", command: "/reaction-audit", load: loadReactionAuditNudge },
+  { key: "analyze", command: "/pal-analyze", load: loadAnalyzeNudge },
+];
+
+function entityReviewNudge(): DueNudge {
+  return {
+    key: "entity-review",
+    command: "pal cli knowledge review",
+    load: loadEntityReviewNudge,
+    enabled: () => isEnabled("entityExtraction"),
+  };
+}
+
+function dueNudges(): DueNudge[] {
+  return [...DUE_NUDGES, entityReviewNudge()];
+}
+
+function dueRemindersOn(): boolean {
+  return isOptedIn("dueReminders");
+}
+
+function isSwitchedOn(nudge: DueNudge): boolean {
+  return (nudge.enabled ?? dueRemindersOn)();
+}
+
+function shownPath(): string {
+  return resolve(paths.cache(), "nudges-shown.json");
+}
+
+function readShownOn(): ShownOn {
+  try {
+    return JSON.parse(readFileSync(shownPath(), "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * A reminder asks the user for something, so it stays until a reply has passed
+ * it on, then rests for the rest of the day.
+ */
+export function pendingToday(
+  key: string,
+  reminder: string,
+  now: Date = new Date()
+): string {
+  if (!reminder) return "";
+
+  return readShownOn()[key] === localDay(now) ? "" : reminder;
+}
+
+export function acknowledgeMentioned(reply: string, now: Date = new Date()): void {
+  const mentioned = dueNudges().filter((nudge) => reply.includes(nudge.command));
+  if (!mentioned.length) return;
+  const today = localDay(now);
+  const shownOn = readShownOn();
+
+  for (const nudge of mentioned) shownOn[nudge.key] = today;
+  writeFileSync(shownPath(), JSON.stringify(shownOn), "utf-8");
+}
+
+export function dueNudgeSections(now: Date = new Date()): string[] {
+  return dueNudges()
+    .filter(isSwitchedOn)
+    .map((nudge) => pendingToday(nudge.key, nudge.load(), now))
+    .filter(Boolean);
+}
+
+export function dueNudgeReminder(now: Date = new Date()): string | null {
+  const sections = dueNudgeSections(now);
+  if (!sections.length) return null;
+
+  return [
+    "Tell the user in one line at the end of this reply that the following is due, naming its command. This comes back every turn until a reply does.",
+    ...sections,
+  ].join("\n\n");
+}

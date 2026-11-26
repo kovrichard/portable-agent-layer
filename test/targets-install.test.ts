@@ -9,17 +9,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import {
-  capturingLog,
-  copyPalDocs,
-  copySkills,
-  copyStatusline,
-  removePalDocs,
-  removeSkills,
-  removeStatusline,
-  scaffoldPalSettings,
-  scaffoldTelos,
-} from "../src/targets/lib";
+import { capturingLog } from "../src/targets/log";
+import { copyPalDocs, removePalDocs } from "../src/targets/pal-docs";
+import { scaffoldPalSettings, scaffoldTelos } from "../src/targets/scaffold";
+import { copySkills, removeSkills } from "../src/targets/skills";
+import { copyStatusline, removeStatusline } from "../src/targets/statusline";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -40,6 +34,7 @@ const SCRIPT = process.platform === "win32" ? "statusline.ps1" : "statusline.sh"
 beforeEach(() => {
   removeOnceReleased(HOME);
   mkdirSync(HOME, { recursive: true });
+
   for (const [key, value] of Object.entries(ENV)) {
     process.env[key] = value;
   }
@@ -67,10 +62,20 @@ describe("scaffoldTelos", () => {
 });
 
 describe("scaffoldPalSettings", () => {
-  test("creates pal-settings.json from the template", () => {
+  test("a new home gets settings.json at its root, from the template", () => {
     scaffoldPalSettings();
 
-    expect(existsSync(resolve(HOME, "memory", "pal-settings.json"))).toBe(true);
+    expect(existsSync(resolve(HOME, "settings.json"))).toBe(true);
+    expect(existsSync(resolve(HOME, "memory", "pal-settings.json"))).toBe(false);
+  });
+
+  test("a home whose settings have not moved gets no second copy", () => {
+    mkdirSync(resolve(HOME, "memory"), { recursive: true });
+    writeFileSync(resolve(HOME, "memory", "pal-settings.json"), "{}");
+
+    scaffoldPalSettings();
+
+    expect(existsSync(resolve(HOME, "settings.json"))).toBe(false);
   });
 
   test("leaves an existing settings file's own keys intact", () => {
@@ -194,6 +199,7 @@ describe("shipped skills", () => {
       mkdirSync(store, { recursive: true });
       chmodSync(store, 0o500);
       const logged: { level: string; message: string }[] = [];
+
       try {
         const count = await capturingLog(
           (level, message) => logged.push({ level, message }),
@@ -203,6 +209,7 @@ describe("shipped skills", () => {
       } finally {
         chmodSync(store, 0o700);
       }
+
       const errors = logged.filter((entry) => entry.level === "error");
       expect(errors.length).toBeGreaterThan(1);
       expect(errors[0]?.message).toMatch(/^Could not install skill \S+ — \S/);
@@ -212,6 +219,7 @@ describe("shipped skills", () => {
   test("a missing skills folder is an error naming the folder", () => {
     const savedPkg = process.env.PAL_PKG;
     process.env.PAL_PKG = HOME;
+
     try {
       expect(() => copySkills(resolve(ENV.PAL_CLAUDE_DIR, "skills"))).toThrow(
         `PAL's skills folder is missing: ${resolve(HOME, "assets", "skills")}`

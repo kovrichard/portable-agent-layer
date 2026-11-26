@@ -2,7 +2,9 @@
  * test/shipped-surface.json lists everything a fresh install writes. When an
  * item stops shipping, it moves to `retired`, and an install must remove it
  * from a machine an older PAL left it on — so retiring anything needs the
- * migration that cleans it up. Refresh the list with:
+ * migration that cleans it up. An item that holds the user's data and moves
+ * only when its owner runs a named migration goes to `ownerRun` instead: an
+ * install must leave it where it is. Refresh the list with:
  *
  *   PAL_SURFACE_UPDATE=1 bun test test/shipped-surface.spawn.test.ts
  */
@@ -18,6 +20,7 @@ import { freshTestDir } from "./lib/test-home";
 interface Manifest {
   current: string[];
   retired: string[];
+  ownerRun: string[];
 }
 
 const PKG = resolve(import.meta.dir, "..");
@@ -28,10 +31,12 @@ const AGENTS = ["claude", "opencode", "cursor-agent", "copilot", "codex"];
 function fakeAgentsOnPath(root: string): void {
   const bin = resolve(root, "bin");
   mkdirSync(bin, { recursive: true });
+
   for (const agent of AGENTS) {
     writeFileSync(resolve(bin, agent), "#!/bin/sh\necho 1.0.0\n");
     chmodSync(resolve(bin, agent), 0o755);
   }
+
   linkFile(process.execPath, resolve(bin, "bun"));
 }
 
@@ -64,6 +69,7 @@ function sandbox(): string {
   mkdirSync(resolve(root, "user"));
   fakeAgentsOnPath(root);
   install(root);
+
   return root;
 }
 
@@ -74,10 +80,14 @@ function readManifest(): Manifest {
 function refreshed(previous: Manifest, current: string[]): Manifest {
   const dropped = previous.current.filter((item) => !current.includes(item));
   const retired = [...new Set([...previous.retired, ...dropped])]
-    .filter((item) => !current.includes(item))
+    .filter((item) => !current.includes(item) && !previous.ownerRun.includes(item))
     .sort();
-  return { current, retired };
+
+  return { current, retired, ownerRun: previous.ownerRun };
 }
+
+const withoutOwnerRun = (items: string[]) =>
+  items.filter((item) => !readManifest().ownerRun.includes(item));
 
 let fresh: string[];
 let planted: string[];
@@ -87,6 +97,7 @@ describe.skipIf(process.platform === "win32")("what PAL ships", () => {
   beforeAll(() => {
     const clean = sandbox();
     fresh = surface(clean, PKG);
+
     if (process.env.PAL_SURFACE_UPDATE === "1")
       writeFileSync(
         MANIFEST,
@@ -94,7 +105,10 @@ describe.skipIf(process.platform === "win32")("what PAL ships", () => {
       );
 
     const old = sandbox();
-    for (const item of readManifest().retired) plant(old, PKG, item);
+
+    const { retired, ownerRun } = readManifest();
+
+    for (const item of [...ownerRun, ...retired]) plant(old, PKG, item);
     planted = surface(old, PKG);
     install(old);
     reinstalled = surface(old, PKG);
@@ -114,7 +128,13 @@ describe.skipIf(process.platform === "win32")("what PAL ships", () => {
     );
   });
 
-  test("an install leaves an older machine exactly like a fresh one", () => {
-    expect(reinstalled).toEqual(fresh);
+  test("an install leaves every owner-run item where an older PAL left it", () => {
+    expect(readManifest().ownerRun.filter((item) => !reinstalled.includes(item))).toEqual(
+      []
+    );
+  });
+
+  test("an install leaves an older machine like a fresh one, its owner's moves aside", () => {
+    expect(withoutOwnerRun(reinstalled)).toEqual(fresh);
   });
 });

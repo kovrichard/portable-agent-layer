@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { evidenceCommand } from "../src/cli/evidence";
-import { appendEvent, eventsSince } from "../src/hooks/lib/events";
+import { appendEvent, eventsSince } from "../src/bronze/events";
 import {
   contentFor,
   exclusions,
   forget,
   unforget,
   userTurnsSince,
-} from "../src/hooks/lib/evidence";
-import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/bronze/evidence";
+import { evidenceCommand } from "../src/cli/evidence";
+import { reload } from "../src/core/settings";
+import { observeTurn, recordReply } from "../src/opinions/interaction";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
@@ -34,7 +34,7 @@ function exchange(prompt: string, reply: string, session = "s1", start = T0) {
 }
 
 const storeFile = (month: string) =>
-  resolve(home, "memory", "content", "events", `${month}.jsonl`);
+  resolve(home, "records", "bronze", "event-text", `${month}.jsonl`);
 
 describe("the evidence read", () => {
   test("a turn comes with its text and the reply it got", () => {

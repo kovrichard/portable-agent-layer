@@ -6,22 +6,22 @@
  * any error produces empty output, never blocks the prompt.
  */
 
-import { promptRulesReminder } from "../lib/adaptation-steering";
-import { promptContextResponse } from "../lib/agent";
-import { dueNudgeReminder } from "../lib/daily-nudge";
-import { getEntityReminder } from "../lib/entity-cards";
-import { observeTurn } from "../lib/interaction";
-import { logDebug, logError } from "../lib/log";
-import { parkPromptContext } from "../lib/parked-context";
-import { progressTreePromptLine } from "../lib/progress-tree-context";
-import { isSystemText } from "../lib/prompt-text";
-import { getRepoStateReminder } from "../lib/repo-state";
-import { runModePromptLine } from "../lib/run-mode-gate";
-import { scheduledPromptsReminder } from "../lib/scheduled-prompts";
-import { isEnabled } from "../lib/settings";
-import { getSkillReminder } from "../lib/skill-match";
-import { getSteeringReminder } from "../lib/steering";
-import { getWallClockReminder } from "../lib/wall-clock";
+import { dueNudgeReminder } from "../../context/daily-nudge";
+import { observeRepoState } from "../../context/repo-state";
+import { getSkillReminder } from "../../context/skill-match";
+import { promptContextResponse } from "../../core/agent";
+import { logDebug, logError } from "../../core/log";
+import { isSystemText } from "../../core/prompt-text";
+import { isEnabled } from "../../core/settings";
+import { getWallClockReminder } from "../../core/wall-clock";
+import { getEntityReminder } from "../../knowledge/entity-cards";
+import { promptRulesReminder } from "../../opinions/adaptation-steering";
+import { observeTurn } from "../../opinions/interaction";
+import { getSteeringReminder } from "../../opinions/steering";
+import { parkPromptContext } from "../../progress/parked-context";
+import { progressTreePromptLine } from "../../progress/progress-tree-context";
+import { scheduledPromptsReminder } from "../../progress/scheduled-prompts";
+import { runModePromptLine } from "../../safety/run-mode-gate";
 
 const BUDGET_MS = 250;
 
@@ -31,10 +31,12 @@ const BUDGET_MS = 250;
  *  @lintignore exported for test/inject-retrieval.test.ts */
 export function withinBudget<T>(work: () => T, ms: number): T | null {
   const started = performance.now();
+
   try {
     return work();
   } catch (err) {
     logError("inject-retrieval", err);
+
     return null;
   } finally {
     const elapsed = performance.now() - started;
@@ -69,7 +71,7 @@ export async function getPromptContext(
     userText &&
       withinBudget(() => scheduledPromptsReminder(process.cwd(), sessionId), BUDGET_MS),
     userText && withinBudget(() => promptRulesReminder(userText, sessionId), BUDGET_MS),
-    withinBudget(() => getRepoStateReminder(), BUDGET_MS),
+    withinBudget(() => observeRepoState(process.cwd(), sessionId ?? null), BUDGET_MS),
     withinBudget(() => progressTreePromptLine(userText, undefined, sessionId), BUDGET_MS),
     userText && withinBudget(() => observeTurn(userText, sessionId), BUDGET_MS),
     withinBudget(() => dueNudgeReminder(), BUDGET_MS),
@@ -93,5 +95,6 @@ export async function injectPromptContext(
 ): Promise<string | null> {
   const combined = await getPromptContext(prompt, sessionId, lastPart);
   if (combined) writeForAgent(combined, sessionId);
+
   return combined;
 }

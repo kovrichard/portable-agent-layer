@@ -7,7 +7,7 @@ import {
   readFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { collectCodex } from "../src/tools/lib/collectors/codex";
 import { freshTestDir } from "./lib/test-home";
 
@@ -19,8 +19,9 @@ let codexDir: string;
 let rollout: string;
 
 function streamed(): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))

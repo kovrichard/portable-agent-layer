@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendEvent, readEvents, scopeOf } from "../src/hooks/lib/progress-tree";
-import { attachGitProgress } from "../src/hooks/lib/progress-tree-git";
-import { newRun, writeRun } from "../src/hooks/lib/run-mode";
+import { appendEvent, readEvents, scopeOf } from "../src/progress/progress-tree";
+import { attachGitProgress } from "../src/progress/progress-tree-git";
+import { newRun, writeRun } from "../src/safety/run-mode";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -16,6 +16,7 @@ let repo: string;
 function git(...args: string[]): string {
   const result = spawnSync("git", ["-C", repo, ...args], { encoding: "utf-8" });
   if (result.status !== 0) throw new Error(result.stderr);
+
   return result.stdout.trim();
 }
 
@@ -28,6 +29,7 @@ function commit(subject: string) {
 function transcriptWithoutCommands(): string {
   const path = resolve(repo, "..", "transcript.jsonl");
   writeFileSync(path, JSON.stringify({ type: "user", message: { content: "go" } }));
+
   return path;
 }
 
@@ -112,6 +114,40 @@ describe("a stop held by an unattended run", () => {
     expect(stop().stdout).toContain(KEEP_WORKING);
     expect(stop("Fixed it. All tests pass.", true).stdout).toContain(CLAIM_SENT_BACK);
     expect(stop("Fixed it. All tests pass.", true).stdout).toContain(KEEP_WORKING);
+  });
+});
+
+describe("a stop before a minimum run's floor", () => {
+  function startMinimumRun(untilOffsetMs: number) {
+    const now = new Date();
+    writeRun(
+      newRun({
+        kind: "minimum",
+        scope: scopeOf(repo),
+        until: new Date(now.getTime() + untilOffsetMs),
+        now: new Date(now.getTime() - 3_600_000),
+        goal: "a tight launch post",
+        bar: ["clarity: 9/10, reread against the brief"],
+      })
+    );
+  }
+
+  test("is sent back with the goal, the bar and a lens, even when the reply asks", () => {
+    startMinimumRun(3_600_000);
+
+    const out = stop("Want me to also draft the email?").stdout;
+
+    expect(out).toContain('"decision":"block"');
+    expect(out).toContain("a tight launch post");
+    expect(out).toContain('lens \\"recheck\\"');
+    expect(out).toContain("Questions belong in the intake");
+  });
+
+  test("past the floor is sent back once to wrap up, then let through", () => {
+    startMinimumRun(-60_000);
+
+    expect(stop().stdout).toContain("the floor is reached");
+    expect(stop("Summary.", true).stdout).not.toContain('"decision":"block"');
   });
 });
 

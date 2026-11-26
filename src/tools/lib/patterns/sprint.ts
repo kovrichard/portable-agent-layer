@@ -25,19 +25,24 @@ export function currentSprint(activity: Activity[]): Sprint | null {
   if (latest === undefined) return null;
   const sprints = [...latest[1]].map((project) => {
     let start = days.length - 1;
+
     while (start > 0 && days[start - 1][1].has(project)) start--;
+
     return { project, days: days.length - start, since: days[start][0] };
   });
+
   return sprints.sort((a, b) => b.days - a.days || a.project.localeCompare(b.project))[0];
 }
 
 function busiestWindow(days: string[]): number {
   let most = 0;
   let start = 0;
+
   for (let end = 0; end < days.length; end++) {
     while (daysBetween(days[start], days[end]) >= BURST_WINDOW_DAYS) start++;
     most = Math.max(most, end - start + 1);
   }
+
   return most;
 }
 
@@ -46,6 +51,7 @@ export function quietAfterBurst(activity: Activity[], today: string): QuietProje
   return [...daysByProject(activity)]
     .map(([project, days]) => {
       const lastActive = days.at(-1) ?? today;
+
       return {
         project,
         lastActive,

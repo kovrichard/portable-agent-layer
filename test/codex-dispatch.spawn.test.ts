@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { eventsSince } from "../src/hooks/lib/events";
-import {
-  buildCliPrompt,
-  buildCodexArgs,
-  hasOpenAiKey,
-  inference,
-} from "../src/hooks/lib/inference";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { eventsSince } from "../src/bronze/events";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
+import { hasOpenAiKey, inference } from "../src/inference/inference";
+import { buildCodexArgs } from "../src/inference/inference-agents";
+import { buildCliPrompt } from "../src/inference/inference-prompt";
 import { codexReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -26,7 +23,9 @@ const PRESERVED = [
 
 function savedEnv(): Record<string, string | undefined> {
   const saved: Record<string, string | undefined> = {};
+
   for (const k of PRESERVED) saved[k] = process.env[k];
+
   return saved;
 }
 function restoreEnv(saved: Record<string, string | undefined>) {
@@ -88,6 +87,7 @@ describe("hasOpenAiKey", () => {
   test("false when PAL_OPENAI_API_KEY is not set", () => {
     const saved = process.env.PAL_OPENAI_API_KEY;
     delete process.env.PAL_OPENAI_API_KEY;
+
     try {
       expect(hasOpenAiKey()).toBe(false);
     } finally {
@@ -98,6 +98,7 @@ describe("hasOpenAiKey", () => {
   test("true when PAL_OPENAI_API_KEY is set", () => {
     const saved = process.env.PAL_OPENAI_API_KEY;
     process.env.PAL_OPENAI_API_KEY = "sk-test";
+
     try {
       expect(hasOpenAiKey()).toBe(true);
     } finally {

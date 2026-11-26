@@ -8,8 +8,12 @@
  * "you were just working in this project" auto-bump.
  */
 
-import { logDebug, logError } from "../lib/log";
-import { readAllProjects, resolveProjectFromCwd, writeProject } from "../lib/projects";
+import { logDebug, logError } from "../../core/log";
+import {
+  readAllProjects,
+  resolveProjectFromCwd,
+  writeProject,
+} from "../../progress/projects";
 
 export async function projectTouch(): Promise<void> {
   try {
@@ -18,6 +22,7 @@ export async function projectTouch(): Promise<void> {
 
     const resolved = resolveProjectFromCwd(process.cwd(), projects);
     if (!resolved) return;
+
     if (resolved.status !== "active") return;
 
     resolved.updated = new Date().toISOString();

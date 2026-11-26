@@ -18,7 +18,9 @@ export const ISC_BOX: Record<IscStatus, string> = {
 
 export function statusFromBox(box: string): IscStatus {
   if (box.toLowerCase() === "x") return "done";
+
   if (box === "~") return "retired";
+
   return "open";
 }
 
@@ -50,6 +52,7 @@ export function decodeIscText(stored: string): string {
 
 export function parseIscs(criteria: string): Isc[] {
   const out: Isc[] = [];
+
   for (const line of criteria.split("\n")) {
     const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
     if (m)
@@ -59,6 +62,7 @@ export function parseIscs(criteria: string): Isc[] {
         status: statusFromBox(m[1]),
       });
   }
+
   return out;
 }
 
@@ -69,12 +73,14 @@ export function parseIscs(criteria: string): Isc[] {
 export function iscTitle(text: string): string {
   const boundary = text.search(/; | — | \(|\. /);
   const clause = (boundary > 0 ? text.slice(0, boundary) : text).trim();
+
   return clause.length > 80 ? `${clause.slice(0, 79).trimEnd()}…` : clause;
 }
 
 /** Scans Criteria AND Changelog so an archived id can never be handed out again. */
 export function nextIscId(criteria: string, changelog: string): number {
   const ids = [...parseIscs(criteria), ...parseIscs(changelog)].map((i) => i.id);
+
   return ids.length > 0 ? Math.max(...ids) + 1 : 1;
 }
 
@@ -88,6 +94,7 @@ export function removeIscLine(
   );
   if (idx === -1) return { line: null, rest: section };
   const [line] = lines.splice(idx, 1);
+
   return {
     line,
     rest: lines
@@ -107,8 +114,10 @@ export function dropEmptyArchiveHeadings(changelog: string): string {
     for (let j = headingIdx + 1; j < lines.length && !lines[j].startsWith("### "); j++) {
       if (lines[j].trim() !== "") return true;
     }
+
     return false;
   };
+
   return lines
     .filter((l, i) => !(/^### Archived /.test(l) && !blockHasContent(i)))
     .join("\n")
@@ -125,6 +134,7 @@ export function archiveLine(
   const heading = `### ${kind} ${now.toISOString().slice(0, 10)}`;
   const base = (changelog ?? "").trim();
   if (base.includes(heading)) return `${base}\n${doneLine}`;
+
   return base ? `${base}\n\n${heading}\n${doneLine}` : `${heading}\n${doneLine}`;
 }
 
@@ -135,8 +145,11 @@ export function selectIscs(
   flags: Set<string>
 ): Isc[] {
   if (flags.has("--all")) return [...open, ...done, ...retired];
+
   if (flags.has("--closed")) return done;
+
   if (flags.has("--retired")) return retired;
+
   return open;
 }
 
@@ -160,11 +173,14 @@ export function completeIsc(
   now: Date = new Date()
 ): IscMove {
   const kept = { criteria: sections.criteria, changelog: sections.changelog };
+
   if (parseIscs(sections.changelog).some((i) => i.id === id)) {
     return { ok: true, already: true, ...kept };
   }
+
   const { line, rest } = removeIscLine(sections.criteria, id);
   if (!line) return { ok: false, reason: `ISC-${id} not found` };
+
   return {
     ok: true,
     already: false,
@@ -180,9 +196,11 @@ export function completeIsc(
 
 export function reopenIsc(sections: IscSections, id: number): IscMove {
   const kept = { criteria: sections.criteria, changelog: sections.changelog };
+
   if (parseIscs(sections.criteria).some((i) => i.id === id && i.status === "open")) {
     return { ok: true, already: true, ...kept };
   }
+
   let changelog = sections.changelog;
   let criteria = sections.criteria;
   let removed = removeIscLine(changelog, id);
@@ -191,8 +209,10 @@ export function reopenIsc(sections: IscSections, id: number): IscMove {
     removed = removeIscLine(criteria, id);
     if (removed.line) criteria = removed.rest;
   }
+
   if (!removed.line) return { ok: false, reason: `ISC-${id} not found` };
   const openLine = removed.line.replace(/\[[x~]\]/i, "[ ]");
+
   return {
     ok: true,
     already: false,
@@ -208,5 +228,6 @@ export function taskSlug(title: string, now: number = Date.now()): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
+
   return `${sanitized}-${now.toString(36)}`;
 }

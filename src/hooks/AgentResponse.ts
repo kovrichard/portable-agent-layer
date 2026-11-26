@@ -3,9 +3,10 @@
  * answered. Cursor's stop event carries no reply, this one does.
  */
 
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { fileFinalReply, type HookTurnPayload } from "./lib/hook-turn";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
+import type { HookTurnPayload } from "../core/hook-payload";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { fileFinalReply } from "./lib/hook-turn";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();

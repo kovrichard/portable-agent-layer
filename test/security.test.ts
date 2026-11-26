@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { checkBashCommand, checkFilePath } from "../src/hooks/lib/security";
+import { checkBashCommand, checkFilePath } from "../src/safety/security";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
@@ -214,6 +214,7 @@ describe("checkBashCommand", () => {
     for (const target of ["/", "/*", "~", "~/", "~/*", "$HOME", `\${HOME}/`, '"$HOME"']) {
       expect(checkBashCommand(`rm -rf ${target}`)).toBeTruthy();
     }
+
     expect(checkBashCommand("rm -rf / && ls")).toBeTruthy();
   });
 
@@ -365,6 +366,14 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("echo 'x' > ~/.pal/memory/signals/foo.txt")).toBeTruthy();
   });
 
+  test("blocks writing to the records PAL keeps, and allows reading them", () => {
+    expect(
+      checkBashCommand("echo 'x' >> ~/.pal/records/ledger/actions.jsonl")
+    ).toBeTruthy();
+    expect(checkBashCommand("cat ~/.pal/records/ledger/actions.jsonl")).toBeNull();
+    expect(checkBashCommand("echo x > /src/MyRepo/records/a.txt")).toBeNull();
+  });
+
   test("allows reading from managed dirs under managed roots", () => {
     expect(checkBashCommand("cat ~/.pal/memory/signals/ratings.jsonl")).toBeNull();
     expect(checkBashCommand("ls ~/.pal/memory/learning/session")).toBeNull();
@@ -409,6 +418,7 @@ describe("checkFilePath", () => {
 
   test("blocks managed files under a relocated PAL home", () => {
     process.env.PAL_HOME = "/srv/pal-home";
+
     try {
       expect(checkFilePath("/srv/pal-home/memory/sessions.json")).toBeTruthy();
       expect(checkFilePath(home(".pal", "memory", "sessions.json"))).toBeNull();
@@ -480,6 +490,7 @@ describe("checkFilePath", () => {
     mkdirSync(repoSkill, { recursive: true });
     linkDir(repoSkill, join(skills, "shipped"));
     mkdirSync(join(skills, "personal"), { recursive: true });
+
     try {
       expect(checkFilePath(join(skills, "shipped", "SKILL.md"))).toMatch(
         /managed by 'pal install'.*PAL repo/
@@ -503,6 +514,18 @@ describe("checkFilePath", () => {
     expect(checkFilePath("/src/MyRepo/.pal/docs/README.md")).toBeNull();
   });
 
+  test("the settings file at the PAL home's root is hook-managed", () => {
+    expect(checkFilePath(home(".pal", "settings.json"))).toMatch(
+      /settings\.json is managed/
+    );
+  });
+
+  test("every other settings.json stays editable, an agent's own included", () => {
+    expect(checkFilePath(home(".claude", "settings.json"))).toBeNull();
+    expect(checkFilePath(home(".pal", "telos", "settings.json"))).toBeNull();
+    expect(checkFilePath("/home/user/project/.vscode/settings.json")).toBeNull();
+  });
+
   test("does not block .pal paths that don't match docs/skills/tools", () => {
     expect(checkFilePath(home(".pal", "telos", "GOALS.md"))).toBeNull();
     expect(checkFilePath(home(".pal", "memory", "pal-settings.json"))).toBeTruthy(); // caught by HOOK_MANAGED_FILES
@@ -513,6 +536,6 @@ describe("checkFilePath", () => {
   test("allows normal file paths", () => {
     expect(checkFilePath("/home/user/project/src/index.ts")).toBeNull();
     expect(checkFilePath("/tmp/foo.txt")).toBeNull();
-    expect(checkFilePath("./src/hooks/lib/paths.ts")).toBeNull();
+    expect(checkFilePath("./src/core/paths.ts")).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { beforeEach, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { runCompaction } from "../src/cli/compaction";
-import { appendEvent } from "../src/hooks/lib/events";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];
@@ -26,6 +26,7 @@ async function labelsFor(
   withCall = true
 ) {
   const session = "s";
+
   if (withCall) {
     appendEvent(
       "model_call",
@@ -33,6 +34,7 @@ async function labelsFor(
       { ts: new Date(BASE).toISOString(), session, runtime: "claude" }
     );
   }
+
   appendEvent(
     "compaction",
     {
@@ -44,6 +46,7 @@ async function labelsFor(
   );
   printed = [];
   await runCompaction(["backtest", "--window", window, "--json"]);
+
   return (JSON.parse(printed[0] ?? "{}") as { labels: Labels }).labels;
 }
 

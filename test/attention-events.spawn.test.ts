@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logAttention } from "../src/hooks/lib/attention-events";
-import { observeTurn } from "../src/hooks/lib/interaction";
-import { reload } from "../src/hooks/lib/settings";
-import { logToolCall } from "../src/hooks/lib/tool-events";
-import { permissionWaitSec } from "../src/hooks/lib/waiting-on-user";
+import { reload } from "../src/core/settings";
+import { observeTurn } from "../src/opinions/interaction";
+import { logAttention } from "../src/usage/attention-events";
+import { logToolCall } from "../src/usage/tool-events";
+import { permissionWaitSec } from "../src/usage/waiting-on-user";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -16,11 +16,13 @@ let home: string;
 function events(type: string): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")

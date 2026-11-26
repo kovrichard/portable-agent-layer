@@ -163,6 +163,7 @@ describe("the SessionEnd hook", () => {
     const file = join(projects, `${SESSION}.jsonl`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, jsonl(lines));
+
     return file;
   }
 
@@ -182,6 +183,7 @@ describe("the SessionEnd hook", () => {
       env,
       T_PO
     );
+
     if (finish) {
       appendEvent({ event: "run_finished", task: id, status: "ready" }, env, T_FIN);
     }
@@ -368,6 +370,7 @@ describe("stats and the afterRunFinished event (criteria 5 to 8)", () => {
       role("2026-11-11T09:01:00.000Z", "po", 0.5, { afterRunFinished: true }),
     ];
     const report = taskReport(orphan, "t1");
+
     for (const run of report.runs) expect(run.costUsd ?? 0).toBe(0);
     expect(summarize(orphan).costByRole.po.costUsd).toBeCloseTo(0.5, 10);
     expect(summarize(orphan).costByRole.po.runs).toBe(0);

@@ -13,6 +13,7 @@ function fakeClaudeOnPath(): string {
   const claude = resolve(bin, "claude");
   writeFileSync(claude, "#!/bin/sh\necho 1.0.0\n");
   chmodSync(claude, 0o755);
+
   return [bin, dirname(process.execPath), "/usr/bin", "/bin"].join(delimiter);
 }
 
@@ -35,6 +36,7 @@ function pal(...args: string[]) {
     encoding: "utf-8",
     timeout: 60000,
   });
+
   return `${result.stdout}${result.stderr}`;
 }
 

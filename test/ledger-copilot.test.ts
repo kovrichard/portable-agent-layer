@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { normalizeToolUse } from "../src/hooks/lib/agent";
-import { ledgeredCalls, unappliedVerdictOf } from "../src/hooks/lib/ledger-hook";
+import { ledgeredCalls, unappliedVerdictOf } from "../src/bronze/ledger-hook";
+import { normalizeToolUse } from "../src/core/agent";
 
 // Every payload below was captured from GitHub Copilot CLI 1.0.17 by registering
 // a hook that wrote its stdin to disk. An invented fixture here proves only that
@@ -107,6 +107,7 @@ describe("Copilot publishes no call id, so the halves pair on what it does send"
   test("each file in one patch gets its own key, or two would claim one snapshot", () => {
     const keys = ledgeredCalls(COPILOT_PATCH).map((call) => call.toolUseId);
     expect(new Set(keys).size).toBe(keys.length);
+
     for (const key of keys) expect(key).toMatch(/^derived-[0-9a-f]{32}$/);
   });
 
@@ -222,6 +223,7 @@ describe("the shipped Copilot hooks template", () => {
         expect(entry.powershell).toContain("--agent=copilot");
       }
     }
+
     expect(raw).not.toContain("PAL_AGENT=");
   });
 

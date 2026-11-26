@@ -16,7 +16,7 @@ describe("palHome", () => {
   test("PAL_HOME env override takes precedence", async () => {
     process.env.PAL_HOME = TEST_DIR;
     // Re-import to pick up env
-    const { palHome } = await import("../src/hooks/lib/paths");
+    const { palHome } = await import("../src/core/paths");
     expect(palHome()).toBe(TEST_DIR);
     delete process.env.PAL_HOME;
   });
@@ -25,7 +25,7 @@ describe("palHome", () => {
     delete process.env.PAL_HOME;
     delete process.env.PAL_TEST_SANDBOX;
     process.env.PAL_PKG = TEST_DIR;
-    const { palHome } = await import("../src/hooks/lib/paths");
+    const { palHome } = await import("../src/core/paths");
     expect(palHome()).toBe(resolve(homedir(), ".pal"));
     delete process.env.PAL_PKG;
     process.env.PAL_TEST_SANDBOX = "1";
@@ -33,28 +33,55 @@ describe("palHome", () => {
 
   test("a test run without PAL_HOME never lands in the real ~/.pal", async () => {
     delete process.env.PAL_HOME;
-    const { palHome } = await import("../src/hooks/lib/paths");
+    const { palHome } = await import("../src/core/paths");
     expect(palHome()).not.toBe(resolve(homedir(), ".pal"));
   });
 
   test("a test run without PAL_HOME stays inside the checkout's .test/", async () => {
     delete process.env.PAL_HOME;
-    const { palHome } = await import("../src/hooks/lib/paths");
+    const { palHome } = await import("../src/core/paths");
     expect(palHome()).toBe(resolve(TEST_ROOT, "pal-home"));
+  });
+
+  test("without PAL_TEST_ROOT the sandbox home is the checkout's own .test/pal-home", async () => {
+    delete process.env.PAL_HOME;
+    const testRoot = process.env.PAL_TEST_ROOT;
+    delete process.env.PAL_TEST_ROOT;
+    const { palHome } = await import("../src/core/paths");
+
+    try {
+      expect(palHome()).toBe(resolve(import.meta.dir, "..", ".test", "pal-home"));
+    } finally {
+      if (testRoot !== undefined) process.env.PAL_TEST_ROOT = testRoot;
+    }
+  });
+
+  test("PAL_TEST_ROOT moves the sandbox home under it", async () => {
+    delete process.env.PAL_HOME;
+    const testRoot = process.env.PAL_TEST_ROOT;
+    process.env.PAL_TEST_ROOT = TEST_DIR;
+    const { palHome } = await import("../src/core/paths");
+
+    try {
+      expect(palHome()).toBe(resolve(TEST_DIR, "pal-home"));
+    } finally {
+      if (testRoot === undefined) delete process.env.PAL_TEST_ROOT;
+      else process.env.PAL_TEST_ROOT = testRoot;
+    }
   });
 });
 
 describe("palPkg", () => {
   test("PAL_PKG env override takes precedence", async () => {
     process.env.PAL_PKG = TEST_DIR;
-    const { palPkg } = await import("../src/hooks/lib/paths");
+    const { palPkg } = await import("../src/core/paths");
     expect(palPkg()).toBe(TEST_DIR);
     delete process.env.PAL_PKG;
   });
 
   test("resolves to repo root by default", async () => {
     delete process.env.PAL_PKG;
-    const { palPkg } = await import("../src/hooks/lib/paths");
+    const { palPkg } = await import("../src/core/paths");
     const pkg = palPkg();
     // Should contain package.json
     expect(existsSync(resolve(pkg, "package.json"))).toBe(true);
@@ -64,7 +91,7 @@ describe("palPkg", () => {
 describe("paths", () => {
   test("user state paths resolve under palHome", async () => {
     process.env.PAL_HOME = TEST_DIR;
-    const { paths } = await import("../src/hooks/lib/paths");
+    const { paths } = await import("../src/core/paths");
     expect(paths.telos()).toBe(resolve(TEST_DIR, "telos"));
     expect(paths.memory()).toBe(resolve(TEST_DIR, "memory"));
     expect(paths.signals()).toBe(resolve(TEST_DIR, "memory", "signals"));
@@ -73,7 +100,7 @@ describe("paths", () => {
 
   test("ensureDir creates directories", async () => {
     process.env.PAL_HOME = TEST_DIR;
-    const { paths } = await import("../src/hooks/lib/paths");
+    const { paths } = await import("../src/core/paths");
     const signalsDir = paths.signals();
     expect(existsSync(signalsDir)).toBe(true);
     delete process.env.PAL_HOME;
@@ -83,7 +110,7 @@ describe("paths", () => {
 describe("assets", () => {
   test("asset paths resolve under palPkg", async () => {
     delete process.env.PAL_PKG;
-    const { assets, palPkg } = await import("../src/hooks/lib/paths");
+    const { assets, palPkg } = await import("../src/core/paths");
     const pkg = palPkg();
     expect(assets.skills()).toBe(resolve(pkg, "assets", "skills"));
     expect(assets.agents()).toBe(resolve(pkg, "assets", "agents"));
@@ -93,7 +120,7 @@ describe("assets", () => {
   });
 
   test("asset directories exist", async () => {
-    const { assets } = await import("../src/hooks/lib/paths");
+    const { assets } = await import("../src/core/paths");
     expect(existsSync(assets.skills())).toBe(true);
     expect(existsSync(assets.agents())).toBe(true);
     expect(existsSync(assets.agentsMdTemplate())).toBe(true);
@@ -105,7 +132,7 @@ describe("platform", () => {
     delete process.env.PAL_CLAUDE_DIR;
     delete process.env.PAL_OPENCODE_DIR;
     delete process.env.PAL_AGENTS_DIR;
-    const { platform } = await import("../src/hooks/lib/paths");
+    const { platform } = await import("../src/core/paths");
     const home = homedir();
     expect(platform.claudeDir()).toBe(resolve(home, ".claude"));
     expect(platform.opencodeDir()).toBe(resolve(home, ".config", "opencode"));
@@ -119,7 +146,7 @@ describe("platform", () => {
     process.env.PAL_CLAUDE_DIR = "/custom/claude";
     process.env.PAL_OPENCODE_DIR = "/custom/opencode";
     process.env.PAL_AGENTS_DIR = "/custom/agents";
-    const { platform } = await import("../src/hooks/lib/paths");
+    const { platform } = await import("../src/core/paths");
     expect(platform.claudeDir()).toBe(resolve("/custom/claude"));
     expect(platform.opencodeDir()).toBe(resolve("/custom/opencode"));
     expect(platform.agentsDir()).toBe(resolve("/custom/agents"));
@@ -133,7 +160,7 @@ describe("platform", () => {
   // directory called "~" under the cwd.
   test("a tilde in an override is expanded, not taken literally", async () => {
     process.env.PAL_CLAUDE_DIR = "~/claude-alt";
-    const { platform } = await import("../src/hooks/lib/paths");
+    const { platform } = await import("../src/core/paths");
     expect(platform.claudeDir()).toBe(resolve(homedir(), "claude-alt"));
     delete process.env.PAL_CLAUDE_DIR;
   });

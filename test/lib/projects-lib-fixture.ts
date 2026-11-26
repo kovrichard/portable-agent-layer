@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ProjectProgress } from "../../src/hooks/lib/projects";
+import type { ProjectProgress } from "../../src/progress/projects";
 import { removeOnceReleased } from "./remove-once-released";
 import { testHome } from "./test-home";
 
@@ -14,8 +14,9 @@ export function projectsHome(file: string): string {
     mkdirSync(home, { recursive: true });
   });
   beforeEach(() => {
-    removeOnceReleased(resolve(home, "memory", "projects"));
+    removeOnceReleased(resolve(home, "work", "projects"));
   });
+
   return home;
 }
 

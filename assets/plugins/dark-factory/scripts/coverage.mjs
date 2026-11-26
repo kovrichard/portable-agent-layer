@@ -15,19 +15,23 @@ function normalClass(cls) {
 
 function isValidVerdict(item, known) {
   if (item.verdict === "clean") return true;
+
   return item.verdict === "finding" && known.has(normalClass(item.class));
 }
 
 function problemOf(items) {
   if (items.length === 0) return "no verdict";
+
   return `unknown class "${items[0].class ?? ""}"`;
 }
 
 export function missingInputs({ expected, reviewed, knownClasses }) {
   const known = new Set(knownClasses.map(normalClass));
+
   return expected.flatMap((source) => {
     const items = reviewed.filter((item) => item.source === source);
     if (items.some((item) => isValidVerdict(item, known))) return [];
+
     return [{ source, problem: problemOf(items) }];
   });
 }
@@ -57,5 +61,6 @@ export function resumeInstructions(missing) {
 
 export function reviewedCount(expected, missing) {
   const missingSources = new Set(missing.map((item) => item.source));
+
   return [...new Set(expected)].filter((source) => !missingSources.has(source)).length;
 }

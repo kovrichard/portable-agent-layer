@@ -1,7 +1,7 @@
 import { expect, setDefaultTimeout, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import { claudeReplying, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -29,6 +29,7 @@ function childEnv(home: string): Record<string, string | undefined> {
     PAL_AGENT: "claude",
     PATH: `${home}${delimiter}${process.env.PATH ?? ""}`,
   };
+
   for (const key of [
     "PAL_INFERENCE_DISABLED",
     "PAL_ANTHROPIC_API_KEY",
@@ -38,11 +39,13 @@ function childEnv(home: string): Record<string, string | undefined> {
     SPAWN_GUARD_ENV.DEPTH,
   ])
     delete env[key];
+
   return env;
 }
 
 function storedTurns(home: string) {
-  const dir = resolve(home, "memory", "adaptation");
+  const dir = resolve(home, "records", "labelled-turns");
+
   return readdirSync(dir)
     .filter((file) => file.startsWith("turns-"))
     .flatMap((file) => readFileSync(resolve(dir, file), "utf-8").trim().split("\n"))

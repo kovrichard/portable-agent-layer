@@ -20,6 +20,7 @@ function loadApiKey(): string {
     console.error("Add it to ~/.pal/.env as PAL_FYZZ_API_KEY=...");
     process.exit(1);
   }
+
   return key;
 }
 
@@ -28,6 +29,7 @@ async function apiFetch(path: string, params?: Record<string, string>): Promise<
   const baseUrl = process.env.PAL_FYZZ_BASE_URL ?? "http://localhost:3000";
 
   const url = new URL(`/api/v1${path}`, baseUrl);
+
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== "") url.searchParams.set(k, v);
@@ -86,9 +88,13 @@ if (command === "conversations") {
     });
 
     const params: Record<string, string> = {};
+
     if (values.limit) params.limit = values.limit;
+
     if (values.search) params.search = values.search;
+
     if (values["project-id"]) params.projectId = values["project-id"];
+
     if (values.cursor) params.cursor = values.cursor;
 
     const result = await apiFetch("/conversations", params);

@@ -88,7 +88,7 @@ beforeAll(() => {
 
 describe("collectExportFiles", () => {
   test("collects telos and memory files", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
 
     expect(files).toContain("telos/MISSION.md");
@@ -98,41 +98,41 @@ describe("collectExportFiles", () => {
   });
 
   test("skips memory/downloads", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     const downloads = files.filter((f) => f.startsWith("memory/downloads"));
     expect(downloads).toHaveLength(0);
   });
 
   test("keeps the content store on its machine", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files.filter((f) => f.startsWith("memory/content"))).toHaveLength(0);
   });
 
   test("collects user-authored personal skills and subagents", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files).toContain("skills/my-skill/SKILL.md");
     expect(files).toContain("agents/my-helper.md");
   });
 
   test("excludes shipped-skill symlinks — only real user files travel", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     const shipped = files.filter((f) => f.startsWith("skills/shipped-skill"));
     expect(shipped).toHaveLength(0);
   });
 
   test("leaves the dark-factory folder on its machine but carries the progress tree", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     const files = collectExportFiles();
     expect(files.filter((f) => f.startsWith("dark-factory"))).toEqual([]);
     expect(files).toContain("memory/progress-tree/events.jsonl");
   });
 
   test("never collects the credentials in ~/.pal/.env", async () => {
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
     expect(collectExportFiles().filter((f) => f.endsWith(".env"))).toEqual([]);
   });
 });
@@ -141,7 +141,8 @@ describe("exportZip", () => {
   const zipPath = resolve(TEST_HOME, "test-export.zip");
 
   async function writeZip() {
-    const { exportZip } = await import("../src/hooks/lib/export");
+    const { exportZip } = await import("../src/core/export");
+
     return exportZip(zipPath);
   }
 
@@ -164,7 +165,7 @@ describe("exportZip", () => {
 
 describe("timestamp", () => {
   test("returns 14-char timestamp string", async () => {
-    const { timestamp } = await import("../src/hooks/lib/export");
+    const { timestamp } = await import("../src/core/export");
     const ts = timestamp();
     expect(ts).toHaveLength(14);
     expect(/^\d{14}$/.test(ts)).toBe(true);
@@ -174,6 +175,7 @@ describe("timestamp", () => {
 describe("cli export — folder arg", () => {
   test("auto-names zip inside given directory", () => {
     const outDir = freshTestDir(import.meta.file);
+
     try {
       const result = palCli(["export", outDir]);
       expect(result.status).toBe(0);
@@ -188,6 +190,7 @@ describe("cli export — folder arg", () => {
 
   test("dry-run with folder arg lists files without writing", () => {
     const outDir = freshTestDir(import.meta.file);
+
     try {
       const result = palCli(["export", outDir, "--dry-run"]);
       expect(result.status).toBe(0);
@@ -204,6 +207,7 @@ describe("cli export — folder arg", () => {
 describe("cli import — folder arg", () => {
   test("finds latest zip in given directory and dry-runs import", () => {
     const workDir = freshTestDir(import.meta.file);
+
     try {
       // Export to workDir first so there is a zip to find
       const exportResult = palCli(["export", workDir]);
@@ -228,6 +232,7 @@ describe("cli import — folder arg", () => {
 
   test("exits non-zero when folder has no zip files", () => {
     const emptyDir = freshTestDir(import.meta.file);
+
     try {
       const result = palCli(["import", emptyDir], { input: "y\n" });
       expect(result.status).not.toBe(0);
@@ -240,6 +245,7 @@ describe("cli import — folder arg", () => {
   test("round-trips a personal skill and subagent into a fresh home", () => {
     const workDir = freshTestDir(import.meta.file);
     const freshHome = freshTestDir(import.meta.file);
+
     try {
       // Export the seeded TEST_HOME (has skills/my-skill + agents/my-helper).
       const exportResult = palCli(["export", workDir]);
@@ -279,6 +285,7 @@ describe("a tilde in the path positional", () => {
     const marker = resolve(TEST_HOME, "memory", "state", "debug-enabled");
     const log = resolve(TEST_HOME, "debug", "debug.log");
     writeFileSync(marker, "");
+
     try {
       palCli(["import", "~/pal-import-nowhere.zip"], { input: "n\n" });
       const contents = readFileSync(log, "utf-8");

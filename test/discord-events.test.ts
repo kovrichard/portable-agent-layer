@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsCommand } from "../src/cli/events";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
@@ -12,11 +12,13 @@ let home: string;
 function nags(): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -30,6 +32,7 @@ async function events(...args: string[]): Promise<number> {
     spyOn(console, "error").mockImplementation(() => {}),
     spyOn(process.stderr, "write").mockImplementation(() => true),
   ];
+
   try {
     return await runCommand(eventsCommand, args, ["pal", "cli", "events"]);
   } finally {

@@ -1,4 +1,4 @@
-import type { RecordAttribution } from "../../../hooks/lib/actor";
+import type { RecordAttribution } from "../../../core/actor";
 
 export type AttributedRow = Partial<RecordAttribution> & { ts: string };
 
@@ -22,6 +22,7 @@ export function emitUnseen<Row extends AttributedRow>(
 ): number {
   const from = new Date(since ?? 0).toISOString();
   let emitted = 0;
+
   for (const row of rows) {
     const id = idOf(row);
     if (known.has(id) || row.ts < from) continue;
@@ -29,5 +30,6 @@ export function emitUnseen<Row extends AttributedRow>(
     emit(row, id);
     emitted++;
   }
+
   return emitted;
 }

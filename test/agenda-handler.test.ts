@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { refreshAgenda } from "../src/hooks/handlers/agenda";
-import { readAgenda } from "../src/hooks/lib/agenda-store";
-import { canInfer } from "../src/hooks/lib/inference";
+import { canInfer } from "../src/inference/inference";
+import { readAgenda } from "../src/progress/agenda-store";
 import { freshTestDir } from "./lib/test-home";
 
 // The only model call behind the morning screen. Both gates in front of it are
@@ -21,6 +21,7 @@ beforeEach(() => {
     if (saved[k] === undefined) delete process.env[k];
     else process.env[k] = saved[k];
   }
+
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });

@@ -1,5 +1,5 @@
-import { labelOfRuntime } from "../hooks/lib/agent-registry";
-import { allEventsSince } from "../hooks/lib/events";
+import { allEventsSince } from "../bronze/events";
+import { labelOfRuntime } from "../core/agent-registry";
 import { leaf } from "../tools/lib/command";
 import { efficiency } from "../tools/lib/cost/efficiency";
 import { leaderboards } from "../tools/lib/cost/leaderboards";
@@ -25,6 +25,7 @@ function printCost(): undefined {
     ...shareLines("PAL's own spend per caller, already in the totals", palSpend(events)),
     ...overheadLines(contextOverhead(events)),
   ];
+
   for (const line of lines) console.log(line);
 }
 

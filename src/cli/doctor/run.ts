@@ -1,4 +1,5 @@
 import { getInstalledVersion } from "../../hooks/handlers/update-check";
+import { releaseHealthMarker } from "../../usage/health-cache";
 import { createStyle } from "../ui/style";
 import {
   agentFindings,
@@ -13,15 +14,17 @@ import { healthFindings } from "./health";
 import { inferenceFindings } from "./inference";
 import { type DoctorReport, doctorExitCode, renderReport } from "./render";
 import { stateFindings } from "./state";
+import { saveHealthSummary } from "./summary";
 
 const inGroup = (group: Group, findings: Finding[]) =>
   findings.map((finding) => ({ ...finding, group }));
 
 const healthGroup = (finding: Finding): Group =>
-  finding.id.startsWith("hook-errors") ? "Inference" : "State";
+  /^(hook-errors|claude-login)/.test(finding.id) ? "Inference" : "State";
 
 function doctorFindings(health: DoctorResult): Finding[] {
   const agents = installedAgents(health);
+
   return [
     ...inGroup("Agents", rosterFindings(agents)),
     ...inGroup("Environment", environmentFindings(health.rtk)),
@@ -37,6 +40,8 @@ export function doctorReport(
   started = performance.now()
 ): DoctorReport {
   const findings = doctorFindings(health);
+  saveHealthSummary(findings);
+
   return {
     version: getInstalledVersion(),
     agents: installedAgents(health),
@@ -45,11 +50,23 @@ export function doctorReport(
   };
 }
 
+export function runBackgroundDoctor(
+  report: (health: DoctorResult) => unknown = doctorReport,
+  detect: () => DoctorResult = detectAgents
+): void {
+  try {
+    report(detect());
+  } finally {
+    releaseHealthMarker();
+  }
+}
+
 /** `pal cli doctor [--verbose] [--json]` — prints the report and returns the exit code. */
 export function runDoctor(args: string[], health?: DoctorResult): number {
   if (process.env.PAL_SKIP_DOCTOR === "1") return 0;
   const started = performance.now();
   const report = doctorReport(health ?? detectAgents(), started);
+
   if (args.includes("--json")) {
     const { elapsedMs: _elapsed, ...json } = report;
     console.log(JSON.stringify(json, null, 2));
@@ -60,5 +77,6 @@ export function runDoctor(args: string[], health?: DoctorResult): number {
     });
     console.log(lines.join("\n"));
   }
+
   return doctorExitCode(report.findings);
 }

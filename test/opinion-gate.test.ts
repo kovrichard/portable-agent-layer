@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { AdaptationRule } from "../src/hooks/lib/adaptation-rules";
-import type { Turn } from "../src/hooks/lib/adaptation-turns";
-import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
-import { gateAdvice, opinionGate } from "../src/hooks/lib/opinion-gate";
+import type { AdaptationRule } from "../src/opinions/adaptation-rules";
+import type { Turn } from "../src/opinions/adaptation-turns";
+import { CORRECTION_KINDS_VERSION } from "../src/opinions/correction-kind";
+import { gateAdvice, opinionGate } from "../src/opinions/opinion-gate";
 
 const KIND = "unverified-claim";
 const approvedAt = Date.parse("2026-09-01T00:00:00.000Z");

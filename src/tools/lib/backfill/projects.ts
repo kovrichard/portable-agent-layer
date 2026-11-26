@@ -4,8 +4,8 @@
  * streamed live as a commitment is not logged twice.
  */
 
-import { eventsSince } from "../../../hooks/lib/events";
-import { readAllProjects } from "../../../hooks/lib/projects";
+import { eventsSince } from "../../../bronze/events";
+import { readAllProjects } from "../../../progress/projects";
 import {
   closedIscRows,
   decisionRows,
@@ -36,5 +36,6 @@ export function backfillProjects(known: Set<string>, since?: string): number {
       ...decisionRows(project),
     ])
     .filter((row) => row.type !== "commitment" || !live.has(commitmentKey(row.fields)));
+
   return emitUnseen(rows, (row) => row.id, emitHistory, known, since);
 }

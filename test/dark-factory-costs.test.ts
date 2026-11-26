@@ -15,7 +15,7 @@ import {
 import { summarize, taskReport } from "../assets/plugins/dark-factory/scripts/stats.mjs";
 import { recordSubagentStop } from "../assets/plugins/dark-factory/scripts/subagent-stop.mjs";
 import { newTask, setStatus } from "../assets/plugins/dark-factory/scripts/task.mjs";
-import { MODEL_PRICING } from "../src/hooks/lib/models";
+import { MODEL_PRICING } from "../src/inference/models";
 import { jsonl, message, type Usage } from "./lib/dark-factory-cost-fixture";
 import {
   eventsNamedIn,
@@ -38,6 +38,7 @@ describe("the plugin's price table (criterion 1)", () => {
       const rates = PRICES[id];
       const pal = MODEL_PRICING[id];
       expect(rates).toBeDefined();
+
       for (const key of [
         "input",
         "output",
@@ -143,6 +144,7 @@ describe("a transcript's cost (criteria 3 and 4)", () => {
             },
           })
     );
+
     return { lines: out, expected: withRule ? 0.05144 : 0.025028 };
   }
 
@@ -214,6 +216,7 @@ describe("the SubagentStop hook's role_finished (criterion 5)", () => {
       env,
       0
     );
+
     return eventsNamedIn(env, "role_finished");
   }
 
@@ -327,6 +330,7 @@ describe("the PO session's role_finished at a final status (criteria 6, 7 and ed
     const file = join(projects, `${session}.jsonl`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, jsonl(lines));
+
     return file;
   }
 
@@ -732,6 +736,7 @@ describe("summarize's costByRole (criterion 10)", () => {
 
   test("keeps every key printed today", () => {
     const keys = Object.keys(summarize(events));
+
     for (const key of [
       "tasks",
       "byCategory",

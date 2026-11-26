@@ -1,4 +1,4 @@
-import { SPAWN_GUARD_ENV } from "../../src/hooks/lib/spawn-guard";
+import { SPAWN_GUARD_ENV } from "../../src/core/spawn-guard";
 
 const PRESERVED = [
   "PAL_AGENT",
@@ -16,7 +16,9 @@ const PRESERVED = [
 
 export function savedEnv(): Record<string, string | undefined> {
   const saved: Record<string, string | undefined> = {};
+
   for (const k of PRESERVED) saved[k] = process.env[k];
+
   return saved;
 }
 

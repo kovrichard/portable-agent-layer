@@ -80,6 +80,7 @@ export function to256([r, g, b]: Rgb): number {
 
 function sgr(term: Terminal, layer: 38 | 48, rgb: Rgb): string {
   if (term.color === "truecolor") return `\x1b[${layer};2;${rgb.join(";")}m`;
+
   return `\x1b[${layer};5;${to256(rgb)}m`;
 }
 
@@ -109,6 +110,7 @@ export function createStyle(term: Terminal = detectTerminal()): Style {
     ch === " "
       ? ch
       : `${sgr(term, 38, mix(PALETTE.violet, PALETTE.cyan, i / span))}${ch}`;
+
   return {
     term,
     glyph: term.unicode ? UNICODE_GLYPHS : ASCII_GLYPHS,
@@ -123,6 +125,7 @@ export function createStyle(term: Terminal = detectTerminal()): Style {
       if (!colored) return text;
       const chars = [...text];
       const span = Math.max(1, chars.length - 1);
+
       return `${chars.map((ch, i) => gradientChar(ch, i, span)).join("")}${RESET}`;
     },
     dim: (text) => paint(PALETTE.dim, text),

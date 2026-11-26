@@ -6,13 +6,13 @@
  *   backfill [--relabel]                        Label the confirmed corrections without a current kind
  */
 
-import { readTurns } from "../hooks/lib/adaptation-turns";
+import { readTurns } from "../opinions/adaptation-turns";
 import {
   backfillCorrectionKinds,
   type KindLabeller,
   labelWithInference,
-} from "../hooks/lib/correction-backfill";
-import { type KindRates, kindRates, splitRates } from "../hooks/lib/correction-rates";
+} from "../opinions/correction-backfill";
+import { type KindRates, kindRates, splitRates } from "../opinions/correction-rates";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 function correctionCommandFor(label: KindLabeller) {
@@ -56,6 +56,7 @@ export function windowDays(days: string | undefined): number {
   const parsed = Number(days);
   if (!Number.isInteger(parsed) || parsed < 1)
     throw new UsageError(`--days must be a whole number of days, got "${days}"`);
+
   return parsed;
 }
 
@@ -63,6 +64,7 @@ function splitDate(split: string): Date {
   const at = new Date(split);
   if (Number.isNaN(at.getTime()))
     throw new UsageError(`--split must be a date such as 2026-10-20, got "${split}"`);
+
   return at;
 }
 
@@ -77,18 +79,23 @@ function formatRates(rates: KindRates, title: string): string {
     const names = rate.suggestions.length
       ? `  (${[...new Set(rate.suggestions)].join(", ")})`
       : "";
+
     return kindLine(rate.kind, String(rate.count), rate.per100.toFixed(1), names);
   });
+
   return [header, kindLine("kind", "n", "/100"), ...rows].join("\n");
 }
 
 function cmdKinds(days: string | undefined, split: string | undefined, json: boolean) {
   const turns = readTurns(windowDays(days));
   const result = split ? splitRates(turns, splitDate(split)) : kindRates(turns);
+
   if (json) {
     console.log(JSON.stringify(result, null, 2));
+
     return 0;
   }
+
   const sections =
     "before" in result
       ? [
@@ -97,6 +104,7 @@ function cmdKinds(days: string | undefined, split: string | undefined, json: boo
         ]
       : [formatRates(result, "Last ".concat(String(windowDays(days)), " days"))];
   console.log(sections.join("\n\n"));
+
   return 0;
 }
 
@@ -111,5 +119,6 @@ async function cmdBackfill(label: KindLabeller, relabel: boolean) {
     onLabelled: (turn, kind) => console.log(labelledLine(turn, kind?.kind ?? "failed")),
   });
   console.log(`Labelled ${result.labelled}, failed ${result.failed}.`);
+
   return result.failed > 0 ? 1 : 0;
 }

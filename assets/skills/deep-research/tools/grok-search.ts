@@ -52,6 +52,7 @@ function loadApiKey(): string {
     console.error("and add it to ~/.pal/.env as PAL_XAI_API_KEY=...");
     process.exit(1);
   }
+
   return key;
 }
 
@@ -63,11 +64,13 @@ function parseSources(raw: string): SourceType[] {
     console.error(`Error: Invalid sources "${raw}". Valid: web, x`);
     process.exit(1);
   }
+
   return sources;
 }
 
 function sourcesToTools(sources: SourceType[]): ToolType[] {
   const map: Record<SourceType, ToolType> = { web: "web_search", x: "x_search" };
+
   return sources.map((s) => map[s]);
 }
 
@@ -102,6 +105,7 @@ async function grokSearch(
 
   if (citations.size > 0) {
     console.log("\n---\n## Sources\n");
+
     for (const [url, title] of citations) {
       console.log(`- [${title}](${url})`);
     }
@@ -130,9 +134,11 @@ async function postGrok(apiKey: string, body: unknown): Promise<OutputItem[]> {
 
   const data = (await response.json()) as GrokResponse;
   if (data.error) fail(`Error: ${data.error.message}`);
+
   if (!data.output || data.output.length === 0) {
     fail("Error: No response output from Grok.");
   }
+
   return data.output;
 }
 
@@ -148,13 +154,16 @@ function addCitations(citations: Map<string, string>, part: ContentPart): void {
 function collectOutput(output: OutputItem[]) {
   const textParts: string[] = [];
   const citations = new Map<string, string>();
+
   for (const item of output) {
     if (item.type !== "message" || !item.content) continue;
+
     for (const part of item.content) {
       if (part.type === "output_text" && part.text) textParts.push(part.text);
       addCitations(citations, part);
     }
   }
+
   return { textParts, citations };
 }
 

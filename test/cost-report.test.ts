@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { eventsSince, type LoggedEvent } from "../src/hooks/lib/events";
-import { reload } from "../src/hooks/lib/settings";
+import { eventsSince, type LoggedEvent } from "../src/bronze/events";
+import { reload } from "../src/core/settings";
 import { collectClaude } from "../src/tools/lib/collectors/claude";
 import { costLines, costMonths } from "../src/tools/lib/cost-report";
 import { readClaudeCode } from "../src/tools/lib/usage-buckets";
@@ -61,6 +61,7 @@ function claudeMonth(): string {
   ];
   writeFileSync(transcript, `${lines.join("\n")}\n`);
   utimesSync(transcript, LONG_AGO, LONG_AGO);
+
   return projects;
 }
 
@@ -93,10 +94,10 @@ const MAX_5X = {
 const label = (runtime: string) => runtime;
 
 describe("a month in the event log costs what pal cli usage says", () => {
-  test("the same transcripts price identically either way", () => {
+  test("the same transcripts price identically either way", async () => {
     const projects = claudeMonth();
     const usage = readClaudeCode(projects, undefined, NOW).buckets.total;
-    collectClaude(projects, NOW);
+    await collectClaude(projects, NOW);
     const month = costMonths(eventsSince("model_call", new Date(0)))
       .get("2026-10")
       ?.get("claude");

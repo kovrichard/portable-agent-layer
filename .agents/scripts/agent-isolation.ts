@@ -5,7 +5,7 @@ interface ToolCall {
   tool_input?: { subagent_type?: string; isolation?: string; [field: string]: unknown };
 }
 
-const READ_ONLY_TYPES = ["Explore", "Plan", "claude-code-guide", "web-fetch"];
+const READ_ONLY_TYPES = ["Explore", "Plan", "claude-code-guide", "web-fetch", "scout"];
 
 const isReadOnly = (type: string) =>
   READ_ONLY_TYPES.includes(type) || type.endsWith("-researcher");

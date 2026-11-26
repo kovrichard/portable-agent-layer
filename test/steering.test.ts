@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { classifyPrompt, getSteeringReminder } from "../src/hooks/lib/steering";
+import { classifyPrompt, getSteeringReminder } from "../src/opinions/steering";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -18,13 +18,13 @@ beforeAll(() => {
 beforeEach(async () => {
   const p = resolve(TEST_HOME, "memory", "pal-settings.json");
   removeOnceReleased(p);
-  const settings = await import("../src/hooks/lib/settings");
+  const settings = await import("../src/core/settings");
   settings.reload();
 });
 
 async function setSettings(data: Record<string, unknown>) {
   writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  const settings = await import("../src/hooks/lib/settings");
+  const settings = await import("../src/core/settings");
   settings.reload();
 }
 

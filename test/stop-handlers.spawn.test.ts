@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { Message } from "../src/bronze/transcript";
 import { runStopHandlers } from "../src/hooks/lib/stop";
-import type { Message } from "../src/hooks/lib/transcript";
 import { sandboxContextRuleDirs } from "./lib/context-rule-dirs";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -84,7 +84,7 @@ describe("runStopHandlers — the final reply", () => {
     });
 
     const shown = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "nudges-shown.json"), "utf-8")
+      readFileSync(resolve(HOME, "cache", "nudges-shown.json"), "utf-8")
     );
     expect(Object.keys(shown)).toEqual(["analyze"]);
   });
@@ -146,12 +146,14 @@ describe("runStopHandlers — last-response cache", () => {
 
   test("caps the cache at twenty sessions, evicting the oldest", async () => {
     const seeded: Record<string, { response: string; ts: string }> = {};
+
     for (let i = 0; i < 20; i++) {
       seeded[`old-${String(i).padStart(2, "0")}`] = {
         response: "r",
         ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
       };
     }
+
     seedCache(seeded);
 
     await runStopHandlers(transcriptOf("q", "newest"), { sessionId: "fresh" });
@@ -165,12 +167,14 @@ describe("runStopHandlers — last-response cache", () => {
 
   test("leaves the cache untouched at exactly twenty sessions", async () => {
     const seeded: Record<string, { response: string; ts: string }> = {};
+
     for (let i = 0; i < 19; i++) {
       seeded[`keep-${String(i).padStart(2, "0")}`] = {
         response: "r",
         ts: `2020-01-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`,
       };
     }
+
     seedCache(seeded);
 
     await runStopHandlers(transcriptOf("q", "twentieth"), { sessionId: "fresh" });

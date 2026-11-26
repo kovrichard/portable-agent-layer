@@ -9,14 +9,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { agentDirOverrides } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
+import { agentDirOverrides } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
-import {
-  claudeBilling,
-  codexBilling,
-  opencodeBilling,
-} from "../src/tools/lib/collectors/billing";
+import { claudeBilling, codexBilling, opencodeBilling } from "../src/usage/billing";
 import { freshTestDir } from "./lib/test-home";
 
 // Field names from each agent's own files: ~/.claude.json's oauthAccount,
@@ -31,6 +27,7 @@ let home: string;
 function writeJson(path: string, value: unknown): string {
   mkdirSync(resolve(path, ".."), { recursive: true });
   writeFileSync(path, JSON.stringify(value));
+
   return path;
 }
 
@@ -52,9 +49,10 @@ const MAX_5X = {
 };
 
 function everythingWritten(): string {
-  const dirs = ["memory/events", "memory/content", "memory/state"].map((d) =>
-    resolve(home, d)
+  const dirs = ["records/bronze/events", "records/bronze/event-text", "memory/state"].map(
+    (d) => resolve(home, d)
   );
+
   return dirs
     .filter(existsSync)
     .flatMap((dir) => readdirSync(dir).map((f) => resolve(dir, f)))
@@ -63,8 +61,9 @@ function everythingWritten(): string {
 }
 
 function modelCalls(): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
     .map((l) => JSON.parse(l))
@@ -74,6 +73,7 @@ function modelCalls(): Record<string, unknown>[] {
 beforeEach(() => {
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
+
   for (const { env } of agentDirOverrides()) process.env[env] = resolve(home, env);
   process.env.XDG_DATA_HOME = resolve(home, "data");
   mkdirSync(resolve(home, "memory", "state"), { recursive: true });
@@ -81,7 +81,7 @@ beforeEach(() => {
 });
 
 describe("Claude Code's billing, from ~/.claude.json", () => {
-  test("a subscription names its plan tier and whether extra usage is on", () => {
+  test("a subscription names its plan tier and whether extra usage is on", async () => {
     const billingAt = claudeBilling(claudeConfig(MAX_5X));
     expect(billingAt("2026-10-12T10:00:00Z")).toEqual({
       billing: "subscription",
@@ -90,12 +90,12 @@ describe("Claude Code's billing, from ~/.claude.json", () => {
     });
   });
 
-  test("a call from before the subscription began is unknown, not the plan of today", () => {
+  test("a call from before the subscription began is unknown, not the plan of today", async () => {
     const billingAt = claudeBilling(claudeConfig(MAX_5X));
     expect(billingAt("2026-05-01T10:00:00Z").billing).toBe("unknown");
   });
 
-  test("an API key login is api billing", () => {
+  test("an API key login is api billing", async () => {
     const billingAt = claudeBilling(claudeConfig(null, { primaryApiKey: SECRET }));
     expect(billingAt("2026-10-12T10:00:00Z")).toEqual({
       billing: "api",
@@ -104,7 +104,7 @@ describe("Claude Code's billing, from ~/.claude.json", () => {
     });
   });
 
-  test("no file, or nothing that says, is unknown", () => {
+  test("no file, or nothing that says, is unknown", async () => {
     expect(
       claudeBilling(resolve(home, "missing.json"))("2026-10-12T10:00:00Z").billing
     ).toBe("unknown");
@@ -118,18 +118,18 @@ describe("Codex's billing, from auth.json's auth_mode alone", () => {
   const auth = (fields: Record<string, unknown>) =>
     writeJson(resolve(home, "codex", "auth.json"), fields);
 
-  test("an API key is api billing", () => {
+  test("an API key is api billing", async () => {
     expect(
       codexBilling(auth({ auth_mode: "apikey", OPENAI_API_KEY: SECRET })).billing
     ).toBe("api");
   });
 
-  test("a ChatGPT login is a subscription", () => {
+  test("a ChatGPT login is a subscription", async () => {
     const path = auth({ auth_mode: "chatgpt", tokens: { id_token: SECRET } });
     expect(codexBilling(path).billing).toBe("subscription");
   });
 
-  test("anything else is unknown", () => {
+  test("anything else is unknown", async () => {
     expect(codexBilling(auth({})).billing).toBe("unknown");
     expect(codexBilling(resolve(home, "none.json")).billing).toBe("unknown");
   });
@@ -142,13 +142,13 @@ describe("opencode's billing, per provider, from auth.json's type", () => {
       openai: { type: "api", key: SECRET },
     });
 
-  test("an OAuth login is a subscription, an API key is api billing", () => {
+  test("an OAuth login is a subscription, an API key is api billing", async () => {
     const billingOf = opencodeBilling(authPath());
     expect(billingOf("anthropic").billing).toBe("subscription");
     expect(billingOf("openai").billing).toBe("api");
   });
 
-  test("a provider with no login, or no provider, is unknown", () => {
+  test("a provider with no login, or no provider, is unknown", async () => {
     const billingOf = opencodeBilling(authPath());
     expect(billingOf("google").billing).toBe("unknown");
     expect(billingOf(undefined).billing).toBe("unknown");
@@ -229,10 +229,10 @@ describe("billing lands on every collected model call", () => {
     db.close();
   }
 
-  test("a Claude Code call carries the subscription it was billed under", () => {
+  test("a Claude Code call carries the subscription it was billed under", async () => {
     writeJson(resolve(home, ".claude.json"), { oauthAccount: MAX_5X });
     claudeTranscript();
-    collectEvents();
+    await collectEvents();
     expect(modelCalls()).toEqual([
       expect.objectContaining({
         billing: "subscription",
@@ -242,7 +242,7 @@ describe("billing lands on every collected model call", () => {
     ]);
   });
 
-  test("no credential value ever leaves the files it sits in", () => {
+  test("no credential value ever leaves the files it sits in", async () => {
     writeJson(resolve(home, ".claude.json"), {
       oauthAccount: { ...MAX_5X, accessToken: SECRET },
       primaryApiKey: SECRET,
@@ -259,7 +259,7 @@ describe("billing lands on every collected model call", () => {
       openai: { type: "api", key: SECRET },
       anthropic: { type: "oauth", refresh: SECRET, access: SECRET, expires: 1 },
     });
-    collectEvents();
+    await collectEvents();
     expect(modelCalls().map((e) => [e.runtime, e.billing])).toEqual([
       ["claude", "subscription"],
       ["opencode", "api"],

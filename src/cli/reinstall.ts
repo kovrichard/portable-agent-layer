@@ -13,5 +13,6 @@ export function reinstallInFreshProcess(
     stdio: "inherit",
     env: { ...process.env, ...env },
   });
+
   return run.status ?? 1;
 }

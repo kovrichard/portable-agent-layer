@@ -56,6 +56,7 @@ function runFixtureWithTmpdir(options: { fails: boolean; tmp: string; root: stri
       stderr: "ignore",
     }
   );
+
   return result.exitCode;
 }
 

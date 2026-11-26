@@ -3,9 +3,9 @@
  * it prints nothing and always exits 0, so it can never disturb a turn.
  */
 
+import { enterHookWorkspace } from "../core/hook-payload";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
 import { runPostToolHandlers } from "./lib/post-tool";
 import { readStdinJSON } from "./lib/stdin";
 

@@ -14,11 +14,16 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { cachedStatus, getInstalledVersion, isRepoMode } from "../handlers/update-check";
-import { appendEvent, logQuietly } from "./events";
-import { logDebug, logError } from "./log";
-import { assets, palPkg, paths } from "./paths";
-import { raw as rawSettings } from "./settings";
+import { appendEvent, logQuietly } from "../../bronze/events";
+import { logDebug, logError } from "../../core/log";
+import { assets, palPkg, paths } from "../../core/paths";
+import { raw as rawSettings } from "../../core/settings";
+import {
+  cachedStatus,
+  getInstalledVersion,
+  isRepoMode,
+  startsNewMajor,
+} from "../handlers/update-check";
 
 export interface AutoUpdateLedger {
   attemptedAt?: string;
@@ -70,6 +75,7 @@ export function readLedger(): AutoUpdateLedger | null {
   try {
     const fp = ledgerPath();
     if (!existsSync(fp)) return null;
+
     return JSON.parse(readFileSync(fp, "utf-8")) as AutoUpdateLedger;
   } catch {
     return null;
@@ -82,6 +88,7 @@ function writeLedger(entry: AutoUpdateLedger): AutoUpdateLedger {
   } catch (err) {
     logError("auto-update:ledger", err);
   }
+
   return entry;
 }
 
@@ -92,6 +99,7 @@ function isAutoUpdateEnabled(): boolean {
 export function autoUpdateStatus(): AutoUpdateStatus {
   const settings = rawSettings().autoUpdate ?? {};
   const cache = cachedStatus();
+
   return {
     enabled: settings.enabled === true,
     decided: settings.decided === true,
@@ -116,16 +124,19 @@ function hasUncommittedChanges(): boolean {
     windowsHide: true,
   });
   if (status.status !== 0) return false;
+
   return (status.stdout ?? "").trim().length > 0;
 }
 
 function outcomeOf(entry: AutoUpdateLedger): string {
   if (!entry.ok) return "failed";
+
   return entry.from === entry.to ? "unchanged" : "updated";
 }
 
 function secondsBetween(from?: string, to?: string): number | null {
   if (!from || !to) return null;
+
   return Math.round((Date.parse(to) - Date.parse(from)) / 1000);
 }
 
@@ -150,17 +161,30 @@ function waitAfter(ledger: AutoUpdateLedger): number {
 
 function heldByLastRun(ledger: AutoUpdateLedger | null, now: number): boolean {
   if (!ledger?.attemptedAt) return false;
+
   return now - new Date(ledger.attemptedAt).getTime() < waitAfter(ledger);
 }
 
-/** The unattended gate: opted in, not held by the last run, and safe to pull. */
+function onlyANewMajorIsOut(): boolean {
+  const cache = cachedStatus();
+
+  return cache !== null && startsNewMajor(cache);
+}
+
+/** The unattended gate: opted in, not held by the last run, within this major, and safe to pull. */
 export function shouldAutoUpdate(now: number = Date.now()): boolean {
   if (!isAutoUpdateEnabled()) return false;
+
   if (heldByLastRun(readLedger(), now)) return false;
+
+  if (onlyANewMajorIsOut()) return false;
+
   if (hasUncommittedChanges()) {
     recordSkip(DIRTY_TREE);
+
     return false;
   }
+
   return true;
 }
 
@@ -171,6 +195,7 @@ function updateCommand(): string[] {
 function heldRecently(): boolean {
   try {
     const held = JSON.parse(readFileSync(lockPath(), "utf-8")) as { at?: string };
+
     return (
       Boolean(held.at) && Date.now() - new Date(String(held.at)).getTime() < LOCK_STALE_MS
     );
@@ -186,12 +211,15 @@ function heldRecently(): boolean {
  */
 function takeLock(): boolean {
   const note = JSON.stringify({ pid: process.pid, at: new Date().toISOString() });
+
   try {
     writeFileSync(lockPath(), note, { flag: "wx" });
+
     return true;
   } catch {
     if (heldRecently()) return false;
     writeFileSync(lockPath(), note, "utf-8");
+
     return true;
   }
 }
@@ -214,6 +242,7 @@ function updatingNotice(): string {
     cache?.latest && cache.latest !== cache.current
       ? ` (${cache.current} → ${cache.latest})`
       : "";
+
   return `📦 Updating PAL in the background${versions} — nothing to wait for, it finishes on its own.`;
 }
 
@@ -226,17 +255,22 @@ function updatingNotice(): string {
 export function autoUpdateOnClose(reason?: string): string | null {
   if (!endsTheSession(reason)) return null;
   const skippedBefore = readLedger()?.skippedAt;
+
   if (!shouldAutoUpdate()) {
     const ledger = readLedger();
     const skippedNow = ledger?.skippedAt && ledger.skippedAt !== skippedBefore;
+
     return skippedNow ? `📦 PAL update waiting — ${ledger?.skipped}.` : null;
   }
+
   spawnAutoUpdate();
+
   return updatingNotice();
 }
 
 function closeHookIsNotDelivering(ledger: AutoUpdateLedger | null): boolean {
   if (!ledger?.attemptedAt) return true;
+
   return Date.now() - new Date(ledger.attemptedAt).getTime() > RESCUE_AFTER_MS;
 }
 
@@ -249,9 +283,12 @@ function closeHookIsNotDelivering(ledger: AutoUpdateLedger | null): boolean {
  */
 export function autoUpdateOnStart(): boolean {
   if (!isAutoUpdateEnabled()) return false;
+
   if (!closeHookIsNotDelivering(readLedger())) return false;
+
   if (!shouldAutoUpdate()) return false;
   spawnAutoUpdate();
+
   return true;
 }
 
@@ -263,12 +300,16 @@ export function autoUpdateOnStart(): boolean {
 export function runAutoUpdate(): AutoUpdateLedger {
   if (hasUncommittedChanges()) {
     recordSkip(DIRTY_TREE);
+
     return readLedger() ?? {};
   }
+
   if (!takeLock()) {
     logDebug("auto-update", "another update holds the lock");
+
     return readLedger() ?? {};
   }
+
   try {
     return update();
   } finally {
@@ -286,6 +327,7 @@ function update(): AutoUpdateLedger {
     windowsHide: true,
   });
   const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+
   try {
     writeFileSync(logPath(), output, "utf-8");
   } catch (err) {
@@ -308,6 +350,7 @@ function update(): AutoUpdateLedger {
     to: entry.to ?? null,
     durationSec: secondsBetween(entry.attemptedAt, entry.finishedAt),
   });
+
   return entry;
 }
 

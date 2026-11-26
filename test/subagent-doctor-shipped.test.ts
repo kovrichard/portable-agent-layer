@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { assets } from "../src/hooks/lib/paths";
+import { assets } from "../src/core/paths";
 import { lintSubagent } from "../src/tools/subagent-doctor";
 import { linkDir } from "./lib/links";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -21,6 +21,7 @@ function copyTo(dir: string): string {
   mkdirSync(dir, { recursive: true });
   const target = resolve(dir, "scout.md");
   copyFileSync(SCOUT, target);
+
   return target;
 }
 
@@ -72,6 +73,7 @@ describe("subagent doctor on shipped definitions", () => {
   test("every shipped definition reports 0 errors", () => {
     const files = readdirSync(SHIPPED_DIR).filter((f) => f.endsWith(".md"));
     expect(files.length).toBeGreaterThan(0);
+
     for (const file of files) {
       const report = lintSubagent(resolve(SHIPPED_DIR, file));
       const errs = report.findings.filter((f) => f.level === "error");

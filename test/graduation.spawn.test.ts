@@ -8,7 +8,7 @@ import {
 } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import { claudeReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -110,7 +110,7 @@ beforeEach(() => {
 
 describe("learning-store", () => {
   test("readFailures returns entries from capture.md", async () => {
-    const { readFailures } = await import("../src/hooks/lib/learning-store");
+    const { readFailures } = await import("../src/opinions/learning-store");
     const failuresDir = resolve(TEST_HOME, "memory", "learning", "failures");
     const entries = readFailures(failuresDir);
     expect(entries.length).toBeGreaterThanOrEqual(9);
@@ -119,7 +119,7 @@ describe("learning-store", () => {
   });
 
   test("readFailures respects limit", async () => {
-    const { readFailures } = await import("../src/hooks/lib/learning-store");
+    const { readFailures } = await import("../src/opinions/learning-store");
     const failuresDir = resolve(TEST_HOME, "memory", "learning", "failures");
     const entries = readFailures(failuresDir, 3);
     expect(entries.length).toBe(3);
@@ -128,7 +128,7 @@ describe("learning-store", () => {
 
 describe("analyze", () => {
   test("detects patterns with 3+ occurrences", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
+    const { analyze } = await import("../src/opinions/graduation");
     const result = await analyze();
 
     expect(result.candidates.length).toBeGreaterThanOrEqual(1);
@@ -141,7 +141,7 @@ describe("analyze", () => {
   });
 
   test("does not include patterns with <3 occurrences as candidates", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
+    const { analyze } = await import("../src/opinions/graduation");
     const result = await analyze();
 
     const uiPattern = result.candidates.find((c) =>
@@ -151,7 +151,7 @@ describe("analyze", () => {
   });
 
   test("does not write to wisdom frames", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
+    const { analyze } = await import("../src/opinions/graduation");
     await analyze();
 
     const framesDir = resolve(TEST_HOME, "memory", "wisdom", "frames");
@@ -162,7 +162,7 @@ describe("analyze", () => {
   });
 
   test("reports correct confidence for occurrences", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
+    const { analyze } = await import("../src/opinions/graduation");
     const result = await analyze();
 
     // test-failure entries share the same context (4x) — grouped separately from principle-failure
@@ -175,7 +175,7 @@ describe("analyze", () => {
   });
 
   test("groups entries by similar context text", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
+    const { analyze } = await import("../src/opinions/graduation");
     const result = await analyze();
 
     const npmGroup = result.candidates.find((c) =>
@@ -186,7 +186,7 @@ describe("analyze", () => {
   });
 
   test("returns ratings summary", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
+    const { analyze } = await import("../src/opinions/graduation");
     const result = await analyze();
     // Ratings file is empty in test, so null is expected
     expect(result.ratings).toBeNull();
@@ -208,7 +208,7 @@ describe("recommendations without an API key", () => {
   });
 
   test("come from the agent's own CLI", async () => {
-    const { analyze } = await import("../src/hooks/lib/graduation");
+    const { analyze } = await import("../src/opinions/graduation");
     const result = await analyze({ actionable: true });
     expect(result.recommendations).toEqual(["Check the npm registry before installing."]);
   });

@@ -27,8 +27,11 @@ const gateColor: Record<GateVerdict, string> = {
 
 function gateLabel(verdict: GateVerdict): string {
   if (verdict === "pass") return "Pass";
+
   if (verdict === "fail") return "Fail";
+
   if (verdict === "flag") return "Flag";
+
   return "N/A";
 }
 

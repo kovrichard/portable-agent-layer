@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { commandsThisTurn } from "../src/hooks/lib/claim-check";
+import { reload } from "../src/core/settings";
+import { commandsThisTurn } from "../src/opinions/claim-check";
 import {
   claimChecksSince,
   transcriptLines,
   watchClaims,
-} from "../src/hooks/lib/claim-log";
-import { rememberSendBack } from "../src/hooks/lib/send-back-guard";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/opinions/claim-log";
+import { rememberSendBack } from "../src/opinions/send-back-guard";
 import { claimCheckLines } from "../src/tools/lib/interaction-report";
 import { freshTestDir } from "./lib/test-home";
 
@@ -18,6 +18,7 @@ const NOW = new Date("2026-10-04T12:00:00Z");
 function transcript(entries: unknown[]): string {
   const path = resolve(HOME, "transcript.jsonl");
   writeFileSync(path, entries.map((e) => JSON.stringify(e)).join("\n"));
+
   return path;
 }
 

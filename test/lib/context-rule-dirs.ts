@@ -13,7 +13,9 @@ const CONTEXT_RULE_AGENT_DIRS = [
  */
 export function sandboxContextRuleDirs(root: string): () => void {
   const saved = CONTEXT_RULE_AGENT_DIRS.map((v) => process.env[v]);
+
   for (const v of CONTEXT_RULE_AGENT_DIRS) process.env[v] = resolve(root, v);
+
   return () =>
     CONTEXT_RULE_AGENT_DIRS.forEach((v, i) => {
       const value = saved[i];

@@ -79,6 +79,7 @@ export function TuningLog({
               </td>
             </tr>
           );
+
           return row;
         })}
       </tbody>

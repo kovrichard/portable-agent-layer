@@ -1,4 +1,4 @@
-import { regenerateIfNeeded } from "../hooks/lib/claude-md";
+import { regenerateIfNeeded } from "../context/claude-md";
 import {
   type Environment,
   type Probe,
@@ -6,7 +6,7 @@ import {
   refreshEnvironment,
   renderEnvironment,
   systemProbe,
-} from "../hooks/lib/environment";
+} from "../core/environment";
 import { leaf } from "../tools/lib/command";
 
 export function currentEnvironment(
@@ -16,8 +16,10 @@ export function currentEnvironment(
   if (refresh) {
     const env = refreshEnvironment(probe);
     regenerateIfNeeded();
+
     return env;
   }
+
   return readEnvironment() ?? refreshEnvironment(probe);
 }
 

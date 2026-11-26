@@ -25,11 +25,14 @@ let dir: string;
 /** Install a fake `rtk` on PATH whose body runs once stdin has been drained. */
 function writeFakeRtk(body: string): void {
   const script = `const c=[];process.stdin.on("data",d=>c.push(d));process.stdin.on("end",()=>{${body}});`;
+
   if (WINDOWS) {
     writeFileSync(resolve(dir, "rtk.js"), script);
     writeFileSync(resolve(dir, "rtk.cmd"), `@echo off\r\nbun "%~dp0rtk.js" %*\r\n`);
+
     return;
   }
+
   const p = resolve(dir, "rtk");
   writeFileSync(p, `#!/usr/bin/env bun\n${script}\n`);
   chmodSync(p, 0o755);
@@ -49,6 +52,7 @@ async function runHook(env: Record<string, string>, stdin = "{}"): Promise<strin
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   return out;
 }
 

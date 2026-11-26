@@ -19,24 +19,36 @@ const SESSION_JSON = JSON.stringify({
 
 let HOME: string;
 
-function fixture(autoUpdate: boolean): void {
-  mkdirSync(resolve(HOME, ".pal", "memory", "state"), { recursive: true });
+const FORMER_SETTINGS = ["memory", "pal-settings.json"];
+
+function writeSettings(autoUpdate: boolean, at: string[]): void {
   writeFileSync(
-    resolve(HOME, ".pal", "memory", "state", "update-available.json"),
+    resolve(HOME, ".pal", ...at),
+    JSON.stringify({ autoUpdate: { enabled: autoUpdate, decided: true } }),
+    "utf-8"
+  );
+}
+
+function writeCheck(latest: string, major: boolean): void {
+  writeFileSync(
+    resolve(HOME, ".pal", "cache", "update-available.json"),
     JSON.stringify({
       checkedAt: new Date().toISOString(),
       available: true,
       current: "0.76.1",
-      latest: "0.77.0",
+      latest,
       mode: "repo",
+      major,
     }),
     "utf-8"
   );
-  writeFileSync(
-    resolve(HOME, ".pal", "memory", "pal-settings.json"),
-    JSON.stringify({ autoUpdate: { enabled: autoUpdate, decided: true } }),
-    "utf-8"
-  );
+}
+
+function fixture(autoUpdate: boolean, settingsAt: string[] = FORMER_SETTINGS): void {
+  mkdirSync(resolve(HOME, ".pal", "cache"), { recursive: true });
+  mkdirSync(resolve(HOME, ".pal", "memory"), { recursive: true });
+  writeCheck("0.77.0", false);
+  writeSettings(autoUpdate, settingsAt);
 }
 
 function render(): string {
@@ -45,6 +57,7 @@ function render(): string {
     encoding: "utf-8",
     env: { ...process.env, HOME },
   });
+
   return run.stdout ?? "";
 }
 
@@ -68,6 +81,25 @@ describe.skipIf(process.platform === "win32")("the update line", () => {
     expect(line).not.toContain("restart to apply");
   });
 
+  test("reads the settings at the PAL home's root once they have moved", () => {
+    fixture(true, ["settings.json"]);
+    expect(render()).toContain("restart to apply");
+  });
+
+  test("the moved settings win over a late copy left in memory/", () => {
+    fixture(true, ["settings.json"]);
+    writeSettings(false, FORMER_SETTINGS);
+    expect(render()).toContain("restart to apply");
+  });
+
+  test("a new major asks for --major even when PAL applies updates itself", () => {
+    fixture(true);
+    writeCheck("1.0.0", true);
+    const line = render();
+    expect(line).toContain("new major: 0.76.1 → 1.0.0  run: pal cli update --major");
+    expect(line).not.toContain("restart to apply");
+  });
+
   test("says nothing at all when no update is waiting", () => {
     mkdirSync(resolve(HOME, ".pal", "memory", "state"), { recursive: true });
     expect(render()).not.toContain("update");
@@ -82,5 +114,7 @@ describe("the Windows statusline", () => {
     expect(ps1).toContain("restart to apply");
     expect(ps1).toContain("run: pal cli update");
     expect(ps1).toContain("autoUpdate.enabled");
+    expect(ps1).toContain("$uc.major -eq $true");
+    expect(ps1).toContain("run: pal cli update --major");
   });
 });

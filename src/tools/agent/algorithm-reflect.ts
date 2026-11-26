@@ -10,7 +10,9 @@
  */
 
 import { appendFileSync } from "node:fs";
-import { paths } from "../../hooks/lib/paths";
+import { reflectionsFile } from "../../bronze/bronze";
+import { recordAlgorithmReflectionQuietly } from "../../progress/algorithm-runs";
+import { progressSession } from "../../progress/progress-session";
 import { buildReflection, intOr, reflectionLine } from "../lib/algorithm-reflect";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { emit } from "../lib/emit";
@@ -22,7 +24,7 @@ Example:
   pal cli algorithm-reflect --task "description" --criteria N --passed N --failed N --sentiment 1-10 \\
     --q1 "self reflection" --q2 "algorithm reflection" --q3 "AI reflection"
 
-Output: algorithm-reflections.jsonl in memory/learning/reflections/`;
+Output: algorithm-reflections.jsonl in records/reflections/`;
 
 const REQUIRED = ["task", "q1", "q2", "q3"] as const;
 
@@ -60,6 +62,7 @@ export const command = leaf({
   run: ({ values }) => {
     const { task, q1, q2, q3 } = values;
     if (!task || !q1 || !q2 || !q3) throw new UsageError(missingRequired(values));
+
     return appendReflection(
       buildReflection({
         task,
@@ -71,6 +74,7 @@ export const command = leaf({
         criteria_failed: intOr(values.failed, 0),
         sentiment: intOr(values.sentiment, 5),
         scope: values.scope,
+        session: progressSession(),
       })
     );
   },
@@ -84,17 +88,18 @@ function missingRequired(
   values: Partial<Record<(typeof REQUIRED)[number], string>>
 ): string {
   const missing = REQUIRED.filter((name) => !values[name]).map((name) => `--${name}`);
+
   return `missing ${missing.join(", ")}`;
 }
 
 function reflectionsPath(): string {
-  paths.reflections();
-  return paths.reflectionsFile();
+  return reflectionsFile();
 }
 
 function appendReflection(reflection: ReturnType<typeof buildReflection>): undefined {
   const path = reflectionsPath();
   appendFileSync(path, reflectionLine(reflection), "utf-8");
+  recordAlgorithmReflectionQuietly();
   emit.receipt(path, {
     passed: reflection.criteria_passed,
     of: reflection.criteria_count,

@@ -14,7 +14,9 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "../../hooks/lib/paths";
+import { reflectionsFile } from "../../bronze/bronze";
+import { ratingsFile } from "../../bronze/signals";
+import { ensureDir, paths } from "../../core/paths";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 
@@ -63,8 +65,10 @@ function shouldRun(force: boolean): boolean {
   if (force) return true;
   const p = synthesisPath();
   if (!existsSync(p)) return true;
+
   try {
     const data = JSON.parse(readFileSync(p, "utf-8")) as { timestamp: string };
+
     return Date.now() - new Date(data.timestamp).getTime() > SYNTHESIS_TTL_MS;
   } catch {
     return true;
@@ -81,6 +85,7 @@ function formatDate(iso: string): string {
 
 function readJsonl<T>(path: string): T[] {
   if (!existsSync(path)) return [];
+
   try {
     return readFileSync(path, "utf-8")
       .split("\n")
@@ -105,11 +110,7 @@ interface Reflection {
 }
 
 function getAlgorithmStats(since: Date): SynthesisState["algorithm"] {
-  const p = resolve(
-    ensureDir(resolve(paths.learning(), "reflections")),
-    "algorithm-reflections.jsonl"
-  );
-  const reflections = readJsonl<Reflection>(p).filter(
+  const reflections = readJsonl<Reflection>(reflectionsFile()).filter(
     (r) => new Date(r.timestamp) >= since
   );
 
@@ -154,8 +155,7 @@ interface Rating {
 }
 
 function getRatingStats(since: Date): SynthesisState["ratings"] {
-  const p = resolve(paths.signals(), "ratings.jsonl");
-  const ratings = readJsonl<Rating>(p).filter((r) => new Date(r.ts) >= since);
+  const ratings = readJsonl<Rating>(ratingsFile()).filter((r) => new Date(r.ts) >= since);
 
   if (ratings.length === 0) {
     return { count: 0, avg: 0, recentAvg: 0, lowCount: 0, trend: "stable" };
@@ -177,6 +177,7 @@ function getRatingStats(since: Date): SynthesisState["ratings"] {
       trend: "stable",
     };
   }
+
   const firstHalf = ratings.slice(0, mid);
   const secondHalf = ratings.slice(mid);
   const firstAvg = firstHalf.reduce((s, r) => s + r.rating, 0) / firstHalf.length;
@@ -203,47 +204,8 @@ function round1(n: number): number {
 export function writeSynthesis(state: SynthesisState): string {
   const sp = synthesisPath();
   writeFileSync(sp, JSON.stringify(state, null, 2), "utf-8");
-  writeSignalCache();
+
   return sp;
-}
-
-function writeSignalCache(): void {
-  try {
-    const p = resolve(paths.signals(), "ratings.jsonl");
-    const all = readJsonl<Rating>(p);
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-
-    const avg = (rs: Rating[]) =>
-      rs.length === 0 ? null : round1(rs.reduce((s, r) => s + r.rating, 0) / rs.length);
-
-    const today = avg(all.filter((r) => r.ts.slice(0, 10) === todayStr));
-    const week = avg(all.filter((r) => new Date(r.ts) >= daysAgo(7)));
-    const month = avg(all.filter((r) => new Date(r.ts) >= daysAgo(30)));
-
-    const recent = all.slice(-20);
-    const mid = Math.floor(recent.length / 2);
-    let trend: "up" | "down" | "stable" = "stable";
-    if (mid >= 3) {
-      const a = avg(recent.slice(0, mid)) ?? 0;
-      const b = avg(recent.slice(mid)) ?? 0;
-      if (b - a > 0.5) trend = "up";
-      else if (a - b > 0.5) trend = "down";
-    }
-
-    const cache = resolve(paths.state(), "signal-cache.json");
-    writeFileSync(
-      cache,
-      JSON.stringify(
-        { computed_at: now.toISOString(), today, week, month, trend },
-        null,
-        2
-      ),
-      "utf-8"
-    );
-  } catch {
-    /* non-critical */
-  }
 }
 
 export function synthesize(days: number): SynthesisState {
@@ -284,6 +246,7 @@ export function run(argv: string[] = scriptArgs()): Promise<number> {
 function lookbackDays(raw: string): number {
   const days = parseInt(raw, 10);
   if (Number.isNaN(days)) throw new UsageError(`--days must be a number of days: ${raw}`);
+
   return days;
 }
 
@@ -295,6 +258,7 @@ function synthesizeUnlessFresh(days: number, force: boolean): undefined {
         message: "Last synthesis < 24h ago. Use --force to override.",
       })
     );
+
     return;
   }
 

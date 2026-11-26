@@ -1,6 +1,6 @@
 # PAL reaction classification evaluation
 #
-# Evaluates the prompt in src/hooks/lib/reaction-rating.ts as the model receives
+# Evaluates the prompt in src/opinions/reaction-rating.ts as the model receives
 # it: system, user, and the schema instruction buildCliPrompt() appends. It labels
 # how the user reacted to the previous reply, and the label is the implicit
 # rating: a confirmed correction rates low, praise rates high, anything else

@@ -6,7 +6,7 @@ import {
   checkPendingMigrations,
   runMigrate,
 } from "../src/cli/migrate";
-import { appendEvent, buildTree, readEvents } from "../src/hooks/lib/progress-tree";
+import { appendEvent, buildTree, readEvents } from "../src/progress/progress-tree";
 import { freshTestDir } from "./lib/test-home";
 
 const MIGRATION = "v10-threads-to-progress-tree";
@@ -43,11 +43,13 @@ function quietly(fn: () => void): string {
   const captured: string[] = [];
   const log = console.log;
   console.log = (...parts: unknown[]) => captured.push(parts.join(" "));
+
   try {
     fn();
   } finally {
     console.log = log;
   }
+
   return captured.join("\n");
 }
 
@@ -126,6 +128,7 @@ describe(MIGRATION, () => {
     writeThreads(thread("t1"));
     pendingIds();
     expect(existsSync(resolve(HOME, "memory", "progress-tree"))).toBe(false);
+    expect(existsSync(resolve(HOME, "work", "progress-tree"))).toBe(false);
   });
 
   test("a dry run names the thread and writes nothing", () => {

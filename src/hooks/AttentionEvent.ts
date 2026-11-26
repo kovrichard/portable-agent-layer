@@ -4,16 +4,17 @@
  * always exits 0.
  */
 
-import { logAttention } from "./lib/attention-events";
+import { enterHookWorkspace } from "../core/hook-payload";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { logAttention } from "../usage/attention-events";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 try {

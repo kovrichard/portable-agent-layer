@@ -9,6 +9,7 @@ export type FactoryEnv = Record<string, string | undefined>;
 
 export function freshFactoryHome(file: string): { home: string; env: FactoryEnv } {
   const home = freshTestDir(file);
+
   return { home, env: { ...process.env, DARK_FACTORY_HOME: home } };
 }
 

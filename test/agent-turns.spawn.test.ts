@@ -2,9 +2,9 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { observeTurn } from "../src/hooks/lib/interaction";
-import { transformedPromptResponse } from "../src/hooks/lib/parked-context";
 import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
+import { observeTurn } from "../src/opinions/interaction";
+import { transformedPromptResponse } from "../src/progress/parked-context";
 import {
   asAgent,
   copilotPrompt,
@@ -33,15 +33,13 @@ const AGENT_RESPONSE_HOOK = resolve(REPO, "src", "hooks", "AgentResponse.ts");
 
 startEachTestInACleanHome(import.meta.file);
 
-/** A reply filed by a detached child shows up in the session's track a moment later. */
-async function filedReply(session: string, timeoutMs = 4000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
+/** A reply filed by a detached child shows up in the session's track later; the test's timeout bounds the wait. */
+async function filedReply(session: string) {
+  for (;;) {
     const reply = trackedReply(session);
     if (reply) return reply;
     await Bun.sleep(50);
   }
-  return undefined;
 }
 
 describe("cursor's prompt hook, which documents no context field", () => {
@@ -121,6 +119,7 @@ describe("copilot, whose prompt hook output is dropped", () => {
 function hookSpecificContext(out: string): string {
   const parsed = JSON.parse(out);
   expect(parsed.hookSpecificOutput.hookEventName).toBe("UserPromptSubmit");
+
   return parsed.hookSpecificOutput.additionalContext;
 }
 

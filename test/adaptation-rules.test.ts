@@ -13,8 +13,8 @@ import {
   readRules,
   retireRule,
   rulesPath,
-} from "../src/hooks/lib/adaptation-rules";
-import { CORRECTION_KINDS } from "../src/hooks/lib/correction-kind";
+} from "../src/opinions/adaptation-rules";
+import { CORRECTION_KINDS } from "../src/opinions/correction-kind";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -250,6 +250,7 @@ describe("decideRule", () => {
 
   test("an opinion past the cap is refused and stays a draft", () => {
     const ofKindDraft = (i: number) => addDraft({ ...draft, kind: CORRECTION_KINDS[i] });
+
     for (let i = 0; i < 8; i++) decideRule(ofKindDraft(i).id, "opinion");
     const ninth = ofKindDraft(8);
 
@@ -308,6 +309,7 @@ describe("addOpinion", () => {
   test("a retired opinion frees its place under the cap", () => {
     const ids = Array.from({ length: 8 }, (_, i) => {
       const result = addOpinion(ofKind(i));
+
       return result.ok ? result.rule.id : "";
     });
     expect(addOpinion(ofKind(8))).toEqual({

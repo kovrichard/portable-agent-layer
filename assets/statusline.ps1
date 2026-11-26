@@ -48,25 +48,15 @@ $GIT_INDICATOR = if ($BRANCH) { "  (git: $BRANCH)" } else { "" }
 # Format cost
 $COST_STR = '$' + ([math]::Round($COST, 2)).ToString("0.00")
 
-# PAL: Hook health - count ERROR lines in debug.log from last 24h
-$HOOK_ERRORS = 0
-$debugLog = Join-Path $env:USERPROFILE ".pal\debug\debug.log"
-if (Test-Path $debugLog) {
-  $cutoff = (Get-Date).AddHours(-24)
-  try {
-    $HOOK_ERRORS = (Get-Content $debugLog -ErrorAction SilentlyContinue |
-      Where-Object { $_ -match '\] ERROR ' } |
-      Where-Object {
-        $m = [regex]::Match($_, '^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]')
-        if ($m.Success) { [datetime]$m.Groups[1].Value -gt $cutoff } else { $false }
-      }).Count
-  } catch { $HOOK_ERRORS = 0 }
-}
-
 # PAL: Open ISC count - find project matching current directory
+# PAL settings: at the PAL home's root, or in memory\ until the owner moves it
+$palSettings = Join-Path $env:USERPROFILE ".pal\settings.json"
+if (-not (Test-Path $palSettings)) { $palSettings = Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json" }
+
 $OPEN_ISCS = 0
 $PROJECT_NAME = ""
-$projectsDir = Join-Path $env:USERPROFILE ".pal\memory\projects"
+$projectsDir = Join-Path $env:USERPROFILE ".pal\work\projects"
+if (-not (Test-Path $projectsDir)) { $projectsDir = Join-Path $env:USERPROFILE ".pal\memory\projects" }
 if (Test-Path $projectsDir) {
   try {
     $CWD_NORM = $CWD.Replace('/', '\').TrimEnd('\')
@@ -138,30 +128,10 @@ if ($SEVEN_D_RAW -ne $null) { $RATE_PARTS += "7d: $([int]$SEVEN_D_RAW)%" }
 if ($DAY_STR) { $RATE_PARTS += $DAY_STR }
 $RATE_STR = if ($RATE_PARTS.Count -gt 0) { " - " + ($RATE_PARTS -join " | ") } else { "" }
 
-# PAL: Signal trend (reads 10-min cache written by session intelligence)
-$SIGNAL_STR = ""
-$signalCache = Join-Path $env:USERPROFILE ".pal\memory\state\signal-cache.json"
-if (Test-Path $signalCache) {
-  try {
-    $sc = Get-Content $signalCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
-    if ($sc.today -ne $null) {
-      $ARROW = switch ($sc.trend) {
-        "up"     { "^"; break }
-        "down"   { "v"; break }
-        "stable" { "-"; break }
-        default  { "?"; break }
-      }
-      $SIG_TODAY = ([math]::Round([double]$sc.today, 1)).ToString("0.0")
-      $SIG_COLOR = if ($sc.trend -eq "up") { $GREEN } elseif ($sc.trend -eq "down") { $RED } else { $DIM }
-      $SIGNAL_STR = "  " + $SIG_COLOR + "sig: $SIG_TODAY/10 $ARROW" + $RESET
-    }
-  } catch {}
-}
-
 # PAL: Update available check (reads cached result, no network call)
 # Emoji constructed at runtime to avoid PS5.1 UTF-8-without-BOM encoding issues
 $UPDATE_LINE = ""
-$updateCache = Join-Path $env:USERPROFILE ".pal\memory\state\update-available.json"
+$updateCache = Join-Path $env:USERPROFILE ".pal\cache\update-available.json"
 if (Test-Path $updateCache) {
   try {
     $uc = Get-Content $updateCache -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
@@ -169,15 +139,61 @@ if (Test-Path $updateCache) {
       $versionStr = if ($uc.current -ne $uc.latest) { "$($uc.current) -> $($uc.latest)" } else { $uc.current + " (new commits)" }
       # With daily updates on, PAL applies this when the session closes — so the
       # next step is to restart, not to run the command yourself.
-      $palSettings = Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json"
       $autoUpdate = $false
       if (Test-Path $palSettings) {
         try { $autoUpdate = (Get-Content $palSettings -Raw | ConvertFrom-Json).autoUpdate.enabled -eq $true } catch {}
       }
-      $UPDATE_LINE = if ($autoUpdate) { "[update] $versionStr  restart to apply" } else { "[update] $versionStr  run: pal cli update" }
+      $UPDATE_LINE = if ($uc.major -eq $true) { "[new major] $versionStr  run: pal cli update --major" } elseif ($autoUpdate) { "[update] $versionStr  restart to apply" } else { "[update] $versionStr  run: pal cli update" }
     }
   } catch {}
 }
+
+# PAL: Health - what the doctor (health.json) and a rejected Claude call (login-rejected.json) left
+$palCache = Join-Path $env:USERPROFILE ".pal\cache"
+$healthFailing = 0
+$healthWarnings = 0
+$healthWorst = ""
+$healthNotice = ""
+$isCount = { param($v) ($v -is [int] -or $v -is [long] -or $v -is [double] -or $v -is [decimal]) -and $v -gt 0 }
+$healthCache = Join-Path $palCache "health.json"
+if (Test-Path $healthCache) {
+  try {
+    $health = Get-Content $healthCache -Raw -ErrorAction Stop | ConvertFrom-Json
+    if (& $isCount $health.failing) { $healthFailing = [long][math]::Floor([double]$health.failing) }
+    if (& $isCount $health.warnings) { $healthWarnings = [long][math]::Floor([double]$health.warnings) }
+    if ($health.worst -is [string]) { $healthWorst = $health.worst }
+    if ($health.notice -is [string]) { $healthNotice = $health.notice }
+  } catch {}
+}
+
+$rejectedLabel = ""
+$rejectedCache = Join-Path $palCache "login-rejected.json"
+if (Test-Path $rejectedCache) {
+  $rejectedLabel = "Claude login rejected"
+  try {
+    if ((Get-Content $rejectedCache -Raw -ErrorAction Stop | ConvertFrom-Json).auth -eq "token") { $rejectedLabel = "Claude token rejected" }
+  } catch {}
+}
+
+$HEALTH_LINE = ""
+$HEALTH_COLOR = $RED
+$healthLabel = ""
+$healthMore = 0
+if ($rejectedLabel) {
+  $healthLabel = $rejectedLabel
+  $healthMore = $healthFailing
+} elseif ($healthFailing -gt 0) {
+  $healthLabel = if ($healthWorst) { $healthWorst } else { "Doctor found a failure" }
+  $healthMore = $healthFailing - 1
+} elseif ($healthNotice) {
+  $healthLabel = $healthNotice
+  $HEALTH_COLOR = $YELLOW
+} elseif ($healthWarnings -gt 0) {
+  $healthLabel = if ($healthWarnings -eq 1) { "1 warning" } else { "$healthWarnings warnings" }
+  $HEALTH_COLOR = $YELLOW
+}
+if ($healthMore -gt 0) { $healthLabel += " (+$healthMore more)" }
+if ($healthLabel) { $HEALTH_LINE = "! $healthLabel $([char]0x2014) pal cli doctor" }
 
 # Dark factory: one line per task that is building or waiting on the user.
 # Reads the tail of each task's own event log, so it stays fast as logs grow.
@@ -203,7 +219,8 @@ if (Test-Path $factoryTasks) {
       $gate = $events | Where-Object { $_.event -eq "gate" } | Select-Object -Last 1
       $latest = $events | Select-Object -Last 1
       $line = "[factory] $name"
-      $line += if ($run) { " - $($run.role) $(& $minsSince $run.ts)m" } else { " - starting" }
+      $progress = if ($run -and $null -ne $run.step -and $null -ne $run.planned) { "$($run.step)/$($run.planned) " } else { "" }
+      $line += if ($run) { " - $progress$($run.role) $(& $minsSince $run.ts)m" } else { " - starting" }
       if ($gate) { $line += if ($gate.result -eq "pass") { " - gate ok" } else { " - gate FAIL" } }
       if ($t.pr -match '/pull/(\d+)') { $line += " - PR #$($Matches[1])" }
       if ($latest -and (& $minsSince $latest.ts) -ge 35) { $line += " - no activity $(& $minsSince $latest.ts)m" }
@@ -212,12 +229,52 @@ if (Test-Path $factoryTasks) {
   }
 }
 
-# Build PAL indicators
-$HOOK_STR = if ($HOOK_ERRORS -gt 0) { "  " + $RED + "! $HOOK_ERRORS hook err" + $RESET } else { "" }
-$ISC_STR  = if ($OPEN_ISCS -gt 0)   { "  " + $DIM + "$OPEN_ISCS open ISCs" + $RESET }  else { "" }
+# PAL: The timebox, unattended or minimum run of this folder or of the project it is in
+$RUN_LINES = @()
+$runDir = Join-Path $env:USERPROFILE ".pal\cache\run-mode"
+if (Test-Path $runDir) {
+  $normPath = { param($p) ([string]$p).Replace('/', '\').TrimEnd('\') }
+  $runCwd = & $normPath $CWD
+  $bindings = $null
+  try { $bindings = Get-Content (Join-Path $env:USERPROFILE ".pal\bindings.json") -Raw -ErrorAction Stop | ConvertFrom-Json } catch {}
+  $principalZone = [TimeZoneInfo]::Utc
+  try {
+    $zoneId = (Get-Content $palSettings -Raw -ErrorAction Stop | ConvertFrom-Json).identity.principal.timezone
+    if ($zoneId) {
+      $principalZone = [TimeZoneInfo]::Local
+      $principalZone = [TimeZoneInfo]::FindSystemTimeZoneById($zoneId)
+    }
+  } catch {}
+  foreach ($runJson in Get-ChildItem -Path $runDir -Filter "*.json" -ErrorAction SilentlyContinue) {
+    try {
+      $r = Get-Content $runJson.FullName -Raw | ConvertFrom-Json
+      $until = [DateTimeOffset]::Parse($r.until)
+      $leftMins = [math]::Ceiling(($until - [DateTimeOffset]::UtcNow).TotalMinutes)
+      if ($r.done -eq $true -or $leftMins -le 0) { continue }
+      $root = ""
+      if ($bindings -and $bindings.PSObject.Properties[$r.scope]) { $root = & $normPath $bindings.($r.scope) }
+      $inScope = ((& $normPath $r.scope) -eq $runCwd) -or ($root -and ($runCwd -eq $root -or $runCwd.StartsWith("$root\", [StringComparison]::OrdinalIgnoreCase)))
+      if (-not $inScope) { continue }
+      $left = if ($leftMins -ge 60) { "$([math]::Floor($leftMins / 60))h$($leftMins % 60)m" } else { "${leftMins}m" }
+      $at = [TimeZoneInfo]::ConvertTime($until, $principalZone).ToString("HH:mm")
+      $RUN_LINES += switch ($r.kind) {
+        "minimum" {
+          $n = @($r.rounds).Count
+          $plural = if ($n -eq 1) { "" } else { "s" }
+          "[minimum run] floor $at - $left left - $n round$plural"
+        }
+        "unattended" { "[unattended] until $at - $left left" }
+        default { "[timebox] until $at - $left left" }
+      }
+    } catch {}
+  }
+}
 
-# Line 1: Model, Directory, Git Branch, Hook Health, Open ISCs
-Write-Host ($CYAN + "[$MODEL]" + $RESET + " folder: $DIR_DISPLAY" + $DIM + $GIT_INDICATOR + $RESET + $HOOK_STR + $ISC_STR + $SIGNAL_STR)
+# Build PAL indicators
+$ISC_STR = if ($OPEN_ISCS -gt 0)   { "  " + $DIM + "$OPEN_ISCS open ISCs" + $RESET }  else { "" }
+
+# Line 1: Model, Directory, Git Branch, Open ISCs
+Write-Host ($CYAN + "[$MODEL]" + $RESET + " folder: $DIR_DISPLAY" + $DIM + $GIT_INDICATOR + $RESET + $ISC_STR)
 
 # Line 2: Context bar with usage percentage, cost, and rate limits
 $CTX_STR = "$USED% - $COST_STR - ${REM}% free"
@@ -226,8 +283,14 @@ Write-Host ($BAR_COLOR + $BAR + $RESET + " " + $CTX_STR + $DIM + $RATE_STR + $RE
 # Line 3: Update available (only when cache says available AND versions differ)
 if ($UPDATE_LINE) { Write-Host ($YELLOW + $UPDATE_LINE + $RESET) }
 
+# Line 3a: Health - the worst failure or the warning count, pointing to the doctor
+if ($HEALTH_LINE) { Write-Host ($HEALTH_COLOR + $HEALTH_LINE + $RESET) }
+
 # Line 3b: Dark-factory tasks that are building or waiting on the user
 foreach ($factoryLine in $FACTORY_LINES) { Write-Host ($CYAN + $factoryLine + $RESET) }
+
+# Line 3c: The run this session works under
+foreach ($runLine in $RUN_LINES) { Write-Host ($YELLOW + $runLine + $RESET) }
 
 # Line 4: Rotating quote (changes every 30 minutes)
 $QUOTES = @(

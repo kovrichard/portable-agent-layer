@@ -28,12 +28,14 @@ function continues(block: Block, next: Activity): boolean {
 /** A parallel session's model calls in another project leave the block alone; the user moving there ends it. */
 function blocksOf(activity: Activity[]): Block[] {
   const blocks: Block[] = [];
+
   for (const next of activity) {
     const current = blocks.at(-1);
     if (current && continues(current, next)) current.last = next;
     else if (!current || current.last.project === next.project || movesAttention(next))
       blocks.push({ first: next, last: next });
   }
+
   return blocks;
 }
 
@@ -45,6 +47,7 @@ export function focusBlocks(activity: Activity[]): Focus | null {
     (top, b) => (top === null || minutesOf(b) > minutesOf(top) ? b : top),
     null
   );
+
   return {
     blocks: focused.length,
     minutes: focused.reduce((sum, b) => sum + minutesOf(b), 0),

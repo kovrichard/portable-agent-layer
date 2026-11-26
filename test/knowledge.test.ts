@@ -15,7 +15,7 @@ import {
   serialize,
   slugify,
   validate,
-} from "../src/tools/knowledge/lib";
+} from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { LedgerEntry } from "../src/hooks/lib/ledger";
+import type { LedgerEntry } from "../src/bronze/ledger";
 import { ledgerView } from "../src/tools/ledger/view";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -23,7 +23,7 @@ let HOME: string;
 
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
-  mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+  mkdirSync(resolve(HOME, "records", "ledger"), { recursive: true });
 });
 
 async function runValidator(payload: unknown, agent = "claude"): Promise<string> {
@@ -35,6 +35,7 @@ async function runValidator(payload: unknown, agent = "claude"): Promise<string>
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   return out.trim();
 }
 
@@ -43,8 +44,9 @@ function preToolUse(toolName: string, toolArgs: Record<string, unknown>) {
 }
 
 function entries(): LedgerEntry[] {
-  const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
+  const file = resolve(HOME, "records", "ledger", "actions.jsonl");
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .split("\n")
     .filter(Boolean)
@@ -103,8 +105,8 @@ describe("a rule refusing is recorded", () => {
 
   test("a ledger it cannot write still denies — recording never softens a block", async () => {
     // A file where the ledger directory has to go: every write path throws.
-    removeOnceReleased(resolve(HOME, "memory", "ledger"));
-    writeFileSync(resolve(HOME, "memory", "ledger"), "not a directory", "utf-8");
+    removeOnceReleased(resolve(HOME, "records", "ledger"));
+    writeFileSync(resolve(HOME, "records", "ledger"), "not a directory", "utf-8");
 
     const out = await runValidator(preToolUse("Bash", { command: DANGEROUS }));
     expect(out).toContain("deny");
@@ -123,6 +125,7 @@ describe("a rule refusing is recorded", () => {
 describe("what the page then reads", () => {
   test("blocked is counted, and counted as a refusal", async () => {
     process.env.PAL_HOME = HOME;
+
     try {
       await runValidator(preToolUse("Bash", { command: DANGEROUS }));
       const view = ledgerView({});

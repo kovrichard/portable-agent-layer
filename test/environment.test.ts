@@ -17,8 +17,8 @@ import {
   renderEnvironment,
   versionIn,
   windowsName,
-} from "../src/hooks/lib/environment";
-import { platform as palPlatform } from "../src/hooks/lib/paths";
+} from "../src/core/environment";
+import { platform as palPlatform } from "../src/core/paths";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -28,6 +28,7 @@ beforeAll(() => {
   removeOnceReleased(TEST_HOME);
   mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
   process.env.PAL_HOME = TEST_HOME;
+
   for (const [name, dir] of Object.entries(AGENT_DIRS))
     process.env[name] = resolve(TEST_HOME, "agents", dir);
 });

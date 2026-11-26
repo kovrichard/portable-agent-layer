@@ -6,10 +6,10 @@ import {
   readCandidates,
   recordCandidate,
   reproveWaiting,
-} from "../src/hooks/lib/adaptation-candidates";
-import { readRules } from "../src/hooks/lib/adaptation-rules";
-import type { RequestedTurn } from "../src/hooks/lib/adaptation-turns";
-import { CORRECTION_KINDS_VERSION } from "../src/hooks/lib/correction-kind";
+} from "../src/opinions/adaptation-candidates";
+import { readRules } from "../src/opinions/adaptation-rules";
+import type { RequestedTurn } from "../src/opinions/adaptation-turns";
+import { CORRECTION_KINDS_VERSION } from "../src/opinions/correction-kind";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -195,7 +195,7 @@ describe("recordCandidate", () => {
   test("a broken line is skipped", () => {
     recordCandidate({ ...candidate, when: "first" }, corrections);
     appendFileSync(
-      resolve(HOME, "memory", "adaptation", "candidates.jsonl"),
+      resolve(HOME, "records", "rule-candidates", "candidates.jsonl"),
       "{ broken\n"
     );
     recordCandidate({ ...candidate, when: "second" }, corrections);

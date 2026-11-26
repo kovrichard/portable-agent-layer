@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
+import { scopeOf } from "../src/progress/progress-tree";
 import {
   clearRun,
   DEFAULT_UNATTENDED_RULES,
@@ -16,13 +16,13 @@ import {
   readRun,
   unattendedRules,
   writeRun,
-} from "../src/hooks/lib/run-mode";
+} from "../src/safety/run-mode";
 import {
   runModePromptLine,
   runModeRecall,
   runModeRefusal,
   unattendedStopReason,
-} from "../src/hooks/lib/run-mode-gate";
+} from "../src/safety/run-mode-gate";
 import { freshTestDir } from "./lib/test-home";
 
 const CWD = "/work/run-text";
@@ -46,6 +46,7 @@ function run(kind: Run["kind"], extra: Partial<Run> = {}): Run {
 function start(kind: Run["kind"], extra: Partial<Run> = {}): Run {
   const stored = run(kind, extra);
   writeRun(stored);
+
   return stored;
 }
 
@@ -155,7 +156,8 @@ describe("the stored run", () => {
 
   test("reads as none when its file is not JSON", () => {
     start("timebox");
-    const dir = resolve(home, "memory", "state", "run-mode");
+    const dir = resolve(home, "cache", "run-mode");
+
     for (const name of readdirSync(dir)) writeFileSync(resolve(dir, name), "{not json");
     expect(readRun(scopeOf(CWD), BEFORE)).toBeNull();
   });

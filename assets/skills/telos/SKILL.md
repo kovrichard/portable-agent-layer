@@ -74,7 +74,7 @@ User: "I finished the migration, update my goals"
 - **Don't dump raw file contents.** Summarize what's relevant to the user's question. They can ask for the full file if needed.
 - **Don't update without confirming.** Always show what you'll change and get a "yes" before running the tool.
 - **Don't create new TELOS files.** Only the 9 listed files are valid. If something doesn't fit, suggest the closest match.
-- **Don't mix TELOS with identity.** AI/principal identity lives in `pal-settings.json`, not TELOS. TELOS is personal context — goals, beliefs, challenges.
+- **Don't mix TELOS with identity.** AI/principal identity lives in `~/.pal/settings.json`, not TELOS. TELOS is personal context — goals, beliefs, challenges.
 - **Don't reference stale data.** If TELOS was loaded earlier in the session via context routing, re-read the file before updating — it may have changed.
 
 ## Rules

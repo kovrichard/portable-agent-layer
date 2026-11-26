@@ -5,7 +5,7 @@
  * Called at the end of an /algorithm-update session.
  */
 
-import { writeReviewMark } from "../../../../src/hooks/lib/algorithm-review";
+import { writeReviewMark } from "../../../../src/opinions/algorithm-review";
 
 const ts = new Date().toISOString();
 writeReviewMark(ts);

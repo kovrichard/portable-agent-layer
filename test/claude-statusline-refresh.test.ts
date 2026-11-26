@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { addStatuslineConfig } from "../src/targets/lib";
+import { addStatuslineConfig } from "../src/targets/statusline";
 
 const palClaudeCommand =
   process.platform === "win32"

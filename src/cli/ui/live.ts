@@ -37,7 +37,8 @@ export class LiveRail {
     private readonly style: Style,
     private readonly write: (text: string) => void = (text) => {
       process.stdout.write(text);
-    }
+    },
+    private readonly now: () => number = () => performance.now()
   ) {}
 
   line(text = ""): void {
@@ -55,11 +56,13 @@ export class LiveRail {
     this.failedNotes += (done?.notes ?? []).filter(
       (note) => note.level === "fail"
     ).length;
+
     return done;
   }
 
   private noteLines(note: Note): string[] {
     if (note.level === "info") return railNotes(this.style, note.text, this.style.dim);
+
     return railNotes(
       this.style,
       note.text,
@@ -83,12 +86,15 @@ export class LiveRail {
       frame += 1;
       draw();
     }, FRAME_MS);
-    const started = performance.now();
+    const started = this.now();
+
     try {
       const done = await work();
       clearInterval(spinner);
       this.write(CLEAR_LINE);
-      if (done) this.settle(name, done, stepTime(performance.now() - started));
+
+      if (done) this.settle(name, done, stepTime(this.now() - started));
+
       return done;
     } catch (error) {
       clearInterval(spinner);
@@ -100,7 +106,9 @@ export class LiveRail {
 
   private settle(name: string, done: Done, time: string, kind: "ok" | "fail" = "ok") {
     const detail = done.detail.join(` ${this.style.glyph.dot} `);
+
     for (const row of railRow(this.style, kind, name, detail, time)) this.line(row);
+
     for (const note of done.notes ?? [])
       for (const line of this.noteLines(note)) this.line(line);
   }
@@ -110,9 +118,11 @@ export class LiveRail {
       const done = await work();
       if (done) {
         this.line(`ok   ${name}: ${done.detail.join(", ")}`);
+
         for (const note of done.notes ?? [])
           this.line(`${note.level.padEnd(4)} ${note.text}`);
       }
+
       return done;
     } catch (error) {
       this.line(`fail ${name}: ${errorText(error)}`);

@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/konvert7/klint/refs/heads/main/klint.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/konvert7/klint/refs/tags/v1.8.0/klint.schema.json
 
 include:
   - src
@@ -8,25 +8,32 @@ include:
   - "!**/out/**"
   - "!**/dist/**"
   - "!**/vendor/**"
-plugins: [sonar]
 rules:
-  no-unguarded-json-parse: error
-  no-sync-in-async:
-    severity: error
-    include: ["src/hooks/**"]
-  no-floating-promise: error
-  no-misused-promises: error
-  no-date-equality: error
-  no-optional-chain-on-non-nullable: error
-  no-object-in-template: error
-  no-nested-template-literals: error
-  no-consecutive-array-push: error
-  no-string-match: error
-  sonar/prefer-string-raw: off
+  recommended: true
+  core:
+    blank-line-after-block: error
+    blank-line-before-control-flow: error
+    cognitive-complexity:
+      error: 14
+    function-length:
+      error: 40
+      skipBlankLines: true
+    no-unguarded-json-parse: error
+    no-sync-in-async:
+      severity: error
+      include: ["src/hooks/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
+    no-nested-template-literals: error
+    no-consecutive-array-push: error
+    no-string-match: error
+  sonar:
+    prefer-string-raw: off
+  experimental:
+    no-date-equality: error
+    no-floating-promise: error
 
 arch:
   layers:
-    core: ["src/hooks/lib/**", "src/tools/**"]
+    core: ["src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**", "src/hooks/lib/**", "src/tools/**"]
     skills: ["assets/skills/**"]
     targets: ["src/targets/**"]
     cli: ["src/cli/**"]
@@ -35,7 +42,6 @@ arch:
     - from: skills
       deny: ["src/**"]
       message: "Skill imports from the repo's src/ directory — skills must be self-contained and portable across machines."
-      severity: warn
 
     - from: core
       deny: targets
@@ -45,19 +51,54 @@ arch:
       deny: cli
       message: "Core library modules must not import from the CLI layer — the CLI depends on core, not the other way around."
 
+    - from: ["src/core/**"]
+      allow: ["src/core/**"]
+      message: "src/core/ is the bottom layer — it imports only other src/core/ modules and packages, never another src/ folder."
+
+    - from: ["src/bronze/**"]
+      allow: ["src/bronze/**", "src/core/**"]
+      message: "src/bronze/ holds the append-only stores — it imports only src/bronze/ and src/core/ modules and packages, never another src/ folder."
+
+    # 2026-11-15: owner approved the folder order core → bronze → inference → domain folders
+    - from: ["src/inference/**"]
+      allow: ["src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/inference/ sits above src/bronze/ — it imports only src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
+
+    - from: ["src/usage/**"]
+      allow: ["src/usage/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/usage/ sits above src/inference/ — it imports only src/usage/, src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
+
+    - from: ["src/knowledge/**"]
+      allow: ["src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/knowledge/ sits above src/inference/ — it imports only src/knowledge/, src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
+
+    - from: ["src/opinions/**"]
+      allow: ["src/opinions/**", "src/usage/**", "src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/opinions/ sits above src/usage/ and src/knowledge/ — it imports only those, src/inference/, src/bronze/ and src/core/ modules and packages, never another src/ folder."
+
+    - from: ["src/progress/**"]
+      allow: ["src/progress/**", "src/opinions/**", "src/usage/**", "src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/progress/ sits above src/opinions/ — it imports only src/progress/ and the folders below it (opinions, usage, knowledge, inference, bronze, core), never another src/ folder."
+
+    - from: ["src/safety/**"]
+      allow: ["src/safety/**", "src/progress/**", "src/opinions/**", "src/usage/**", "src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/safety/ sits above src/progress/ — it imports only src/safety/ and the folders below it (progress, opinions, usage, knowledge, inference, bronze, core), never another src/ folder."
+
+    - from: ["src/context/**"]
+      allow: ["src/context/**", "src/safety/**", "src/progress/**", "src/opinions/**", "src/usage/**", "src/knowledge/**", "src/inference/**", "src/bronze/**", "src/core/**"]
+      message: "src/context/ is the top domain folder — it imports only src/context/ and the folders below it (safety, progress, opinions, usage, knowledge, inference, bronze, core), never src/hooks/, src/cli/, src/tools/ or src/targets/."
+
   maxCommentDensity:
     - limit: 5
       in: ["src/**", "assets/skills/**", "!assets/skills/consulting-report/template/**"]
       countDocComments: false
       message: "Encode intent in names and small functions, not prose — see the Documenting code rules in AGENTS.md."
-      severity: warn
 
   maxCommentBlock:
     - limit: 2
       in: ["src/**", "assets/skills/**", "!assets/skills/consulting-report/template/**"]
       countDocComments: false
       message: "Extract a well-named function instead of stacking comment lines — see the Documenting code rules in AGENTS.md."
-      severity: warn
 
   # A hook entrypoint is only ever spawned, so it exports nothing and no test can
   # import it — Stryker's instrumentation never sees it run and its logic can be
@@ -71,10 +112,13 @@ arch:
     - limit: 90
       in: ["src/hooks/*.ts", "!src/hooks/handlers/**", "!src/hooks/lib/**"]
       message: "Hook entrypoint is too long to be only glue — move the logic to src/hooks/lib/ where a test can import it."
+    - limit: 500
+      in: ["src/**"]
+      message: "File is over 500 lines — split it into modules with one purpose each."
 
   forbidden:
     - pattern: "process.exit("
-      in: ["src/hooks/lib/**"]
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
       message: "process.exit() called inside a library module — library functions should return or throw, not terminate the process."
 
     # cmd.exe never expands "~" and PowerShell hands it to native commands
@@ -100,8 +144,8 @@ arch:
     - pattern: 're:(startsWith\(.~|replace\(.~|replace\(/\^~)'
       in:
         - "src/**"
-        - "!src/hooks/lib/paths.ts"
-      message: "Hand-rolled tilde expansion — import toPath() from src/hooks/lib/paths.ts, which anchors on the leading segment and rejects ~user."
+        - "!src/core/paths.ts"
+      message: "Hand-rolled tilde expansion — import toPath() from src/core/paths.ts, which anchors on the leading segment and rejects ~user."
 
     # A path that came from argv or a flag has not been through a shell on
     # Windows, so resolve() reads its leading "~" as a literal directory under
@@ -114,7 +158,7 @@ arch:
     - pattern: 're:resolve\((values\.|argv\[|positionals\[|args\[|rest\b|\w*[Aa]rg\))'
       in:
         - "src/**"
-      message: "Foreign path string resolved directly — use toPath() from src/hooks/lib/paths.ts so a leading tilde survives Windows."
+      message: "Foreign path string resolved directly — use toPath() from src/core/paths.ts so a leading tilde survives Windows."
 
     # The page's libraries belong to the @pal/control-room-ui workspace and are
     # bundled into ui/dist, so they are absent from what a PAL user installs.
@@ -144,27 +188,27 @@ arch:
     - pattern: 're:\bsymlinkSync\('
       in:
         - "src/**"
-        - "!src/targets/lib.ts"
-        - "!src/hooks/lib/claude-md.ts"
-      message: "Raw symlinkSync — a directory symlink needs Developer Mode on Windows. Create links in src/targets/lib.ts, where ensureSymlink() picks a junction on Windows."
+        - "!src/targets/symlink.ts"
+        - "!src/context/claude-md.ts"
+      message: "Raw symlinkSync — a directory symlink needs Developer Mode on Windows. Create links in src/targets/symlink.ts, where ensureSymlink() picks a junction on Windows."
 
   singleton:
     - pattern: "process.env.PAL_HOME"
-      only: "src/hooks/lib/paths.ts"
+      only: "src/core/paths.ts"
       in: ["src/**"]
-      message: "PAL home path accessed directly — use the paths module (src/hooks/lib/paths.ts) instead."
+      message: "PAL home path accessed directly — use the paths module (src/core/paths.ts) instead."
 
     - pattern: "process.env.PAL_ANTHROPIC_API_KEY"
-      only: "src/hooks/lib/inference.ts"
-      in: ["src/hooks/**", "src/tools/**"]
+      only: "src/inference/inference.ts"
+      in: ["src/hooks/**", "src/tools/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
       message: "Direct access to PAL_ANTHROPIC_API_KEY bypasses the inference layer — use the inference module instead."
 
     - pattern: "process.env.PAL_PKG"
-      only: "src/hooks/lib/paths.ts"
+      only: "src/core/paths.ts"
       in: ["src/**"]
       message: "Package root path accessed directly — use getPalPkg() from the paths module instead."
 
     - pattern: "resolve(import.meta.dir"
-      only: "src/hooks/lib/paths.ts"
-      in: ["src/hooks/lib/**"]
+      only: "src/core/paths.ts"
+      in: ["src/hooks/lib/**", "src/core/**", "src/bronze/**", "src/inference/**", "src/usage/**", "src/knowledge/**", "src/opinions/**", "src/progress/**", "src/safety/**", "src/context/**"]
       message: "Package-relative path resolution in hook lib must go through the paths module — import getPalPkg() instead of navigating from import.meta.dir."

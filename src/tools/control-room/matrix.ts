@@ -11,19 +11,15 @@
  * with the user instead of hiding from them.
  */
 
-import {
-  type GoalProgress,
-  progressFor,
-  readGoalLinks,
-} from "../../hooks/lib/goal-links";
+import { dueFrom, readTelosGoals, type TelosGoal } from "../../opinions/telos-goals";
+import { type GoalProgress, progressFor, readGoalLinks } from "../../progress/goal-links";
 import {
   type ProjectProgress,
   readAllProjects,
   type ServesAuthority,
   type ServesKind,
-} from "../../hooks/lib/projects";
-import { isImportant, SERVES_MEANING } from "../../hooks/lib/serves";
-import { dueFrom, readTelosGoals, type TelosGoal } from "../../hooks/lib/telos-goals";
+} from "../../progress/projects";
+import { isImportant, SERVES_MEANING } from "../../progress/serves";
 import { parseIscs } from "../lib/project-isc";
 import { type ControlRoomPrefs, readPrefs } from "./prefs";
 import { readSnoozes, snoozedUntil } from "./snooze";
@@ -63,11 +59,13 @@ function dueSoon(due: string | null, now: Date, withinDays: number): boolean {
   if (!due) return false;
   const at = new Date(`${due}T23:59:59Z`).getTime();
   if (!Number.isFinite(at)) return false;
+
   return at - now.getTime() <= withinDays * 86_400_000;
 }
 
 function earliestDue(lines: string[]): string | null {
   const dates = lines.map(dueFrom).filter((d): d is string => d !== null);
+
   return dates.length > 0 ? dates.sort()[0] : null;
 }
 
@@ -79,6 +77,7 @@ function plural(count: number, noun: string): string {
 function quietSince(updated: string | undefined, now: Date, afterDays: number): boolean {
   if (!updated) return false;
   const age = now.getTime() - new Date(updated).getTime();
+
   return Number.isFinite(age) && age > afterDays * 86_400_000;
 }
 
@@ -98,9 +97,12 @@ function projectUrgency(
   const reasons: string[] = [];
   const blockers = p.blockers?.length ?? 0;
   if (blockers > 0) reasons.push(plural(blockers, "blocker"));
+
   if (waiting) reasons.push("waiting on you");
   else if (inProgress) reasons.push("work in progress");
+
   if (dueSoon(due, now, prefs.urgentWithinDays)) reasons.push(`next step dated ${due}`);
+
   if (
     important &&
     p.status === "active" &&
@@ -108,6 +110,7 @@ function projectUrgency(
   ) {
     reasons.push("gone quiet");
   }
+
   return reasons;
 }
 
@@ -132,6 +135,7 @@ function projectItem(
   );
 
   const placed = placementOf(p.placed);
+
   return {
     kind: "project",
     id: p.name,
@@ -159,6 +163,7 @@ function goalItem(
   progress: GoalProgress | null
 ): MatrixItem {
   const urgent = dueSoon(goal.due, now, prefs.urgentWithinDays);
+
   return {
     kind: "goal",
     id: goal.id,
@@ -206,6 +211,7 @@ function criteriaBySlug(
         ...parseIscs(p.criteria ?? ""),
         ...parseIscs(p.changelog ?? ""),
       ].filter((i) => i.status !== "retired" && !snoozedUntil(p.name, i.id, snoozes));
+
       return [
         p.name,
         { closed: iscs.filter((i) => i.status === "done").length, written: iscs.length },
@@ -249,5 +255,6 @@ export function matrix(now: Date = new Date()): Matrix {
         )
       : []),
   ];
+
   return buildMatrix(items, ranked.filter((p) => !p.serves).length);
 }

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ProjectProgress } from "../src/hooks/lib/projects";
+import type { ProjectProgress } from "../src/progress/projects";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/projects");
+  return await import("../src/progress/projects");
 }
 
 function project(name: string, path?: string): ProjectProgress {
@@ -26,6 +26,7 @@ function project(name: string, path?: string): ProjectProgress {
 function checkout(name: string): string {
   const dir = resolve(HOME, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -71,7 +72,7 @@ describe("auditBindings", () => {
 
   test("never writes anything", async () => {
     const { auditBindings } = await lib();
-    const { bindingsFilePath } = await import("../src/hooks/lib/bindings");
+    const { bindingsFilePath } = await import("../src/core/project-bindings");
     auditBindings([project("alpha", checkout("alpha"))], {});
     expect(require("node:fs").existsSync(bindingsFilePath(HOME))).toBe(false);
   });
@@ -81,7 +82,9 @@ describe("proposeBinding", () => {
   function repoAt(name: string, origin?: string): string {
     const dir = checkout(name);
     spawnSync("git", ["init", "-q", dir]);
+
     if (origin) spawnSync("git", ["-C", dir, "remote", "add", "origin", origin]);
+
     return dir;
   }
 
@@ -118,7 +121,7 @@ describe("proposeBinding", () => {
 
   test("only ever suggests a command, never performs the binding", async () => {
     const { proposeBinding } = await lib();
-    const { readBindings } = await import("../src/hooks/lib/bindings");
+    const { readBindings } = await import("../src/core/project-bindings");
     proposeBinding(project("orbit"), checkout("orbit"));
     expect(readBindings(HOME)).toEqual({});
   });

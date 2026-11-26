@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { scheduleCommand } from "../src/cli/schedule";
-import { scopeOf } from "../src/hooks/lib/progress-tree";
-import { readSchedules, type Schedule } from "../src/hooks/lib/scheduled-prompts";
+import { scopeOf } from "../src/progress/progress-tree";
+import { readSchedules, type Schedule } from "../src/progress/scheduled-prompts";
 import { type Command, runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
@@ -27,6 +27,7 @@ function schedule(...args: string[]): Promise<number> {
 
 function only(): Schedule {
   const [stored] = readSchedules();
+
   return stored;
 }
 

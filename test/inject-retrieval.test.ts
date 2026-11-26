@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { answerGitAsNotACheckout } from "./lib/fake-git";
 import {
   captureStdout,
   injectRetrievalHome,
@@ -9,6 +10,7 @@ import {
 } from "./lib/inject-retrieval-fixture";
 
 const TEST_HOME = injectRetrievalHome(import.meta.file);
+answerGitAsNotACheckout(import.meta.path);
 
 function seedCapture(slug: string, ctx: string, principle: string) {
   const dir = resolve(TEST_HOME, "memory", "learning", "failures", "2026", "04", slug);
@@ -27,9 +29,9 @@ function seedCapture(slug: string, ctx: string, principle: string) {
 }
 
 function seedSkillIndex() {
-  mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
+  mkdirSync(resolve(TEST_HOME, "cache"), { recursive: true });
   writeFileSync(
-    resolve(TEST_HOME, "memory", "state", "skill-index.json"),
+    resolve(TEST_HOME, "cache", "skill-index.json"),
     JSON.stringify({
       skills: {
         presentation: {
@@ -49,14 +51,17 @@ function enableDebugLogging() {
 
 function readDebugLog(): string {
   const path = resolve(TEST_HOME, "debug", "debug.log");
+
   return existsSync(path) ? readFileSync(path, "utf-8") : "";
 }
 
 function blockFor(ms: number): string {
   const end = performance.now() + ms;
+
   while (performance.now() < end) {
     /* occupy the thread so no timer can interleave */
   }
+
   return "completed";
 }
 
@@ -155,7 +160,7 @@ describe("injectPromptContext handler", () => {
   });
 
   test("a subagent's hand-back matches no rule, lesson, skill or self-check", async () => {
-    const { addDraft, decideRule } = await import("../src/hooks/lib/adaptation-rules");
+    const { addDraft, decideRule } = await import("../src/opinions/adaptation-rules");
     const rule = addDraft({
       when: "The user reports a broken build",
       trigger: { side: "prompt", pattern: "build is broken" },
@@ -191,7 +196,7 @@ describe("injectPromptContext handler", () => {
 
 describe("tier-2 context sources", () => {
   test("the failures digest is not a semi-static source", async () => {
-    const { getSemiStaticSources } = await import("../src/hooks/lib/semi-static");
+    const { getSemiStaticSources } = await import("../src/context/semi-static");
     const slugs = getSemiStaticSources().map((s) => s.slug);
     expect(slugs).not.toContain("failures");
   });

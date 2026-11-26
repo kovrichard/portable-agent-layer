@@ -9,15 +9,15 @@
  * This avoids the 1-5s inference latency that previously blocked every first prompt.
  */
 
-import { spawnDetachedInference } from "../lib/detached-inference";
-import { canInfer, inference } from "../lib/inference";
-import { logDebug, logError } from "../lib/log";
+import { logDebug, logError } from "../../core/log";
+import { spawnDetachedInference } from "../../inference/detached-inference";
+import { canInfer, inference } from "../../inference/inference";
 import {
   extractFallbackName,
   labelFromModel,
   readSessionNames,
   writeSessionName,
-} from "../lib/session-names";
+} from "../../progress/session-names";
 
 const NAME_PROMPT =
   "You generate concise 4-word session titles for AI assistant sessions. " +
@@ -93,5 +93,6 @@ if (process.argv[2] === "--upgrade") {
   if (sid && prompt && expected !== undefined) {
     await upgradeWithInference(sid, prompt, expected);
   }
+
   process.exit(0);
 }

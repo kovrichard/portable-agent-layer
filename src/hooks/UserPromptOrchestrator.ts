@@ -7,15 +7,18 @@
  *  - session-name: generate 4-word session headline on first prompt
  */
 
+import {
+  compactionWarningReminder,
+  recordCompactionNear,
+} from "../context/compaction-near";
+import { type HookTurnPayload, hookSessionId } from "../core/hook-payload";
+import { logDebug, logPromptSnapshot } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { startHookTiming } from "../usage/hook-timing";
 import { injectPromptContext } from "./handlers/inject-retrieval";
-import { compactionWarningReminder, recordCompactionNear } from "./lib/compaction-near";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { startHookTiming } from "./lib/hook-timing";
-import { type HookTurnPayload, hookSessionId } from "./lib/hook-turn";
-import { logDebug, logPromptSnapshot } from "./lib/log";
 import { capturePrompt } from "./lib/prompt-capture";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
 
 recordHookRunOnExit();
@@ -23,6 +26,7 @@ recordHookRunOnExit();
 // Recursion guard — the "prompt" inside a spawned inference is the dispatcher's
 // payload, not a real user message. Skip rating capture, session naming, etc.
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 interface PromptSubmitInput extends HookTurnPayload {
@@ -34,6 +38,7 @@ interface PromptSubmitInput extends HookTurnPayload {
 const input = await readStdinJSON<PromptSubmitInput>();
 logDebug("UserPromptOrchestrator", `Input: ${JSON.stringify(input).slice(0, 200)}`);
 const compactionVerdict = recordCompactionNear(input, Boolean(input?.prompt));
+
 if (!input?.prompt) process.exit(0);
 
 const timing = startHookTiming("prompt");

@@ -11,7 +11,7 @@ import { afterAll, beforeEach } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { relative, resolve } from "node:path";
-import { agentDirOverrides } from "../src/hooks/lib/paths";
+import { agentDirOverrides } from "../src/core/paths";
 import { guardFile, sharedRepoConfig } from "./lib/repo-config-tripwire";
 import { refuseSubprocessesOutsideSpawnFiles } from "./lib/subprocess-guard";
 import {
@@ -22,6 +22,7 @@ import {
 
 process.env.PAL_INFERENCE_DISABLED = "1";
 process.env.PAL_NOTIFICATIONS_DISABLED = "1";
+process.env.HUSKY = "0";
 // 2026-11-10: fake CLIs abort on purpose; the real 0.5-1.5 s retry wait cost each dispatch test ~1.5 s
 process.env.PAL_INFERENCE_RETRY_JITTER_MS = "0";
 
@@ -56,6 +57,12 @@ function detachFromHookRepository() {
 }
 
 detachFromHookRepository();
+
+function loadPluginModulesFromTheCheckoutUnderTest() {
+  delete process.env.PAL_DIR;
+}
+
+loadPluginModulesFromTheCheckoutUnderTest();
 
 function keepTestsOutOfTheRealHome() {
   const home = resolve(TEST_ROOT, "user-home");
@@ -119,7 +126,7 @@ failTheTestAfterOneThatRewritesTheRealRepoConfig();
 
 function keepTempFilesInAFolderTheRunRemoves() {
   redirectTempIntoTestFolder();
-  afterAll(removeTestTempFolder);
+  afterAll(removeTestTempFolder, 120_000);
 }
 
 keepTempFilesInAFolderTheRunRemoves();

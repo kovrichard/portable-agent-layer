@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";
 
@@ -55,15 +55,16 @@ beforeEach(() => {
 });
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
     .map((line) => JSON.parse(line));
 }
 
-const promises = () => logLines("memory").filter((e) => e.type === "promise");
+const promises = () => logLines("events").filter((e) => e.type === "promise");
 
 describe("the bot's promises become events", () => {
   test("each promise is made, and a closed one is done or dropped", () => {
@@ -87,8 +88,8 @@ describe("the bot's promises become events", () => {
 
   test("the title stays in the content store", () => {
     backfillEvents();
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content").map((c) => c.title)).toContain(
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text").map((c) => c.title)).toContain(
       "a private kept promise"
     );
   });

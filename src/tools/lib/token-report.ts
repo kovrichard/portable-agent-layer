@@ -49,13 +49,16 @@ const DEFAULT_LABEL_WIDTH = 14;
 
 export function fmt(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+
   return n.toLocaleString("en-US");
 }
 
 /** Two decimals reads as money; a sub-dollar total needs four to say anything. */
 export function fmtCost(n: number): string {
   if (n >= 1) return `$${n.toFixed(2)}`;
+
   return `$${n.toFixed(4)}`;
 }
 
@@ -72,6 +75,7 @@ export function rowLine(
   const tokens = fmt(totalTokens(b)).padStart(8);
   const calls = fmt(b.calls).padStart(5);
   const cost = costLabel(b).padStart(8);
+
   return `  ${label.padEnd(labelWidth)} ${tokens} tok  ${calls} calls  ${cost}`;
 }
 
@@ -86,6 +90,7 @@ export function detailedLine(
   const write1h = fmt(b.cacheWrite1h).padStart(7);
   const read = fmt(b.cacheRead).padStart(8);
   const cost = costLabel(b).padStart(8);
+
   return `  ${label.padEnd(labelWidth)} ${input} in  ${output} out  ${write5m} cw5m  ${write1h} cw1h  ${read} cr  ${cost}`;
 }
 
@@ -119,11 +124,13 @@ function mergedEntries<T>(
   merge: (all: T[]) => T
 ): [string, T][] {
   const grouped = new Map<string, T[]>();
+
   for (const { usage } of agents) {
     for (const [key, value] of Object.entries(pick(usage))) {
       grouped.set(key, [...(grouped.get(key) ?? []), value]);
     }
   }
+
   return [...grouped].map(([key, all]) => [key, merge(all)]);
 }
 
@@ -137,6 +144,7 @@ export function modelsByCost(agents: AgentReport[]): [string, Bucket][] {
 /** One project is the project you are in; a breakdown of it says nothing new. */
 export function projectsByCost(agents: AgentReport[]): [string, TimeBuckets][] {
   const entries = mergedEntries(agents, (usage) => usage.byProject, mergeTimeBuckets);
+
   return entries.length <= 1 ? [] : byCost(entries, (buckets) => buckets.total.cost);
 }
 
@@ -145,6 +153,7 @@ function byModelLines(agents: AgentReport[]): string[] {
   if (sorted.length === 0) return [];
   const names = sorted.map(([model]) => modelLabel(model));
   const width = Math.max(DEFAULT_LABEL_WIDTH, ...names.map((name) => name.length + 2));
+
   return [
     "\n  By Model (all time)\n",
     ...sorted.map(([, bucket], i) => detailedLine(names[i], bucket, width)),
@@ -154,6 +163,7 @@ function byModelLines(agents: AgentReport[]): string[] {
 function byProjectLines(agents: AgentReport[]): string[] {
   const sorted = projectsByCost(agents);
   if (sorted.length === 0) return [];
+
   return [
     "\n  By Project (all time)\n",
     ...sorted.map(([project, buckets]) => rowLine(project, buckets.total)),
@@ -173,6 +183,7 @@ function palInferenceLines(pal: PalInferenceUsage): string[] {
 function agentLines(agents: AgentReport[]): string[] {
   const used = usedAgents(agents);
   if (used.length === 0) return ["\n  No agent usage recorded\n"];
+
   return used.flatMap(({ label, usage }) => [
     `\n  ${label} Usage\n`,
     ...windowLines(usage.buckets),
@@ -201,6 +212,7 @@ export function unpricedAgents(agents: AgentReport[]): string[] {
 
 function unpricedLines(agents: AgentReport[]): string[] {
   const unpriced = unpricedAgents(agents);
+
   return unpriced.length === 0
     ? []
     : [`\n  Not priced: ${unpriced.join(", ")} (no per-token price)`];
@@ -208,14 +220,17 @@ function unpricedLines(agents: AgentReport[]): string[] {
 
 export function rtkLines(gain: RtkGain): string[] {
   const heading = "\n  rtk Compression\n";
+
   if (!gain.installed) return [heading, "  rtk not installed"];
   const summary = gain.summary;
   if (!summary || summary.total_commands === 0) {
     return [heading, "  rtk installed — no savings recorded yet"];
   }
+
   const saved = fmt(summary.total_saved).padStart(8);
   const pct = summary.avg_savings_pct.toFixed(1);
   const commands = fmt(summary.total_commands);
+
   return [
     heading,
     `  Tokens saved   ${saved} tok  ${pct}% avg  across ${commands} commands`,
@@ -228,8 +243,10 @@ export function parseRtkSummary(
   stdout: string
 ): RtkSummary | null {
   if (status !== 0 || !stdout) return null;
+
   try {
     const parsed = JSON.parse(stdout) as { summary?: RtkSummary };
+
     return parsed.summary ?? null;
   } catch {
     return null;

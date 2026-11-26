@@ -21,12 +21,14 @@ function handoffFile(name: string, ageSeconds: number): string {
   writeFileSync(file, "transcript", "utf-8");
   const mtime = NOW_SECONDS - ageSeconds;
   utimesSync(file, mtime, mtime);
+
   return file;
 }
 
 function loggedErrors(): string[] {
   const log = resolve(home, "debug", "debug.log");
   if (!existsSync(log)) return [];
+
   return readFileSync(log, "utf-8")
     .split("\n")
     .filter((line) => line.includes("ERROR "));

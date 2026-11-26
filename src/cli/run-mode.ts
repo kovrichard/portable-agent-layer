@@ -1,16 +1,18 @@
 /**
- * pal cli timebox / pal cli unattended — start, inspect and end a run with a
- * deadline for the current project or folder. The hooks enforce it.
+ * pal cli timebox / unattended / minimum — start, inspect and end a run with a
+ * deadline or a floor for the current project or folder. The hooks enforce it.
  */
 
-import { progressSession } from "../hooks/lib/progress-session";
-import { scopeOf } from "../hooks/lib/progress-tree";
-import { recordRunEstimate } from "../hooks/lib/run-estimates";
+import { progressSession } from "../progress/progress-session";
+import { scopeOf } from "../progress/progress-tree";
+import { logMinimum } from "../safety/minimum-events";
+import { recordRunEstimate } from "../safety/run-estimates";
 import {
   clearRun,
   deadlineFrom,
   describeRun,
   estimateMinutesFrom,
+  isOver,
   newRun,
   type Run,
   type RunKind,
@@ -18,10 +20,10 @@ import {
   unattendedRules,
   untilLabel,
   writeRun,
-} from "../hooks/lib/run-mode";
-import { isInGitRepo } from "../hooks/lib/session-events";
+} from "../safety/run-mode";
 import { group, leaf, UsageError } from "../tools/lib/command";
 import { gatherRunStats } from "../tools/lib/run-stats";
+import { isInGitRepo } from "../usage/session-events";
 
 const FOR = {
   type: "string",
@@ -54,11 +56,13 @@ function deadline(values: { for?: string; until?: string }): Date {
 
 function runOf(kind: RunKind): Run | null {
   const run = readRun(currentScope());
+
   return run?.kind === kind ? run : null;
 }
 
 function noRun(kind: RunKind): number {
   console.error(`No ${kind} run in ${currentScope()}.`);
+
   return 1;
 }
 
@@ -74,6 +78,7 @@ function printStatus(kind: RunKind): number {
   const run = runOf(kind);
   if (!run) return noRun(kind);
   console.log(describeRun(run));
+
   return 0;
 }
 
@@ -84,6 +89,7 @@ function statsUntil(run: Run, at: Date) {
     finishedAt: at.toISOString(),
     sessions: run.sessions ?? [],
   };
+
   return gatherRunStats(window, process.cwd());
 }
 
@@ -92,6 +98,7 @@ function withCurrentSession(run: Run): Run {
   const session = progressSession();
   const sessions = run.sessions ?? [];
   if (!session || sessions.includes(session)) return run;
+
   return { ...run, sessions: [...sessions, session] };
 }
 
@@ -111,6 +118,7 @@ function endRun(kind: RunKind): number {
   recordIfEndedUnfinished(run);
   clearRun(run.scope);
   console.log(`Ended the ${kind} run that was due at ${untilLabel(run)}.`);
+
   return 0;
 }
 
@@ -132,6 +140,7 @@ function startTimebox(values: {
   console.log(
     `Time box set: ends at ${untilLabel(run)}. After that only \`pal cli\` and report edits run.`
   );
+
   return 0;
 }
 
@@ -140,6 +149,7 @@ function estimate(text: string | undefined): number {
     throw new UsageError(
       "give how long the tasks and fallbacks will take with --estimate"
     );
+
   try {
     return estimateMinutesFrom(text);
   } catch (err) {
@@ -157,6 +167,7 @@ function startUnattended(values: {
   report?: string;
 }): number {
   refuseIfRunning();
+
   if (!values.task?.length) throw new UsageError("give each approved task with --task");
   const run = newRun({
     kind: "unattended",
@@ -170,6 +181,7 @@ function startUnattended(values: {
   });
   writeRun(withCurrentSession(run));
   console.log(describeRun(run));
+
   return 0;
 }
 
@@ -179,6 +191,7 @@ function logEntry(text: string): number {
   const run = withCurrentSession(found);
   writeRun({ ...run, log: [...run.log, { at: new Date().toISOString(), entry: text }] });
   console.log(`Logged (${run.log.length + 1} entries).`);
+
   return 0;
 }
 
@@ -189,8 +202,126 @@ function markDone(): number {
   if (!run.done) recordFinished(run);
   writeRun({ ...run, done: true });
   console.log("Marked done: the agent may stop. The run ends when the user is back.");
+
   return 0;
 }
+
+function startMinimum(values: {
+  for?: string;
+  until?: string;
+  goal?: string;
+  bar?: string[];
+}): number {
+  refuseIfRunning();
+
+  if (!values.goal?.trim()) throw new UsageError("give what the run is for with --goal");
+
+  if (!values.bar?.length)
+    throw new UsageError(
+      'give each bar dimension with --bar "<dim: target, how checked>"'
+    );
+  const now = new Date();
+  const run = newRun({
+    kind: "minimum",
+    scope: currentScope(),
+    until: deadline(values),
+    now,
+    goal: values.goal,
+    bar: values.bar,
+  });
+  writeRun(withCurrentSession(run));
+  logMinimum("started", run, now, { content: { goal: run.goal, bar: run.bar } });
+  console.log(
+    `${describeRun(run, now)}\nDo a pass, check it against the bar, then log it with \`pal cli minimum round\`. Stopping before the floor is refused.`
+  );
+
+  return 0;
+}
+
+function required(value: string | undefined, flag: string): string {
+  if (!value?.trim()) throw new UsageError(`give ${flag}`);
+
+  return value;
+}
+
+function logRound(values: { scores?: string; weakest?: string; did?: string }): number {
+  const round = {
+    scores: required(values.scores, "--scores"),
+    weakest: required(values.weakest, "--weakest"),
+    did: required(values.did, "--did"),
+  };
+  const found = runOf("minimum");
+  if (!found) return noRun("minimum");
+  const now = new Date();
+  const run = withCurrentSession(found);
+  const rounds = [...(run.rounds ?? []), { at: now.toISOString(), ...round }];
+  const logged = { ...run, rounds };
+  writeRun(logged);
+  logMinimum("round", logged, now, { content: round });
+  console.log(`Round ${rounds.length} logged.`);
+
+  return 0;
+}
+
+function endMinimum(): number {
+  const run = runOf("minimum");
+  if (!run) return noRun("minimum");
+  const now = new Date();
+  const early = !isOver(run, now);
+  logMinimum("ended", run, now, { early });
+  clearRun(run.scope);
+  console.log(
+    early
+      ? `Ended the minimum run before its floor at ${untilLabel(run)}.`
+      : `Ended the minimum run; its floor was ${untilLabel(run)}.`
+  );
+
+  return 0;
+}
+
+export const minimumCommand = group({
+  summary:
+    "Keep working at least until a floor time, improving the weakest part each pass",
+  commands: {
+    start: leaf({
+      summary: "Start a minimum run with its goal and bar",
+      options: {
+        for: FOR,
+        until: UNTIL,
+        goal: { type: "string", value: "<text>", description: "What good looks like" },
+        bar: {
+          type: "string",
+          multiple: true,
+          value: "<dim: target, how checked>",
+          description: "A bar dimension with its target and check (repeat)",
+        },
+      },
+      run: ({ values }) => startMinimum(values),
+    }),
+    round: leaf({
+      summary:
+        "Log a finished pass: scores against the bar, the weakest part, what changed",
+      options: {
+        scores: {
+          type: "string",
+          value: "<text>",
+          description: "Score per bar dimension",
+        },
+        weakest: { type: "string", value: "<text>", description: "The weakest part now" },
+        did: { type: "string", value: "<text>", description: "What this pass changed" },
+      },
+      run: ({ values }) => logRound(values),
+    }),
+    status: leaf({
+      summary: "Show the goal, bar, rounds and time to the floor",
+      run: () => printStatus("minimum"),
+    }),
+    end: leaf({
+      summary: "End the run, before the floor only when the user asks",
+      run: endMinimum,
+    }),
+  },
+});
 
 export const timeboxCommand = group({
   summary: "Stop work at a deadline and report what was found",

@@ -1,7 +1,7 @@
 import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { agentDirOverrides, ensureDir, paths } from "../../src/hooks/lib/paths";
-import { reload } from "../../src/hooks/lib/settings";
+import { agentDirOverrides, ensureDir, paths } from "../../src/core/paths";
+import { reload } from "../../src/core/settings";
 import { freshTestDir } from "./test-home";
 
 // Every payload and transcript step below was captured from agy 1.3.1 by a hook
@@ -36,17 +36,21 @@ let current: AgySandbox = { sandbox: "", workspace: "", transcript: "" };
 /** A fresh sandbox, PAL home and agent dirs, with the runtime env and cwd put back. */
 export function freshAgySandbox(testFile: string): AgySandbox {
   process.chdir(ORIGINAL_CWD);
+
   for (const key of RUNTIME_ENV) {
     if (savedRuntimeEnv[key] === undefined) delete process.env[key];
     else process.env[key] = savedRuntimeEnv[key];
   }
+
   const sandbox = realpathSync(freshTestDir(testFile));
   const workspace = resolve(sandbox, "workspace");
   mkdirSync(workspace, { recursive: true });
   current = { sandbox, workspace, transcript: resolve(sandbox, "transcript_full.jsonl") };
   process.env.PAL_HOME = resolve(sandbox, "home");
+
   for (const { env } of agentDirOverrides()) process.env[env] = resolve(sandbox, env);
   delete process.env.PAL_AGENT;
+
   return current;
 }
 

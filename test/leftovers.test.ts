@@ -28,6 +28,7 @@ const json = (path: string) => JSON.parse(readFileSync(path, "utf-8"));
 function leftover(id: string) {
   const found = LEFTOVERS.find((l) => l.id === id);
   if (!found) throw new Error(`no leftover ${id}`);
+
   return found;
 }
 
@@ -36,6 +37,7 @@ function cleanUp(id: string): string[] {
   const found = l.find();
   if (found.length > 0) l.remove();
   expect(l.find()).toEqual([]);
+
   return found;
 }
 

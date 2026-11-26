@@ -23,6 +23,13 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
     MISSION.md, GOALS.md, BELIEFS.md,
     CHALLENGES.md, STRATEGIES.md, IDEAS.md, LEARNED.md,
     MODELS.md, NARRATIVES.md
+  settings.json                    # The user's configuration
+  memory/                          # What PAL learned and recalls (knowledge, relationship, rules)
+  records/                         # What happened, one folder per store (raw transcripts, ledger, ratings, history)
+  work/                            # The user's work (projects, progress tree, task ISAs, schedules)
+  state/                           # This machine's working state, never exported
+  cache/                           # Rebuilt on the next read; safe to delete
+  backups/                         # Archives and manifests written by migrations
 
 <PAL package>/                     # The PAL codebase
   src/
@@ -35,14 +42,9 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
   assets/
     skills/                        # Bundled skills (16+)
     templates/PAL/                 # Templates for PAL home files
-
-<PAL package>/memory/              # Persistent memory (gitignored)
-  state/                           # Runtime state (sessions, counts, caches)
-  signals/                         # Rating signals (ratings.jsonl)
-  adaptation/                      # Rules drafted from corrections, and approved opinions
-  relationship/                    # opinions-context.md, the opinions rendered for native loading
-  failures/                        # Low-rating context dumps from older versions
 ```
+
+The four data folders, `memory/`, `records/`, `work/` and `state/`, are described in SYSTEM_ARCHITECTURE.md under "Data Folders".
 
 ## Core Subsystems
 
@@ -86,8 +88,8 @@ Hook-based security: validates Bash commands and file operations against dangero
 
 At session start, three things happen:
 1. **CLAUDE.md** loads natively (identity, modes, routing table)
-2. **`loadAtStartup` files** from `pal-settings.json` are loaded by `LoadContext.ts`
-3. **Dynamic context** injected by `LoadContext.ts`: crystallized principles, tracked opinions (≥85%), recent interaction notes, learning digest, signal trends, failure patterns, active work summary — each toggleable in `pal-settings.json → dynamicContext`
+2. **`loadAtStartup` files** from `~/.pal/settings.json` are loaded by `LoadContext.ts`
+3. **Dynamic context** injected by `LoadContext.ts`: crystallized principles, tracked opinions (≥85%), recent interaction notes, learning digest, signal trends, failure patterns, active work summary — each toggleable in `~/.pal/settings.json → dynamicContext`
 
 All other documentation loads on-demand via the routing table in CLAUDE.md.
 
@@ -118,6 +120,6 @@ PAL is designed to work identically across:
 ## Extending PAL
 
 - **Add a skill:** Use the `create-skill` skill or manually create `assets/skills/<name>/SKILL.md`
-- **Add startup files:** Append to `pal-settings.json → loadAtStartup.files`
+- **Add startup files:** Append to `~/.pal/settings.json → loadAtStartup.files`
 - **Add user context:** Create files in `~/.pal/telos/`
-- **Toggle dynamic context:** Set keys in `pal-settings.json → dynamicContext` to `false`
+- **Toggle dynamic context:** Set keys in `~/.pal/settings.json → dynamicContext` to `false`

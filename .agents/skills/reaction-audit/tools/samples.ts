@@ -4,7 +4,7 @@
  * rule's label, as JSON: [{ id, text, replyEnd }]. Pass --all for every sample.
  */
 
-import { blindSamples, unauditedSamples } from "../../../../src/hooks/lib/reaction-audit";
+import { blindSamples, unauditedSamples } from "../../../../src/opinions/reaction-audit";
 
 const samples = process.argv.includes("--all")
   ? unauditedSamples(null)

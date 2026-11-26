@@ -19,6 +19,7 @@ async function runValidator(payload: unknown, agent = "vscode"): Promise<string>
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   return out.trim();
 }
 

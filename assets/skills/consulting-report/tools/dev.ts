@@ -1,9 +1,7 @@
 #!/usr/bin/env bun
 
-// consulting-report skill tool: launch the Next.js dev server for live preview.
-//
-// Usage:
-//   pal cli skill run consulting-report dev <report-dir>
+// Launch the report's Next.js dev server for live preview.
+// Usage: pal cli skill run consulting-report dev <report-dir>
 
 import { spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
@@ -13,6 +11,7 @@ import { join, resolve } from "node:path";
 async function exists(p: string): Promise<boolean> {
   try {
     await access(p, fsConstants.F_OK);
+
     return true;
   } catch {
     return false;
@@ -25,11 +24,13 @@ async function dev(reportDir: string): Promise<number> {
   if (!(await exists(pkg))) {
     throw new Error(`not a scaffolded report (missing package.json): ${dir}`);
   }
+
   const result = spawnSync("bun", ["run", "dev"], {
     cwd: dir,
     stdio: "inherit",
     shell: true,
   });
+
   return result.status ?? 1;
 }
 
@@ -38,6 +39,7 @@ async function run(argv: string[] = process.argv.slice(2)): Promise<void> {
     console.error("usage: dev.ts <report-dir>");
     process.exit(1);
   }
+
   const status = await dev(argv[0]);
   process.exit(status);
 }

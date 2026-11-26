@@ -1,10 +1,10 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { buildSystemReminder } from "../src/hooks/lib/context";
-import { appendEvent } from "../src/hooks/lib/progress-tree";
-import { writeProject } from "../src/hooks/lib/projects";
-import { reload } from "../src/hooks/lib/settings";
+import { buildSystemReminder } from "../src/context/context";
+import { reload } from "../src/core/settings";
+import { appendEvent } from "../src/progress/progress-tree";
+import { writeProject } from "../src/progress/projects";
 import { freshPalHomeEachTest } from "./lib/context-build-fixture";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 
@@ -16,6 +16,7 @@ describe("buildSystemReminder", () => {
   function withSessionIn<T>(dir: string, run: () => T): T {
     const savedStart = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = dir;
+
     try {
       return run();
     } finally {
@@ -42,6 +43,7 @@ describe("buildSystemReminder", () => {
       JSON.stringify({ dynamicContext: { progressTree: true } })
     );
     reload();
+
     return dir;
   }
 
@@ -73,6 +75,7 @@ describe("buildSystemReminder", () => {
     });
     const savedStart = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = startDir;
+
     try {
       expect(buildSystemReminder()).toContain("**started-here** (just now) → here");
     } finally {

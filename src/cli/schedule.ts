@@ -3,8 +3,8 @@
  * themselves or for one project. The prompt hook injects the due ones.
  */
 
-import { scopeOf } from "../hooks/lib/progress-tree";
-import { readAllProjects } from "../hooks/lib/projects";
+import { scopeOf } from "../progress/progress-tree";
+import { readAllProjects } from "../progress/projects";
 import {
   addSchedule,
   appliesHere,
@@ -17,7 +17,7 @@ import {
   scheduleLine,
   USER_SCOPE,
   windowLabel,
-} from "../hooks/lib/scheduled-prompts";
+} from "../progress/scheduled-prompts";
 import { group, leaf, UsageError } from "../tools/lib/command";
 
 interface AddValues {
@@ -33,7 +33,9 @@ interface AddValues {
 function scopeFor(values: AddValues): string {
   if (values.user && values.project)
     throw new UsageError("give --user or --project, not both");
+
   if (values.user) return USER_SCOPE;
+
   return values.project === undefined
     ? scopeOf(process.cwd())
     : registeredProject(values.project);
@@ -47,7 +49,9 @@ function registeredProject(name: string): string {
 function repeatFor(values: AddValues): Repeat {
   if (values["every-session"] && values["every-prompt"])
     throw new UsageError("give --every-session or --every-prompt, not both");
+
   if (values["every-prompt"]) return "every-prompt";
+
   return values["every-session"] ? "every-session" : "daily";
 }
 
@@ -57,6 +61,7 @@ function scopeLabel(schedule: Schedule): string {
 
 function built(values: AddValues, text: string): Schedule {
   if (!values.from) throw new UsageError("give the start time with --from <HH:MM>");
+
   try {
     return newSchedule({
       scope: scopeFor(values),
@@ -78,6 +83,7 @@ function add(values: AddValues, text: string): number {
   console.log(
     `Scheduled ${schedule.id} for ${scopeLabel(schedule)}: ${schedule.repeat}, ${windowLabel(schedule)}. Remove it with \`pal cli schedule remove ${schedule.id}\`.`
   );
+
   return 0;
 }
 
@@ -90,19 +96,25 @@ function list(here: boolean): number {
   const shown = readSchedules().filter((s) => !here || appliesHere(s, cwd));
   if (!shown.length) {
     console.log(here ? "No schedule applies here." : "No schedules.");
+
     return 0;
   }
+
   for (const schedule of shown)
     console.log(`${scheduleLine(schedule)}  [${status(schedule)}]`);
+
   return 0;
 }
 
 function remove(id: string): number {
   if (!removeSchedule(id)) {
     console.error(`No schedule ${id}.`);
+
     return 1;
   }
+
   console.log(`Removed ${id}.`);
+
   return 0;
 }
 

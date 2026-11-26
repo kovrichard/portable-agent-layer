@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { runRule } from "../src/cli/rule";
-import { addDraft, decideRule, readRules } from "../src/hooks/lib/adaptation-rules";
+import { addDraft, decideRule, readRules } from "../src/opinions/adaptation-rules";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;

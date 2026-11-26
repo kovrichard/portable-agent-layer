@@ -7,11 +7,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
-import { appendTurn, readTurns, type TurnInput } from "../src/hooks/lib/adaptation-turns";
+import { appendTurn, readTurns, type TurnInput } from "../src/opinions/adaptation-turns";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
-const dir = () => resolve(HOME, "memory", "adaptation");
+const dir = () => resolve(HOME, "records", "labelled-turns");
 
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);

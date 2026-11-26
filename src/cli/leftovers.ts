@@ -1,7 +1,16 @@
-import { existsSync, lstatSync, readlinkSync, renameSync, unlinkSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readlinkSync,
+  renameSync,
+  rmdirSync,
+  unlinkSync,
+} from "node:fs";
 import { resolve } from "node:path";
-import { palHome, paths, platform } from "../hooks/lib/paths";
-import { readJson, writeJson } from "../targets/lib";
+import { palHome, paths, platform } from "../core/paths";
+import { formerSettingsPath, SETTINGS_FILE } from "../core/settings";
+import { readJson, writeJson } from "../targets/json-file";
 
 /** Something an older PAL wrote that the current one neither writes nor reads. */
 export interface Leftover {
@@ -14,7 +23,10 @@ export interface Leftover {
 type Json = Record<string, unknown>;
 
 const claudeSettings = () => resolve(platform.claudeDir(), "settings.json");
-const palSettings = () => resolve(paths.memory(), "pal-settings.json");
+const everyPalSettingsFile = () =>
+  [...new Set([formerSettingsPath(), resolve(palHome(), SETTINGS_FILE)])].filter(
+    existsSync
+  );
 
 function isPathScopedFileToolRule(rule: string): boolean {
   return /^(?:Grep|Glob)\(/.test(rule);
@@ -23,6 +35,7 @@ function isPathScopedFileToolRule(rule: string): boolean {
 function allowRulesIn(settingsPath: string): string[] {
   const settings = readJson<Json>(settingsPath, {});
   const allow = (settings.permissions as { allow?: unknown } | undefined)?.allow;
+
   return Array.isArray(allow)
     ? allow.filter((r): r is string => typeof r === "string")
     : [];
@@ -50,6 +63,7 @@ const palWrittenFactoryHome = () => resolve(palHome(), "dark-factory");
 function pinnedFactoryHome(): string | null {
   const env = (readJson<Json>(claudeSettings(), {}).env ?? {}) as Json;
   const value = env.DARK_FACTORY_HOME;
+
   return typeof value === "string" && resolve(value) === palWrittenFactoryHome()
     ? value
     : null;
@@ -64,14 +78,16 @@ const claudeFactoryHomeOverride: Leftover = {
     const settings = readJson<Json>(claudeSettings(), {});
     const env = settings.env as Json;
     delete env.DARK_FACTORY_HOME;
+
     if (Object.keys(env).length === 0) delete settings.env;
     writeJson(claudeSettings(), settings);
   },
 };
 
-function startupFiles(): string[] {
-  const settings = readJson<Json>(palSettings(), {});
+function startupFiles(settingsFile: string): string[] {
+  const settings = readJson<Json>(settingsFile, {});
   const files = (settings.loadAtStartup as { files?: unknown } | undefined)?.files;
+
   return Array.isArray(files)
     ? files.filter((f): f is string => typeof f === "string")
     : [];
@@ -79,16 +95,28 @@ function startupFiles(): string[] {
 
 const isProjectsFile = (file: string) => file.endsWith("PROJECTS.md");
 
+const loadsProjectsFile = (settingsFile: string) =>
+  startupFiles(settingsFile).some(isProjectsFile);
+
+function stopLoadingProjectsFile(settingsFile: string): void {
+  const settings = readJson<Json>(settingsFile, {});
+  const startup = settings.loadAtStartup as { files: string[] };
+  startup.files = startup.files.filter((file) => !isProjectsFile(file));
+  writeJson(settingsFile, settings);
+}
+
 const startupProjectsFile: Leftover = {
   id: "startup-projects-md",
   description:
     "Stop loading PROJECTS.md at startup — projects moved to the project store",
-  find: () => startupFiles().filter(isProjectsFile),
+  find: () =>
+    everyPalSettingsFile().flatMap((file) =>
+      startupFiles(file)
+        .filter(isProjectsFile)
+        .map((entry) => `${file}: ${entry}`)
+    ),
   remove() {
-    const settings = readJson<Json>(palSettings(), {});
-    const startup = settings.loadAtStartup as { files: string[] };
-    startup.files = startup.files.filter((file) => !isProjectsFile(file));
-    writeJson(palSettings(), settings);
+    everyPalSettingsFile().filter(loadsProjectsFile).forEach(stopLoadingProjectsFile);
   },
 };
 
@@ -126,6 +154,7 @@ const opencodeConfig = () => resolve(platform.opencodeDir(), "config.json");
 
 function opencodeInstructions(): string[] {
   const instructions = readJson<Json>(opencodeConfig(), {}).instructions;
+
   return Array.isArray(instructions)
     ? instructions.filter((i): i is string => typeof i === "string")
     : [];
@@ -150,6 +179,7 @@ function retiredContextSource(source: RetiredContextSource): Leftover {
       resolve(platform.antigravityPluginDir(), "rules", `pal-${source.slug}.md`),
     ].filter((path) => existsSync(path));
   const opencodeLoadsIt = () => opencodeInstructions().includes(source.digest());
+
   return {
     id: source.id,
     description: `Stop loading the ${source.name} into Cursor, Copilot, Antigravity and opencode — PAL no longer writes it`,
@@ -159,6 +189,7 @@ function retiredContextSource(source: RetiredContextSource): Leftover {
     ],
     remove() {
       for (const path of copies()) unlinkSync(path);
+
       if (!opencodeLoadsIt()) return;
       const config = readJson<Json>(opencodeConfig(), {});
       config.instructions = opencodeInstructions().filter((i) => i !== source.digest());
@@ -236,8 +267,49 @@ const debugLogPrev: Leftover = {
   find: () => (existsSync(`${debugLog()}.prev`) ? [`${debugLog()}.prev`] : []),
   remove() {
     const prev = `${debugLog()}.prev`;
+
     if (existsSync(`${debugLog()}.1`)) unlinkSync(prev);
     else renameSync(prev, `${debugLog()}.1`);
+  },
+};
+
+const CACHES_MOVED_OUT_OF_STATE = [
+  "update-available.json",
+  "environment.json",
+  "skill-index.json",
+  "nudges-shown.json",
+  "collect-last-run",
+];
+
+const oldStateCache = (name: string) => resolve(paths.state(), name);
+const oldRunModeFolder = () => resolve(paths.state(), "run-mode");
+
+function isEmptyFolder(dir: string): boolean {
+  return existsSync(dir) && lstatSync(dir).isDirectory() && readdirSync(dir).length === 0;
+}
+
+function keepNewestCacheCopy(name: string): void {
+  const old = oldStateCache(name);
+  const current = resolve(paths.cache(), name);
+
+  if (existsSync(current)) unlinkSync(old);
+  else renameSync(old, current);
+}
+
+const cachesInState: Leftover = {
+  id: "caches-in-state",
+  description:
+    "Move machine-local caches from memory/state to ~/.pal/cache, so export stops carrying them to other machines",
+  find: () => [
+    ...CACHES_MOVED_OUT_OF_STATE.map(oldStateCache).filter((path) => existsSync(path)),
+    ...(isEmptyFolder(oldRunModeFolder()) ? [oldRunModeFolder()] : []),
+  ],
+  remove() {
+    for (const name of CACHES_MOVED_OUT_OF_STATE) {
+      if (existsSync(oldStateCache(name))) keepNewestCacheCopy(name);
+    }
+
+    if (isEmptyFolder(oldRunModeFolder())) rmdirSync(oldRunModeFolder());
   },
 };
 
@@ -253,4 +325,5 @@ export const LEFTOVERS: Leftover[] = [
   retiredVerbRules,
   opinionTrackingDocCopy,
   debugLogPrev,
+  cachesInState,
 ];

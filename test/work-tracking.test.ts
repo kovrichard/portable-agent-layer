@@ -8,7 +8,7 @@ import {
   extractHandoff,
   readProjectHistory,
   writeSession,
-} from "../src/hooks/lib/work-tracking";
+} from "../src/progress/work-tracking";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -43,8 +43,8 @@ describe("detectStatus", () => {
 
 describe("extractArtifacts", () => {
   test("extracts absolute file paths from assistant messages", () => {
-    const msgs = [{ role: "assistant", content: "Updated /src/hooks/lib/agent.ts" }];
-    expect(extractArtifacts(msgs)).toContain("/src/hooks/lib/agent.ts");
+    const msgs = [{ role: "assistant", content: "Updated /src/core/agent.ts" }];
+    expect(extractArtifacts(msgs)).toContain("/src/core/agent.ts");
   });
 
   test("extracts relative file paths", () => {
@@ -145,13 +145,8 @@ describe("writeSession / project history I/O", () => {
       handoff: "",
       messageCount: 1,
     });
-    const archive = resolve(
-      TEST_HOME,
-      "memory",
-      "state",
-      "sessions-archive",
-      "2026-03.jsonl"
-    );
+    const archive = resolve(TEST_HOME, "records", "sessions-archive", "2026-03.jsonl");
+
     for (let n = 0; n < 51; n++) writeSession(session(n));
     const hot = JSON.parse(
       readFileSync(resolve(TEST_HOME, "memory", "state", "sessions.json"), "utf-8")

@@ -19,10 +19,11 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { palHome } from "../../../../src/hooks/lib/paths";
 
-const TELOS_DIR = resolve(palHome(), "telos");
+const PAL_HOME = process.env.PAL_HOME || resolve(homedir(), ".pal");
+const TELOS_DIR = resolve(PAL_HOME, "telos");
 const BACKUPS_DIR = resolve(TELOS_DIR, "backups");
 const UPDATES_LOG = resolve(TELOS_DIR, "updates.md");
 
@@ -41,6 +42,7 @@ const VALID_FILES = [
 function timestamp(): string {
   const now = new Date();
   const pad = (n: number) => n.toString().padStart(2, "0");
+
   return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 }
 
@@ -69,6 +71,7 @@ const filePath = resolve(TELOS_DIR, file);
 
 // Backup
 mkdirSync(BACKUPS_DIR, { recursive: true });
+
 if (existsSync(filePath)) {
   const backupName = `${file.replace(".md", "")}-${timestamp()}.md`;
   copyFileSync(filePath, resolve(BACKUPS_DIR, backupName));

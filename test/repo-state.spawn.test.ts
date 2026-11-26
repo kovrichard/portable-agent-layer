@@ -20,12 +20,13 @@ async function setSettings(data: Record<string, unknown>) {
     resolve(ROOT, "pal", "memory", "pal-settings.json"),
     JSON.stringify(data)
   );
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 async function repoStateReminder(cwd: string) {
-  const { getRepoStateReminder } = await import("../src/hooks/lib/repo-state");
-  return getRepoStateReminder(cwd);
+  const { observeRepoState } = await import("../src/context/repo-state");
+
+  return observeRepoState(cwd);
 }
 
 function git(dir: string, ...args: string[]): void {
@@ -63,13 +64,32 @@ function released(name = "app"): string {
   git(dir, "tag", "v1.0.0");
   git(dir, "remote", "add", "origin", remote);
   git(dir, "push", "-q", "-u", "origin", "main", "--tags");
+
   return dir;
 }
 
 async function registerProject(name: string, path: string) {
-  const { writeProject } = await import("../src/hooks/lib/projects");
+  const { writeProject } = await import("../src/progress/projects");
   const now = new Date().toISOString();
   writeProject({ name, path, status: "active", created: now, updated: now });
+}
+
+async function repoStateEvents() {
+  const { eventsSince } = await import("../src/bronze/events");
+
+  return eventsSince("repo_state", new Date(Date.now() - 60_000));
+}
+
+function headOf(dir: string): string {
+  return spawnSync("git", ["-C", dir, "rev-parse", "HEAD"], {
+    encoding: "utf-8",
+  }).stdout.trim();
+}
+
+async function observe(cwd: string, session: string | null = "s1") {
+  const { observeRepoState } = await import("../src/context/repo-state");
+
+  return observeRepoState(cwd, session);
 }
 
 describe("a git checkout", () => {
@@ -153,4 +173,70 @@ test("the line is off when repoState is disabled", async () => {
   await setSettings({ dynamicContext: { repoState: false } });
 
   expect(await repoStateReminder(released())).toBeNull();
+});
+
+describe("the repo_state event", () => {
+  test("records the commit, branch and session a prompt starts from", async () => {
+    await setSettings({});
+    const dir = released();
+
+    await observe(dir);
+
+    const events = await repoStateEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: "repo_state",
+      session: "s1",
+      cwd: dir,
+      head: headOf(dir),
+      branch: "main",
+      changed: 0,
+      ahead: 0,
+      behind: 0,
+    });
+  });
+
+  test("counts uncommitted files and commits not pushed", async () => {
+    await setSettings({});
+    const dir = released();
+    commit(dir, "b");
+    writeFileSync(resolve(dir, "c"), "c");
+
+    await observe(dir);
+
+    expect((await repoStateEvents())[0]).toMatchObject({
+      head: headOf(dir),
+      changed: 1,
+      ahead: 1,
+    });
+  });
+
+  test("is written even when the Repo line is switched off", async () => {
+    await setSettings({ dynamicContext: { repoState: false } });
+    const dir = released();
+
+    expect(await observe(dir)).toBeNull();
+    expect(await repoStateEvents()).toHaveLength(1);
+  });
+
+  test("a repository without commits records no commit", async () => {
+    await setSettings({});
+    const dir = resolve(ROOT, "fresh");
+    mkdirSync(dir);
+    git(dir, "init", "-q");
+
+    await observe(dir);
+
+    expect((await repoStateEvents())[0]).toMatchObject({ head: null, changed: 0 });
+  });
+
+  test("a directory without git records nothing", async () => {
+    await setSettings({});
+    const dir = resolve(ROOT, "scratch");
+    mkdirSync(dir);
+
+    await observe(dir);
+
+    expect(await repoStateEvents()).toHaveLength(0);
+  });
 });

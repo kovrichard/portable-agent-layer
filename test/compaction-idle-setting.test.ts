@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { recordIdleCompactionNear } from "../src/hooks/lib/compaction-near";
-import { eventsSince } from "../src/hooks/lib/events";
-import { reload } from "../src/hooks/lib/settings";
+import { eventsSince } from "../src/bronze/events";
+import { recordIdleCompactionNear } from "../src/context/compaction-near";
+import { reload } from "../src/core/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const IDLE_ENV = "CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS";
@@ -28,6 +28,7 @@ function transcriptWith(name: string, tokens: number): string {
   const path = resolve(home, name);
   const usage = { input_tokens: 10, cache_read_input_tokens: tokens - 10 };
   writeFileSync(path, `${JSON.stringify({ message: { usage } })}\n`);
+
   return path;
 }
 

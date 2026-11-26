@@ -1,7 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { readProject, writeProject } from "../src/hooks/lib/projects";
+import { readProject, writeProject } from "../src/progress/projects";
 import { fakeProject, projectsHome } from "./lib/projects-lib-fixture";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 
@@ -13,6 +13,7 @@ const TEST_HOME = projectsHome(import.meta.file);
 function checkoutDir(name: string): string {
   const dir = resolve(TEST_HOME, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 

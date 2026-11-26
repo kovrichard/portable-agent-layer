@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { paths } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import {
   autoUpdateOnClose,
   autoUpdateOnStart,
@@ -11,8 +13,6 @@ import {
   runAutoUpdate,
   shouldAutoUpdate,
 } from "../src/hooks/lib/auto-update";
-import { paths } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -134,6 +134,35 @@ describe("the daily gate", () => {
   });
 });
 
+function setChecked(current: string, latest: string): void {
+  writeFileSync(
+    resolve(paths.cache(), "update-available.json"),
+    JSON.stringify({ checkedAt: "", available: true, current, latest, mode: "package" }),
+    "utf-8"
+  );
+}
+
+describe("a new major", () => {
+  test("is never installed unattended", () => {
+    setSettings({ enabled: true, decided: true });
+    setChecked("0.117.0", "1.0.0");
+    expect(shouldAutoUpdate()).toBe(false);
+  });
+
+  test("is not recorded as a skip, so closing a session prints nothing about it", () => {
+    setSettings({ enabled: true, decided: true });
+    setChecked("0.117.0", "1.0.0");
+    expect(autoUpdateOnClose()).toBeNull();
+    expect(readLedger()).toBeNull();
+  });
+
+  test("a release within the installed major still goes through", () => {
+    setSettings({ enabled: true, decided: true });
+    setChecked("0.117.0", "0.118.0");
+    expect(shouldAutoUpdate()).toBe(true);
+  });
+});
+
 describe("uncommitted work", () => {
   test("a dirty clone waits, and says why", () => {
     setSettings({ enabled: true, decided: true });
@@ -192,11 +221,13 @@ describe("a run that fails", () => {
 function updateEvents(): Record<string, unknown>[] {
   const file = resolve(
     HOME,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -267,6 +298,7 @@ function fakeUpdateCommand(): string {
   );
   git("add", "-A");
   git("commit", "-m", "fake update command");
+
   return seen;
 }
 
@@ -319,7 +351,7 @@ describe("what the closing terminal says", () => {
   test("names the versions it is moving between", () => {
     setSettings({ enabled: true, decided: true });
     writeFileSync(
-      resolve(paths.state(), "update-available.json"),
+      resolve(paths.cache(), "update-available.json"),
       JSON.stringify({
         checkedAt: new Date().toISOString(),
         available: true,

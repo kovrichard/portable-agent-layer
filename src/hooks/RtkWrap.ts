@@ -16,12 +16,12 @@
  * subcommand and are handled elsewhere — this hook no-ops for them.
  */
 
-import { getActiveAgent } from "./lib/agent";
+import { getActiveAgent } from "../core/agent";
+import { findBinaryOnPath } from "../core/which";
+import { keepJqUnwrapped } from "../safety/rtk-jq";
+import { isWorktreeAgentGitCall } from "../safety/rtk-worktree";
+import { noteHookPayloadText, recordHookRunOnExit } from "../usage/hook-run";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { noteHookPayloadText, recordHookRunOnExit } from "./lib/hook-run";
-import { keepJqUnwrapped } from "./lib/rtk-jq";
-import { isWorktreeAgentGitCall } from "./lib/rtk-worktree";
-import { findBinaryOnPath } from "./lib/which";
 
 recordHookRunOnExit();
 
@@ -42,6 +42,7 @@ async function run(): Promise<void> {
 
   const stdin = await Bun.stdin.text();
   noteHookPayloadText(stdin);
+
   if (isWorktreeAgentGitCall(stdin)) return;
   const proc = Bun.spawn([rtk, "hook", subcommand], {
     stdin: Buffer.from(stdin),
@@ -50,6 +51,7 @@ async function run(): Promise<void> {
   });
   const out = await new Response(proc.stdout).text();
   await proc.exited;
+
   if (proc.exitCode === 0 && out) {
     process.stdout.write(keepJqUnwrapped(out));
   }

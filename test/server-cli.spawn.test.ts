@@ -46,6 +46,7 @@ function portNobodyListensOn(): number {
   });
   const { port } = placeholder;
   placeholder.stop(true);
+
   return port as number;
 }
 
@@ -78,6 +79,7 @@ function recordedPid(): number {
 function alive(pid: number): boolean {
   try {
     process.kill(pid, 0);
+
     return true;
   } catch {
     return false;
@@ -86,10 +88,12 @@ function alive(pid: number): boolean {
 
 async function untilGone(pid: number): Promise<boolean> {
   const deadline = Date.now() + 3000;
+
   while (Date.now() < deadline) {
     if (!alive(pid)) return true;
     await Bun.sleep(50);
   }
+
   return false;
 }
 

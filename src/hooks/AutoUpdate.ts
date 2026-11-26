@@ -6,9 +6,9 @@
  * git pull and a reinstall.
  */
 
+import { logError } from "../core/log";
+import { recordHookRunOnExit } from "../usage/hook-run";
 import { runAutoUpdate } from "./lib/auto-update";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { logError } from "./lib/log";
 
 recordHookRunOnExit();
 

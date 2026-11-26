@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { vscodeSettingsFile } from "../src/targets/lib";
+import { vscodeSettingsFile } from "../src/targets/vscode-settings";
 
 const realPlatform = process.platform;
 const savedXdg = process.env.XDG_CONFIG_HOME;
@@ -16,8 +16,10 @@ beforeEach(() => {
     value: realPlatform,
     configurable: true,
   });
+
   if (savedXdg === undefined) delete process.env.XDG_CONFIG_HOME;
   else process.env.XDG_CONFIG_HOME = savedXdg;
+
   if (savedAppData === undefined) delete process.env.APPDATA;
   else process.env.APPDATA = savedAppData;
 });

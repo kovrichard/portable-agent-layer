@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { matchSkills, type SkillIndex } from "../src/hooks/lib/skill-match";
+import { matchSkills, type SkillIndex } from "../src/context/skill-match";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -24,20 +24,18 @@ const INDEX: SkillIndex = {
 };
 
 function writeIndex(index: SkillIndex) {
-  mkdirSync(resolve(TEST_HOME, "memory", "state"), { recursive: true });
-  writeFileSync(
-    resolve(TEST_HOME, "memory", "state", "skill-index.json"),
-    JSON.stringify(index)
-  );
+  mkdirSync(resolve(TEST_HOME, "cache"), { recursive: true });
+  writeFileSync(resolve(TEST_HOME, "cache", "skill-index.json"), JSON.stringify(index));
 }
 
 async function setSettings(data: Record<string, unknown>) {
   writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 async function loadMatcher() {
-  const mod = await import(`../src/hooks/lib/skill-match.ts?t=${Date.now()}`);
+  const mod = await import(`../src/context/skill-match.ts?t=${Date.now()}`);
+
   return mod.getSkillReminder as (prompt: string) => string | null;
 }
 
@@ -50,7 +48,7 @@ beforeAll(() => {
 beforeEach(async () => {
   const settingsPath = resolve(TEST_HOME, "memory", "pal-settings.json");
   removeOnceReleased(settingsPath);
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
   writeIndex(INDEX);
 });
 
@@ -87,6 +85,7 @@ describe("matchSkills", () => {
 
   test("returns at most three skills", () => {
     const skills: SkillIndex["skills"] = {};
+
     for (const n of ["a", "b", "c", "d"]) {
       skills[n] = { name: n, description: "", triggers: ["slides"] };
     }
@@ -122,16 +121,13 @@ describe("getSkillReminder", () => {
   });
 
   test("returns null when there is no skill index on disk", async () => {
-    removeOnceReleased(resolve(TEST_HOME, "memory", "state", "skill-index.json"));
+    removeOnceReleased(resolve(TEST_HOME, "cache", "skill-index.json"));
 
     expect((await loadMatcher())("make me a pitch deck")).toBeNull();
   });
 
   test("returns null when the index is unreadable", async () => {
-    writeFileSync(
-      resolve(TEST_HOME, "memory", "state", "skill-index.json"),
-      "{ not json"
-    );
+    writeFileSync(resolve(TEST_HOME, "cache", "skill-index.json"), "{ not json");
 
     expect((await loadMatcher())("make me a pitch deck")).toBeNull();
   });

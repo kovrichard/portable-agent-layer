@@ -4,7 +4,7 @@
  * never be imported by a test that walks this tree.
  */
 
-import { AGENT_NAMES, AGENT_REGISTRY } from "../hooks/lib/agent-registry";
+import { AGENT_NAMES, AGENT_REGISTRY } from "../core/agent-registry";
 import {
   type Group,
   group,
@@ -13,6 +13,8 @@ import {
   type OptionSpec,
   type OptionSpecs,
 } from "../tools/lib/command";
+import { algorithmRunCommand } from "./algorithm-run";
+import { authCommand } from "./auth";
 import { builtinTools, builtinToolVerbs } from "./builtin-tools";
 import { compactionCommand } from "./compaction";
 import { contentCommand } from "./content";
@@ -23,6 +25,7 @@ import { eventsCommand } from "./events";
 import { evidenceCommand } from "./evidence";
 import { identityCommand } from "./identity";
 import { inferCommand } from "./infer";
+import { judgeCommand } from "./judge";
 import { knowledgeCommand } from "./knowledge";
 import { ledgerCommand } from "./ledger-command";
 import { runMigrate } from "./migrate";
@@ -30,7 +33,7 @@ import { patternsCommand } from "./patterns";
 import { telosCommand, timezoneCommand } from "./personal-context";
 import { progressCommand } from "./progress";
 import { ruleCommand } from "./rule";
-import { timeboxCommand, unattendedCommand } from "./run-mode";
+import { minimumCommand, timeboxCommand, unattendedCommand } from "./run-mode";
 import { scheduleCommand } from "./schedule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
@@ -72,6 +75,7 @@ function agentOptions(verb: string): OptionSpecs {
     agent,
     { type: "boolean", description: `${verb} ${AGENT_REGISTRY[agent].label}` },
   ]);
+
   return {
     ...Object.fromEntries(perAgent),
     all: { type: "boolean", description: `${verb} every supported agent` },
@@ -87,6 +91,7 @@ const DRY_RUN: OptionSpec = { type: "boolean", description: "Show what would hap
 function debugCommand(admin: AdminHandlers): Group {
   const state = (s: DebugState, summary: string) =>
     leaf({ summary, run: () => admin.debug(s) });
+
   return group({
     summary: "Verbose hook debug logging (persisted)",
     fallback: "status",
@@ -98,7 +103,7 @@ function debugCommand(admin: AdminHandlers): Group {
   });
 }
 
-function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
+function lifecycleCommands(admin: AdminHandlers): Record<string, Leaf> {
   return {
     init: leaf({
       summary: "Scaffold PAL home and install (default: every installed agent)",
@@ -128,9 +133,19 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
           type: "boolean",
           description: "Switch back to the stable channel",
         },
+        major: {
+          type: "boolean",
+          description:
+            "Install a new major release; without it, updates stay within this major",
+        },
       },
       run: admin.update,
     }),
+  };
+}
+
+function stateTransferCommands(admin: AdminHandlers): Record<string, Leaf> {
+  return {
     export: leaf({
       summary: "Export your state to a zip",
       args: "[path]",
@@ -146,6 +161,11 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       },
       run: admin.import,
     }),
+  };
+}
+
+function maintenanceCommands(admin: AdminHandlers): Record<string, Leaf> {
+  return {
     status: leaf({ summary: "Show PAL configuration", run: admin.status }),
     doctor: leaf({
       summary: "Find what is wrong and how to fix it; exits 1 on any failure",
@@ -161,13 +181,27 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
       run: admin.doctor,
     }),
     migrate: leaf({
-      summary: "Run pending data migrations",
+      summary: "Run pending data migrations, or the one named",
+      args: "[id]",
       options: {
         list: { type: "boolean", description: "List pending and done migrations" },
         "dry-run": DRY_RUN,
+        undo: { type: "string", description: "Undo a migration that supports it, by id" },
+        force: {
+          type: "boolean",
+          description: "Run a named move even though PAL looks busy",
+        },
       },
       run: ({ argv }) => runMigrate(argv),
     }),
+  };
+}
+
+function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
+  return {
+    ...lifecycleCommands(admin),
+    ...stateTransferCommands(admin),
+    ...maintenanceCommands(admin),
   };
 }
 
@@ -182,11 +216,13 @@ export function cliTree(admin: AdminHandlers): Group {
       cost: costCommand,
       wrapped: wrappedCommand,
       env: envCommand,
+      auth: authCommand,
       patterns: patternsCommand,
       content: contentCommand,
       events: eventsCommand,
       evidence: evidenceCommand,
       infer: inferCommand,
+      judge: judgeCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),
       telos: telosCommand,
@@ -196,9 +232,11 @@ export function cliTree(admin: AdminHandlers): Group {
       rule: ruleCommand,
       correction: correctionCommand,
       compaction: compactionCommand,
+      "algorithm-run": algorithmRunCommand,
       progress: progressCommand,
       timebox: timeboxCommand,
       unattended: unattendedCommand,
+      minimum: minimumCommand,
       schedule: scheduleCommand,
       server: serverCommand,
       skill: skillCommand,
@@ -218,5 +256,6 @@ export function inertAdmin(): AdminHandlers {
 
 export function adminCommandNames(): string[] {
   const names = Object.keys(cliTree(inertAdmin()).commands);
+
   return names.filter((name) => !builtinToolVerbs.includes(name));
 }

@@ -11,15 +11,16 @@ beforeEach(async () => {
   WORK = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   process.env.PAL_AGENT = "opencode";
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 async function hook() {
-  return await import("../src/hooks/lib/ledger-hook");
+  return await import("../src/bronze/ledger-hook");
 }
 
 async function entries() {
-  const { ledgerPath } = await import("../src/hooks/lib/ledger");
+  const { ledgerPath } = await import("../src/bronze/ledger");
+
   return readFileSync(ledgerPath(), "utf-8")
     .trim()
     .split("\n")
@@ -42,6 +43,7 @@ describe("opencode tool names reach the ledger's tool filter", () => {
 
   test("its read and shell tools are not", async () => {
     const { ledgeredTarget } = await hook();
+
     for (const tool of ["read", "bash", "shell", "grep", "glob", "list"]) {
       expect(ledgeredTarget(tool, { filePath: "/w/a.ts" })).toBeNull();
     }

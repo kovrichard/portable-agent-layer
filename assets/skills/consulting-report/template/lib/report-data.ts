@@ -10,9 +10,11 @@
 // "@/lib/report-data" continue to work.
 
 export type {
+  ComparisonRow,
   ConfigurationParameter,
   Dimension,
   Finding,
+  HeadlineStat,
   Recommendation,
   ReportData,
   RubricLevel,
@@ -44,6 +46,10 @@ export const reportData: ReportData = {
       interviewCount: 0,
       roles: ["Executive Leadership", "Department Heads", "Team Leads"],
     },
+    headlineStats: [
+      { value: "—", label: "Headline metric", caption: "replace with your own" },
+      { value: "—", label: "Second metric", caption: "replace with your own" },
+    ],
     keyFindings: [
       "Finding 1 — replace with actual finding",
       "Finding 2 — replace with actual finding",
@@ -92,6 +98,13 @@ export const reportData: ReportData = {
 
   targetState: {
     description: "Replace with the vision description.",
+    comparison: [
+      {
+        metric: "Replace with metric",
+        left: "Current state value",
+        right: "Target state value",
+      },
+    ],
     keyCapabilities: ["Capability 1", "Capability 2", "Capability 3"],
     successMetrics: ["Metric 1", "Metric 2", "Metric 3"],
   },

@@ -6,39 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .agents/hooks/check.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/type-check.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/knip.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/jscpd.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/klint.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/secretlint.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/madge.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/lf.ts"
-          },
-          {
-            "type": "command",
-            "command": "bun .agents/hooks/exact-versions.ts"
+            "command": "bun .agents/hooks/gates.ts"
           }
         ]
       }
@@ -50,32 +18,12 @@
       },
       {
         "matcher": "SubagentHandback",
-        "hooks": [
-          { "type": "command", "command": "bun .agents/hooks/check.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/type-check.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/knip.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/jscpd.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/klint.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/secretlint.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/madge.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/exact-versions.ts --subagent" }
-        ]
+        "hooks": [{ "type": "command", "command": "bun .agents/hooks/gates.ts --subagent" }]
       }
     ],
     "SubagentStop": [
       {
-        "hooks": [
-          { "type": "command", "command": "bun .agents/hooks/check.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/type-check.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/knip.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/jscpd.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/klint.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/secretlint.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/madge.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/lf.ts --subagent" },
-          { "type": "command", "command": "bun .agents/hooks/exact-versions.ts --subagent" }
-        ]
+        "hooks": [{ "type": "command", "command": "bun .agents/hooks/gates.ts --subagent" }]
       }
     ]
   },

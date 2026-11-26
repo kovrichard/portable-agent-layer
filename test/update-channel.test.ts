@@ -4,13 +4,13 @@ import { resolve } from "node:path";
 import { createStyle } from "../src/cli/ui/style";
 import type { Terminal } from "../src/cli/ui/terminal";
 import { channelSwitchLine, requestedChannel } from "../src/cli/update-flow";
+import { reload, write } from "../src/core/settings";
 import {
   checkPackage,
   setUpdateChannel,
   type UpdateCache,
   updateChannel,
 } from "../src/hooks/handlers/update-check";
-import { reload, write } from "../src/hooks/lib/settings";
 import { freshTestDir } from "./lib/test-home";
 
 const pipe: Terminal = { rich: false, color: "none", unicode: true, width: 80 };
@@ -27,8 +27,10 @@ function registry(version: string) {
   const asked: string[] = [];
   const fetchImpl = (async (url: string) => {
     asked.push(url);
+
     return Response.json({ version });
   }) as unknown as typeof fetch;
+
   return { asked, fetchImpl };
 }
 

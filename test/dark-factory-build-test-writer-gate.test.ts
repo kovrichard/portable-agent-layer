@@ -19,6 +19,7 @@ const CONFIG = {
 
 function worldWithLint(lintResults: number[], config: object = CONFIG) {
   let seen = 0;
+
   return buildWorld(import.meta.file, {
     category: "feature",
     config,
@@ -26,6 +27,7 @@ function worldWithLint(lintResults: number[], config: object = CONFIG) {
       [LINT]: () => {
         const exitCode = lintResults[Math.min(seen, lintResults.length - 1)] ?? 0;
         seen += 1;
+
         return { exitCode, output: exitCode === 0 ? "" : "lint: bad test file" };
       },
     },

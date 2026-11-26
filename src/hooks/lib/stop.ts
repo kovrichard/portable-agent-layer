@@ -15,6 +15,30 @@ import {
 } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+  extractContent,
+  extractLastAssistant,
+  type Message,
+  recentMessages,
+  withFinalReply,
+} from "../../bronze/transcript";
+import { acknowledgeMentioned } from "../../context/daily-nudge";
+import {
+  hookFinalReply,
+  hookSessionId,
+  type StopTurnPayload,
+} from "../../core/hook-payload";
+import { logDebug, logError } from "../../core/log";
+import { assets, ensureDir, paths } from "../../core/paths";
+import { spawnDetachedInference } from "../../inference/detached-inference";
+import { transcriptLines } from "../../opinions/claim-log";
+import { recordReply } from "../../opinions/interaction";
+import {
+  recordAlgorithmTurnQuietly,
+  type TurnLines,
+  turnTexts,
+} from "../../progress/algorithm-runs";
+import { startHookTiming } from "../../usage/hook-timing";
 import { autoBackup } from "../handlers/backup";
 import { writeContextDigests } from "../handlers/context-digests";
 import { notifyDesktop } from "../handlers/desktop-notify";
@@ -25,33 +49,7 @@ import { resetTab } from "../handlers/tab";
 import { updateCounts } from "../handlers/update-counts";
 import { captureWorkSession } from "../handlers/work-session";
 import { spawnCollectIfDue } from "./collect-trigger";
-import { acknowledgeMentioned } from "./daily-nudge";
-import { spawnDetachedInference } from "./detached-inference";
-import { startHookTiming } from "./hook-timing";
-import {
-  fileFinalReply,
-  type HookTurnPayload,
-  hookFinalReply,
-  hookSessionId,
-} from "./hook-turn";
-import { recordReply } from "./interaction";
-import { logDebug, logError } from "./log";
-import { assets, ensureDir, paths } from "./paths";
-import {
-  extractContent,
-  extractLastAssistant,
-  type Message,
-  recentMessages,
-  withFinalReply,
-} from "./transcript";
-
-export interface StopTurnPayload extends HookTurnPayload {
-  transcript_path?: string | null;
-  transcriptPath?: string | null;
-  stop_hook_active?: boolean;
-  loop_count?: number;
-  executionNum?: number;
-}
+import { fileFinalReply } from "./hook-turn";
 
 type Transcript = Message[];
 
@@ -67,6 +65,7 @@ const REPLY_WAIT: ReplyWait = { timeoutMs: 15_000, intervalMs: 200 };
 
 function transcriptOf(payload: StopTurnPayload | null): Transcript {
   const transcriptPath = payload?.transcript_path ?? payload?.transcriptPath;
+
   return transcriptPath ? recentMessages(transcriptPath, STOP_USER_MESSAGES) : [];
 }
 
@@ -80,9 +79,11 @@ async function transcriptOnceReplied(
   wait: ReplyWait
 ): Promise<Transcript | null> {
   const deadline = Date.now() + wait.timeoutMs;
+
   for (;;) {
     const messages = transcriptOf(payload);
     if (!replyNotWrittenYet(payload, messages)) return messages;
+
     if (Date.now() >= deadline) return null;
     await Bun.sleep(wait.intervalMs);
   }
@@ -120,8 +121,10 @@ export async function finishDeferredStop(
   const messages = await transcriptOnceReplied(payload, wait);
   if (!messages) {
     logDebug("finishDeferredStop", "The reply never reached the transcript");
+
     return;
   }
+
   await runTurnStop(payload, messages);
 }
 
@@ -130,8 +133,10 @@ export async function stopTurn(payload: StopTurnPayload | null): Promise<void> {
   const messages = transcriptOf(payload);
   if (payload && replyNotWrittenYet(payload, messages)) {
     deferStopTurn(payload);
+
     return;
   }
+
   await runTurnStop(payload, messages);
 }
 
@@ -143,16 +148,22 @@ async function runTurnStop(
     await runStopHandlers(messages, {
       lastAssistantMessage: hookFinalReply(payload),
       sessionId: hookSessionId(payload),
+      turnLines: () => (payload ? transcriptLines(payload) : null),
     });
+
     return;
   }
+
   logDebug("stopTurn", "No readable transcript; filing only the final reply");
   fileFinalReply(payload);
+  const finalReply = hookFinalReply(payload) ?? "";
+  recordAlgorithmTurnQuietly(hookSessionId(payload), [finalReply], "final-reply");
 }
 
 interface RunStopHandlersOptions {
   lastAssistantMessage?: string;
   sessionId?: string;
+  turnLines?: TurnLines;
 }
 
 /** Run all stop handlers on the newest messages of the transcript */
@@ -161,6 +172,7 @@ export async function runStopHandlers(
   options: RunStopHandlersOptions = {}
 ): Promise<void> {
   const timing = startHookTiming("stop");
+
   if (fileMessages.length < 2) return;
   const messages = withFinalReply(fileMessages, options.lastAssistantMessage);
   const transcript = JSON.stringify(messages);
@@ -169,14 +181,21 @@ export async function runStopHandlers(
 
   // Cache last assistant response (session-scoped)
   cacheLastResponse(messages, options.lastAssistantMessage, options.sessionId);
+
   if (options.sessionId) recordFinalReply(messages, options.sessionId);
+
+  recordAlgorithmTurnQuietly(
+    options.sessionId,
+    turnTexts(messages),
+    "transcript",
+    options.turnLines
+  );
 
   // Always persist last exchange — drives CompactRecover + "Pick Up Where You Left Off"
   if (options.sessionId) persistLastExchange(messages, options.sessionId);
 
-  // Detach inference-bearing handlers — claude --print cold-start can exceed
-  // any in-hook budget. These spawn detached bun subprocesses that run the
-  // inference and write results to disk; they don't block this hook.
+  // A claude --print cold start can exceed any in-hook budget, so inference runs in
+  // detached subprocesses that write their results to disk.
   await timing.time("detach-inference", async () => {
     sweepStaleHandoffs();
     await detachSessionIntelligence(transcript, options.sessionId);
@@ -201,12 +220,14 @@ export async function runStopHandlers(
   const results = await Promise.allSettled(
     names.map((name) => timing.time(name, Promise.resolve(handlers[name])))
   );
+
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
     if (r?.status === "rejected") {
       logError(`runStopHandlers:${names[i]}`, r.reason);
     }
   }
+
   timing.log(options.sessionId);
 }
 
@@ -235,12 +256,14 @@ function cacheLastResponse(
       const lastAssistant = extractLastAssistant(msgs);
       lastResponse = extractContent(lastAssistant);
     }
+
     if (!lastResponse) return;
 
     const cachePath = resolve(ensureDir(paths.state()), "last-responses.json");
 
     // Read existing cache
     let cache: Record<string, CachedResponse> = {};
+
     if (existsSync(cachePath)) {
       try {
         cache = JSON.parse(readFileSync(cachePath, "utf-8"));
@@ -261,6 +284,7 @@ function cacheLastResponse(
       const sorted = keys.sort((a, b) =>
         (cache[a].ts ?? "").localeCompare(cache[b].ts ?? "")
       );
+
       for (const key of sorted.slice(0, keys.length - MAX_CACHED_SESSIONS)) {
         delete cache[key];
       }
@@ -290,6 +314,7 @@ async function writeTranscriptHandoff(transcript: string): Promise<string> {
   const id: string = randomUUID();
   const file = resolve(paths.transcriptHandoff(), `${id}.txt`);
   await writeFile(file, transcript, "utf-8");
+
   return file;
 }
 
@@ -297,8 +322,10 @@ async function writeTranscriptHandoff(transcript: string): Promise<string> {
 export function sweepStaleHandoffs(now: number = Date.now()): void {
   try {
     const dir = paths.transcriptHandoff();
+
     for (const name of readdirSync(dir)) {
       const file = resolve(dir, name);
+
       try {
         if (now - statSync(file).mtimeMs <= HANDOFF_MAX_AGE_MS) continue;
         unlinkSync(file);
@@ -349,6 +376,7 @@ async function detachEntityExtraction(
   sessionId?: string
 ): Promise<void> {
   if (!sessionId) return;
+
   try {
     const transcriptPath = await writeTranscriptHandoff(transcript);
     const scriptPath = resolve(assets.hooks(), "handlers", "entity-extraction.ts");

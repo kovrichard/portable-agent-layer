@@ -38,6 +38,7 @@ const MARK_ROOM = "-m-2 p-2";
 function rememberedLayout(): Layout {
   try {
     const stored = localStorage.getItem(LAYOUT_KEY);
+
     return isLayout(stored) ? stored : "matrix";
   } catch {
     return "matrix";
@@ -54,6 +55,7 @@ function TodayRoute() {
   const [params, setParams] = useSearchParams();
   const asked = params.get("layout");
   const layout = isLayout(asked) ? asked : rememberedLayout();
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-4 flex justify-end">
@@ -78,6 +80,7 @@ function ProjectsRoute() {
   const [params, setParams] = useSearchParams();
   const asked = params.get("status");
   const filter: StatusFilter = isStatusFilter(asked) ? asked : "ranked";
+
   return (
     <Screen
       title="Projects"
@@ -97,6 +100,7 @@ function ProjectsRoute() {
 
 function ProjectDetailRoute() {
   const { slug } = useParams();
+
   return (
     <Scroller className={MARK_ROOM}>
       <ProjectDetail slug={slug ?? ""} />
@@ -113,6 +117,7 @@ function LogRoute() {
     const merged = { ...filter, ...next };
     setParams(Object.fromEntries(Object.entries(merged).filter(([, v]) => v)));
   };
+
   return (
     <Screen
       title="Action log"
@@ -203,6 +208,7 @@ function Header({ status }: { status: ServerStatus | null }) {
 
 function App() {
   const status = useLoaded<ServerStatus>("/api/status");
+
   return (
     <BrowserRouter>
       <div className="flex h-screen flex-col overflow-hidden">

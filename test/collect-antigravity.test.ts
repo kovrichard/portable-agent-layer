@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import {
   ANTIGRAVITY_ALLOW_LIST,
   collectAntigravity,
@@ -17,8 +17,9 @@ let home: string;
 let dbPath: string;
 
 function streamed(): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
@@ -31,6 +32,7 @@ function fixtureDb(): Database {
   db.run(
     "CREATE TABLE conversation_summaries (conversation_id TEXT PRIMARY KEY, title TEXT, preview TEXT, step_count INTEGER, last_modified_time TEXT, workspace_uris TEXT, status TEXT, source TEXT, project_id TEXT, agent_name TEXT, parent_conversation_id TEXT, nesting_depth INTEGER, killed INTEGER)"
   );
+
   return db;
 }
 

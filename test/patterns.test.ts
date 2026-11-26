@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { patternsCommand } from "../src/cli/patterns";
-import { appendEvent } from "../src/hooks/lib/events";
 import { runCommand } from "../src/tools/lib/command";
 import { projectActivity } from "../src/tools/lib/patterns/activity";
 import { contextSwitches, dayShape } from "../src/tools/lib/patterns/days";
@@ -368,8 +368,10 @@ describe("momentum as printed", () => {
 
 async function patterns(): Promise<string> {
   const log = spyOn(console, "log").mockImplementation(() => {});
+
   try {
     expect(await runCommand(patternsCommand, [], ["pal", "cli", "patterns"])).toBe(0);
+
     return log.mock.calls.map((c) => c.join(" ")).join("\n");
   } finally {
     log.mockRestore();
@@ -379,6 +381,7 @@ async function patterns(): Promise<string> {
 describe("pal cli patterns", () => {
   test("its help says what it reads", async () => {
     const log = spyOn(console, "log").mockImplementation(() => {});
+
     try {
       await runCommand(patternsCommand, ["--help"], ["pal", "cli", "patterns"]);
       expect(log.mock.calls.join("\n")).toContain(

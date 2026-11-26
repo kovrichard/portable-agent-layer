@@ -16,7 +16,7 @@ import {
 } from "./lib.mjs";
 import { notify } from "./notify.mjs";
 import { runRoleHeadless } from "./role.mjs";
-import { changedFilesSince, rolesAfterChanges } from "./roles.mjs";
+import { changedFilesSince, rolesAfterChanges, rolesFor } from "./roles.mjs";
 import { markReady, openPr, push, sync } from "./ship.mjs";
 import {
   appendDecision,
@@ -82,8 +82,9 @@ const ACCEPTANCE_TESTS_INSTRUCTIONS =
   "Write the failing acceptance tests from spec.md only; there is no plan yet, so do not read plan.md. Write tests.md in the task folder mapping each test to the acceptance criteria it covers. Leave the tests uncommitted; the code writer commits them with the code.";
 const PLAN_AFTER_TESTS_INSTRUCTIONS =
   "Write plan.md for this change. Failing acceptance tests already exist in the worktree (see tests.md in the task folder); the plan must make them pass without changing them.";
-const UNIT_TESTS_INSTRUCTIONS =
-  "Type one unit test per row of each example table in plan.md, in the test files the plan names. Test only what the tables state, change no other file, and leave the tests uncommitted. When plan.md has no example tables, change nothing.";
+const STUB_RULE =
+  "When a test names a function, type or method that plan.md defines and that does not exist yet, add it where plan.md puts it, with the plan's signature and a body that only fails when it runs (todo!() in Rust, panic in Go, a thrown error elsewhere), so the tests compile and fail; the code writer replaces it.";
+const UNIT_TESTS_INSTRUCTIONS = `Type one unit test per row of each example table in plan.md, in the test files the plan names. Test only what the tables state, change no other file except for those stubs, and leave everything uncommitted. ${STUB_RULE} When plan.md has no example tables, change nothing.`;
 const SETTLE_PLAN_INSTRUCTIONS =
   "The plan gate ended with findings it could not settle, and their answers are now in the spec's Decisions. Read spec.md again and apply its Decisions to plan.md.";
 const REPLAN_INSTRUCTIONS =
@@ -105,7 +106,10 @@ export const FINGERPRINT_UNREADABLE =
 const TEST_FIX_DIFF_UNREADABLE =
   "could not list the files the test fix changed: git diff --name-only failed";
 const TEST_EDITS_EVENT = "test_edits_restored";
+const TEST_EDITS_KEPT_EVENT = "test_edits_kept";
+const TEST_EDIT_DIFF_LIMIT = 4000;
 const UNIT_TESTS_NO_RISE_EVENT = "unit_tests_no_rise";
+const UNIT_TESTS_NO_COMPILE_EVENT = "unit_tests_do_not_compile";
 
 function stuck(message) {
   return { status: "stuck", message };
@@ -130,8 +134,10 @@ function poInstructions(role, question) {
 function poReply(outcome, question) {
   const answer = isUsable(outcome) ? outcome.structured : {};
   if (answer.userQuestion) return { userQuestion: answer.userQuestion };
+
   if (answer.answer)
     return { answer: answer.answer, revert: answer.revert, testFix: answer.testFix };
+
   return { userQuestion: question };
 }
 
@@ -156,6 +162,7 @@ function askPo(run, role, question) {
     },
     run.env
   );
+
   return reply;
 }
 
@@ -172,6 +179,7 @@ function resumeWithAnswer(run, role, outcome, model, question, answer) {
     resumeSessionId: outcome.sessionId,
     instructions,
   });
+
   return isUsable(resumed) ? { outcome: resumed } : { failed: resumed.error };
 }
 
@@ -181,6 +189,7 @@ function answerQuestion(run, role, outcome, model, question) {
   appendDecision(run.id, { role, question, answer: reply.answer }, run.env);
   const fixed = fixTestIfRuled(run, role, reply);
   if (fixed.stop) return { stop: fixed.stop };
+
   return resumeWithAnswer(
     run,
     role,
@@ -195,16 +204,19 @@ function afterQuestion(run, role, outcome, model) {
   if (!isUsable(outcome)) return { failed: outcome.error };
   const question = outcome.structured.question;
   if (!question) return { outcome };
+
   if (!outcome.sessionId)
     return {
       failed: "the role asked a question but claude returned no session id to resume",
     };
+
   return answerQuestion(run, role, outcome, model, question);
 }
 
 export function requestedTestFix(testFix) {
   if (!testFix || !Array.isArray(testFix.files) || testFix.files.length === 0)
     return null;
+
   return {
     files: testFix.files,
     change: typeof testFix.change === "string" ? testFix.change : "",
@@ -225,11 +237,13 @@ Change only these files, and only as the answer says. Leave the changes uncommit
 function changedFilesText(files) {
   if (files === null)
     return "The files you changed could not be listed: git diff --name-only failed.";
+
   return `You changed these files:\n${fileList(files)}`;
 }
 
 function noRiseRetryInstructions(baseline, failing, files) {
   const changed = changedFilesText(files);
+
   return `Your unit tests did not raise the failing test count: ${baseline} before you typed them, ${failing} after. A test file that fails to load counts as one failure, however many tests it holds.
 
 ${changed}
@@ -237,9 +251,18 @@ ${changed}
 Move the tests you added into a new test file that no other test uses, keep the tests themselves as they are, leave them uncommitted, and change no other file.`;
 }
 
+function noCompileRetryInstructions(error) {
+  return `Your unit tests do not compile, so the test run reports no failing test count. The first error:
+${error}
+
+${STUB_RULE} Keep the tests as they are, leave everything uncommitted, and change no other file.`;
+}
+
 function unchangedNamedMessage(named, outside) {
   const base = `the test the PO ruled wrong was not changed: the test writer changed none of ${named.join(", ")}`;
+
   if (outside.length === 0) return base;
+
   return `${base}, and changed files the PO did not name: ${outside.join(", ")}`;
 }
 
@@ -247,23 +270,28 @@ export function testFixScopeMessage(named, changed) {
   const outside = changed.filter((file) => !named.includes(file));
   const namedChanged = changed.some((file) => named.includes(file));
   if (!namedChanged) return unchangedNamedMessage(named, outside);
+
   if (outside.length === 0) return null;
+
   return `the test writer changed files the PO did not name: ${outside.join(", ")}`;
 }
 
 export function withFixedTests(answer, files) {
   if (files.length === 0) return answer;
+
   return `${answer}\n\nThe test writer changed these test files as the PO answered: ${files.join(", ")}`;
 }
 
 function changedBetween(run, before, after) {
   const output = gitOutput(run, ["diff", "--name-only", before, after]);
   if (output === null) return null;
+
   return output.split("\n").filter(Boolean);
 }
 
 function typistChangedFiles(run, before, after) {
   if (before === null || after === null) return null;
+
   return changedBetween(run, before, after);
 }
 
@@ -276,6 +304,7 @@ function changedAfterFix(run, askedBy, testFix, before) {
   if (message) return { stop: stuck(message) };
   run.testFixTrees.push({ tree: after, files: changed });
   appendEvent({ event: "test_fixed", task: run.id, askedBy, files: changed }, run.env);
+
   return { files: changed };
 }
 
@@ -287,20 +316,25 @@ function runTestFix(run, askedBy, testFix, answer) {
   });
   const roleStopped = roleStop("test-writer", written);
   if (roleStopped) return { stop: roleStopped };
+
   return changedAfterFix(run, askedBy, testFix, before);
 }
 
 function fixTestIfRuled(run, askedBy, reply) {
   const testFix = requestedTestFix(reply.testFix);
   if (!testFix) return { files: [] };
+
   if (run.testFixes >= TEST_FIX_LIMIT) {
     appendEvent(
       { event: "test_fix_skipped", task: run.id, files: testFix.files },
       run.env
     );
+
     return { files: [] };
   }
+
   run.testFixes += 1;
+
   return runTestFix(run, askedBy, testFix, reply.answer);
 }
 
@@ -313,6 +347,42 @@ function handOver(run, role, reason, instructions) {
   run.lastRole = role;
 }
 
+function planSlots(before, testsAgain = false) {
+  if (!before.includes("test-writer")) return ["planner", "plan-gate"];
+
+  return testsAgain
+    ? ["planner", "plan-gate", "test-writer", "unit-tests"]
+    : ["planner", "plan-gate", "unit-tests"];
+}
+
+function beforeSlots(before) {
+  return before.flatMap((role) => (role === "planner" ? planSlots(before) : [role]));
+}
+
+function afterSlots(run) {
+  const after = run.after ?? rolesFor(run.category).after;
+  const slots = after.includes("tester") ? RESUME_ORDER : RESUME_ORDER.slice(0, -1);
+
+  return slots.slice((run.resume?.through ?? -1) + 1);
+}
+
+function routeOf(run) {
+  return [...run.beforeSlots, ...afterSlots(run)];
+}
+
+function enterSlot(run, slot) {
+  const route = routeOf(run);
+  if (route.indexOf(slot) > route.indexOf(run.slot)) run.slot = slot;
+}
+
+function nextProgress(run) {
+  run.step += 1;
+  const route = routeOf(run);
+  const ahead = route.length - 1 - route.indexOf(run.slot);
+
+  return { step: run.step, planned: run.step + ahead };
+}
+
 function runRole(
   run,
   role,
@@ -322,7 +392,13 @@ function runRole(
   const model = tier ? TIER_MODELS[tier] : undefined;
   handOver(run, role, reason, instructions);
   appendEvent(
-    { event: "role_run", task: run.id, role, model: model ?? "default" },
+    {
+      event: "role_run",
+      task: run.id,
+      role,
+      model: model ?? "default",
+      ...nextProgress(run),
+    },
     run.env
   );
   const outcome = run.effects.runRoleHeadless(run.id, role, {
@@ -331,20 +407,27 @@ function runRole(
     instructions,
     resumeSessionId,
   });
+
   return afterQuestion(run, role, outcome, model);
 }
 
 function roleStop(role, result) {
   if (result.stop) return result.stop;
+
   if (result.waitingOn) return waiting(result.waitingOn);
+
   if ("failed" in result) return stuck(`${role} failed: ${result.failed}`);
+
   return null;
 }
 
 function fixStop(fixed, what) {
   if (fixed.stop) return fixed.stop;
+
   if (fixed.waitingOn) return waiting(fixed.waitingOn);
+
   if (!fixed.passed) return stuck(`${what} could not be fixed with the gate green`);
+
   return null;
 }
 
@@ -363,6 +446,7 @@ function recordEscalation(run, previous, step) {
 
 function withFailure(instructions, failure) {
   if (!failure) return instructions;
+
   return `${instructions}\n\nThe gate failed after the previous attempt. Fix this first:\n${failure}`;
 }
 
@@ -380,6 +464,7 @@ function gateRole(run, role, attempt, tier) {
 
 function gateFor(run, step) {
   run.attempt += 1;
+
   return gateRole(run, step.role, run.attempt, step.tier);
 }
 
@@ -392,6 +477,7 @@ function testWriterGateStuck(failure) {
 function gatedTestWriter(run, instructions, options = {}) {
   const gated = gateEntriesFor(run.config, "test-writer").length > 0;
   let failure = null;
+
   for (let attempt = 1; attempt <= TEST_WRITER_GATE_ATTEMPTS; attempt += 1) {
     const result = runRole(run, "test-writer", withFailure(instructions, failure), {
       ...options,
@@ -402,11 +488,13 @@ function gatedTestWriter(run, instructions, options = {}) {
     if (gate.passed) return result;
     failure = failureReport(gate.failed);
   }
+
   return { stop: testWriterGateStuck(failure) };
 }
 
 function untilGreen(run, ladder, instructions, reason) {
   let failure = null;
+
   for (const [index, step] of ladder.entries()) {
     recordEscalation(run, ladder[index - 1], step);
     const result = runRole(run, step.role, withFailure(instructions, failure), {
@@ -414,18 +502,48 @@ function untilGreen(run, ladder, instructions, reason) {
       reason: failure ? "gate-failed" : reason,
     });
     if (result.waitingOn) return { waitingOn: result.waitingOn };
+
     if (result.stop) return { stop: result.stop };
     const gate = gateFor(run, step);
     if (gate.passed) return { passed: true };
     failure = failureReport(gate.failed);
   }
+
   return { passed: false, failure };
 }
 
-export function failingTestCount(output) {
+const PER_TEST_SUMMARY_LINES = [
+  /^test result: .*?\b(\d+) failed\b/,
+  /^\s*(\d+) fail\s*$/,
+  /^\s*Tests:?\s+.*?\b(\d+) failed\b/,
+];
+
+function summaryLineFailures(line) {
+  const match = PER_TEST_SUMMARY_LINES.map((pattern) => line.match(pattern)).find(
+    Boolean
+  );
+
+  return match ? Number(match[1]) : null;
+}
+
+function summedSummaryFailures(output) {
+  const counts = String(output)
+    .split(/\r?\n/)
+    .map(summaryLineFailures)
+    .filter((count) => count !== null);
+
+  return counts.length === 0 ? null : counts.reduce((sum, count) => sum + count, 0);
+}
+
+function lastFailureMention(output) {
   const matches = Array.from(String(output).matchAll(/\b(\d+) fail(?:ed)?\b/g));
   const last = matches.at(-1);
+
   return last ? Number(last[1]) : null;
+}
+
+export function failingTestCount(output) {
+  return summedSummaryFailures(output) ?? lastFailureMention(output);
 }
 
 export function planGateEndedWithFindings(events, taskId) {
@@ -433,11 +551,13 @@ export function planGateEndedWithFindings(events, taskId) {
     (event) => event.event === "plan_gate" && event.task === taskId
   );
   const latest = gates.at(-1);
+
   return Boolean(latest) && latest.findings > 0;
 }
 
 export function worktreeStatusChanged(before, after) {
   if (before === null || after === null) return true;
+
   return before !== after;
 }
 
@@ -445,8 +565,19 @@ function redTestCheck(run) {
   return run.config.gate.find((entry) => entry.name === RED_TEST_CHECK);
 }
 
+const COMPILE_ERROR_LINE =
+  /^error(?:\[[A-Z]\d+\])?: (?!could not compile|test failed|\d+ targets? failed).*$/m;
+
+export function firstCompileError(output) {
+  return String(output).match(COMPILE_ERROR_LINE)?.[0] ?? null;
+}
+
 function missingCountMessage(output) {
-  return `the test run failed but reported no failing test count, so it does not prove the new tests fail:\n${output.slice(-FAILURE_TAIL)}`;
+  const tail = output.slice(-FAILURE_TAIL);
+  const compileError = firstCompileError(output);
+  if (compileError) return `the tests do not compile: ${compileError}\n${tail}`;
+
+  return `the test run failed but reported no failing test count, so it does not prove the new tests fail:\n${tail}`;
 }
 
 function noRiseMessage(baseline, failing, output) {
@@ -474,15 +605,23 @@ function measureTestsRed(run, baseline) {
     },
     run.env
   );
+
   if (exitCode === 0 || failing === 0)
     return {
       stop: stuck(
         `the new tests pass before the code exists, so they prove nothing:\n${output.slice(-FAILURE_TAIL)}`
       ),
     };
-  if (failing === null) return { stop: stuck(missingCountMessage(output)) };
+
+  if (failing === null)
+    return {
+      stop: stuck(missingCountMessage(output)),
+      compileError: firstCompileError(output),
+    };
+
   if (baseline !== undefined && failing <= baseline)
     return { noRise: { failing, output } };
+
   return {};
 }
 
@@ -490,11 +629,13 @@ export function proveTestsRed(run, baseline) {
   const proof = measureTestsRed(run, baseline);
   if (proof.noRise)
     return stuck(noRiseMessage(baseline, proof.noRise.failing, proof.noRise.output));
+
   return proof.stop ?? null;
 }
 
 function baselineFailingCount(exitCode, output) {
   if (exitCode === 0) return 0;
+
   return failingTestCount(output);
 }
 
@@ -504,13 +645,16 @@ export function takeBaseline(run) {
   const { exitCode, output } = run.effects.runCheck(check.run, run.worktree, run.env);
   const baseline = baselineFailingCount(exitCode, output);
   if (baseline === null) return { stop: stuck(missingCountMessage(output)) };
+
   return { baseline };
 }
 
 function prepareStep(run) {
   try {
     Object.assign(run, run.effects.prepare(run.id, run.env));
+
     if (readTask(run.id, run.env).status === "ready") markStarted(run.id, run.env);
+
     return null;
   } catch (error) {
     return stuck(`prepare failed: ${error.message}`);
@@ -526,6 +670,7 @@ function hasCommitsAheadOfBase(run) {
       env: run.env,
     }
   );
+
   return result.status === 0 && Number(result.stdout.trim()) > 0;
 }
 
@@ -546,9 +691,11 @@ function recordPlanWritten(run, specHash) {
 }
 
 function planWith(run, instructions, reason, resumeSessionId) {
+  enterSlot(run, "planner");
   const specHash = specSha256(run);
   const result = runRole(run, "planner", instructions, { reason, resumeSessionId });
   if (!roleStop("planner", result)) recordPlanWritten(run, specHash);
+
   return result;
 }
 
@@ -560,6 +707,7 @@ function latestPlanSha256(run) {
   const plans = readEvents(run.env).filter(
     (event) => event.event === "plan_written" && event.task === run.id
   );
+
   return plans.at(-1)?.specSha256 ?? null;
 }
 
@@ -572,6 +720,7 @@ function latestPlannerSessionId(events, taskId) {
       typeof event.sessionId === "string" &&
       event.sessionId !== ""
   );
+
   return sessions.at(-1)?.sessionId ?? null;
 }
 
@@ -585,9 +734,11 @@ function planOlderThanSpec(run) {
 
 function specChangedSincePlan(run) {
   if (!run.before.includes("planner")) return false;
+
   if (!existsSync(planPath(run))) return true;
   const recorded = latestPlanSha256(run);
   if (recorded !== null) return recorded !== specSha256(run);
+
   return planOlderThanSpec(run);
 }
 
@@ -601,6 +752,7 @@ function planRevisionInstructions(findings) {
 
 function planGateUnsettled(findings) {
   const listed = findings.map((finding) => `- ${finding.problem} Fix: ${finding.fix}`);
+
   return `The plan gate still reports findings after ${PLAN_GATE_ROUNDS} rounds; the PO settles them:\n${listed.join("\n")}`;
 }
 
@@ -613,6 +765,7 @@ function recordPlanGate(run, round, findings) {
 
 function revisePlan(run, findings) {
   const sessionId = latestPlannerSessionId(readEvents(run.env), run.id);
+
   return runPlanner(
     run,
     planRevisionInstructions(findings),
@@ -622,6 +775,8 @@ function revisePlan(run, findings) {
 }
 
 function planGateStep(run) {
+  enterSlot(run, "plan-gate");
+
   for (let round = 1; round <= PLAN_GATE_ROUNDS; round += 1) {
     const review = runRole(run, "reviewer", PLAN_GATE_INSTRUCTIONS, {
       reason: "plan-gate",
@@ -630,17 +785,21 @@ function planGateStep(run) {
     if (stop) return stop;
     const findings = review.outcome.structured.findings ?? [];
     recordPlanGate(run, round, findings);
+
     if (findings.length === 0) return null;
+
     if (round === PLAN_GATE_ROUNDS) return waiting(planGateUnsettled(findings));
     const revisionStop = revisePlan(run, findings);
     if (revisionStop) return revisionStop;
   }
+
   return null;
 }
 
 function planAndGate(run, instructions, reason) {
   const stop = runPlanner(run, instructions, reason);
   if (stop) return stop;
+
   return planGateStep(run);
 }
 
@@ -650,11 +809,13 @@ function replan(run) {
     const resumed = planWith(run, REPLAN_INSTRUCTIONS, "spec-changed", sessionId);
     if (!("failed" in resumed)) return roleStop("planner", resumed);
   }
+
   return runPlanner(run, REPLAN_INSTRUCTIONS, "spec-changed");
 }
 
 function testsAfterReplan(run) {
   if (!run.before.includes("test-writer")) return null;
+  enterSlot(run, "test-writer");
   const taken = takeBaseline(run);
   if (taken.stop) return taken.stop;
   const before = worktreeFingerprint(run);
@@ -665,9 +826,21 @@ function testsAfterReplan(run) {
     })
   );
   if (stop) return stop;
+
   return worktreeStatusChanged(before, worktreeFingerprint(run))
     ? proveTestsRed(run, taken.baseline)
     : null;
+}
+
+function retryTypistOnce(run, baseline, instructions, typist) {
+  const retried = gatedTestWriter(run, instructions, {
+    tier: "small",
+    resumeSessionId: typist.sessionId ?? undefined,
+  });
+  const stop = roleStop("test-writer", retried);
+  if (stop) return stop;
+
+  return proveTestsRed(run, baseline);
 }
 
 function retryUnitTests(run, baseline, failing, typist) {
@@ -676,24 +849,37 @@ function retryUnitTests(run, baseline, failing, typist) {
     { event: UNIT_TESTS_NO_RISE_EVENT, task: run.id, baseline, failing, files },
     run.env
   );
-  const retried = gatedTestWriter(
+
+  return retryTypistOnce(
     run,
+    baseline,
     noRiseRetryInstructions(baseline, failing, files),
-    { tier: "small", resumeSessionId: typist.sessionId ?? undefined }
+    typist
   );
-  const stop = roleStop("test-writer", retried);
-  if (stop) return stop;
-  return proveTestsRed(run, baseline);
+}
+
+function retryUncompiledUnitTests(run, baseline, error, typist) {
+  appendEvent(
+    { event: UNIT_TESTS_NO_COMPILE_EVENT, task: run.id, baseline, error },
+    run.env
+  );
+
+  return retryTypistOnce(run, baseline, noCompileRetryInstructions(error), typist);
 }
 
 function proveUnitTestsRed(run, baseline, typist) {
   const proof = measureTestsRed(run, baseline);
-  if (!proof.noRise) return proof.stop ?? null;
-  return retryUnitTests(run, baseline, proof.noRise.failing, typist);
+  if (proof.noRise) return retryUnitTests(run, baseline, proof.noRise.failing, typist);
+
+  if (proof.compileError)
+    return retryUncompiledUnitTests(run, baseline, proof.compileError, typist);
+
+  return proof.stop ?? null;
 }
 
 function unitTestsStep(run) {
   if (!run.before.includes("test-writer")) return null;
+  enterSlot(run, "unit-tests");
   const taken = takeBaseline(run);
   if (taken.stop) return taken.stop;
   const before = worktreeFingerprint(run);
@@ -709,6 +895,7 @@ function unitTestsStep(run) {
       })
     : null;
   if (!stopAfterProof) appendEvent({ event: "unit_tests_done", task: run.id }, run.env);
+
   return stopAfterProof;
 }
 
@@ -719,11 +906,14 @@ function unitTestsOwed(run) {
     .filter((event) => event.task === run.id)
     .map((event) => event.event);
   const lastPlan = kinds.lastIndexOf("plan_written");
+
   return lastPlan >= 0 && kinds.lastIndexOf("unit_tests_done") < lastPlan;
 }
 
 function resumeUnitTests(run) {
   if (!unitTestsOwed(run)) return null;
+  run.beforeSlots = ["plan-gate", "unit-tests"];
+
   return planGateStep(run) ?? unitTestsStep(run);
 }
 
@@ -734,7 +924,9 @@ function testsAfterSettle(run, specChanged) {
 function settlePlanStep(run) {
   const specChanged = specChangedSincePlan(run);
   resumeFromTheStart(run);
+  run.beforeSlots = planSlots(run.before, specChanged);
   const sessionId = latestPlannerSessionId(readEvents(run.env), run.id);
+
   return (
     runPlanner(run, SETTLE_PLAN_INSTRUCTIONS, "plan-findings", sessionId ?? undefined) ??
     planGateStep(run) ??
@@ -746,6 +938,8 @@ function settlePlanStep(run) {
 function replanIfSpecChanged(run) {
   if (!specChangedSincePlan(run)) return null;
   resumeFromTheStart(run);
+  run.beforeSlots = planSlots(run.before, true);
+
   return replan(run) ?? planGateStep(run) ?? testsAfterReplan(run) ?? unitTestsStep(run);
 }
 
@@ -762,15 +956,19 @@ function plannerInstructions(before) {
 }
 
 function beforeRoleStep(run, role) {
+  enterSlot(run, role);
+
   if (role === "planner")
     return (
       planAndGate(run, plannerInstructions(run.before), "pipeline") ?? unitTestsStep(run)
     );
+
   if (role === "test-writer")
     return (
       roleStop(role, gatedTestWriter(run, testWriterInstructions(run.before))) ??
       proveTestsRed(run)
     );
+
   return roleStop(role, runRole(run, role, BEFORE_INSTRUCTIONS[role]));
 }
 
@@ -783,6 +981,8 @@ function firstPlanStillOwed(run) {
 }
 
 function resumeFirstPlan(run) {
+  run.beforeSlots = planSlots(run.before);
+
   return beforeRoleStep(run, "planner");
 }
 
@@ -791,22 +991,30 @@ function beforeRolesStep(run) {
   const hasCommits = hasCommitsAheadOfBase(run);
   if (!hasCommits && testsProvedRedBefore(run) && firstPlanStillOwed(run))
     return resumeFirstPlan(run);
+
   if (hasCommits) return replanIfSpecChanged(run);
+
   if (testsProvedRedBefore(run)) return replanIfSpecChanged(run) ?? resumeUnitTests(run);
+  run.beforeSlots = beforeSlots(run.before);
+
   for (const role of run.before) {
     const stop = beforeRoleStep(run, role);
     if (stop) return stop;
   }
+
   return null;
 }
 
 function codeSource(before) {
   if (before.includes("planner")) return "plan.md";
+
   if (before.includes("debugger")) return "repro.md";
+
   return "the spec";
 }
 
 function codeLadderStep(run) {
+  enterSlot(run, "code");
   const coded = untilGreen(
     run,
     CODE_LADDER,
@@ -814,11 +1022,14 @@ function codeLadderStep(run) {
     "pipeline"
   );
   if (coded.stop) return coded.stop;
+
   if (coded.waitingOn) return waiting(coded.waitingOn);
+
   if (!coded.passed)
     return stuck(
       `the gate still fails after ${CODE_LADDER.length} attempts:\n${coded.failure.slice(-FAILURE_TAIL)}`
     );
+
   return null;
 }
 
@@ -826,6 +1037,7 @@ function guardedLadder(run, ladderStep) {
   const start = worktreeFingerprint(run);
   if (start === null) return stuck(FINGERPRINT_UNREADABLE);
   const fixesFrom = run.testFixTrees.length;
+
   return ladderStep() ?? testEditsStep(run, start, fixesFrom);
 }
 
@@ -836,6 +1048,7 @@ function codeStep(run) {
 function protectedTestFiles(run, tree) {
   const output = gitOutput(run, ["ls-tree", "-r", "--name-only", tree]);
   if (output === null) return null;
+
   return output
     .split("\n")
     .filter(Boolean)
@@ -845,16 +1058,19 @@ function protectedTestFiles(run, tree) {
 function filesChangedBetween(run, before, after) {
   const output = gitOutput(run, ["diff", "--name-only", "--no-renames", before, after]);
   if (output === null) return null;
+
   return output.split("\n").filter(Boolean);
 }
 
 function changedFilesByTree(run, baselines, end) {
   const changedByTree = new Map();
+
   for (const tree of new Set(baselines.map((entry) => entry.tree))) {
     const changed = filesChangedBetween(run, tree, end);
     if (changed === null) return null;
     changedByTree.set(tree, changed);
   }
+
   return changedByTree;
 }
 
@@ -867,10 +1083,12 @@ export function specTestFiles(specText) {
   const start = lines.indexOf(EXEMPT_TEST_FILES_HEADING);
   if (start === -1) return [];
   const section = [];
+
   for (const line of lines.slice(start + 1)) {
     if (line.startsWith("#")) break;
     section.push(line);
   }
+
   return section
     .filter((line) => line.startsWith("- "))
     .map((line) =>
@@ -885,6 +1103,7 @@ export function specTestFiles(specText) {
 function exemptTestFiles(run) {
   const specPath = join(run.taskDir, "spec.md");
   if (!existsSync(specPath)) return [];
+
   return specTestFiles(readFileSync(specPath, "utf8"));
 }
 
@@ -898,14 +1117,57 @@ export function editedTestFiles(run, start, fixesFrom) {
   const baselines = baselineTrees(files, start, run.testFixTrees.slice(fixesFrom));
   const changedByTree = changedFilesByTree(run, baselines, end);
   if (changedByTree === null) return { stop: stuck(FINGERPRINT_UNREADABLE) };
-  return { edits: editedBaselines(baselines, changedByTree) };
+
+  return { edits: editedBaselines(baselines, changedByTree), end };
+}
+
+function testEditDiff(run, edit, end) {
+  const diff = gitOutput(run, ["diff", edit.tree, end, "--", edit.file]) ?? "";
+
+  return `### ${edit.file}\n${diff.slice(0, TEST_EDIT_DIFF_LIMIT)}`;
+}
+
+function testEditsQuestion(run, edits, end) {
+  const diffs = edits.map((edit) => testEditDiff(run, edit, end)).join("\n\n");
+
+  return `The code step changed these test files, and the code writer and the debugger never edit a test:
+
+${diffs}
+
+When a change only makes its test correct, contradicting no acceptance criterion and no Decision and weakening no check the spec asks for, put that file in testFix.files, and the change stays. Leave out every file whose change is not right: the build restores it, and the code writer makes the gate pass without it.`;
+}
+
+function keepRuledTestEdits(run, edits, end, reply) {
+  const named = requestedTestFix(reply.testFix)?.files ?? [];
+  const kept = edits.filter((edit) => named.includes(edit.file)).map((edit) => edit.file);
+  if (kept.length === 0) return edits;
+  run.testFixTrees.push({ tree: end, files: kept });
+  appendEvent({ event: TEST_EDITS_KEPT_EVENT, task: run.id, files: kept }, run.env);
+
+  return edits.filter((edit) => !kept.includes(edit.file));
+}
+
+function poRulesOnTestEdits(run, found) {
+  if (run.testFixes >= TEST_FIX_LIMIT) return { edits: found.edits };
+  run.testFixes += 1;
+  const question = testEditsQuestion(run, found.edits, found.end);
+  const reply = askPo(run, UNPLANNED_FILES_ASKER, question);
+  if (reply.userQuestion) return { stop: waiting(reply.userQuestion) };
+
+  return { edits: keepRuledTestEdits(run, found.edits, found.end, reply) };
 }
 
 function testEditsStep(run, start, fixesFrom) {
   const found = editedTestFiles(run, start, fixesFrom);
   if (found.stop) return found.stop;
+
   if (found.edits.length === 0) return null;
-  return restoreTestEdits(run, start, fixesFrom, found.edits);
+  const ruled = poRulesOnTestEdits(run, found);
+  if (ruled.stop) return ruled.stop;
+
+  if (ruled.edits.length === 0) return null;
+
+  return restoreTestEdits(run, start, fixesFrom, ruled.edits);
 }
 
 function restoreTestEdits(run, start, fixesFrom, edits) {
@@ -923,7 +1185,9 @@ function restoreTestEdits(run, start, fixesFrom, edits) {
   if (stop) return stop;
   const again = editedTestFiles(run, start, fixesFrom);
   if (again.stop) return again.stop;
+
   if (again.edits.length === 0) return null;
+
   return stuck(testEditsAgainMessage(again.edits.map((edit) => edit.file)));
 }
 
@@ -934,8 +1198,10 @@ function rolesAfterStep(run) {
     run.config
   );
   run.after = roles;
+
   for (const role of added)
     appendEvent({ event: "roles_added", task: run.id, role }, run.env);
+
   return null;
 }
 
@@ -969,6 +1235,7 @@ export function isTestFile(file, testPaths) {
   const parts = file.split("/");
   const name = parts.at(-1);
   const directories = parts.slice(0, -1);
+
   return (
     TEST_NAME_MARKERS.some((marker) => name.includes(marker)) ||
     directories.some((directory) => TEST_DIRECTORIES.includes(directory))
@@ -978,6 +1245,7 @@ export function isTestFile(file, testPaths) {
 export function baselineTrees(protectedFiles, startTree, fixes) {
   return protectedFiles.map((file) => {
     const lastFix = fixes.filter((fix) => fix.files.includes(file)).at(-1);
+
     return { file, tree: lastFix ? lastFix.tree : startTree };
   });
 }
@@ -988,9 +1256,13 @@ export function editedBaselines(baselines, changedByTree) {
   );
 }
 
+function editedTestLine(edit) {
+  return `- ${edit.file} (tree ${edit.tree})`;
+}
+
 export function restoreTestEditsInstructions(edits) {
   return `The code step changed these test files, and the code writer and the debugger never edit a test:
-${edits.map((edit) => `- ${edit.file} (tree ${edit.tree})`).join("\n")}
+${edits.map(editedTestLine).join("\n")}
 
 Restore each file to its content in the git tree named next to it, for example with \`git checkout <tree> -- <file>\`; a deleted file is recreated that way. Commit the restore; every commit goes through the repo's hooks. Then make the gate pass without editing any test. When a test seems wrong, ask the PO a question instead of changing it. Change none of these files again: a second change stops the build.`;
 }
@@ -1050,6 +1322,7 @@ function differsFromBase(run, file) {
     ["diff", "--name-only", `origin/${run.base}`, "HEAD", "--", file],
     { cwd: run.worktree, env: run.env }
   );
+
   return result.status !== 0 || result.stdout.trim() !== "";
 }
 
@@ -1063,12 +1336,15 @@ function recordUnplannedFiles(run, files, reverted) {
 
 function stillDifferingMessage(base, differing) {
   if (differing.length === 0) return null;
+
   return `these files still differ from origin/${base} after the revert: ${differing.join(", ")}`;
 }
 
 function revertStop(ladderStop, differingMessage) {
   if (!differingMessage) return ladderStop;
+
   if (!ladderStop) return stuck(differingMessage);
+
   return stuck(`${ladderStop.message}; ${differingMessage}`);
 }
 
@@ -1085,6 +1361,7 @@ function revertUnplannedFiles(run, listed, chosen) {
     stillDifferingMessage(run.base, stillDiffering(run, chosen))
   );
   if (!stop) recordUnplannedFiles(run, listed, chosen);
+
   return stop;
 }
 
@@ -1106,6 +1383,7 @@ function unplannedFilesStep(run) {
   const chosen = filesToRevert(listed, reply.revert);
   if (chosen.length > 0) return revertUnplannedFiles(run, listed, chosen);
   recordUnplannedFiles(run, listed, []);
+
   return null;
 }
 
@@ -1117,6 +1395,7 @@ function reviewFindingsStep(run, findings) {
       `Fix these review findings:\n${JSON.stringify(findings, null, 2)}`,
       "review-findings"
     );
+
     return fixStop(fixed, "review findings");
   });
 }
@@ -1127,12 +1406,15 @@ function reviewInstructions(run) {
     `origin/${run.base}`,
     run.env
   );
+
   return changed.includes(CONFIG_FILE)
     ? `${REVIEW_INSTRUCTIONS}\n\n${CONFIG_CHANGED_NOTE}`
     : REVIEW_INSTRUCTIONS;
 }
 
 function reviewStep(run) {
+  enterSlot(run, "review");
+
   for (let round = 1; round <= REVIEW_ROUNDS; round += 1) {
     const review = runRole(run, "reviewer", reviewInstructions(run));
     const stop = roleStop("reviewer", review);
@@ -1142,10 +1424,12 @@ function reviewStep(run) {
       { event: "review", task: run.id, round, findings: findings.length },
       run.env
     );
+
     if (findings.length === 0) return null;
     const fixStopped = reviewFindingsStep(run, findings);
     if (fixStopped) return fixStopped;
   }
+
   return null;
 }
 
@@ -1155,12 +1439,15 @@ function unmetCriteria(tested) {
 
 function testerStep(run) {
   if (!run.after.includes("tester")) return null;
+  enterSlot(run, "tester");
   const tested = runRole(run, "tester", TESTER_INSTRUCTIONS);
   const stop = roleStop("tester", tested);
   if (stop) return stop;
   const unmet = unmetCriteria(tested);
   appendEvent({ event: "test", task: run.id, unmet: unmet.length }, run.env);
+
   if (unmet.length === 0) return null;
+
   return guardedLadder(run, () => {
     const fixed = untilGreen(
       run,
@@ -1168,33 +1455,39 @@ function testerStep(run) {
       `The tester found unmet criteria in the running app:\n${JSON.stringify(unmet, null, 2)}`,
       "unmet-criteria"
     );
+
     return fixStop(fixed, "tester findings");
   });
 }
 
 function syncStep(run) {
   let synced;
+
   try {
     synced = run.effects.sync(run.id, run.env);
   } catch (error) {
     return stuck(`sync failed: ${error.message}`);
   }
+
   if (synced.conflict)
     return stuck(
       `the branch conflicts with ${run.base} when rebased on it; it needs a hand`
     );
+
   return null;
 }
 
 function shipStep(run) {
   run.effects.push(run.id, run.env);
   run.pr = run.effects.openPr(run.id, run.env).pr;
+
   return null;
 }
 
 function readCi(run, options = {}) {
   if (!readTask(run.id, run.env).pr)
     return { state: "unreadable", error: "the task has no pull request" };
+
   try {
     return run.effects.waitForCi(run.id, { env: run.env, ...options });
   } catch (error) {
@@ -1204,8 +1497,10 @@ function readCi(run, options = {}) {
 
 function pollCi(run, options = {}) {
   let ci = { state: "pending", failed: [] };
+
   for (let poll = 0; poll < CI_POLLS && ci.state === "pending"; poll += 1)
     ci = readCi(run, options);
+
   return ci;
 }
 
@@ -1221,13 +1516,16 @@ function ciFixStep(run, ci) {
       `CI failed on the pull request: ${ciSummary(ci)}. Read the failing logs with gh run view and fix the cause.`,
       "ci-failed"
     );
+
     return fixStop(fixed, "CI failures");
   });
 }
 
 function unfinishedCiStop(ci) {
   if (ci.state === "unreadable") return stuck(`could not read CI: ${ci.error}`);
+
   if (ci.state === "pass" || ci.state === "none" || ci.state === "fail") return null;
+
   return stuck(`CI did not finish: ${ciSummary(ci)}`);
 }
 
@@ -1241,6 +1539,7 @@ function externalFailure(ci) {
 
 function rerunOne(run, id) {
   let result;
+
   try {
     result = run.effects.spawnTool("gh", ["run", "rerun", id, "--failed"], {
       cwd: run.worktree,
@@ -1249,14 +1548,19 @@ function rerunOne(run, id) {
   } catch (error) {
     return `${id}: ${error.message}`;
   }
+
   if (result.status === 0) return null;
-  return `${id}: ${result.stderr.trim() || `exit ${result.status}`}`;
+
+  const reason = result.stderr.trim() || `exit ${result.status}`;
+
+  return `${id}: ${reason}`;
 }
 
 function rerunFailedRuns(run, runIds) {
   if (runIds.length === 0)
     return { ok: false, error: "no failed GitHub Actions run to rerun" };
   const failures = runIds.map((id) => rerunOne(run, id)).filter(Boolean);
+
   return { ok: failures.length === 0, error: failures.join("; ") || null };
 }
 
@@ -1277,11 +1581,14 @@ function recordRerun(run, ci, rerun) {
 function rerunCiStep(run, ci) {
   const rerun = rerunFailedRuns(run, ci.runs ?? []);
   recordRerun(run, ci, rerun);
+
   if (!rerun.ok) return stuck(`${externalFailure(ci)}; the rerun failed: ${rerun.error}`);
   const again = pollCi(run, { staleLinks: ci.links ?? [] });
   const stop = unfinishedCiStop(again);
   if (stop) return stop;
+
   if (ciPassed(again)) return null;
+
   return stuck(externalFailure(again));
 }
 
@@ -1294,7 +1601,9 @@ function ciStep(run) {
     const ci = pollCi(run);
     const stop = unfinishedCiStop(ci);
     if (stop) return stop;
+
     if (ciPassed(ci)) return null;
+
     if (round === CI_ROUNDS)
       return stuck(`CI still fails after ${CI_ROUNDS} rounds: ${ciSummary(ci)}`);
     const headBefore = worktreeHead(run);
@@ -1303,14 +1612,17 @@ function ciStep(run) {
     const headAfter = worktreeHead(run);
     if (headBefore === null || headAfter === null)
       return stuck("could not read CI: worktree HEAD unreadable");
+
     if (!fixCommitted(headBefore, headAfter)) return rerunCiStep(run, ci);
     run.effects.push(run.id, run.env);
   }
+
   return null;
 }
 
 function readyStep(run) {
   run.effects.markReady(run.id, run.env);
+
   return { status: "ready", message: `Ready for your review: ${run.pr}` };
 }
 
@@ -1337,6 +1649,7 @@ const RESUME_ORDER = ["code", "review", "tester"];
 
 function gitOutput(run, args) {
   const result = run.effects.spawnTool("git", args, { cwd: run.worktree, env: run.env });
+
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
@@ -1350,6 +1663,7 @@ function worktreeStatus(run) {
 
 export function worktreeFingerprint(run) {
   const dir = mkdtempSync(join(tmpdir(), "dark-factory-index-"));
+
   try {
     const options = {
       cwd: run.worktree,
@@ -1357,6 +1671,7 @@ export function worktreeFingerprint(run) {
     };
     if (run.effects.spawnTool("git", ["add", "-A"], options).status !== 0) return null;
     const tree = run.effects.spawnTool("git", ["write-tree"], options);
+
     return tree.status === 0 ? tree.stdout.trim() : null;
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -1380,11 +1695,13 @@ function resumePoint(run) {
     head !== null && latest?.head === head && isWorktreeClean(run)
       ? RESUME_ORDER.indexOf(latest.step)
       : -1;
+
   return { head, through };
 }
 
 function finishedAtHead(run, name) {
   run.resume ??= resumePoint(run);
+
   return RESUME_ORDER.indexOf(name) <= run.resume.through;
 }
 
@@ -1395,12 +1712,16 @@ function recordStep(run, event, name, head) {
 function runStep(run, step) {
   const name = RESUMABLE_STEPS.get(step);
   if (!name) return step(run);
+
   if (finishedAtHead(run, name)) {
     recordStep(run, "step_skipped", name, run.resume.head);
+
     return null;
   }
+
   const stop = step(run);
   if (!stop) recordStep(run, "step_done", name, worktreeHead(run));
+
   return stop;
 }
 
@@ -1409,6 +1730,7 @@ function pipeline(run) {
     const stop = runStep(run, step);
     if (stop) return stop;
   }
+
   return stuck("the pipeline ended without an outcome");
 }
 
@@ -1416,6 +1738,7 @@ function saveStatus(run, outcome) {
   try {
     if (outcome.status === "waiting") recordQuestion(run.id, outcome.message, run.env);
     else setStatus(run.id, outcome.status, outcome.message, run.env);
+
     return null;
   } catch (error) {
     return error.message;
@@ -1424,6 +1747,7 @@ function saveStatus(run, outcome) {
 
 function messageWithStatusError(outcome, statusError) {
   if (!statusError) return outcome.message;
+
   return `${outcome.message} (the task status could not be saved: ${statusError})`;
 }
 
@@ -1431,6 +1755,7 @@ function finishRun(run, outcome) {
   const message = messageWithStatusError(outcome, saveStatus(run, outcome));
   notify(run.id, outcome.status, message, run.env);
   run.effects.startCoach(run.id, outcome.status, run.env);
+
   return { task: run.id, status: outcome.status, message, pr: run.pr ?? null };
 }
 
@@ -1442,19 +1767,24 @@ export function runBuild(taskId, { env = process.env, effects = {} } = {}) {
     attempt: 0,
     testFixes: 0,
     testFixTrees: [],
+    step: 0,
+    beforeSlots: [],
     pr: null,
   };
   let outcome;
+
   try {
     outcome = pipeline(run);
   } catch (error) {
     outcome = stuck(error.message);
   }
+
   return finishRun(run, outcome);
 }
 
 async function cliResult([taskId]) {
   if (!taskId) return { task: null, status: "stuck", message: USAGE, pr: null };
+
   return superviseBuild(taskId);
 }
 

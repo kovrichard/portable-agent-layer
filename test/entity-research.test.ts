@@ -3,8 +3,10 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { researchFromCli } from "../src/cli/knowledge-research";
-import type { RegisterEntry } from "../src/hooks/lib/company-register";
-import type { ResearchProfile } from "../src/hooks/lib/entity-extraction";
+import { reload } from "../src/core/settings";
+import type { inference } from "../src/inference/inference";
+import type { RegisterEntry } from "../src/knowledge/company-register";
+import type { ResearchProfile } from "../src/knowledge/entity-extraction";
 import {
   newResearchTargets,
   type ResearchDeps,
@@ -13,12 +15,10 @@ import {
   researchNewEntities,
   researchSchema,
   researchSystem,
-} from "../src/hooks/lib/entity-research";
-import { acceptReview, pendingReviews } from "../src/hooks/lib/entity-review";
-import type { inference } from "../src/hooks/lib/inference";
-import { reload } from "../src/hooks/lib/settings";
-import { ingestEntities } from "../src/tools/knowledge/ingest";
-import { load } from "../src/tools/knowledge/lib";
+} from "../src/knowledge/entity-research";
+import { acceptReview, pendingReviews } from "../src/knowledge/entity-review";
+import { ingestEntities } from "../src/knowledge/ingest";
+import { load } from "../src/knowledge/lib";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -61,11 +61,13 @@ function deps(reply: Partial<ResearchProfile> | null, error?: string) {
     today: "2026-10-10",
     infer: async (call) => {
       calls.push(call);
+
       return reply
         ? { success: true, output: JSON.stringify({ ...PROFILE, ...reply }) }
         : { success: false, error };
     },
   };
+
   return { calls, deps: d };
 }
 
@@ -82,6 +84,7 @@ function captureLog(): { text: () => string; restore: () => void } {
   const spy = spyOn(console, "log").mockImplementation((...a: unknown[]) => {
     lines.push(a.join(" "));
   });
+
   return { text: () => lines.join("\n"), restore: () => spy.mockRestore() };
 }
 
@@ -210,6 +213,7 @@ describe("researchEntity", () => {
       registry: ResearchDeps["registry"] = async () => ENTRY
     ) => {
       const built = deps(reply, "no web search");
+
       return { calls: built.calls, deps: { ...built.deps, registry } };
     };
 
@@ -313,6 +317,7 @@ describe("researchEntity", () => {
         person,
         withRegister({}, async () => {
           asked = true;
+
           return ENTRY;
         }).deps
       );
@@ -358,6 +363,7 @@ describe("researchNewEntities", () => {
       ...d,
       infer: async (call) => {
         if (call.user.includes("Ilse")) throw new Error("offline");
+
         return d.infer(call);
       },
     };
@@ -379,6 +385,7 @@ describe("accepting a researched profile", () => {
       "chat test"
     );
     await researchNewEntities([COMPANY], deps({}).deps);
+
     return pendingReviews()[0].id;
   }
 
@@ -388,6 +395,7 @@ describe("accepting a researched profile", () => {
     await runKnowledge(["review"]);
     out.restore();
     expect(out.text()).toContain(`${id}  company "Brightmoor" — found on the web`);
+
     for (const shown of [
       "https://www.linkedin.com/company/brightmoor-example",
       "Registration number: 09-09-000000",

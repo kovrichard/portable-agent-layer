@@ -32,6 +32,7 @@ beforeEach(() => {
 
 const tick = () => {
   clock += 1000;
+
   return new Date(clock);
 };
 
@@ -68,6 +69,7 @@ function pastRun(past: Past) {
 
 function newOne(id = "new-1", category = "bug") {
   writeTask({ id, title: id, repo: "/repo", category, status: "draft" }, env);
+
   return id;
 }
 
@@ -125,6 +127,7 @@ describe("the estimate written at the start (criteria 1-3)", () => {
   test("only the last 10 ready runs count", () => {
     pastRun({ wallMs: 1e9, tokens: 1e9, costUsd: 1e9 });
     pastRun({ wallMs: 1e9, tokens: 1e9, costUsd: 1e9 });
+
     for (let i = 0; i < 10; i++) pastRun({ wallMs: 100, tokens: 50, costUsd: 2 });
     const id = newOne();
     markStarted(id, env);
@@ -353,8 +356,10 @@ describe("stats estimates (criterion 7)", () => {
     actual: Record<string, unknown>
   ) {
     const events: Record<string, unknown>[] = [{ event: "task_started", task }];
+
     if (estimate) events.push({ event: "estimate", task, ...estimate });
     events.push({ event: "run_finished", task, status: "ready", ...actual });
+
     return events;
   }
 

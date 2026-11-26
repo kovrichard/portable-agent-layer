@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsCommand } from "../src/cli/events";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
@@ -25,18 +25,21 @@ async function backfill(...args: string[]): Promise<string[]> {
   const log = spyOn(console, "log").mockImplementation((line: string) => {
     printed.push(line);
   });
+
   try {
     await runCommand(eventsCommand, ["backfill", ...args], ["pal", "cli", "events"]);
   } finally {
     log.mockRestore();
   }
+
   return printed;
 }
 
 beforeEach(() => {
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
-  mkdirSync(resolve(home, "memory", "events"), { recursive: true });
+  mkdirSync(resolve(home, "records", "bronze", "events"), { recursive: true });
+  mkdirSync(resolve(home, "memory"), { recursive: true });
   reload();
   writeFileSync(
     resolve(home, "memory", "commitments.json"),
@@ -56,7 +59,7 @@ describe("pal cli events backfill", () => {
 
   test("an id in a file that is not a month log does not count as logged", async () => {
     writeFileSync(
-      resolve(home, "memory", "events", "notes.txt"),
+      resolve(home, "records", "bronze", "events", "notes.txt"),
       `${JSON.stringify({ id: promiseEventId })}\n`
     );
     expect(await backfill()).toContain("promises: 1");

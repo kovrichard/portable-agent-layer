@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { loadSettingsTemplate } from "../src/targets/lib";
+import { loadSettingsTemplate } from "../src/targets/settings-merge";
 
 const PKG = resolve(import.meta.dir, "..").replaceAll("\\", "/");
 const TEMPLATE = resolve(PKG, "assets/templates/settings.claude.json");
@@ -19,5 +19,9 @@ describe("the Claude Code settings template", () => {
   test("registers the pal marketplace but leaves the unfinished dark-factory plugin off", () => {
     expect(settings.extraKnownMarketplaces?.pal).toBeDefined();
     expect(settings.enabledPlugins?.["dark-factory@pal"]).toBe(false);
+  });
+
+  test("turns on the status band, so a required data move shows on every machine", () => {
+    expect(settings.enabledPlugins?.["pal-status@pal"]).toBe(true);
   });
 });

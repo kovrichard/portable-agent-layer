@@ -6,18 +6,18 @@
  * Usage: pal cli interaction report [--days N]
  */
 
-import { claimChecksSince } from "../../hooks/lib/claim-log";
-import { turnsSince } from "../../hooks/lib/interaction";
+import { claimChecksSince } from "../../opinions/claim-log";
+import { turnsSince } from "../../opinions/interaction";
 import { group, leaf, runCommand, UsageError } from "../lib/command";
 import { claimCheckLines, reportLines, summarize } from "../lib/interaction-report";
 import { scriptArgs } from "../lib/script-args";
 
-const DETAILS = `Reads the measured turns from the event log in memory/events/ and the older
+const DETAILS = `Reads the measured turns from the event log in records/bronze/events/ and the older
 memory/signals/interaction/ files (features only, no text) and prints turns, channels, reactions, the hints sent, per agent the
 turns, replies filed and hints sent, and for each label (short, long, fast,
 skimming, friction) how the replies written while it was active compare with
 the replies written while none was. Last, the replies that claimed a result
-(memory/signals/claim-checks/), and which of them had no command behind the
+(records/claim-checks/), and which of them had no command behind the
 claim or were sent back.`;
 
 const DAY_MS = 86_400_000;
@@ -49,6 +49,7 @@ function printReport(days: number): undefined {
   const since = new Date(Date.now() - days * DAY_MS);
   const events = turnsSince(since);
   const claims = claimCheckLines(claimChecksSince(since));
+
   for (const line of [...reportLines(summarize(events), days), ...claims])
     console.log(line);
 }

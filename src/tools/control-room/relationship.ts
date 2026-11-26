@@ -5,27 +5,23 @@
  * CLI and the rule-review skill use.
  */
 
-import { type Candidate, readCandidates } from "../../hooks/lib/adaptation-candidates";
+import { type Candidate, readCandidates } from "../../opinions/adaptation-candidates";
 import {
   type AdaptationRule,
   decideRule,
   readRules,
   retireRule,
   type TriggerProof,
-} from "../../hooks/lib/adaptation-rules";
-import { readTurns, type Turn } from "../../hooks/lib/adaptation-turns";
+} from "../../opinions/adaptation-rules";
+import { readTurns, type Turn } from "../../opinions/adaptation-turns";
 import {
   EFFECT_WINDOW_DAYS,
   type OpinionEffect,
   opinionEffectOf,
-} from "../../hooks/lib/correction-rates";
-import { gateAdvice } from "../../hooks/lib/opinion-gate";
-import {
-  type RuleEffect,
-  readRuleEvents,
-  ruleEffects,
-} from "../../hooks/lib/rule-effect";
-import { ordinaryTurnsNeeded } from "../../hooks/lib/rule-proof";
+} from "../../opinions/correction-rates";
+import { gateAdvice } from "../../opinions/opinion-gate";
+import { type RuleEffect, readRuleEvents, ruleEffects } from "../../opinions/rule-effect";
+import { ordinaryTurnsNeeded } from "../../opinions/rule-proof";
 import type { WriteOutcome } from "./writes";
 
 const WINDOW_DAYS = 30;
@@ -66,9 +62,11 @@ export interface RelationshipView {
 
 function turnStats(turns: Turn[]): TurnStats {
   const byReaction: Record<string, number> = {};
+
   for (const turn of turns)
     byReaction[turn.reaction] = (byReaction[turn.reaction] ?? 0) + 1;
   const confirmed = turns.filter((turn) => turn.confirmed === true);
+
   return {
     total: turns.length,
     byReaction,
@@ -89,10 +87,12 @@ export function relationship(now: Date = new Date()): RelationshipView {
   const opinionTurns = readTurns(EFFECT_WINDOW_DAYS, now);
   const withStatus = (status: AdaptationRule["status"]) =>
     rules.filter((rule) => rule.status === status);
+
   return {
     windowDays: WINDOW_DAYS,
     drafts: withStatus("draft").map((rule) => {
       const advice = gateAdvice(rule, rules, opinionTurns, now);
+
       return advice ? { ...rule, gateAdvice: advice } : rule;
     }),
     active: withStatus("approved").map((rule) => ({
@@ -122,5 +122,6 @@ export function decideFromPage(id: string, decision: PageDecision): WriteOutcome
   const known = readRules().some((rule) => rule.id === id);
   const result = decision === "retired" ? retireRule(id) : decideRule(id, decision);
   if (result.ok) return { ok: true, changed: true };
+
   return { ok: false, status: known ? 409 : 404, error: result.reason };
 }

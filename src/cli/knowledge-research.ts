@@ -3,19 +3,19 @@
  * the active agent, print the profile, and optionally queue it for review.
  */
 
-import { lookupCompanyRegister } from "../hooks/lib/company-register-router";
-import { loadKnownEntities, loadNameIndex } from "../hooks/lib/entity-cards";
-import { queueForReview } from "../hooks/lib/entity-extraction";
-import { lookupName } from "../hooks/lib/entity-names";
+import { identity } from "../core/settings";
+import { inference } from "../inference/inference";
+import { lookupCompanyRegister } from "../knowledge/company-register-router";
+import { loadKnownEntities, loadNameIndex } from "../knowledge/entity-cards";
+import { queueForReview } from "../knowledge/entity-extraction";
+import { lookupName } from "../knowledge/entity-names";
 import {
   type ResearchDeps,
   type ResearchTarget,
   renderProfile,
   researchEntity,
   researchItem,
-} from "../hooks/lib/entity-research";
-import { inference } from "../hooks/lib/inference";
-import { identity } from "../hooks/lib/settings";
+} from "../knowledge/entity-research";
 import { leaf, UsageError } from "../tools/lib/command";
 
 interface ResearchValues {
@@ -30,11 +30,13 @@ function storedSlug(name: string, kind: ResearchTarget["kind"]): string {
   const domain = kind === "person" ? "People" : "Companies";
   const { entities, exact } = lookupName(name, loadNameIndex(loadKnownEntities()));
   const matches = entities.filter((e) => e.domain === domain);
+
   return exact && matches.length === 1 ? matches[0].slug : "";
 }
 
 function targetFrom(name: string, values: ResearchValues): ResearchTarget {
   const kind = values.person ? "person" : "company";
+
   return {
     kind,
     name,
@@ -58,18 +60,22 @@ export async function researchFromCli(
   const outcome = await researchEntity(target, deps);
   if (!outcome.found) {
     console.error(`Nothing kept for "${target.name}": ${outcome.reason}`);
+
     return 1;
   }
+
   console.log(
     values.json
       ? JSON.stringify(outcome.profile, null, 2)
       : renderProfile(outcome.profile)
   );
+
   if (values.queue) {
     const item = researchItem(target, outcome.profile);
     queueForReview([item]);
     console.log(`\nQueued for review: pal cli knowledge review accept ${item.id}`);
   }
+
   return 0;
 }
 

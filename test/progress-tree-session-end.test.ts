@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { appendEvent } from "../src/hooks/lib/progress-tree";
-import { recordWhereSessionStopped } from "../src/hooks/lib/progress-tree-session-end";
+import { appendEvent } from "../src/progress/progress-tree";
+import { recordWhereSessionStopped } from "../src/progress/progress-tree-session-end";
 import {
   openNode,
   paths,
@@ -26,6 +26,7 @@ const stopAt = (note: Partial<typeof NOTE> = {}) =>
 const onlyNode = () => {
   const nodes = [...tree().nodes.values()];
   expect(nodes).toHaveLength(1);
+
   return nodes[0];
 };
 

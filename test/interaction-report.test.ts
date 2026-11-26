@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import type { TurnEvent } from "../src/hooks/lib/interaction";
-import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
+import type { TurnEvent } from "../src/opinions/interaction";
+import { REACTION_RULES } from "../src/opinions/interaction-reaction";
 import { reportLines, summarize } from "../src/tools/lib/interaction-report";
 
 let clock = 0;
 
 function turn(over: Partial<TurnEvent> = {}): TurnEvent {
   clock += 60;
+
   return {
     ts: new Date(Date.UTC(2026, 9, 1, 8, 0, clock)).toISOString(),
     session: "s1",
@@ -39,6 +40,7 @@ function answered(words: number, reaction: TurnEvent["reaction"], mood = "") {
 
 function readBeforeTheSplit(event: TurnEvent): TurnEvent {
   const { reactionRules: _rules, ...older } = event;
+
   return older;
 }
 

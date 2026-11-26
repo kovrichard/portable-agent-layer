@@ -31,12 +31,14 @@ function makeRepo(name: string): string {
   writeFileSync(resolve(dir, "tracked.txt"), "one\n");
   git(dir, "add", "-A");
   git(dir, "commit", "-qm", "init");
+
   return dir;
 }
 
 function linkedWorktreeOf(main: string, name: string): string {
   const dir = resolve(ROOT, name);
   git(main, "worktree", "add", "-q", "-b", name, dir);
+
   return dir;
 }
 
@@ -45,6 +47,7 @@ function runStepCli(args: string[]) {
     encoding: "utf-8",
     env: { ...process.env, DARK_FACTORY_HOME: resolve(ROOT, "factory") },
   });
+
   return { code: r.status, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
@@ -57,6 +60,7 @@ describe("step.mjs usage", () => {
   test("no command prints a usage line naming all five commands and exits 2", () => {
     const r = runStepCli([]);
     expect(r.code).toBe(2);
+
     for (const command of COMMANDS) expect(r.stderr).toContain(command);
     expect(r.stderr).toContain("usage: step.mjs");
   });
@@ -64,6 +68,7 @@ describe("step.mjs usage", () => {
   test("an unknown command prints the usage line and exits 2", () => {
     const r = runStepCli(["frobnicate", "t1"]);
     expect(r.code).toBe(2);
+
     for (const command of COMMANDS) expect(r.stderr).toContain(command);
   });
 

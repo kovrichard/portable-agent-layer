@@ -22,6 +22,7 @@ function stats(...args: string[]) {
     encoding: "utf8",
     env: env as NodeJS.ProcessEnv,
   });
+
   return { status: result.status, out: result.stdout };
 }
 

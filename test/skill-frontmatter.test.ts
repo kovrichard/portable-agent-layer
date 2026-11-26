@@ -17,6 +17,7 @@ function skillFiles(): string[] {
 
 function frontmatterLines(path: string): string[] {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(path, "utf-8"));
+
   return match ? match[1].split(/\r?\n/) : [];
 }
 

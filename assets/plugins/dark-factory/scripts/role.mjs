@@ -70,6 +70,7 @@ function costOf([, usage]) {
 function mainModel(modelUsage) {
   const entries = Object.entries(modelUsage);
   if (entries.length === 0) return null;
+
   return entries.reduce((best, entry) =>
     costOf(entry) > costOf(best) ? entry : best
   )[0];
@@ -81,6 +82,7 @@ function tokens(reply, modelKey, usageKey) {
   const values = entries
     .map((entry) => entry?.[modelKey])
     .filter((value) => typeof value === "number");
+
   return values.length > 0 ? values.reduce((total, value) => total + value, 0) : null;
 }
 
@@ -106,6 +108,7 @@ export function statsFrom(reply) {
 function parseObject(text) {
   try {
     const value = JSON.parse(text);
+
     return isPlainObject(value) ? value : null;
   } catch {
     return null;
@@ -115,6 +118,7 @@ function parseObject(text) {
 export function parseClaudeReply(stdout) {
   const text = String(stdout ?? "").trim();
   if (!text) return null;
+
   return parseObject(text) ?? parseObject(text.split("\n").at(-1));
 }
 
@@ -140,12 +144,14 @@ function failed(taskId, role, exitCode, error, stats = emptyStats()) {
 
 function claudeProjectsDir(worktree, env = process.env) {
   const configDir = env.CLAUDE_CONFIG_DIR || join(userHome(env), ".claude");
+
   return join(configDir, "projects", worktree.replace(/[^a-zA-Z0-9]/g, "-"));
 }
 
 export function transcriptPathFor(worktree, sessionId, env = process.env) {
   if (!worktree || typeof sessionId !== "string" || sessionId.length === 0) return null;
   const file = join(claudeProjectsDir(worktree, env), `${sessionId}.jsonl`);
+
   return existsSync(file) ? file : null;
 }
 
@@ -171,24 +177,30 @@ function tail(text, size = 500) {
 function firstReplyError(reply) {
   if (Array.isArray(reply.errors) && reply.errors.length > 0)
     return reply.errors.join("; ");
+
   if (typeof reply.result === "string" && reply.result.length > 0) return reply.result;
+
   return stringOr(reply.subtype);
 }
 
 function replyError(reply, status) {
   if (status === 0 && reply.is_error !== true) return null;
+
   return firstReplyError(reply) ?? `claude exited with code ${status}`;
 }
 
 function replyErrorOf(reply, status, structured) {
   const error = replyError(reply, status);
   if (error === null && structured === null) return NO_STRUCTURED_ERROR;
+
   return error;
 }
 
 function exitCodeFor(status, error) {
   if (status !== 0) return status;
+
   if (error) return 1;
+
   return 0;
 }
 
@@ -223,6 +235,7 @@ function noReplyOutcome(taskId, role, spawned, status) {
       status,
       `claude exited with code ${status}: ${tail(spawned.stderr)}`
     );
+
   return failed(taskId, role, 1, `claude printed no JSON: ${tail(spawned.stdout, 200)}`);
 }
 
@@ -232,6 +245,7 @@ function replyOutcome(taskId, role, spawned) {
   if (reply === null) return noReplyOutcome(taskId, role, spawned, status);
   const structured = structuredOf(reply);
   const error = replyErrorOf(reply, status, structured);
+
   return {
     task: taskId,
     role,
@@ -244,6 +258,7 @@ function replyOutcome(taskId, role, spawned) {
 
 function outcomeFrom(taskId, role, spawned, timeoutMs) {
   if (spawned.missing) return failed(taskId, role, MISSING_EXIT, spawned.missing);
+
   if (timedOut(spawned))
     return failed(
       taskId,
@@ -251,8 +266,10 @@ function outcomeFrom(taskId, role, spawned, timeoutMs) {
       TIMEOUT_EXIT,
       `claude did not finish within ${timeoutMs} ms and was stopped`
     );
+
   if (spawned.error)
     return failed(taskId, role, 1, `could not start claude: ${spawned.error.message}`);
+
   return replyOutcome(taskId, role, spawned);
 }
 
@@ -269,6 +286,7 @@ export function rolePrompt(
   env = process.env
 ) {
   const folder = taskDir(task.id, env);
+
   return [
     `Task ${task.id}: ${task.title}`,
     `Task folder: ${folder} (the spec is ${join(folder, "spec.md")}; plan.md, design.md, repro.md and tests.md live here when they exist).`,
@@ -307,6 +325,7 @@ export function claudeInvocation(
   } = {}
 ) {
   const policy = policyFor(role);
+
   return {
     command: "claude",
     cwd: task.worktree,
@@ -348,6 +367,7 @@ function withoutReplyBody(outcome) {
 
 function savedReply(outcome, env) {
   const body = { result: outcome.result ?? null, structured: outcome.structured ?? null };
+
   try {
     return savePayload(
       outcome.task,
@@ -396,6 +416,7 @@ function attempt(
       spawnClaude(invocation, timeoutMs, roleEnv(env, role)),
       timeoutMs
     );
+
     return {
       ...outcome,
       transcriptPath: transcriptPathFor(task.worktree, outcome.sessionId, env),
@@ -426,6 +447,7 @@ export function runRoleHeadless(
     resumeSessionId,
   });
   recordFinished(outcome, env);
+
   return outcome;
 }
 
@@ -433,6 +455,7 @@ function positiveNumber(flag, value) {
   const number = Number(value);
   if (!(Number.isFinite(number) && number > 0))
     throw new Error(`${flag} needs a positive number`);
+
   return number;
 }
 
@@ -445,6 +468,7 @@ function stringFlagValue(flag, value) {
 function flagValue(token, value) {
   if (Object.hasOwn(NUMERIC_FLAGS, token))
     return [NUMERIC_FLAGS[token], positiveNumber(token, value)];
+
   if (Object.hasOwn(STRING_FLAGS, token))
     return [STRING_FLAGS[token], stringFlagValue(token, value)];
   throw new Error(USAGE);
@@ -453,16 +477,19 @@ function flagValue(token, value) {
 function splitFlags(tokens) {
   const positionals = [];
   const flags = {};
+
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (!token.startsWith("--")) {
       positionals.push(token);
       continue;
     }
+
     const [key, value] = flagValue(token, tokens[index + 1]);
     flags[key] = value;
     index += 1;
   }
+
   return { positionals, flags };
 }
 
@@ -473,6 +500,7 @@ export function parseCliArgs(argv) {
   const { positionals, flags } = splitFlags(head);
   if (positionals.length !== 2) throw new Error(USAGE);
   const [taskId, role] = positionals;
+
   return {
     taskId,
     role,
@@ -487,6 +515,7 @@ function mainOutcome(argv) {
   try {
     const { taskId, role, timeoutMs, model, resumeSessionId, extraArgs } =
       parseCliArgs(argv);
+
     return runRoleHeadless(taskId, role, {
       timeoutMs,
       model,

@@ -1,0 +1,9 @@
+{
+  "extends": "./template/tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "template/node_modules/.cache/tsc-demo.tsbuildinfo",
+    "plugins": [],
+    "rootDirs": ["template/lib", "demo/lib"]
+  },
+  "include": ["demo/lib/report-data.ts"]
+}

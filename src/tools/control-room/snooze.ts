@@ -8,8 +8,8 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { logCommitment } from "../../hooks/lib/commitment-events";
-import { ensureDir, paths } from "../../hooks/lib/paths";
+import { ensureDir, paths } from "../../core/paths";
+import { logCommitment } from "../../progress/commitment-events";
 
 const DAY_MS = 86_400_000;
 export const MAX_SNOOZE_DAYS = 90;
@@ -29,12 +29,15 @@ export function readSnoozes(now: Date = new Date()): Snoozes {
   const file = snoozeFile();
   if (!existsSync(file)) return {};
   let stored: Snoozes;
+
   try {
     stored = JSON.parse(readFileSync(file, "utf-8")) as Snoozes;
   } catch {
     return {};
   }
+
   const today = now.toISOString().slice(0, 10);
+
   return Object.fromEntries(
     Object.entries(stored).filter(
       ([, until]) => typeof until === "string" && until > today
@@ -59,9 +62,12 @@ export function setSnooze(
 ): string | null {
   const live = readSnoozes(now);
   const key = snoozeKey(project, id);
+
   if (days <= 0) delete live[key];
   else live[key] = new Date(now.getTime() + days * DAY_MS).toISOString().slice(0, 10);
   writeFileSync(snoozeFile(), `${JSON.stringify(live, null, 2)}\n`, "utf-8");
+
   if (days > 0) logCommitment(project, id, "snoozed", "control-room", days);
+
   return live[key] ?? null;
 }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
 import { run } from "../src/tools/agent/project";
 import { setSnooze } from "../src/tools/control-room/snooze";
 import { setIscStatus } from "../src/tools/control-room/writes";
@@ -13,11 +13,13 @@ let home: string;
 function commitments(): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -29,6 +31,7 @@ const afterOpening = () => commitments().filter((e) => e.outcome !== "opened");
 
 async function cli(...args: string[]): Promise<void> {
   const quiet = spyOn(console, "log").mockImplementation(() => {});
+
   try {
     await run(args);
   } finally {

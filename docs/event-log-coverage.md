@@ -17,6 +17,7 @@ missing hook is recorded here, never synthesised from another event.
 | Event | Claude Code | opencode | Cursor | Copilot | Codex | Antigravity |
 | ----- | ----------- | -------- | ------ | ------- | ----- | ----------- |
 | `turn` | ✅ UserPromptSubmit | ✅ chat.message | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
+| `repo_state` | ✅ UserPromptSubmit | ✅ chat.message | ✅ beforeSubmitPrompt | ✅ userPromptSubmitted | ✅ UserPromptSubmit | ✅ PreInvocation |
 | `reply` | ✅ Stop | ✅ session.idle | ✅ stop | ✅ agentStop | ✅ Stop | ✅ Stop |
 | `session_start` | ✅ SessionStart | ✅ session.created | ✅ sessionStart | ✅ sessionStart | ✅ SessionStart | ⛔ |
 | `session_end` | ✅ SessionEnd | ⛔ | ✅ sessionEnd | ✅ sessionEnd | ✅ SessionEnd | ⛔ |
@@ -57,11 +58,17 @@ These come from PAL code, not from a runtime hook, so every runtime has them.
 | Event | Written when |
 | ----- | ------------ |
 | `inference_call` | PAL makes a model call of its own (`pal cli infer`, ratings, naming, …) |
+| `judge_call` | PAL asks a typed judgment (`judge()`: ratings, correction kinds, `pal cli judge`): mode, route, System One provider, model, tokens, cost, latency, failure, and both sides' answers |
 | `pal_update` | A self-update runs or is skipped, including `pal cli update` |
 | `pal_heartbeat` | The daily heartbeat is sent, fails or is skipped, with the exact payload sent |
+| `migration_run` | A migration runs from install or `pal cli migrate`, a dry run or `--undo` included: its id, `done` or `failed`, and its migrated and skipped counts; the result lines go to the content store |
+| `memory_move` | Recorded data is backed up, moved, rolled back, refused, undone or swept by a migration: counts, hash total and the manifest or archive name; the paths go to the content store |
 | `commitment` | An ISC is kept, dropped, reopened or snoozed, from the CLI or the control room |
 | `entity_first_seen` | A person, company, idea or research topic first enters the knowledge store |
 | `discord_nag` | The Discord bot reports a nag or its answer through `pal cli events discord-nag` |
+| `repo_state` | Every prompt in a git checkout: the commit, branch and count of uncommitted files the prompt starts from |
+| `minimum_run` | A minimum run starts, logs a round, sends a stop back (with the lens it used), reaches its floor, hits the push-back cap, or is ended (`early` when before the floor); the goal, bar and round text go to the content store |
+| `algorithm_run` | Shadow mode. At stop, an ALGORITHM turn (`change: turn`, with its node, phases and verdict, and its run type, would-nudge checks and exemption read from the turn's tool calls), the open run it supersedes, and a run a reflection finished; `pal cli algorithm-reflect` adds `change: reflected` for the session's current turn |
 
 ## Signals carried as fields, not events
 

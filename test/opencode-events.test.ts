@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { agentDirOverrides } from "../src/core/paths";
+import { reload } from "../src/core/settings";
 import {
   logOpencodeCompaction,
   logOpencodePermissionReply,
   logOpencodeSessionCreated,
   logOpencodeToolFailure,
   rememberAskedTool,
-} from "../src/hooks/lib/opencode-events";
-import { agentDirOverrides } from "../src/hooks/lib/paths";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/usage/opencode-events";
 import { freshTestDir } from "./lib/test-home";
 
 // Shapes from @opencode-ai/sdk's generated Event types (v1, which the plugin
@@ -18,8 +18,9 @@ import { freshTestDir } from "./lib/test-home";
 let home: string;
 
 function streamed(type: string): Record<string, unknown>[] {
-  const dir = resolve(home, "memory", "events");
+  const dir = resolve(home, "records", "bronze", "events");
   if (!existsSync(dir)) return [];
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
@@ -181,6 +182,7 @@ describe("the opencode plugin routes its bus events to these loggers", () => {
   async function plugin(): Promise<any> {
     for (const { env } of agentDirOverrides()) process.env[env] = resolve(home, env);
     const { default: PALPlugin } = await import("../src/targets/opencode/plugin");
+
     return await PALPlugin({ directory: home, client: {} } as never);
   }
 

@@ -31,6 +31,7 @@ function claudeUsage() {
     tokens,
     horizonsFrom(NOW)
   );
+
   return usage;
 }
 

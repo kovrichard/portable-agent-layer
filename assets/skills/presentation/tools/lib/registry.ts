@@ -24,6 +24,7 @@ export type Registry = Record<string, TemplateEntry>;
 export async function loadRegistry(): Promise<Registry> {
   try {
     const raw = await readFile(REGISTRY_PATH, "utf8");
+
     return JSON.parse(raw) as Registry;
   } catch {
     return {};
@@ -50,10 +51,12 @@ export async function getTemplate(name: string): Promise<TemplateEntry> {
       `template "${name}" not registered. Run setup-template.ts first or check 'list-templates.ts'.`
     );
   }
+
   return reg[name];
 }
 
 export async function listTemplates(): Promise<TemplateEntry[]> {
   const reg = await loadRegistry();
+
   return Object.values(reg);
 }

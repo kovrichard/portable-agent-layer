@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { reload } from "../src/hooks/lib/settings";
-import { emitRating } from "../src/hooks/lib/signals";
+import { emitRating } from "../src/bronze/signals";
+import { reload } from "../src/core/settings";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { freshTestDir } from "./lib/test-home";
 
@@ -41,15 +41,16 @@ function writeRatings(...rows: object[]): void {
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, dir, "events");
+  const path = resolve(home, "records", "bronze", dir);
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
     .map((line) => JSON.parse(line));
 }
 
-const ratings = () => logLines("memory").filter((e) => e.type === "rating");
+const ratings = () => logLines("events").filter((e) => e.type === "rating");
 
 describe("rating signals become rating events", () => {
   test("a rating keeps its score, source and origin; its text goes to content", () => {
@@ -66,8 +67,8 @@ describe("rating signals become rating events", () => {
         source: "implicit",
       }),
     ]);
-    expect(JSON.stringify(logLines("memory"))).not.toContain("private");
-    expect(logLines("memory/content")).toEqual([
+    expect(JSON.stringify(logLines("events"))).not.toContain("private");
+    expect(logLines("event-text")).toEqual([
       expect.objectContaining({
         context: "a private rated context",
         responsePreview: "a private reply preview",
@@ -89,6 +90,28 @@ describe("rating signals become rating events", () => {
       expect.objectContaining({
         id: "rating:unknown:2026-08-01T10:00:00.000Z",
         machine: "unknown",
+      }),
+    ]);
+  });
+
+  test("a row from before sessions were recorded keeps its id and logs a null session", () => {
+    writeRatings(ratingRow("2026-09-10T06:55:09.577Z"));
+    backfillEvents();
+    expect(ratings()).toEqual([
+      expect.objectContaining({
+        id: "rating:other-machine:2026-09-10T06:55:09.577Z",
+        session: null,
+      }),
+    ]);
+  });
+
+  test("a row with a session keeps the same id and logs its session", () => {
+    writeRatings(ratingRow("2026-09-10T06:55:09.577Z", { session: "session-1" }));
+    backfillEvents();
+    expect(ratings()).toEqual([
+      expect.objectContaining({
+        id: "rating:other-machine:2026-09-10T06:55:09.577Z",
+        session: "session-1",
       }),
     ]);
   });

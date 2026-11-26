@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { startHookTiming } from "../src/hooks/lib/hook-timing";
-import { reload } from "../src/hooks/lib/settings";
+import { reload } from "../src/core/settings";
+import { startHookTiming } from "../src/usage/hook-timing";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -10,11 +10,13 @@ let home: string;
 function timings(): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -33,7 +35,7 @@ beforeEach(() => {
 describe("hook timing", () => {
   test("one event per run names the hook, its total and each handler's time", async () => {
     const timing = startHookTiming("stop");
-    await timing.time("slow", Bun.sleep(30));
+    await timing.time("slow", () => Bun.sleep(30));
     await timing.time("fast", () => 1);
     timing.log("s1");
     const [event] = timings();

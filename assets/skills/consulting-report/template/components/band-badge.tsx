@@ -61,6 +61,7 @@ export function BandBadge({ band, bandStyles }: BandBadgeProps) {
     background: s.background,
     borderColor: s.borderColor,
   };
+
   return (
     <span
       className="inline-flex items-center px-2.5 py-0.5 rounded-full font-sans text-[0.7rem] font-bold uppercase tracking-widest border whitespace-nowrap"

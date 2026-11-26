@@ -14,15 +14,15 @@ let HOME: string;
 beforeEach(async () => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/ledger-hook");
+  return await import("../src/bronze/ledger-hook");
 }
 
 async function ledger() {
-  return await import("../src/hooks/lib/ledger");
+  return await import("../src/bronze/ledger");
 }
 
 const CALL = {
@@ -34,7 +34,8 @@ const CALL = {
 const SNAPSHOT = { ...CALL, before: "parked", ts: "2026-05-04T10:00:00.000Z" };
 
 function ledgerLines(): Record<string, unknown>[] {
-  const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
+  const file = resolve(HOME, "records", "ledger", "actions.jsonl");
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -44,6 +45,7 @@ function ledgerLines(): Record<string, unknown>[] {
 function onDisk(contents: string): string {
   const path = resolve(HOME, "target.ts");
   writeFileSync(path, contents, "utf-8");
+
   return path;
 }
 
@@ -144,9 +146,11 @@ describe("commitUnapplied", () => {
 
   test("records one entry per file a patch touched, not one for the call", async () => {
     const { commitUnapplied } = await lib();
+
     for (const target of ["/work/app/a.ts", "/work/app/b.ts"]) {
       commitUnapplied({ ...CALL, target }, { outcome: "failed" });
     }
+
     expect(new Set(ledgerLines().map((row) => row.target)).size).toBe(2);
   });
 });

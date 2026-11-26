@@ -12,7 +12,8 @@ let HOME: string;
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-  mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+  mkdirSync(resolve(HOME, "records", "ledger"), { recursive: true });
+  mkdirSync(resolve(HOME, "memory"), { recursive: true });
 });
 
 async function view() {
@@ -23,6 +24,7 @@ let serial = 0;
 
 function entry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   serial++;
+
   return {
     id: `id-${serial}`,
     ts: `2026-09-04T12:00:${String(serial % 60).padStart(2, "0")}.000Z`,
@@ -52,7 +54,7 @@ function refused(overrides: Record<string, unknown> = {}): Record<string, unknow
 
 function writeLedger(rows: Record<string, unknown>[]): void {
   writeFileSync(
-    resolve(HOME, "memory", "ledger", "actions.jsonl"),
+    resolve(HOME, "records", "ledger", "actions.jsonl"),
     `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`,
     "utf-8"
   );

@@ -27,6 +27,7 @@ beforeEach(() => {
 function record(result?: number) {
   return (input: CommandInput) => {
     calls.push(input);
+
     return result;
   };
 }

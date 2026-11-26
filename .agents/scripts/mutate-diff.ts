@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { Glob } from "bun";
 import strykerConfig from "../../stryker.config.mjs";
 
-const baseRef = process.argv[2] ?? "origin/main";
+const baseRef = process.argv[2] ?? "origin/canary";
 
 function mutatePatterns(): string[] {
   const patterns = strykerConfig.mutate ?? [];

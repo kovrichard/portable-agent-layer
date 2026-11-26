@@ -7,7 +7,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { assets, ensureDir, paths } from "../lib/paths";
+import { ratingsFile } from "../../bronze/signals";
+import { assets, ensureDir, paths } from "../../core/paths";
 
 interface Counts {
   signals: number;
@@ -21,6 +22,7 @@ function countJsonlLines(filepath: string): number {
   try {
     if (!existsSync(filepath)) return 0;
     const content = readFileSync(filepath, "utf-8").trim();
+
     return content ? content.split("\n").length : 0;
   } catch {
     return 0;
@@ -30,6 +32,7 @@ function countJsonlLines(filepath: string): number {
 function countMdFiles(dir: string): number {
   try {
     if (!existsSync(dir)) return 0;
+
     return readdirSync(dir).filter((f) => f.endsWith(".md")).length;
   } catch {
     return 0;
@@ -37,14 +40,14 @@ function countMdFiles(dir: string): number {
 }
 
 function getCounts(): Counts {
-  const signalsDir = paths.signals();
-  const signals = countJsonlLines(resolve(signalsDir, "ratings.jsonl"));
+  const signals = countJsonlLines(ratingsFile());
 
   const telos = countMdFiles(paths.telos());
 
   // Count skills in the PAL skills dir
   let skills = 0;
   const skillsDir = assets.skills();
+
   try {
     if (existsSync(skillsDir)) {
       skills = readdirSync(skillsDir, { withFileTypes: true }).filter((e) =>
@@ -57,6 +60,7 @@ function getCounts(): Counts {
 
   // Count named sessions
   let sessions = 0;
+
   try {
     const namesPath = resolve(paths.state(), "session-names.json");
     if (existsSync(namesPath)) {

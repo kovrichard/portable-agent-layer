@@ -74,6 +74,7 @@ describe("a subagent continued with SendMessage (criterion 12)", () => {
 
   function grown() {
     const [first] = finished();
+
     return [
       ...early,
       message("m3", SONNET, usage(4000, 400), { ts: at(first.ts, 10), tools: 3 }),

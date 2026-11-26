@@ -1,12 +1,14 @@
-import { preserveTranscriptsOnce } from "../hooks/lib/transcript-preserve";
+import { preserveTranscriptsOnce } from "../bronze/transcript-preserve";
 import { group, leaf } from "../tools/lib/command";
 
-function printPreserve(): undefined {
-  const result = preserveTranscriptsOnce();
+async function printPreserve(): Promise<undefined> {
+  const result = await preserveTranscriptsOnce();
   if (!result) {
     console.log("Another copy is already running.");
+
     return;
   }
+
   console.log(
     `Copied ${result.copied}, unchanged ${result.unchanged}, failed ${result.failed}`
   );

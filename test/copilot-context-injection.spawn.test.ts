@@ -24,6 +24,7 @@ function runLoadContext() {
     env: {
       ...process.env,
       PAL_HOME: resolve(sandbox, "home"),
+      PAL_SKIP_DOCTOR: "1",
       PAL_COPILOT_DIR: copilotDir,
       PAL_CLAUDE_DIR: resolve(sandbox, "claude"),
       PAL_OPENCODE_DIR: resolve(sandbox, "opencode"),
@@ -78,7 +79,8 @@ describe("LoadContext on Copilot", () => {
 });
 
 function injectedEvents(): Record<string, number>[] {
-  const dir = resolve(sandbox, "home", "memory", "events");
+  const dir = resolve(sandbox, "home", "records", "bronze", "events");
+
   return readdirSync(dir)
     .flatMap((file) => readFileSync(resolve(dir, file), "utf-8").trim().split("\n"))
     .map((line) => JSON.parse(line))

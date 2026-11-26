@@ -25,6 +25,7 @@ function assistantText(lines) {
     .flatMap((line) => {
       const content = line.message?.content;
       if (typeof content === "string") return [content];
+
       return (content ?? [])
         .filter((part) => part.type === "text")
         .map((part) => part.text);
@@ -40,10 +41,12 @@ function linesOnceReplyIsWritten(path, reply, waitMs) {
   if (!path || !existsSync(path)) return [];
   const deadline = Date.now() + waitMs;
   let lines = transcriptLines(path);
+
   while (!holdsReply(lines, reply) && Date.now() < deadline) {
     sleep(FLUSH_POLL_MS);
     lines = transcriptLines(path);
   }
+
   return lines;
 }
 
@@ -55,6 +58,7 @@ function previousStopTs(events, taskId, agentId) {
       event.task === taskId &&
       event.agentId === agentId
   );
+
   return earlier.at(-1)?.ts ?? null;
 }
 
@@ -62,11 +66,13 @@ function stopTotals(lines, afterTs) {
   if (afterTs === null) {
     return { ...transcriptTotals(lines), costUsd: transcriptCost(lines) };
   }
+
   const after = Date.parse(afterTs);
   const counted = lines.filter(
     (line) => line.type === "assistant" && Date.parse(line.timestamp) > after
   );
   const totals = transcriptTotals(counted);
+
   return {
     ...totals,
     model: transcriptTotals(lines).model,
@@ -77,6 +83,7 @@ function stopTotals(lines, afterTs) {
 
 function savedReply(taskId, role, text, env) {
   const body = { result: text ?? null, structured: null };
+
   return savePayload(
     taskId,
     "replies",
@@ -111,6 +118,7 @@ export function recordSubagentStop(input, env = process.env, waitMs = FLUSH_WAIT
     reply: savedReply(task.id, role, input.last_assistant_message, env),
   };
   appendEvent(event, env);
+
   return event;
 }
 

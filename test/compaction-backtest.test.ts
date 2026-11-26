@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { appendEvent } from "../src/bronze/events";
 import { runCompaction } from "../src/cli/compaction";
-import { appendEvent } from "../src/hooks/lib/events";
 import { freshTestDir } from "./lib/test-home";
 
 let printed: string[];
@@ -83,6 +83,7 @@ function seedHistory() {
 
 async function backtest(...args: string[]) {
   const code = await runCompaction(["backtest", ...args]);
+
   return { code, text: printed.join("\n") };
 }
 

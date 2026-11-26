@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { progressSession } from "../src/hooks/lib/progress-session";
+import { progressSession } from "../src/progress/progress-session";
 
 describe("progress session", () => {
   test("reads the session each agent exports to its shell", () => {

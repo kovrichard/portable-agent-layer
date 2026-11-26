@@ -1,0 +1,14 @@
+diff --git a/dist/index.js b/dist/index.js
+index acdebffdbc7508da6cd6cefbf4056b5b296842db..7856c32a1f3f06702a873959de2db5709f4226a6 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -936,7 +936,8 @@ function compareStatusCounts(tests, summary) {
+   const problems = [];
+   for (const { status, label, summaryKey } of STATUS_COUNTS) {
+     const reported = tests.filter((t) => t.status === status).length;
+-    if (reported !== summary[summaryKey]) {
++    const bunCountsSkippedHooks = status === "skip" && reported < summary[summaryKey];
++    if (reported !== summary[summaryKey] && !bunCountsSkippedHooks) {
+       problems.push(`bun's summary counts ${summary[summaryKey]} ${label} test(s), but the Bun inspector reported ${reported}: ` + "test events were lost or merged on the way from bun to the runner");
+     }
+   }

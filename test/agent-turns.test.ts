@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileFinalReply, hookSessionId } from "../src/hooks/lib/hook-turn";
-import { observeTurn, recordReply } from "../src/hooks/lib/interaction";
+import { hookSessionId } from "../src/core/hook-payload";
+import { fileFinalReply } from "../src/hooks/lib/hook-turn";
+import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
+import { observeTurn, recordReply } from "../src/opinions/interaction";
 import {
   parkPromptContext,
   transformedPromptResponse,
-} from "../src/hooks/lib/parked-context";
-import { finishDeferredStop, stopTurn } from "../src/hooks/lib/stop";
+} from "../src/progress/parked-context";
 import {
   asAgent,
   EARLIER_EXCHANGE,
@@ -29,6 +30,7 @@ startEachTestInACleanHome(import.meta.file);
 /** Short, quick turns that change the session's picture and so earn a hint. */
 function hintEarningTurns(session: string): void {
   observeTurn("start the work", session);
+
   for (let i = 0; i < 4; i++) {
     recordReply(session, "short answer");
     observeTurn("yes pls", session);
@@ -171,6 +173,7 @@ describe("opencode", () => {
 
   function debugLog(): string {
     const path = resolve(paths.home, "debug", "debug.log");
+
     return existsSync(path) ? readFileSync(path, "utf-8") : "";
   }
 
@@ -179,6 +182,7 @@ describe("opencode", () => {
     writeFileSync(resolve(paths.home, "memory", "state", "debug-enabled"), "");
     const hooks = await plugin();
     const events = ["message.part.delta", "message.part.updated", "session.status"];
+
     for (const type of events) {
       await asAgent("opencode", () => hooks.event({ event: { type, properties: {} } }));
     }

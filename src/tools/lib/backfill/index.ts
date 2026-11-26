@@ -3,9 +3,9 @@
  * comes from its source's own id, so a second run appends nothing.
  */
 
-import { loggedEventIds } from "../../../hooks/lib/events";
-import { readAllProjects } from "../../../hooks/lib/projects";
-import { eventLogEnabled } from "../../../hooks/lib/settings";
+import { loggedEventIds } from "../../../bronze/events";
+import { eventLogEnabled } from "../../../core/settings";
+import { readAllProjects } from "../../../progress/projects";
 import { backfillEntities } from "./entities";
 import { backfillGit } from "./git";
 import { backfillLedger } from "./ledger";
@@ -19,12 +19,14 @@ function projectRepos(): string[] {
   const paths = readAllProjects().flatMap((project) =>
     project.path ? [project.path] : []
   );
+
   return [...new Set(paths)];
 }
 
 export function backfillEvents(since?: string): Record<string, number> {
   if (!eventLogEnabled()) return {};
   const known = loggedEventIds();
+
   return {
     git: backfillGit(projectRepos(), known, since),
     sessions: backfillSessions(since),

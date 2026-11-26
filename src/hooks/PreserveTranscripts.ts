@@ -3,14 +3,14 @@
  * store in a process of its own, so no session waits on the gzip.
  */
 
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { logError } from "./lib/log";
-import { preserveTranscriptsOnce } from "./lib/transcript-preserve";
+import { preserveTranscriptsOnce } from "../bronze/transcript-preserve";
+import { logError } from "../core/log";
+import { recordHookRunOnExit } from "../usage/hook-run";
 
 recordHookRunOnExit();
 
 try {
-  preserveTranscriptsOnce();
+  await preserveTranscriptsOnce();
 } catch (err) {
   logError("PreserveTranscripts", err);
 }

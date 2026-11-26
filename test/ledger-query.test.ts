@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { writeBinding } from "../src/progress/bindings";
 import { freshTestDir } from "./lib/test-home";
 
 // The read side is only worth as much as the questions it can answer without
@@ -15,7 +16,7 @@ beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   PROJECT = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-  mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+  mkdirSync(resolve(HOME, "records", "ledger"), { recursive: true });
 });
 
 async function query() {
@@ -30,6 +31,7 @@ function registerProject(slug: string, path: string): void {
     `---\nname: ${slug}\nstatus: active\ncreated: 2026-09-01T00:00:00.000Z\nupdated: 2026-09-01T00:00:00.000Z\npath: ${path}\n---\n\n## Goal\n\nnone\n`,
     "utf-8"
   );
+  writeBinding(slug, path, HOME);
 }
 
 type EntryOverrides = Record<string, unknown>;
@@ -38,6 +40,7 @@ let serial = 0;
 
 function entry(overrides: EntryOverrides = {}): Record<string, unknown> {
   serial++;
+
   return {
     id: `id-${serial}`,
     ts: "2026-09-04T12:00:00.000Z",
@@ -57,7 +60,7 @@ function entry(overrides: EntryOverrides = {}): Record<string, unknown> {
 
 function writeLedger(name: string, rows: Record<string, unknown>[]): void {
   writeFileSync(
-    resolve(HOME, "memory", "ledger", name),
+    resolve(HOME, "records", "ledger", name),
     `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`,
     "utf-8"
   );
@@ -81,7 +84,7 @@ describe("history that rotation moved aside", () => {
 
   test("a half-written line is skipped rather than failing the query", async () => {
     writeFileSync(
-      resolve(HOME, "memory", "ledger", "actions.jsonl"),
+      resolve(HOME, "records", "ledger", "actions.jsonl"),
       `${JSON.stringify(entry({ id: "good" }))}\n{"id":"trunc`,
       "utf-8"
     );
@@ -344,6 +347,7 @@ describe("what the record says became of a change", () => {
     const q = await query();
     const found = q.findEntry(id);
     if (!found) throw new Error(`no entry ${id}`);
+
     return q.chainVerdict(found);
   }
 

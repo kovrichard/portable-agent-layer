@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isDirectChild } from "../src/hooks/lib/paths";
+import { isDirectChild } from "../src/core/paths";
 
 describe("isDirectChild", () => {
   test("a file directly inside the parent is a direct child", () => {

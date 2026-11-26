@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   addCodexStatuslineConfig,
   removeCodexStatuslineConfig,
-} from "../src/targets/lib";
+} from "../src/targets/codex/statusline";
 
 describe("Codex status line config", () => {
   test("inserts root tui.status_line before existing TOML tables", () => {

@@ -1,0 +1,120 @@
+/**
+ * Shared export logic — zips user state directories.
+ * Used by cli/index.ts (pal cli export) and handlers/backup.ts (automatic).
+ */
+
+import { existsSync, readdirSync } from "node:fs";
+import { relative, resolve } from "node:path";
+import AdmZip from "adm-zip";
+import { ensureActorRegistered } from "./actor";
+import { buildManifest, MANIFEST_NAME } from "./export-manifest";
+import { ensureRegistered } from "./machine";
+import { isMachineLocalState } from "./machine-state";
+import { palHome } from "./paths";
+import { SETTINGS_FILE } from "./settings";
+
+/**
+ * Directories within PAL_HOME that contain user state worth exporting.
+ * `skills` and `agents` hold user-authored personal skills and subagents.
+ * Shipped skills live in `skills/` only as symlinks back to the repo, and
+ * walkDir skips symlinks (see below) — so only real, user-owned files travel.
+ */
+const EXPORT_DIRS = ["telos", "memory", "records", "work", "skills", "agents"];
+
+/** Subdirectories/files to skip during export. */
+const SKIP_PATTERNS = [
+  "memory/downloads",
+  "memory/content",
+  "records/bronze/event-text",
+  "records/bronze/tool-output",
+  "records/raw",
+  "memory/state/transcript-handoff",
+];
+
+function shouldSkip(relPath: string): boolean {
+  const normalized = relPath.replaceAll("\\", "/");
+
+  return (
+    SKIP_PATTERNS.some((p) => normalized.startsWith(p)) || isMachineLocalState(normalized)
+  );
+}
+
+/** Recursively collect all files under a directory, returning paths relative to root. */
+function walkDir(dir: string, root: string): string[] {
+  const files: string[] = [];
+
+  if (!existsSync(dir)) return files;
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = resolve(dir, entry.name);
+    const relPath = relative(root, fullPath);
+
+    if (shouldSkip(relPath)) continue;
+
+    // A Dirent symlink is neither a directory nor a file, which keeps shipped-skill
+    // symlinks out of the export; stat()-based following would pull them in.
+    if (entry.isDirectory()) {
+      files.push(...walkDir(fullPath, root));
+    } else if (entry.isFile()) {
+      files.push(relPath.replaceAll("\\", "/"));
+    }
+  }
+
+  return files;
+}
+
+/** Collect the list of user state files to export. */
+export function collectExportFiles(): string[] {
+  const root = palHome();
+  const files: string[] = [];
+
+  for (const dir of EXPORT_DIRS) {
+    files.push(...walkDir(resolve(root, dir), root));
+  }
+
+  const settings = resolve(root, SETTINGS_FILE);
+  if (existsSync(settings)) files.push(SETTINGS_FILE);
+
+  return files;
+}
+
+/**
+ * Zip the given files and write to outputPath. Returns file count.
+ *
+ * The archive declares its source machine in a manifest. Registry entries under
+ * memory/machines/ travel with the corpus, so the manifest exists to say which
+ * machine produced THIS archive — after a merge an archive can carry entries
+ * for several machines.
+ */
+export function exportZip(outputPath: string): number {
+  const root = palHome();
+  const identity = ensureRegistered(root);
+  ensureActorRegistered(root);
+  const files = collectExportFiles();
+  if (files.length === 0) return 0;
+
+  const zip = new AdmZip();
+
+  for (const file of files) {
+    const fullPath = resolve(root, file);
+    const dir = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
+    zip.addLocalFile(fullPath, dir);
+  }
+
+  zip.addFile(
+    MANIFEST_NAME,
+    Buffer.from(`${JSON.stringify(buildManifest(identity, files.length), null, 2)}\n`)
+  );
+
+  zip.writeZip(outputPath);
+
+  return files.length;
+}
+
+/** Generate a timestamped filename prefix. */
+export function timestamp(): string {
+  return new Date()
+    .toISOString()
+    .replace(/[-:T.]/g, "")
+    .slice(0, 14);
+}

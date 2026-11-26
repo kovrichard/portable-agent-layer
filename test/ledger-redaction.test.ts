@@ -14,11 +14,11 @@ beforeEach(async () => {
   HOME = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 async function sensitive() {
-  return (await import("../src/hooks/lib/sensitive-path")).isSensitivePath;
+  return (await import("../src/bronze/sensitive-path")).isSensitivePath;
 }
 
 async function withUserPatterns(patterns: unknown) {
@@ -27,7 +27,7 @@ async function withUserPatterns(patterns: unknown) {
     JSON.stringify({ ledger: { redactPaths: patterns } }),
     "utf-8"
   );
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 function entries(file: string): Record<string, unknown>[] {
@@ -194,7 +194,7 @@ describe("recordAction on a sensitive target", () => {
   };
 
   test("writes no part of the content to the ledger", async () => {
-    const { recordAction, ledgerPath } = await import("../src/hooks/lib/ledger");
+    const { recordAction, ledgerPath } = await import("../src/bronze/ledger");
     recordAction(SECRET_EDIT);
     const raw = readFileSync(ledgerPath(), "utf-8");
     expect(raw).not.toContain("old-secret-value");
@@ -203,13 +203,13 @@ describe("recordAction on a sensitive target", () => {
   });
 
   test("marks the delta redacted with no hunks", async () => {
-    const { recordAction } = await import("../src/hooks/lib/ledger");
+    const { recordAction } = await import("../src/bronze/ledger");
     const entry = recordAction(SECRET_EDIT);
     expect(entry.delta).toEqual({ hunks: [], redacted: true });
   });
 
   test("keeps both hashes and byte counts", async () => {
-    const { recordAction } = await import("../src/hooks/lib/ledger");
+    const { recordAction } = await import("../src/bronze/ledger");
     const entry = recordAction(SECRET_EDIT);
     const hashOf = (s: string) =>
       new Bun.CryptoHasher("sha256").update(s, "utf-8").digest("hex");
@@ -225,7 +225,7 @@ describe("recordAction on a sensitive target", () => {
   });
 
   test("keeps the tool, outcome, target and attribution", async () => {
-    const { recordAction, ledgerPath } = await import("../src/hooks/lib/ledger");
+    const { recordAction, ledgerPath } = await import("../src/bronze/ledger");
     recordAction(SECRET_EDIT);
     const [row] = entries(ledgerPath());
     expect(row.tool).toBe("Edit");
@@ -236,7 +236,7 @@ describe("recordAction on a sensitive target", () => {
   });
 
   test("is redacted on a denied outcome too, so the mark tracks the path not the ending", async () => {
-    const { recordAction } = await import("../src/hooks/lib/ledger");
+    const { recordAction } = await import("../src/bronze/ledger");
     const entry = recordAction({
       ...SECRET_EDIT,
       outcome: "denied",
@@ -249,7 +249,7 @@ describe("recordAction on a sensitive target", () => {
   });
 
   test("an ordinary target keeps its delta", async () => {
-    const { recordAction } = await import("../src/hooks/lib/ledger");
+    const { recordAction } = await import("../src/bronze/ledger");
     const entry = recordAction({
       ...SECRET_EDIT,
       target: "/work/app/.env.sample",
@@ -261,7 +261,7 @@ describe("recordAction on a sensitive target", () => {
 
 describe("redacted is distinguishable from truncated", () => {
   test("a change too large is truncated, not redacted", async () => {
-    const { recordAction } = await import("../src/hooks/lib/ledger");
+    const { recordAction } = await import("../src/bronze/ledger");
     const entry = recordAction({
       tool: "Write",
       target: "/work/app/src/big.ts",
@@ -274,7 +274,7 @@ describe("redacted is distinguishable from truncated", () => {
   });
 
   test("a sensitive target is redacted, not truncated", async () => {
-    const { recordAction } = await import("../src/hooks/lib/ledger");
+    const { recordAction } = await import("../src/bronze/ledger");
     const entry = recordAction({
       tool: "Write",
       target: "/work/app/.env",
@@ -287,7 +287,7 @@ describe("redacted is distinguishable from truncated", () => {
   });
 
   test("applyDelta refuses a redacted delta rather than returning a wrong file", async () => {
-    const { applyDelta } = await import("../src/hooks/lib/ledger");
+    const { applyDelta } = await import("../src/bronze/ledger");
     expect(applyDelta("API_KEY=old\n", { hunks: [], redacted: true })).toBeNull();
   });
 });
@@ -302,10 +302,10 @@ describe("savePending on a sensitive target", () => {
   };
 
   test("writes no content to the pending file", async () => {
-    const { savePending } = await import("../src/hooks/lib/ledger");
+    const { savePending } = await import("../src/bronze/ledger");
     savePending(SNAPSHOT);
     const parked = readFileSync(
-      resolve(HOME, "memory", "ledger", "pending", "toolu_redact_1.json"),
+      resolve(HOME, "records", "ledger", "pending", "toolu_redact_1.json"),
       "utf-8"
     );
     expect(parked).not.toContain("parked-secret");
@@ -313,7 +313,7 @@ describe("savePending on a sensitive target", () => {
   });
 
   test("keeps the hash so the claimed entry can still name the version", async () => {
-    const { savePending, claimPending } = await import("../src/hooks/lib/ledger");
+    const { savePending, claimPending } = await import("../src/bronze/ledger");
     savePending(SNAPSHOT);
     const claimed = claimPending("toolu_redact_1");
     expect(claimed?.before).toBeNull();
@@ -324,7 +324,7 @@ describe("savePending on a sensitive target", () => {
   });
 
   test("an ordinary target parks its content unchanged", async () => {
-    const { savePending, claimPending } = await import("../src/hooks/lib/ledger");
+    const { savePending, claimPending } = await import("../src/bronze/ledger");
     savePending({
       ...SNAPSHOT,
       toolUseId: "toolu_plain_1",
@@ -336,7 +336,7 @@ describe("savePending on a sensitive target", () => {
   });
 
   test("a creation on a sensitive target stays a creation", async () => {
-    const { savePending, claimPending } = await import("../src/hooks/lib/ledger");
+    const { savePending, claimPending } = await import("../src/bronze/ledger");
     savePending({ ...SNAPSHOT, toolUseId: "toolu_create_1", before: null });
     const claimed = claimPending("toolu_create_1");
     expect(claimed?.before).toBeNull();
@@ -345,7 +345,7 @@ describe("savePending on a sensitive target", () => {
 
   test("the withheld hash reaches the entry recordAction writes", async () => {
     const { savePending, claimPending, recordAction } = await import(
-      "../src/hooks/lib/ledger"
+      "../src/bronze/ledger"
     );
     savePending(SNAPSHOT);
     const claimed = claimPending("toolu_redact_1");

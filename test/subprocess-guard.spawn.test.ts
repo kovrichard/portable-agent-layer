@@ -17,6 +17,7 @@ beforeEach(() => {
 function writeTestFile(name: string, body: string): string {
   const file = resolve(dir, name);
   writeFileSync(file, `import { expect, test } from "bun:test";\n${body}\n`);
+
   return file;
 }
 
@@ -26,6 +27,7 @@ function runTests(...files: string[]) {
     ["bun", "test", ...files.map((file) => `./${relative(REPO, file)}`)],
     { cwd: REPO, env: { ...process.env }, stdout: "pipe", stderr: "pipe" }
   );
+
   return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
 }
 

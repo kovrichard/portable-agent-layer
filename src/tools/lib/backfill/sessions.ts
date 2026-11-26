@@ -5,8 +5,8 @@
  * content store.
  */
 
-import { appendEvent, eventsSince } from "../../../hooks/lib/events";
-import { readSessionHistory, type SessionRecord } from "../../../hooks/lib/work-tracking";
+import { appendEvent, eventsSince } from "../../../bronze/events";
+import { readSessionHistory, type SessionRecord } from "../../../progress/work-tracking";
 
 const sessionEventId = (sessionId: string) => `session:${sessionId}`;
 
@@ -51,6 +51,8 @@ export function backfillSessions(since?: string): number {
       !ended.has(record.sessionId) &&
       (!since || record.ts >= new Date(since).toISOString())
   );
+
   for (const record of fresh) emitSession(record);
+
   return fresh.length;
 }

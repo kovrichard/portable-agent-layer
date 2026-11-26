@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { inference } from "../src/hooks/lib/inference";
-import { reload } from "../src/hooks/lib/settings";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { reload } from "../src/core/settings";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
+import { inference } from "../src/inference/inference";
 import { copilotReplying, prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -17,11 +17,13 @@ let home: string;
 function calls(): Record<string, unknown>[] {
   const file = resolve(
     home,
-    "memory",
+    "records",
+    "bronze",
     "events",
     `${new Date().toISOString().slice(0, 7)}.jsonl`
   );
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -34,6 +36,7 @@ beforeEach(() => {
     if (saved[k] === undefined) delete process.env[k];
     else process.env[k] = saved[k];
   }
+
   home = freshTestDir(import.meta.file);
   process.env.PAL_HOME = home;
   process.env.PAL_AGENT = "copilot";

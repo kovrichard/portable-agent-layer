@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { applyDelta } from "../src/hooks/lib/ledger";
+import { applyDelta } from "../src/bronze/ledger";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -46,8 +46,9 @@ function hashOf(content: string): string {
 }
 
 function entries(): Record<string, unknown>[] {
-  const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
+  const file = resolve(HOME, "records", "ledger", "actions.jsonl");
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")

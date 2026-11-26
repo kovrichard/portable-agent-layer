@@ -28,6 +28,7 @@ beforeEach(() => {
 function projectDir(slug: string): string {
   const dir = resolve(HOME, "memory", "projects", slug);
   mkdirSync(dir, { recursive: true });
+
   return dir;
 }
 
@@ -57,6 +58,7 @@ function registerProject(
     `---\n${front}\n---\n\n## Goal\n\nnone\n\n## Criteria\n\n${opts.criteria ?? ""}\n`,
     "utf-8"
   );
+
   return path;
 }
 

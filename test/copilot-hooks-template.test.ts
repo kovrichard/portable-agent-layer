@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { loadCopilotHooksTemplate } from "../src/targets/lib";
+import { loadCopilotHooksTemplate } from "../src/targets/copilot/hooks";
 
 const TEMPLATE = resolve(import.meta.dir, "../assets/templates/hooks.copilot.json");
 const PKG_ROOT = "C:/pkg";
@@ -13,6 +13,7 @@ function entries(): Array<{ event: string; entry: Entry }> {
   const cfg = loadCopilotHooksTemplate(TEMPLATE, PKG_ROOT) as {
     hooks: Record<string, Entry[]>;
   };
+
   return Object.entries(cfg.hooks).flatMap(([event, list]) =>
     list.map((entry) => ({ event, entry }))
   );
@@ -60,6 +61,7 @@ describe("Copilot hooks template", () => {
       expect(`${event}:${entry.bash}`).toContain("--agent=copilot");
       expect(`${event}:${entry.powershell}`).toContain("--agent=copilot");
     }
+
     expect(readFileSync(TEMPLATE, "utf-8")).not.toContain("PAL_AGENT");
   });
 
@@ -71,6 +73,7 @@ describe("Copilot hooks template", () => {
 
   test("both shells point at the same hook script", () => {
     const script = (cmd: string) => cmd.slice(cmd.lastIndexOf("/") + 1);
+
     for (const { entry } of entries()) {
       expect(script(entry.powershell ?? "")).toBe(script(entry.bash ?? ""));
     }
@@ -78,6 +81,7 @@ describe("Copilot hooks template", () => {
 
   test("PKG_ROOT is substituted, leaving no unresolved placeholder", () => {
     expect(readFileSync(TEMPLATE, "utf-8")).toContain("{{PKG_ROOT}}");
+
     for (const { entry } of entries()) {
       expect(entry.bash).toContain(`${PKG_ROOT}/src/hooks/`);
       expect(entry.powershell).toContain(`${PKG_ROOT}/src/hooks/`);

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { appendEvent, readTree } from "../src/hooks/lib/progress-tree";
+import { appendEvent, readTree } from "../src/progress/progress-tree";
 import {
   renderNodeDetail,
   renderPromptLine,
   renderSessionContext,
   renderTreeList,
-} from "../src/hooks/lib/progress-tree-render";
+} from "../src/progress/progress-tree-render";
 import { freshTestDir } from "./lib/test-home";
 
 let file: string;
@@ -19,6 +19,7 @@ beforeEach(() => {
 
 function at(): Date {
   clock += 1000;
+
   return new Date(clock);
 }
 
@@ -74,6 +75,7 @@ describe("session context", () => {
       open(`n${i}`, `Node ${i} with a fairly long descriptive title`, null);
       appendEvent("pal", `n${i}`, "follow-up", { text: "x".repeat(80) }, file, at());
     }
+
     expect(renderSessionContext(tree()).length).toBeLessThanOrEqual(2_000);
   });
 });

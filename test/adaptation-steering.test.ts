@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { addDraft, type DraftInput, decideRule } from "../src/hooks/lib/adaptation-rules";
+import { reload } from "../src/core/settings";
+import { addDraft, type DraftInput, decideRule } from "../src/opinions/adaptation-rules";
 import {
   promptRulesReminder,
   watchReplyRules,
-} from "../src/hooks/lib/adaptation-steering";
-import { rememberSendBack } from "../src/hooks/lib/send-back-guard";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/opinions/adaptation-steering";
+import { rememberSendBack } from "../src/opinions/send-back-guard";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -29,12 +29,14 @@ function approved(over: Partial<DraftInput>) {
     ...over,
   });
   decideRule(rule.id, "approved");
+
   return rule;
 }
 
 function events() {
-  const path = resolve(HOME, "memory", "adaptation", "rule-events.jsonl");
+  const path = resolve(HOME, "records", "rule-events", "rule-events.jsonl");
   if (!existsSync(path)) return [];
+
   return readFileSync(path, "utf-8")
     .trim()
     .split("\n")

@@ -7,7 +7,7 @@ import {
   recentMessages,
   runningCount,
   withFinalReply,
-} from "../src/hooks/lib/transcript";
+} from "../src/bronze/transcript";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
@@ -35,6 +35,7 @@ describe("withFinalReply", () => {
 function withTmpFile(content: string, fn: (path: string) => void): void {
   const dir = freshTestDir(import.meta.file);
   const path = resolve(dir, "transcript.jsonl");
+
   try {
     writeFileSync(path, content, "utf-8");
     fn(path);
@@ -285,6 +286,7 @@ describe("readTranscriptFile — VS Code Copilot shape", () => {
 
 function codexMessage(role: string, ...texts: string[]): string {
   const partType = role === "assistant" ? "output_text" : "input_text";
+
   return JSON.stringify({
     type: "response_item",
     payload: {

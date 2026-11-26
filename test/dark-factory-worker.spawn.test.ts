@@ -155,11 +155,13 @@ function startWaiter(mode = "ready"): Waiter {
     out += chunk;
   });
   const exited = new Promise<number | null>((done) => child.on("close", done));
+
   return { child, stdout: () => out, exited };
 }
 
 async function until(condition: () => boolean, what: string, timeoutMs = 40_000) {
   const deadline = Date.now() + timeoutMs;
+
   while (!condition()) {
     if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`);
     await Bun.sleep(POLL_MS);

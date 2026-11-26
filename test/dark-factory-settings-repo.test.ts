@@ -22,12 +22,15 @@ function writeJson(file: string, value: unknown) {
 function repoWith(settings: unknown) {
   const repo = join(root, "repo");
   mkdirSync(repo, { recursive: true });
+
   if (settings !== undefined) writeJson(join(repo, ".claude/settings.json"), settings);
+
   return { id: "t1", repo, worktree: repo };
 }
 
 function writtenFor(task: object) {
   const file = writeRoleSettings(task, env);
+
   return file === null ? null : JSON.parse(readFileSync(file, "utf8"));
 }
 

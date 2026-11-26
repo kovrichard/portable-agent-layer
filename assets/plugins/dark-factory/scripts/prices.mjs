@@ -42,6 +42,7 @@ export function tokenCost(
 ) {
   if (!Object.hasOwn(PRICES, model)) return null;
   const rates = PRICES[model];
+
   return (
     ((input ?? 0) * rates.input +
       (output ?? 0) * rates.output +
@@ -67,6 +68,7 @@ export function messageCost({ model, usage }) {
     (u.input_tokens ?? 0) +
     (u.cache_read_input_tokens ?? 0) +
     (u.cache_creation_input_tokens ?? 0);
+
   return LONG_PROMPT_MODELS.has(model) && prompt > LONG_PROMPT_TOKENS
     ? base * LONG_PROMPT_FACTOR
     : base;
@@ -74,10 +76,12 @@ export function messageCost({ model, usage }) {
 
 export function transcriptCost(lines) {
   let total = 0;
+
   for (const line of onePerMessage(lines)) {
     const cost = messageCost(line.message);
     if (cost === null) return null;
     total += cost;
   }
+
   return total;
 }

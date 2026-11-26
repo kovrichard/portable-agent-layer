@@ -1,4 +1,4 @@
-import type { LoggedEvent } from "../../../hooks/lib/events";
+import type { LoggedEvent } from "../../../bronze/events";
 import { dayOf, numberOf, ofType } from "../wrapped/year";
 
 type Tier = "instructionsChars" | "semiStaticChars" | "dynamicChars";
@@ -17,6 +17,7 @@ export function contextOverhead(events: LoggedEvent[]): Overhead | null {
   const sessions = new Set(injections.map((e) => e.session ?? e.id)).size;
   const average = (tier: Tier) =>
     injections.reduce((sum, e) => sum + (numberOf(e[tier]) ?? 0), 0) / sessions;
+
   return {
     since: dayOf(first),
     sessions,

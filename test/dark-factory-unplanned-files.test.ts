@@ -38,9 +38,11 @@ function scenario(setup: Scenario) {
     },
   });
   world.changedFiles.push(...setup.changed);
+
   for (const [name, text] of Object.entries(setup.docs ?? {}))
     writeFileSync(join(taskDir(TASK, world.env), name), text);
   simulateRevert(world, setup.leaveDirty ?? []);
+
   return world;
 }
 
@@ -59,17 +61,20 @@ function simulateRevert(world: World, leaveDirty: string[]) {
         (file) => !args.instructions?.includes(file) || leaveDirty.includes(file)
       );
     }
+
     return fakeRole(id, role, args);
   }) as never;
   effects.spawnTool = ((command: string, args: string[], ...rest: unknown[]) => {
     if (command === "git" && args[0] === "diff") {
       const differing = args.filter((arg) => dirtyNow().includes(arg));
+
       return {
         status: differing.length > 0 ? 1 : 0,
         stdout: differing.join("\n"),
         stderr: "",
       };
     }
+
     return fakeSpawn(command, args, ...rest);
   }) as never;
 }
@@ -162,6 +167,7 @@ describe("the question to the PO", () => {
     expect(eventsNamed(world, "po_question")).toHaveLength(1);
     expect(poCalls(world)).toHaveLength(1);
     const text = poCalls(world)[0]?.instructions ?? "";
+
     for (const file of ["one.ts", "two.ts", "three.ts"]) expect(text).toContain(file);
     expect(text).toMatch(/keep/i);
     expect(text).toMatch(/revert/i);
@@ -238,6 +244,7 @@ describe("reverting files", () => {
       "po",
       "reviewer",
     ]);
+
     for (const call of world.roleCalls)
       expect(call.instructions).not.toContain("ghost.ts");
   });

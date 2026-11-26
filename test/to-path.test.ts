@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { homedir } from "node:os";
 import { resolve, sep } from "node:path";
-import { toPath } from "../src/hooks/lib/paths";
+import { toPath } from "../src/core/paths";
 
 const HOME = homedir();
 

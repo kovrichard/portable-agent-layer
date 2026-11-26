@@ -111,12 +111,14 @@ export function Pending({ value }: { value: Loaded<unknown> }) {
         <Skeleton className="h-3 w-1/3" />
       </div>
     );
+
   if (value.state === "error")
     return (
       <div className="border-l-2 border-alarm bg-alarm/10 px-3 py-2 text-[12px] text-alarm">
         {value.message}
       </div>
     );
+
   return null;
 }
 

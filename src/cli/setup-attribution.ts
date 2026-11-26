@@ -11,9 +11,10 @@ import * as clack from "@clack/prompts";
 import {
   identity,
   raw as readSettings,
+  settingsPath,
   write as writeSettings,
-} from "../hooks/lib/settings";
-import { buildAttributionText } from "../targets/lib";
+} from "../core/settings";
+import { buildAttributionText } from "../targets/claude/attribution";
 
 /** Prompt once for git attribution opt-in; true when it asked. */
 export async function promptAttribution(): Promise<boolean> {
@@ -36,6 +37,7 @@ export async function promptAttribution(): Promise<boolean> {
   });
   if (clack.isCancel(enabled)) {
     clack.log.warn("Skipped — will ask again next time");
+
     return true;
   }
 
@@ -43,7 +45,8 @@ export async function promptAttribution(): Promise<boolean> {
   writeSettings(settings);
   const state = enabled ? `${name} attribution on` : "Attribution off";
   clack.log.success(
-    `${state} · change later: edit pal-settings.json, then run 'pal install'`
+    `${state} · change later: edit ${settingsPath()}, then run 'pal install'`
   );
+
   return true;
 }

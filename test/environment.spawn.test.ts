@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { systemProbe } from "../src/hooks/lib/environment";
+import { systemProbe } from "../src/core/environment";
 
 describe("the system probe", () => {
   test("finds a command on PATH and misses one that is not", () => {

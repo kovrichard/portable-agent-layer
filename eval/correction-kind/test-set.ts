@@ -5,9 +5,9 @@
  */
 
 import { resolve } from "node:path";
-import type { Turn } from "../../src/hooks/lib/adaptation-turns";
-import { labelWithInference } from "../../src/hooks/lib/correction-backfill";
-import { paths } from "../../src/hooks/lib/paths";
+import { paths } from "../../src/core/paths";
+import type { Turn } from "../../src/opinions/adaptation-turns";
+import { labelWithInference } from "../../src/opinions/correction-backfill";
 
 interface TestCase {
   id: string;

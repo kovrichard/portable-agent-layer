@@ -6,27 +6,35 @@
 
 import { rmSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeLocation } from "../../../bronze/bronze";
+import { logError } from "../../../core/log";
+import { paths, platform } from "../../../core/paths";
+import { eventLogEnabled } from "../../../core/settings";
 import { markCollected } from "../../../hooks/lib/collect-trigger";
-import { logError } from "../../../hooks/lib/log";
-import { paths, platform } from "../../../hooks/lib/paths";
-import { eventLogEnabled } from "../../../hooks/lib/settings";
+import { claudeBilling, claudeConfigFile } from "../../../usage/billing";
 import { opencodeDatabase } from "../agent-usage";
 import { antigravityDatabase, collectAntigravity } from "./antigravity";
-import { claudeBilling, claudeConfigFile } from "./billing";
 import { collectClaude } from "./claude";
+import { collectClaudeDenials } from "./claude-denials";
 import { collectCodex } from "./codex";
 import { collectCopilot, copilotDatabase } from "./copilot";
 import { collectOpencode } from "./opencode";
 
 const LOCK_STALE_MS = 10 * 60_000;
 
-const COLLECTORS: Record<string, () => number> = {
+const COLLECTORS: Record<string, () => number | Promise<number>> = {
   claude: () =>
     collectClaude(
       resolve(platform.claudeDir(), "projects"),
       new Date(),
       claudeBilling(claudeConfigFile()),
-      resolve(paths.content(), "claude")
+      storeLocation("transcripts")
+    ),
+  "claude-denials": () =>
+    collectClaudeDenials(
+      resolve(platform.claudeDir(), "projects"),
+      new Date(),
+      storeLocation("transcripts")
     ),
   opencode: () => collectOpencode(opencodeDatabase()),
   codex: () => collectCodex(platform.codexDir()),
@@ -50,36 +58,43 @@ function lockIsFresh(now: number): boolean {
 function takeLock(now: number): boolean {
   try {
     writeFileSync(lockPath(), String(process.pid), { flag: "wx" });
+
     return true;
   } catch {
     if (lockIsFresh(now)) return false;
     writeFileSync(lockPath(), String(process.pid));
+
     return true;
   }
 }
 
-function runCollectors(): Record<string, number | "failed"> {
+async function runCollectors(): Promise<Record<string, number | "failed">> {
   const emitted: Record<string, number | "failed"> = {};
+
   for (const [source, collect] of Object.entries(COLLECTORS)) {
     try {
-      emitted[source] = collect();
+      emitted[source] = await collect();
     } catch (err) {
       logError(`collect:${source}`, err);
       emitted[source] = "failed";
     }
   }
+
   return emitted;
 }
 
 /** Null while another collect holds the lock. */
-export function collectEvents(
+export async function collectEvents(
   now: number = Date.now()
-): Record<string, number | "failed"> | null {
+): Promise<Record<string, number | "failed"> | null> {
   if (!eventLogEnabled()) return {};
+
   if (!takeLock(now)) return null;
+
   try {
     markCollected(now);
-    return runCollectors();
+
+    return await runCollectors();
   } finally {
     rmSync(lockPath(), { force: true });
   }

@@ -16,11 +16,11 @@ beforeEach(() => {
 
 async function setSettings(data: Record<string, unknown>) {
   writeFileSync(resolve(TEST_HOME, "memory", "pal-settings.json"), JSON.stringify(data));
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 }
 
 async function load() {
-  return await import(`../src/hooks/lib/wall-clock.ts?t=${Date.now()}`);
+  return await import(`../src/core/wall-clock.ts?t=${Date.now()}`);
 }
 
 const NOON_UTC = new Date("2026-09-05T12:34:56.000Z");

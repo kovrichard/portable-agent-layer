@@ -10,15 +10,15 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { latestUserRequest } from "../../bronze/antigravity-transcript";
+import { regenerateIfNeeded } from "../../context/claude-md";
+import { buildSystemReminder } from "../../context/context";
+import { type HookTurnPayload, hookSessionId } from "../../core/hook-payload";
+import { logContextSnapshot, logError, logPromptSnapshot } from "../../core/log";
+import { paths } from "../../core/paths";
+import { startHookTiming } from "../../usage/hook-timing";
 import { getPromptContext } from "../handlers/inject-retrieval";
-import { latestUserRequest } from "./antigravity-transcript";
 import { autoUpdateOnStart } from "./auto-update";
-import { regenerateIfNeeded } from "./claude-md";
-import { buildSystemReminder } from "./context";
-import { startHookTiming } from "./hook-timing";
-import { type HookTurnPayload, hookSessionId } from "./hook-turn";
-import { logContextSnapshot, logError, logPromptSnapshot } from "./log";
-import { paths } from "./paths";
 import { capturePrompt } from "./prompt-capture";
 import { heartbeatOnStart } from "./telemetry";
 
@@ -36,6 +36,7 @@ function startedFile(): string {
 function startedConversations(): string[] {
   try {
     const file = startedFile();
+
     return existsSync(file) ? JSON.parse(readFileSync(file, "utf-8")) : [];
   } catch {
     return [];
@@ -48,6 +49,7 @@ function claimConversationStart(conversationId: string): boolean {
   if (started.includes(conversationId)) return false;
   const kept = [...started, conversationId].slice(-REMEMBERED_CONVERSATIONS);
   writeFileSync(startedFile(), JSON.stringify(kept), "utf-8");
+
   return true;
 }
 
@@ -65,12 +67,14 @@ function sessionStartReminder(): string {
   attempt("heartbeat", heartbeatOnStart);
   const reminder = buildSystemReminder({ agent: "claude" });
   if (reminder) logContextSnapshot(reminder);
+
   return reminder;
 }
 
 async function promptReminder(prompt: string, conversationId: string) {
   const context = await getPromptContext(prompt, conversationId);
   logPromptSnapshot(prompt, context);
+
   return context;
 }
 

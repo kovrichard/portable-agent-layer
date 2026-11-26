@@ -1,19 +1,15 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { eventsSince } from "../src/hooks/lib/events";
-import { reload } from "../src/hooks/lib/settings";
+import { eventsSince } from "../src/bronze/events";
+import { reload } from "../src/core/settings";
 import {
   NOTEWORTHY_BYTES,
   recordSlurpCheck,
   showsOutOfMemory,
   slurpVerdictOf,
-} from "../src/hooks/lib/slurp-check";
-import {
-  commandSlurps,
-  type FileProbe,
-  shellTokens,
-} from "../src/hooks/lib/slurp-detect";
+} from "../src/safety/slurp-check";
+import { commandSlurps, type FileProbe, shellTokens } from "../src/safety/slurp-detect";
 import { freshTestDir } from "./lib/test-home";
 
 const CWD = resolve("/work");
@@ -26,10 +22,12 @@ function fakeDisk(files: Record<string, number | string>): FileProbe {
     sizeOf: (path) => {
       const entry = files[path];
       if (entry === undefined) return null;
+
       return typeof entry === "number" ? entry : entry.length;
     },
     readScript: (path) => {
       const entry = files[path];
+
       return typeof entry === "string" ? entry : null;
     },
   };
@@ -179,6 +177,7 @@ describe("the shadow verdict", () => {
     ]) {
       expect(showsOutOfMemory({ error })).toBe(true);
     }
+
     expect(showsOutOfMemory({ exit_code: 137 })).toBe(true);
     expect(showsOutOfMemory({ error: "Exit code 1" })).toBe(false);
   });

@@ -13,6 +13,7 @@ export interface Switches {
 
 export function dayShape(activity: Activity[]): DayShape {
   const sizes = [...projectsByDay(activity).values()].map((projects) => projects.size);
+
   return {
     oneProject: sizes.filter((n) => n === 1).length,
     manyProjects: sizes.filter((n) => n > 1).length,
@@ -31,6 +32,7 @@ export function contextSwitches(activity: Activity[]): Switches | null {
   const counts = [...perDay];
   if (counts.length === 0) return null;
   const [day, most] = counts.reduce((top, c) => (c[1] > top[1] ? c : top));
+
   return {
     perDay: counts.reduce((sum, [, n]) => sum + n, 0) / counts.length,
     mostInADay: { value: most, label: day },

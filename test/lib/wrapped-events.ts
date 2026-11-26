@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { EventType, LoggedEvent } from "../../src/hooks/lib/events";
-import { reload } from "../../src/hooks/lib/settings";
+import type { EventType, LoggedEvent } from "../../src/bronze/events";
+import { reload } from "../../src/core/settings";
 import { freshTestDir } from "./test-home";
 
 export function budapestHome(testFile: string): string {
@@ -13,6 +13,7 @@ export function budapestHome(testFile: string): string {
     JSON.stringify({ identity: { principal: { timezone: "Europe/Budapest" } } })
   );
   reload();
+
   return home;
 }
 
@@ -24,6 +25,7 @@ export function event(
   envelope: Partial<LoggedEvent> = {}
 ): LoggedEvent {
   seq++;
+
   return {
     v: 1,
     id: `e${seq}`,

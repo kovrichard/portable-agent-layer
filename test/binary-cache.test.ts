@@ -1,5 +1,5 @@
 import { beforeEach, expect, test } from "bun:test";
-import { canInfer } from "../src/hooks/lib/inference";
+import { canInfer } from "../src/inference/inference";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { freshTestDir } from "./lib/test-home";
 

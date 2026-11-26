@@ -4,19 +4,19 @@
  */
 
 import {
-  extractFallbackName,
-  readSessionNames,
-  writeSessionName,
-} from "../lib/session-names";
-import { now } from "../lib/time";
-import {
   extractContent,
   extractLastAssistant,
   extractLastUser,
   type Message,
   parseMessages,
   runningCount,
-} from "../lib/transcript";
+} from "../../bronze/transcript";
+import { now } from "../../core/time";
+import {
+  extractFallbackName,
+  readSessionNames,
+  writeSessionName,
+} from "../../progress/session-names";
 import {
   detectStatus,
   extractArtifacts,
@@ -24,7 +24,7 @@ import {
   readSession,
   type SessionRecord,
   writeSession,
-} from "../lib/work-tracking";
+} from "../../progress/work-tracking";
 
 function sessionLength(
   messages: Message[],
@@ -57,6 +57,7 @@ export async function captureWorkSession(
       name = extractFallbackName(userTexts);
       if (name !== "untitled session") writeSessionName(id, name);
     }
+
     if (!name || name === "untitled session") name = "untitled session";
 
     // Extract content

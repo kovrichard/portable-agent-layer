@@ -13,12 +13,12 @@ import {
   checkPendingMigrations,
   runMigrate,
 } from "../src/cli/migrate";
-import { appendEvent, nodesWithStatus, readTree } from "../src/hooks/lib/progress-tree";
+import { reload } from "../src/core/settings";
+import { appendEvent, nodesWithStatus, readTree } from "../src/progress/progress-tree";
 import {
   loadProgressTreeContext,
   progressTreePromptLine,
-} from "../src/hooks/lib/progress-tree-context";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/progress/progress-tree-context";
 import { freshTestDir } from "./lib/test-home";
 
 const MIGRATION = "v9-progress-tree-names";
@@ -32,7 +32,7 @@ let HOME: string;
 
 const settingsFile = () => resolve(HOME, "memory", "pal-settings.json");
 const oldFolder = () => resolve(HOME, "memory", "work-tree");
-const newFolder = () => resolve(HOME, "memory", "progress-tree");
+const newFolder = () => resolve(HOME, "work", "progress-tree");
 
 function writeSettings(value: unknown): void {
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
@@ -54,11 +54,13 @@ function quietly(fn: () => void): string {
   const captured: string[] = [];
   const log = console.log;
   console.log = (...parts: unknown[]) => captured.push(parts.join(" "));
+
   try {
     fn();
   } finally {
     console.log = log;
   }
+
   return captured.join("\n");
 }
 
@@ -79,7 +81,7 @@ describe("the progress tree's old settings", () => {
       quietly(() => runMigrate([]));
 
       expect(readSettings()).toEqual({ dynamicContext: { opinions: true } });
-      expect(checkPendingMigrations()).toEqual([]);
+      expect(pendingIds()).toEqual(["v13-settings-to-root"]);
     }
   );
 
@@ -99,7 +101,7 @@ describe("v9-progress-tree-names: data folder", () => {
     expect(pendingIds()).toContain(MIGRATION);
   });
 
-  test("moves memory/work-tree to memory/progress-tree", () => {
+  test("moves memory/work-tree to work/progress-tree", () => {
     writeEvents(oldFolder(), [OLD_1, OLD_2]);
 
     quietly(() => runMigrate([]));
@@ -154,25 +156,26 @@ describe("v9-progress-tree-names: what it reports", () => {
     writeSettings({ dynamicContext: { workTree: true } });
     writeEvents(oldFolder(), [EVENT]);
     expect(v9Detail()).toBe("memory/work-tree/");
-    expect(v9Lines()).toEqual(["memory/work-tree/: moved to memory/progress-tree/"]);
+    expect(v9Lines()).toEqual(["memory/work-tree/: moved to work/progress-tree/"]);
   });
 
   test("with both folders it reports how many events it appended", () => {
     writeEvents(oldFolder(), [EVENT, '{"type":"open","id":"old-2"}']);
     writeEvents(newFolder(), ['{"type":"open","id":"new-1"}']);
     expect(v9Lines()).toEqual([
-      "memory/work-tree/: 2 event(s) appended before memory/progress-tree/events.jsonl",
+      "memory/work-tree/: 2 event(s) appended before work/progress-tree/events.jsonl",
     ]);
   });
 
   test.each([
-    [false, "memory/work-tree/: would move to memory/progress-tree/"],
+    [false, "memory/work-tree/: would move to work/progress-tree/"],
     [
       true,
-      "memory/work-tree/: would append its events before memory/progress-tree/events.jsonl",
+      "memory/work-tree/: would append its events before work/progress-tree/events.jsonl",
     ],
   ])("a dry run with the new folder present=%p says what it would do", (both, line) => {
     writeEvents(oldFolder(), [EVENT]);
+
     if (both) writeEvents(newFolder(), [EVENT]);
     expect(quietly(() => runMigrate(["--dry-run"]))).toContain(line);
   });
@@ -185,7 +188,7 @@ describe("v9-progress-tree-names: what it reports", () => {
     const output = quietly(() => runMigrate([]));
 
     expect(output).toContain(
-      "memory/work-tree/: 1 event(s) appended before memory/progress-tree/events.jsonl"
+      "memory/work-tree/: 1 event(s) appended before work/progress-tree/events.jsonl"
     );
     expect(output).toContain(
       "memory/work-tree/: skipped (holds files other than events.jsonl)"
@@ -200,7 +203,7 @@ describe("v9-progress-tree-names: what it reports", () => {
     writeEvents(newFolder(), [EVENT]);
 
     expect(v9Lines()).toEqual([
-      "memory/work-tree/: 0 event(s) appended before memory/progress-tree/events.jsonl",
+      "memory/work-tree/: 0 event(s) appended before work/progress-tree/events.jsonl",
       "memory/work-tree/: skipped (holds files other than events.jsonl)",
     ]);
     expect(readEventLines(newFolder())).toEqual([EVENT]);
@@ -238,10 +241,10 @@ describe("an install from before the rename", () => {
 describe("the schema and the template name no progress-tree switch", () => {
   const assets = resolve(import.meta.dir, "..", "assets");
   const schema = JSON.parse(
-    readFileSync(resolve(assets, "schema", "pal-settings.schema.json"), "utf-8")
+    readFileSync(resolve(assets, "schema", "settings.schema.json"), "utf-8")
   ).properties.dynamicContext.properties;
   const template = JSON.parse(
-    readFileSync(resolve(assets, "templates", "pal-settings.json"), "utf-8")
+    readFileSync(resolve(assets, "templates", "settings.json"), "utf-8")
   ).dynamicContext;
 
   test.each(RETIRED_KEY_PAIRS)("%s and %s are in neither", (oldKey, newKey) => {
@@ -253,22 +256,25 @@ describe("the schema and the template name no progress-tree switch", () => {
 });
 
 describe("the old names are gone from src/ and assets/", () => {
-  const ALLOWED = resolve(import.meta.dir, "..", "src", "cli", "migrate.ts");
+  const MIGRATIONS_DIR = resolve(import.meta.dir, "..", "src", "cli", "migrations");
   const OLD_NAME = /workTree|work-tree/;
+  const BUILD_OUTPUT = new Set(["node_modules", "dist", ".next", "out"]);
 
   function filesUnder(dir: string): string[] {
     return readdirSync(dir).flatMap((name) => {
       const path = resolve(dir, name);
-      if (name === "node_modules" || name === "dist") return [];
+
+      if (BUILD_OUTPUT.has(name)) return [];
+
       return statSync(path).isDirectory() ? filesUnder(path) : [path];
     });
   }
 
-  test("only migrate.ts mentions workTree or work-tree", () => {
+  test("only the migrations mention workTree or work-tree", () => {
     const root = resolve(import.meta.dir, "..");
     const offenders = ["src", "assets"]
       .flatMap((dir) => filesUnder(resolve(root, dir)))
-      .filter((file) => file !== ALLOWED)
+      .filter((file) => !file.startsWith(MIGRATIONS_DIR))
       .filter((file) => OLD_NAME.test(readFileSync(file, "utf-8")));
     expect(offenders).toEqual([]);
   });

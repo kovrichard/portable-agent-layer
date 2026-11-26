@@ -5,28 +5,33 @@
  * stdin: JSON object with { session_id, transcript_path, last_assistant_message, ... }
  */
 
-import { checkReadmeSync } from "./handlers/readme-sync";
-import { stopBlockResponse } from "./lib/agent";
 import {
   type AntigravityStopFields,
   isSideStop,
   withTranscriptReply,
-} from "./lib/antigravity-transcript";
-import { recordIdleCompactionNear } from "./lib/compaction-near";
+} from "../bronze/antigravity-transcript";
+import { recordIdleCompactionNear } from "../context/compaction-near";
+import { stopBlockResponse } from "../core/agent";
+import {
+  enterHookWorkspace,
+  hookFinalReply,
+  type StopTurnPayload,
+} from "../core/hook-payload";
+import { logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { replySendBack } from "../opinions/reply-checks";
+import { stopProgressTree } from "../progress/progress-tree-stop";
+import { runStopReason } from "../safety/run-mode-gate";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { checkReadmeSync } from "./handlers/readme-sync";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { enterHookWorkspace } from "./lib/hook-turn";
-import { logError } from "./lib/log";
-import { stopProgressTree } from "./lib/progress-tree-stop";
-import { replySendBack } from "./lib/reply-checks";
-import { unattendedStopReason } from "./lib/run-mode-gate";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
 import { readStdinJSON } from "./lib/stdin";
-import { type StopTurnPayload, stopTurn } from "./lib/stop";
+import { stopTurn } from "./lib/stop";
 
 recordHookRunOnExit();
 
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
 
 const received = await readStdinJSON<StopTurnPayload & AntigravityStopFields>();
@@ -42,10 +47,8 @@ try {
   logError("StopOrchestrator:progress-tree", err);
 }
 
-// Fix requests come before the keep-working block; the README first, as it blocks every attempt until fixed.
+// Fix requests before keep-working: the README first, as it blocks every attempt, then reply checks, claims before style.
 try {
-  // A block carrying no reason stops the turn without telling the model why, so it
-  // is worth less than not blocking at all — require the reason to raise one.
   const decision = await checkReadmeSync();
   if (decision.decision === "block" && decision.reason) {
     process.stdout.write(stopBlockResponse(decision.reason));
@@ -55,7 +58,6 @@ try {
   logError("StopOrchestrator:readme-sync", err);
 }
 
-// Reply checks next, claims before style rules: one send-back per reply, so the corrected reply goes through.
 try {
   const sendBack = replySendBack(payload);
   if (sendBack) {
@@ -65,15 +67,16 @@ try {
 } catch (err) {
   logError("StopOrchestrator:reply-checks", err);
 }
-// After the reply checks: a reply that needs fixing goes back for the fix, not for the next task.
+
 try {
-  const keepGoing = unattendedStopReason(process.cwd());
+  const keepGoing = runStopReason(process.cwd(), hookFinalReply(payload) ?? "");
   if (keepGoing) {
     process.stdout.write(stopBlockResponse(keepGoing));
     process.exit(0);
   }
 } catch (err) {
-  logError("StopOrchestrator:unattended", err);
+  logError("StopOrchestrator:run-mode", err);
 }
+
 // Last: it writes to the terminal and starts inference, which only a stop that really ends may do.
 await stopTurn(payload);

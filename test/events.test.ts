@@ -7,8 +7,8 @@ import {
   EVENT_FIELDS,
   EVENT_SCHEMA_VERSION,
   eventsSince,
-} from "../src/hooks/lib/events";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/bronze/events";
+import { reload } from "../src/core/settings";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -18,9 +18,22 @@ function setSettings(data: Record<string, unknown>) {
   reload();
 }
 
+/** A shared runner can stall one append for hundreds of ms; the median ignores such a stall, a mean does not. */
+function medianAppendMs(runs: number): number {
+  const costs = Array.from({ length: runs }, (_, words) => {
+    const start = performance.now();
+    appendEvent("turn", { words }, {});
+
+    return performance.now() - start;
+  });
+
+  return costs.sort((a, b) => a - b)[Math.floor(runs / 2)] ?? Number.POSITIVE_INFINITY;
+}
+
 function streamLines(month: string): Record<string, unknown>[] {
-  const file = resolve(home, "memory", "events", `${month}.jsonl`);
+  const file = resolve(home, "records", "bronze", "events", `${month}.jsonl`);
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -59,6 +72,22 @@ describe("the event envelope", () => {
     });
     expect(typeof event?.machine).toBe("string");
     expect(typeof event?.actor).toBe("string");
+  });
+
+  test("the project is the binding whose folder holds the cwd, and null outside every binding", () => {
+    const gizmo = resolve(home, "checkouts", "gizmo");
+    writeFileSync(resolve(home, "bindings.json"), JSON.stringify({ gizmo }));
+    appendEvent(
+      "turn",
+      {},
+      { ts: "2026-09-10T10:00:00.000Z", cwd: resolve(gizmo, "src") }
+    );
+    appendEvent(
+      "turn",
+      {},
+      { ts: "2026-09-10T10:00:01.000Z", cwd: resolve(home, "checkouts", "loose") }
+    );
+    expect(streamLines("2026-09").map((e) => e.project)).toEqual(["gizmo", null]);
   });
 
   test("the channel comes from PAL_CHANNEL unless the caller names one", () => {
@@ -141,11 +170,11 @@ describe("the content store", () => {
       { ts: "2026-09-10T10:00:00.000Z", content: { prompt: "secret plan" } }
     );
     const stream = readFileSync(
-      resolve(home, "memory", "events", "2026-09.jsonl"),
+      resolve(home, "records", "bronze", "events", "2026-09.jsonl"),
       "utf-8"
     );
     const content = readFileSync(
-      resolve(home, "memory", "content", "events", "2026-09.jsonl"),
+      resolve(home, "records", "bronze", "event-text", "2026-09.jsonl"),
       "utf-8"
     );
     expect(stream).not.toContain("secret plan");
@@ -166,16 +195,17 @@ describe("opting out", () => {
       { ts: "2026-09-10T10:00:00.000Z", content: { prompt: "x" } }
     );
     expect(id).toBeNull();
-    expect(existsSync(resolve(home, "memory", "events"))).toBe(false);
+    expect(existsSync(resolve(home, "records", "bronze", "events"))).toBe(false);
     expect(existsSync(resolve(home, "memory", "content"))).toBe(false);
   });
 });
 
 describe("a failed write", () => {
   test.skipIf(process.platform === "win32")("is swallowed and reported as no id", () => {
-    const dir = resolve(home, "memory", "events");
+    const dir = resolve(home, "records", "bronze", "events");
     mkdirSync(dir, { recursive: true });
     chmodSync(dir, 0o500);
+
     try {
       expect(appendEvent("turn", {}, { ts: "2026-09-10T10:00:00.000Z" })).toBeNull();
     } finally {
@@ -206,11 +236,39 @@ describe("reading events back", () => {
 });
 
 describe("cost", () => {
-  test("an append stays under 5 ms once the process is warm", () => {
+  test("the median append stays under 5 ms once the process is warm", () => {
     appendEvent("turn", { words: 1 }, { ts: "2026-09-10T10:00:00.000Z" });
-    const runs = 50;
-    const start = performance.now();
-    for (let i = 0; i < runs; i++) appendEvent("turn", { words: i }, {});
-    expect((performance.now() - start) / runs).toBeLessThan(5);
+
+    expect(medianAppendMs(51)).toBeLessThan(5);
+  });
+});
+
+describe("admittedFields table (plan step 2)", () => {
+  test("a turn keeps no field nested deeper than one level", () => {
+    expect(admittedFields("turn", { reply: { a: { b: { c: 1 } } } })).toEqual({});
+  });
+
+  test("a judge_call keeps a choice answer with its probabilities", () => {
+    const fields = {
+      systemOneAnswers: { r: { choice: "a", probabilities: { a: 0.9 } } },
+    };
+    expect(admittedFields("judge_call", fields)).toEqual(fields);
+  });
+
+  test("a judge_call keeps a score answer with its probability list", () => {
+    const fields = {
+      systemOneAnswers: { m: { score: 2, probabilities: [0.1, 0.3, 0.6] } },
+    };
+    expect(admittedFields("judge_call", fields)).toEqual(fields);
+  });
+
+  test("a judge_call drops an answer nested deeper than its allowance", () => {
+    expect(
+      admittedFields("judge_call", { systemOneAnswers: { r: { p: { x: { y: 1 } } } } })
+    ).toEqual({});
+  });
+
+  test("a judge_call drops a field it does not declare", () => {
+    expect(admittedFields("judge_call", { prompt: "x" })).toEqual({});
   });
 });

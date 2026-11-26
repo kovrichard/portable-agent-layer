@@ -8,7 +8,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appendEvent } from "../../../hooks/lib/events";
+import { appendEvent } from "../../../bronze/events";
 import { readCursor, writeCursor } from "./cursors";
 import { type AllowList, selectAllowed } from "./sqlite";
 
@@ -54,6 +54,7 @@ function isoOf(antigravityTime: string): string {
 function workspaceOf(row: SummaryRow): string {
   try {
     const [first] = JSON.parse(row.workspace_uris) as string[];
+
     return first?.startsWith("file://") ? fileURLToPath(first) : "";
   } catch {
     return "";
@@ -95,6 +96,7 @@ export function collectAntigravity(dbPath: string): number {
     }
   );
   const conversations = rows.filter((row) => row.agent_name !== PAL_INFERENCE_AGENT);
+
   for (const row of conversations) emitConversation(row);
   const last = rows.at(-1);
   if (last) {
@@ -103,5 +105,6 @@ export function collectAntigravity(dbPath: string): number {
       id: last.conversation_id,
     });
   }
+
   return conversations.length;
 }

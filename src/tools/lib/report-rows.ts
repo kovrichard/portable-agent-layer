@@ -8,6 +8,7 @@ export function row(label: string, value: string): string {
 
 export function tallyLabel(tallies: Tally[]): string {
   if (tallies.length === 0) return "unknown";
+
   return tallies.map((t) => `${t.name} ${count(t.count)}`).join(" · ");
 }
 

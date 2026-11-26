@@ -16,6 +16,7 @@ function buildSkillsFolder() {
   mkdirSync(skills, { recursive: true });
   linkDir(real, resolve(skills, "good"));
   linkDir(at("gone"), resolve(skills, "dangling"));
+
   return { skills, real };
 }
 
@@ -64,12 +65,14 @@ describe("describeUnresolvedSkills", () => {
 
 function makeFolder(path: string) {
   mkdirSync(path, { recursive: true });
+
   return path;
 }
 
 function makeRealSkill(path: string) {
   makeFolder(path);
   writeFileSync(resolve(path, "SKILL.md"), "# skill");
+
   return path;
 }
 

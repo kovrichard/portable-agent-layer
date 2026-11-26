@@ -57,18 +57,49 @@ export default {
   // src/hooks/*.ts), an OS/network/TTY boundary that is stubbed away before a mutant
   // could ever be observed, or a file a test reads as text, which instrumenting breaks.
   mutate: [
+    "src/core/**/*.ts",
+    "src/bronze/**/*.ts",
+    "src/inference/**/*.ts",
+    "src/usage/**/*.ts",
+    "src/knowledge/**/*.ts",
+    "src/opinions/**/*.ts",
+    "src/progress/**/*.ts",
+    "src/safety/**/*.ts",
+    "src/context/**/*.ts",
     "src/hooks/lib/**/*.ts",
     "src/hooks/handlers/*.ts",
     "src/tools/**/*.ts",
     "src/cli/**/*.ts",
-    "src/targets/lib.ts",
+    "src/targets/log.ts",
+    "src/targets/json-file.ts",
+    "src/targets/config-backups.ts",
+    "src/targets/pal-hook-command.ts",
+    "src/targets/settings-merge.ts",
+    "src/targets/hooks-template.ts",
+    "src/targets/scaffold.ts",
+    "src/targets/pal-docs.ts",
+    "src/targets/symlink.ts",
+    "src/targets/skills.ts",
+    "src/targets/bulk-install.ts",
+    "src/targets/context-files.ts",
+    "src/targets/shipped-agents.ts",
+    "src/targets/personal-subagents.ts",
+    "src/targets/statusline.ts",
+    "src/targets/skill-index.ts",
+    "src/targets/claude/attribution.ts",
+    "src/targets/claude/agents.ts",
+    "src/targets/cursor/hooks.ts",
+    "src/targets/codex/hooks.ts",
+    "src/targets/codex/rules.ts",
+    "src/targets/codex/statusline.ts",
+    "src/targets/copilot/hooks.ts",
     "src/targets/agent-render.ts",
     "src/targets/vscode-settings.ts",
     "src/targets/opencode/permission.ts",
-    "!src/hooks/lib/inference.ts",
-    "!src/hooks/lib/notify.ts",
+    "!src/inference/inference.ts",
+    "!src/core/notify.ts",
     "!src/hooks/lib/stdin.ts",
-    "!src/hooks/lib/which.ts",
+    "!src/core/which.ts",
     "!src/cli/index.ts",
     "!src/cli/server.ts",
     "!src/cli/setup-attribution.ts",
@@ -120,7 +151,9 @@ export default {
   //   rung 4 — 2026-10-13: diff runs -> break 70
   //            (last 11 PR branches scored 78-100%; only the older entity and
   //            event-log PRs, 62-69%, would have broken)
-  thresholds: { high: 90, low: 80, break: 70 },
+  //   rung 5 — 2026-11-20: diff runs -> break 80
+  //            (a 156-file diff run scored 89.82%, 8192 mutants)
+  thresholds: { high: 90, low: 80, break: 80 },
   // Stryker copies the project into a sandbox with fs.copyFile, which throws ENOTSUP on a
   // symlink. Every entry below is either a symlink farm (agent config dirs, the installed
   // test homes, the vendored skill node_modules) or bulk the suite never reads.

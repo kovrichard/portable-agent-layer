@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { reload } from "../src/core/settings";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
 import { runPostToolHandlers } from "../src/hooks/lib/post-tool";
-import { reload } from "../src/hooks/lib/settings";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
-import { logToolCall } from "../src/hooks/lib/tool-events";
+import { logToolCall } from "../src/usage/tool-events";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -17,8 +17,9 @@ function month(): string {
 }
 
 function lines(dir: string[]): Record<string, unknown>[] {
-  const file = resolve(home, "memory", ...dir, `${month()}.jsonl`);
+  const file = resolve(home, "records", "bronze", ...dir, `${month()}.jsonl`);
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf-8")
     .trim()
     .split("\n")
@@ -94,6 +95,30 @@ describe("a tool call", () => {
     expect(toolCalls().map((e) => e.outcome)).toEqual(["failed", "denied"]);
   });
 
+  test("an auto-mode denial keeps its call id, and its reason beside the input", () => {
+    logToolCall({
+      hook_event_name: "PermissionDenied",
+      tool_use_id: "toolu_1",
+      tool_name: "Bash",
+      tool_input: { command: "rm -rf build" },
+      reason: "[Destructive] deletes a folder",
+    });
+    expect(toolCalls()[0]).toMatchObject({
+      denial: "classifier:auto-mode",
+      toolUseId: "toolu_1",
+    });
+    expect(lines(["event-text"])[0]).toMatchObject({
+      input: { command: "rm -rf build" },
+      reason: "[Destructive] deletes a folder",
+    });
+  });
+
+  test("a call that ran is no denial and stores no reason", () => {
+    logToolCall({ tool_name: "Bash", tool_input: { command: "ls" } });
+    expect(toolCalls()[0]).toMatchObject({ denial: null });
+    expect(lines(["event-text"])[0]).not.toHaveProperty("reason");
+  });
+
   test("reads Copilot's camelCase payload and Antigravity's nested call", () => {
     logToolCall({ sessionId: "c1", toolName: "bash", toolArgs: '{"command":"ls"}' });
     logToolCall({
@@ -115,7 +140,7 @@ describe("a tool call", () => {
   test("the arguments go to the content store, never the stream", () => {
     logToolCall({ tool_name: "Bash", tool_input: { command: "echo secret-ish words" } });
     expect(JSON.stringify(toolCalls())).not.toContain("secret-ish");
-    expect(JSON.stringify(lines(["content", "events"]))).toContain("secret-ish");
+    expect(JSON.stringify(lines(["event-text"]))).toContain("secret-ish");
   });
 
   test("a payload that names no tool is ignored", () => {

@@ -6,6 +6,7 @@ import { LiveRail } from "../src/cli/ui/live";
 import { createStyle } from "../src/cli/ui/style";
 import type { Terminal } from "../src/cli/ui/terminal";
 import { downloadCommand, runUpdate } from "../src/cli/update-flow";
+import { paths } from "../src/core/paths";
 import {
   checkForUpdate,
   checkNpm,
@@ -13,9 +14,9 @@ import {
   clearUpdateCache,
   getUpdateNotice,
   isNewerRelease,
+  startsNewMajor,
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
-import { paths } from "../src/hooks/lib/paths";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
 
@@ -26,28 +27,32 @@ const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
 
 const pipe: Terminal = { rich: false, color: "none", unicode: true, width: 80 };
 
-function updating(update: UpdateCache, code = 0) {
+function updating(update: UpdateCache, code = 0, major = false, terminal = pipe) {
   let out = "";
   const ran: string[][] = [];
   const reinstalls: Record<string, string>[] = [];
-  const style = createStyle(pipe);
+  const style = createStyle(terminal);
   const result = runUpdate(
     {
       check: async () => update,
       run: async (cmd, args) => {
         ran.push([cmd, ...args]);
+
         return { code, output: "remote said no" };
       },
       reinstall: (env) => {
         reinstalls.push(env);
+
         return 0;
       },
+      ...(major ? { major } : {}),
     },
     style,
     new LiveRail(style, (text) => {
       out += text;
     })
   );
+
   return { result, ran, reinstalls, output: () => out };
 }
 
@@ -107,6 +112,87 @@ describe("pal cli update — the flow", () => {
   });
 });
 
+const majorRelease = (current: string, latest: string, available = true): UpdateCache =>
+  ({ available, current, latest, mode: "package" }) as UpdateCache;
+
+describe("pal cli update — a new major", () => {
+  test("is not installed by a plain update, which names the command that takes it", async () => {
+    const run = updating(majorRelease("0.117.0", "1.0.0"));
+
+    expect(await run.result).toBe(0);
+    expect(run.ran).toEqual([]);
+    expect(run.reinstalls).toEqual([]);
+    expect(run.output()).toEndWith(
+      "warn PAL 1.0.0 is a new major release; this install stays on 0.117.0 -> pal cli update --major to take it\n\n"
+    );
+  });
+
+  test("a rich terminal marks it as a warning and styles the command", async () => {
+    const rich = { ...pipe, rich: true };
+    const run = updating(majorRelease("0.117.0", "1.0.0"), 0, false, rich);
+
+    expect(await run.result).toBe(0);
+    expect(run.ran).toEqual([]);
+    expect(run.output()).toContain(
+      "PAL 1.0.0 is a new major release; this install stays on 0.117.0"
+    );
+    expect(run.output()).toContain("pal cli update --major");
+    expect(run.output()).toContain("to take it");
+    expect(run.output()).not.toContain("warn PAL");
+  });
+
+  test("is installed with --major", async () => {
+    const run = updating(majorRelease("0.117.0", "1.0.0"), 0, true);
+
+    expect(await run.result).toBe(0);
+    expect(run.ran).toEqual([["bun", "add", "-g", "portable-agent-layer@1.0.0"]]);
+    expect(run.reinstalls).toEqual([{ PAL_UPDATED_FROM: "0.117.0" }]);
+  });
+
+  test("counts the first number only, and a canary of the next major is one", () => {
+    expect(startsNewMajor(majorRelease("0.117.0", "1.0.0"))).toBe(true);
+    expect(startsNewMajor(majorRelease("0.117.0", "1.0.0-canary.1"))).toBe(true);
+    expect(startsNewMajor(majorRelease("1.9.0", "2.0.0"))).toBe(true);
+    expect(startsNewMajor(majorRelease("0.117.0", "0.118.0"))).toBe(false);
+    expect(startsNewMajor(majorRelease("0.117.0", "0.118.0-canary.1"))).toBe(false);
+    expect(startsNewMajor(majorRelease("1.0.0", "1.4.2"))).toBe(false);
+  });
+
+  test("needs a release that is actually newer and readable", () => {
+    expect(startsNewMajor(majorRelease("0.117.0", "1.0.0", false))).toBe(false);
+    expect(startsNewMajor(majorRelease("0.117.0", "abc1234 (ahead)"))).toBe(false);
+    expect(startsNewMajor(majorRelease("2.0.0", "1.0.0"))).toBe(false);
+  });
+
+  test("the check stores its verdict for the statusline scripts", async () => {
+    process.env.PAL_HOME = freshTestDir(import.meta.file);
+    process.env.PAL_PKG = freshTestDir(import.meta.file);
+    writeFileSync(resolve(process.env.PAL_PKG, "package.json"), '{"version":"0.117.0"}');
+    const npmSays = (version: string) =>
+      (async () => Response.json({ version })) as unknown as typeof fetch;
+    const stored = () =>
+      JSON.parse(readFileSync(resolve(paths.cache(), "update-available.json"), "utf-8"));
+
+    await checkForUpdate(true, "stable", npmSays("1.0.0"));
+    expect(stored()).toMatchObject({ latest: "1.0.0", major: true });
+
+    await checkForUpdate(true, "stable", npmSays("0.118.0"));
+    expect(stored()).toMatchObject({ latest: "0.118.0", major: false });
+  });
+
+  test("the update notice names it as a major and the command that takes it", () => {
+    process.env.PAL_HOME = freshTestDir(import.meta.file);
+    writeFileSync(
+      resolve(paths.cache(), "update-available.json"),
+      JSON.stringify({ ...majorRelease("0.117.0", "1.0.0"), checkedAt: "" })
+    );
+
+    expect(getUpdateNotice()).toBe(
+      "📦 PAL 1.0.0 is a new major release, installed only on request: pal cli update --major"
+    );
+  });
+});
+
 // After a successful update the cached update-available.json still says
 // available:true (checkForUpdate(true) wrote it moments earlier). Without
 // invalidation the greeting + CLI-close nag "Update available" for the full 1h
@@ -121,7 +207,7 @@ describe("pal cli update — clears stale update cache", () => {
 
   test("clearUpdateCache removes the cache so no stale notice remains", () => {
     process.env.PAL_HOME = home;
-    const fp = resolve(paths.state(), "update-available.json");
+    const fp = resolve(paths.cache(), "update-available.json");
     writeFileSync(
       fp,
       JSON.stringify({
@@ -254,8 +340,10 @@ describe("pal cli update --canary", () => {
     const asked: string[] = [];
     const fetchImpl = (async (url: string) => {
       asked.push(url);
+
       return Response.json({ version });
     }) as unknown as typeof fetch;
+
     return { asked, fetchImpl };
   }
 

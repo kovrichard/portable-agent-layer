@@ -1,4 +1,4 @@
-import type { LoggedEvent } from "../../../hooks/lib/events";
+import type { LoggedEvent } from "../../../bronze/events";
 import { apiPriceOf } from "../cost-report";
 import { numberOf, ofType } from "../wrapped/year";
 
@@ -15,6 +15,7 @@ function shares(
   priceOf: (call: LoggedEvent) => number | null
 ): Share[] {
   const byLabel = new Map<string, Share>();
+
   for (const call of calls) {
     const label = labelOf(call);
     const share = byLabel.get(label) ?? { label, calls: 0, cost: 0, unpriced: 0 };
@@ -24,6 +25,7 @@ function shares(
     if (price === null) share.unpriced++;
     else share.cost += price;
   }
+
   return [...byLabel.values()].sort(
     (a, b) => b.cost - a.cost || b.calls - a.calls || a.label.localeCompare(b.label)
   );

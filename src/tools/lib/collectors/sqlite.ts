@@ -52,6 +52,7 @@ export function selectAllowed<Row>(
   const id = quoted(after.idColumn);
   const sql = `SELECT ${columns.map(quoted).join(", ")} FROM ${quoted(table)} WHERE ${order} > ?1 OR (${order} = ?1 AND ${id} > ?2) ORDER BY ${order}, ${id}`;
   const db = new Database(dbPath, { readonly: true });
+
   try {
     return db
       .query<Row, [number | string, number | string]>(sql)

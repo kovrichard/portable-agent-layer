@@ -22,6 +22,7 @@ function CellContent({ value }: { value: TierMatrixCellValue }) {
   if (value === "required") {
     return <span className="text-success font-bold text-base">✓</span>;
   }
+
   if (value === "recommended") {
     return (
       <span className="font-sans text-[0.7rem] font-semibold uppercase tracking-widest text-warning">
@@ -29,9 +30,11 @@ function CellContent({ value }: { value: TierMatrixCellValue }) {
       </span>
     );
   }
+
   if (value === false) {
     return <span className="text-muted">—</span>;
   }
+
   return <span>{value}</span>;
 }
 
@@ -52,8 +55,11 @@ export function TierMatrix({
   function colStyle(index: number): CSSProperties | undefined {
     const val = columnWidths?.[index];
     if (!val) return undefined;
+
     if (sizing === "manual") return { width: val };
+
     if (sizing === "capped") return { maxWidth: val };
+
     return undefined;
   }
 

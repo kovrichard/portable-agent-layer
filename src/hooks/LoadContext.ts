@@ -1,37 +1,40 @@
 /**
  * Hook: SessionStart — Injects dynamic context + regenerates AGENTS.md if stale.
  *
- * Static context (TELOS, setup prompt) is loaded natively from AGENTS.md /
- * CLAUDE.md. This hook injects dynamic context only: the progress tree,
- * opinions, work state.
- *
- * Which agent gets what, in which envelope, is in lib/session-context.ts.
+ * Static context (TELOS, setup prompt) loads natively from AGENTS.md / CLAUDE.md;
+ * this hook injects only the dynamic part: progress tree, opinions, work state.
+ * Which agent gets what, in which envelope, is in src/context/session-context.ts.
  */
 
-import { getActiveAgent } from "./lib/agent";
-import { autoUpdateOnStart } from "./lib/auto-update";
-import { buildClaudeMd, regenerateIfNeeded } from "./lib/claude-md";
-import { type AgentTarget, buildSystemReminder } from "./lib/context";
-import { logContextInjected } from "./lib/context-overhead";
-import { duplicatesCursorHooks } from "./lib/cursor-shadow";
-import { recordHookRunOnExit } from "./lib/hook-run";
-import { hookSessionId } from "./lib/hook-turn";
-import { logContextSnapshot, logDebug, logError } from "./lib/log";
+import { buildClaudeMd, regenerateIfNeeded } from "../context/claude-md";
+import { buildSystemReminder } from "../context/context";
+import { logContextInjected } from "../context/context-overhead";
 import {
   contextEnvelope,
   contextForSource,
   isSubagentSession,
   needsAgentsMd,
+  reminderTarget,
   writeCopilotInstructions,
-} from "./lib/session-context";
-import { logSessionStart, type SessionStartPayload } from "./lib/session-events";
-import { isPalSpawnedInference } from "./lib/spawn-guard";
+} from "../context/session-context";
+import { refreshCachesOnStart } from "../context/start-refresh";
+import { getActiveAgent } from "../core/agent";
+import { hookSessionId } from "../core/hook-payload";
+import { logContextSnapshot, logDebug, logError } from "../core/log";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { recordHookRunOnExit } from "../usage/hook-run";
+import { logSessionStart, type SessionStartPayload } from "../usage/session-events";
+import { autoUpdateOnStart } from "./lib/auto-update";
+import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { readStdinJSON } from "./lib/stdin";
 import { heartbeatOnStart } from "./lib/telemetry";
 
 recordHookRunOnExit();
+
 if (isPalSpawnedInference()) process.exit(0);
+
 if (duplicatesCursorHooks()) process.exit(0);
+
 if (isSubagentSession(process.env)) {
   logDebug("LoadContext", "Subagent session — skipping context loading");
   process.exit(0);
@@ -50,6 +53,7 @@ try {
 }
 
 heartbeatOnStart();
+refreshCachesOnStart();
 
 try {
   const active = getActiveAgent();
@@ -61,12 +65,8 @@ try {
     process.exit(0);
   }
 
-  // The reminder is built for one of four targets; every other agent reads the
-  // same shape Claude Code does.
-  const target: AgentTarget =
-    active === "copilot" || active === "cursor" || active === "codex" ? active : "claude";
   const reminder = buildSystemReminder({
-    agent: target,
+    agent: reminderTarget(active),
     sessionId: hookSessionId(input),
   });
   if (!reminder) process.exit(0);

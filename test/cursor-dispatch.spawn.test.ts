@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { buildCliPrompt, buildCursorArgs, inference } from "../src/hooks/lib/inference";
-import { SPAWN_GUARD_ENV } from "../src/hooks/lib/spawn-guard";
+import { SPAWN_GUARD_ENV } from "../src/core/spawn-guard";
+import { inference } from "../src/inference/inference";
+import { buildCursorArgs } from "../src/inference/inference-agents";
+import { buildCliPrompt } from "../src/inference/inference-prompt";
 import { prependPath, writeFakeBin } from "./fixtures/fake-bin";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -21,7 +23,9 @@ const PRESERVED = [
 
 function savedEnv(): Record<string, string | undefined> {
   const saved: Record<string, string | undefined> = {};
+
   for (const k of PRESERVED) saved[k] = process.env[k];
+
   return saved;
 }
 function restoreEnv(saved: Record<string, string | undefined>) {

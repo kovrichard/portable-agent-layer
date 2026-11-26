@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { writeProject } from "../src/hooks/lib/projects";
-import { PAL_REPO_URL } from "../src/hooks/lib/remote";
-import { reload } from "../src/hooks/lib/settings";
+import { PAL_REPO_URL } from "../src/core/remote";
+import { reload } from "../src/core/settings";
+import { writeProject } from "../src/progress/projects";
 import { backfillEvents } from "../src/tools/lib/backfill";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -49,6 +49,7 @@ function run(...args: string[]): string {
     },
   });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+
   return result.stdout.trim();
 }
 
@@ -57,19 +58,21 @@ function commitFiles(message: string, files: Record<string, string>): string {
     writeFileSync(resolve(repo, name), text);
   run("add", "-A");
   run("commit", "-q", "-m", message);
+
   return run("rev-parse", "HEAD");
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
-  const path = resolve(home, "pal", dir, "events");
+  const path = resolve(home, "pal", "records", "bronze", dir);
   if (!existsSync(path)) return [];
+
   return readdirSync(path)
     .flatMap((f) => readFileSync(resolve(path, f), "utf-8").trim().split("\n"))
     .filter(Boolean)
     .map((line) => JSON.parse(line));
 }
 
-const commits = () => logLines("memory").filter((e) => e.type === "commit");
+const commits = () => logLines("events").filter((e) => e.type === "commit");
 
 describe("git history becomes commit events", () => {
   test("a commit carries its counts, type and AI co-author, stamped at its author date", () => {
@@ -119,11 +122,11 @@ describe("git history becomes commit events", () => {
   test("names, emails and the subject stay in the content store, out of the event", () => {
     const hash = commitFiles("fix: a private subject line", { a: "1\n" });
     backfillEvents();
-    const events = JSON.stringify(logLines("memory"));
+    const events = JSON.stringify(logLines("events"));
     expect(events).not.toContain(AUTHOR);
     expect(events).not.toContain("ada@example.test");
     expect(events).not.toContain("a private subject line");
-    expect(logLines("memory/content")).toEqual([
+    expect(logLines("event-text")).toEqual([
       expect.objectContaining({
         id: `git:${hash}`,
         author: AUTHOR,

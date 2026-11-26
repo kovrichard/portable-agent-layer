@@ -1,12 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import {
-  loadCursorHooksTemplate,
-  loadSettingsTemplate,
-  mergeCursorHooks,
-  mergeSettings,
-} from "../src/targets/lib";
+import { loadCursorHooksTemplate, mergeCursorHooks } from "../src/targets/cursor/hooks";
+import { loadSettingsTemplate, mergeSettings } from "../src/targets/settings-merge";
 
 const templatePath = (name: string) =>
   resolve(import.meta.dir, "../assets/templates", name);
@@ -28,6 +24,7 @@ describe("templates declare their agent by flag, not shell prefix", () => {
     test(`${file} declares --agent=${agent} on every hook command`, () => {
       const hookCommands = commandsIn(raw).filter((c) => c.includes("/src/hooks/"));
       expect(hookCommands.length).toBeGreaterThan(0);
+
       for (const command of hookCommands) {
         expect(command).toContain(`--agent=${agent}`);
       }

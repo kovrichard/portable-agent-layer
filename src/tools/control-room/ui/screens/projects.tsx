@@ -42,7 +42,9 @@ const COLUMNS = [
 
 function keep(card: ProjectCard, filter: StatusFilter): boolean {
   if (filter === "all") return true;
+
   if (filter === "ranked") return RANKED.has(card.status);
+
   return card.status === filter;
 }
 
@@ -96,6 +98,7 @@ export function Projects({ filter }: { filter: StatusFilter }) {
   const board = useLoaded<ProjectCard[]>("/api/board");
   if (board.state !== "ready") return <Pending value={board} />;
   const rows = board.data.filter((card) => keep(card, filter));
+
   return (
     <div className="blueprint flex min-h-0 flex-1 flex-col bg-bg">
       {rows.length === 0 ? (

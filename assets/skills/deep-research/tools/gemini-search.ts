@@ -56,6 +56,7 @@ function loadApiKey(): string {
     console.error("and add it to ~/.pal/.env as PAL_GEMINI_API_KEY=...");
     process.exit(1);
   }
+
   return key;
 }
 
@@ -122,15 +123,18 @@ async function postGemini(url: string, body: unknown): Promise<Candidate> {
 
   const data = (await response.json()) as GeminiResponse;
   if (data.error) fail(`Error: ${data.error.message}`);
+
   if (!data.candidates || data.candidates.length === 0) {
     fail("Error: No candidates in Gemini response.");
   }
+
   return data.candidates[0];
 }
 
 function printGrounding(meta: GroundingMetadata): void {
   if (meta.webSearchQueries && meta.webSearchQueries.length > 0) {
     console.log("\n---\n## Search Queries Used\n");
+
     for (const q of meta.webSearchQueries) {
       console.log(`- ${q}`);
     }
@@ -138,6 +142,7 @@ function printGrounding(meta: GroundingMetadata): void {
 
   if (meta.groundingChunks && meta.groundingChunks.length > 0) {
     console.log("\n---\n## Sources\n");
+
     for (const chunk of meta.groundingChunks) {
       if (chunk.web) {
         console.log(`- [${chunk.web.title}](${chunk.web.uri})`);

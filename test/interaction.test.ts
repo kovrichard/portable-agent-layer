@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { observeTurn, recordReply, type TurnEvent } from "../src/hooks/lib/interaction";
+import { reload } from "../src/core/settings";
+import { observeTurn, recordReply, type TurnEvent } from "../src/opinions/interaction";
 import {
   DEFAULT_BASELINE,
   type MoodTurn,
   readMood,
-} from "../src/hooks/lib/interaction-mood";
-import { REACTION_RULES } from "../src/hooks/lib/interaction-reaction";
-import { reload } from "../src/hooks/lib/settings";
+} from "../src/opinions/interaction-mood";
+import { REACTION_RULES } from "../src/opinions/interaction-reaction";
 import { freshTestDir } from "./lib/test-home";
 
 let TEST_HOME: string;
@@ -20,7 +20,7 @@ function at(sec: number): Date {
 }
 
 function eventsDir(): string {
-  return resolve(TEST_HOME, "memory", "events");
+  return resolve(TEST_HOME, "records", "bronze", "events");
 }
 
 function loggedEvents(): TurnEvent[] {
@@ -61,7 +61,13 @@ describe("measuring a turn", () => {
     const raw = readFileSync(resolve(eventsDir(), "2026-09.jsonl"), "utf-8");
     expect(raw).not.toContain("credentials");
     expect(lastEvent()).toMatchObject({ session: "s1", words: 5, channel: "mobile" });
-    const content = resolve(TEST_HOME, "memory", "content", "events", "2026-09.jsonl");
+    const content = resolve(
+      TEST_HOME,
+      "records",
+      "bronze",
+      "event-text",
+      "2026-09.jsonl"
+    );
     expect(readFileSync(content, "utf-8")).toContain(
       "please rotate the staging credentials"
     );
@@ -262,6 +268,7 @@ describe("measuring a turn", () => {
 
 function fastShortTurn(session: string, i: number): string | null {
   recordReply(session, "short answer", at(i * 30));
+
   return observeTurn("yes pls", session, at(i * 30 + 10));
 }
 
@@ -279,6 +286,7 @@ describe("telling the agent", () => {
 
   test("logs the mood each turn was read as, and whether the agent was told", () => {
     observeTurn("start", "s1", T0);
+
     for (const i of [1, 2, 3, 4]) fastShortTurn("s1", i);
 
     expect(loggedEvents().map((e) => [e.mood, e.hinted])).toEqual([
@@ -292,6 +300,7 @@ describe("telling the agent", () => {
 
   test("says once when the pattern is back to usual", () => {
     observeTurn("start", "s1", T0);
+
     for (const i of [1, 2, 3]) fastShortTurn("s1", i);
     recordReply("s1", "short answer", at(200));
     const back = observeTurn(words(40), "s1", at(200 + 3 * 3600));
@@ -367,6 +376,7 @@ function seedShortRepliesApprovedMore() {
 
 function settleIntoFastShort(session: string): void {
   observeTurn("start", session, T0);
+
   for (const i of [1, 2, 3, 4]) fastShortTurn(session, i);
 }
 
@@ -449,10 +459,12 @@ describe("checking the hint worked", () => {
   test("a label that asks for nothing in particular is not checked", () => {
     seedReplyHistory(200);
     observeTurn("start", "s1", T0);
+
     for (const i of [1, 2, 3, 4]) {
       recordReply("s1", "an answer", at(i * 200));
       observeTurn(words(100), "s1", at(i * 200 + 100));
     }
+
     recordReply("s1", words(300), at(1000));
     observeTurn(words(100), "s1", at(1100));
 

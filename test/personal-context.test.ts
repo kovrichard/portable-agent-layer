@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { settingsPath } from "../src/core/settings";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
 
@@ -14,7 +15,7 @@ beforeEach(async () => {
   process.env.PAL_HOME = HOME;
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
   mkdirSync(resolve(HOME, "telos"), { recursive: true });
-  (await import("../src/hooks/lib/settings")).reload();
+  (await import("../src/core/settings")).reload();
 });
 
 function answer(file: string) {
@@ -22,8 +23,9 @@ function answer(file: string) {
 }
 
 function storedTimezone(): string | undefined {
-  const path = resolve(HOME, "memory", "pal-settings.json");
+  const path = settingsPath(HOME);
   if (!existsSync(path)) return undefined;
+
   return JSON.parse(readFileSync(path, "utf-8")).identity?.principal?.timezone;
 }
 
@@ -35,8 +37,10 @@ async function capture(
   console.log = (...args: unknown[]) => {
     out += `${args.join(" ")}\n`;
   };
+
   try {
     const code = await work();
+
     return { code, out };
   } finally {
     console.log = original;
@@ -45,6 +49,7 @@ async function capture(
 
 async function cli() {
   const fresh = await import(`../src/cli/personal-context.ts?t=${Date.now()}`);
+
   return {
     runTelos: (args: string[]) =>
       runCommand(fresh.telosCommand, args, ["pal", "cli", "telos"]),
@@ -91,6 +96,7 @@ describe("pal cli telos", () => {
     ]) {
       answer(f);
     }
+
     const { runTelos } = await cli();
     const { out } = await capture(() => runTelos([]));
 
@@ -153,7 +159,7 @@ describe("pal cli timezone", () => {
         dynamicContext: { x: false },
       })
     );
-    (await import("../src/hooks/lib/settings")).reload();
+    (await import("../src/core/settings")).reload();
     const { runTimezone } = await cli();
     await capture(() => runTimezone(["Asia/Tokyo"]));
 

@@ -17,7 +17,10 @@ beforeEach(() => {
 });
 
 async function lib() {
-  return await import("../src/hooks/lib/bindings");
+  return {
+    ...(await import("../src/core/project-bindings")),
+    ...(await import("../src/progress/bindings")),
+  };
 }
 
 /**
@@ -264,7 +267,7 @@ describe("test-sandbox guard", () => {
 describe("bindings never sync", () => {
   test("the bindings file is excluded from an export", async () => {
     const { writeBinding, bindingsFilePath } = await lib();
-    const { collectExportFiles } = await import("../src/hooks/lib/export");
+    const { collectExportFiles } = await import("../src/core/export");
 
     writeBinding("alpha", "/work/alpha", HOME);
     expect(existsSync(bindingsFilePath(HOME))).toBe(true);

@@ -27,6 +27,7 @@ export function findingsFile(env = process.env) {
 export function readFindings(env = process.env) {
   const file = findingsFile(env);
   if (!existsSync(file)) return [];
+
   return readFileSync(file, "utf8")
     .split("\n")
     .filter((line) => line.trim())
@@ -67,9 +68,11 @@ function removeIfStale(lock) {
 
 function acquire(lock) {
   const deadline = Date.now() + LOCK_TIMEOUT_MS;
+
   for (;;) {
     try {
       writeFileSync(lock, String(process.pid), { flag: "wx" });
+
       return;
     } catch (error) {
       if (error.code !== "EEXIST" || Date.now() > deadline) throw error;
@@ -83,6 +86,7 @@ export function withFindingsLock(env, action) {
   const lock = join(dirname(findingsFile(env)), "findings.lock");
   mkdirSync(dirname(lock), { recursive: true });
   acquire(lock);
+
   try {
     return action();
   } finally {
@@ -101,6 +105,7 @@ function pathNames(line) {
   if (!match) return [];
   const path = match[1];
   const base = path.split("/").at(-1);
+
   return base.length >= MIN_BASENAME_LENGTH ? [path, base] : [path];
 }
 
@@ -113,6 +118,7 @@ function identifiersIn(line) {
     line.matchAll(DESTRUCTURED),
     (match) => match[1].match(IDENTIFIER) ?? []
   ).flat();
+
   return [...direct, ...destructured];
 }
 
@@ -130,7 +136,8 @@ function escapeRegExp(text) {
 
 function ruleMentions(rule, name) {
   if (name.includes("/") || name.includes(".")) return rule.includes(name);
-  return new RegExp(`(^|[^\\w$])${escapeRegExp(name)}([^\\w$]|$)`).test(rule);
+
+  return new RegExp(String.raw`(^|[^\w$])${escapeRegExp(name)}([^\w$]|$)`).test(rule);
 }
 
 export function generalityViolation(rule, names) {
@@ -143,10 +150,12 @@ function classKey(role, cls) {
 
 function mergeEvidence(existing = [], added = []) {
   const seen = new Set();
+
   return [...existing, ...added].filter((item) => {
     const key = `${item.task}\u0000${item.ref}`;
     if (seen.has(key)) return false;
     seen.add(key);
+
     return true;
   });
 }
@@ -198,24 +207,30 @@ function applyFinding(state, result, { taskId, names, stamp }) {
       class: result.class,
       matched,
     });
+
     return;
   }
+
   const sameClass = (finding) => classKey(finding.role, finding.class) === key;
   const rejected = state.store.find(
     (finding) => finding.status === "rejected" && sameClass(finding)
   );
   if (rejected) {
     state.events.push(droppedEvent(taskId, result, rejected));
+
     return;
   }
+
   const pending = state.store.find(
     (finding) => finding.status === "pending" && sameClass(finding)
   );
   if (pending) {
     mergeInto(pending, result.evidence, stamp);
     addOnce(state.updated, pending.id);
+
     return;
   }
+
   const finding = newFinding(result, `c${state.store.length + 1}`, stamp);
   state.store.push(finding);
   state.created.push(finding.id);
@@ -228,8 +243,10 @@ function applyUpdate(state, update, { taskId, stamp }) {
   if (target) {
     mergeInto(target, update.evidence, stamp);
     addOnce(state.updated, target.id);
+
     return;
   }
+
   state.events.push({ event: "coach_update_ignored", task: taskId, id: update.id });
 }
 
@@ -241,15 +258,19 @@ export function applyCoachResult(store, result, { taskId, names, now }) {
     created: [],
     updated: [],
   };
+
   for (const finding of result.findings)
     applyFinding(state, finding, { taskId, names, stamp });
+
   for (const update of result.updates) applyUpdate(state, update, { taskId, stamp });
+
   return state;
 }
 
 export function findingById(id, env = process.env) {
   const finding = readFindings(env).find((item) => item.id === id);
   if (!finding) throw new Error(`unknown finding "${id}"`);
+
   return finding;
 }
 
@@ -267,6 +288,7 @@ function transitionPendingLocked(id, changes, env, now) {
   const updated = { ...current, ...changes, updatedAt: now.toISOString() };
   store[index] = updated;
   writeFindings(store, env);
+
   return updated;
 }
 

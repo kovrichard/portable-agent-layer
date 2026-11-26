@@ -18,6 +18,7 @@ function isPlainObject(value) {
 function readJsonObject(file) {
   try {
     const value = JSON.parse(readFileSync(file, "utf8"));
+
     return isPlainObject(value) ? value : null;
   } catch {
     return null;
@@ -26,6 +27,7 @@ function readJsonObject(file) {
 
 function userSettings(env) {
   const configDir = env.CLAUDE_CONFIG_DIR || join(userHome(env), ".claude");
+
   return readJsonObject(join(configDir, "settings.json")) ?? {};
 }
 
@@ -35,6 +37,7 @@ export function roleSettingsFrom(userSettings) {
       ([key]) => !KEYS_THAT_BREAK_ISOLATION.includes(key)
     )
   );
+
   return Object.keys(kept).length > 0 ? kept : null;
 }
 
@@ -45,17 +48,20 @@ export function repoPermissionsFrom(repoSettings) {
       Array.isArray(repoSettings.permissions[key])
     ).map((key) => [key, repoSettings.permissions[key]])
   );
+
   return Object.keys(lists).length > 0 ? lists : null;
 }
 
 export function withRepoPermissions(kept, permissions) {
   if (permissions === null) return kept;
+
   return { ...(kept ?? {}), permissions };
 }
 
 function repoSettings(task) {
   const root = task.worktree ?? task.repo;
   if (!root) return {};
+
   return readJsonObject(join(root, ".claude", "settings.json")) ?? {};
 }
 
@@ -81,5 +87,6 @@ export function writeRoleSettings(task, env = process.env) {
   mkdirSync(dir, { recursive: true });
   const file = join(dir, SETTINGS_FILE);
   writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`, { mode: 0o600 });
+
   return file;
 }

@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readCodex, readCopilot, readOpencode } from "../src/tools/lib/agent-usage";
-import { freshTestDir } from "./lib/test-home";
+import { freshTestDir, outsideRepoHome } from "./lib/test-home";
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 const TODAY = "2026-09-06T10:00:00.000Z";
@@ -16,6 +16,20 @@ function tempDir(): string {
 function writeLines(path: string, entries: unknown[]): void {
   mkdirSync(join(path, ".."), { recursive: true });
   writeFileSync(path, entries.map((entry) => JSON.stringify(entry)).join("\n"));
+}
+
+function repoNamed(name: string): string {
+  const dir = join(tempDir(), name);
+  mkdirSync(join(dir, ".git"), { recursive: true });
+
+  return dir;
+}
+
+function folderWithoutRepo(): string {
+  const dir = join(outsideRepoHome(import.meta.file), "plain");
+  mkdirSync(dir, { recursive: true });
+
+  return dir;
 }
 
 describe("readCodex", () => {
@@ -32,8 +46,8 @@ describe("readCodex", () => {
     writeLines(join(dir, sub, "2026", "09", "06", "rollout-a.jsonl"), entries);
   }
 
-  const session = [
-    { type: "session_meta", payload: { cwd: "/work/portable-agent-layer" } },
+  const sessionIn = (meta: object) => [
+    { type: "session_meta", payload: meta },
     { type: "turn_context", payload: { model: "gpt-5.5" } },
     tokenCount(
       TODAY,
@@ -56,6 +70,7 @@ describe("readCodex", () => {
       1050
     ),
   ];
+  const session = sessionIn({ cwd: "/work/portable-agent-layer" });
 
   test("splits cached input out of input, and counts a repeated event once", () => {
     const dir = tempDir();
@@ -73,10 +88,21 @@ describe("readCodex", () => {
 
   test("files the call under its model and the folder it ran in", () => {
     const dir = tempDir();
-    rollout(dir, "sessions", session);
+    rollout(dir, "sessions", sessionIn({ cwd: repoNamed("widgets") }));
     const usage = readCodex(dir, undefined, NOW);
     expect(Object.keys(usage.byModel)).toEqual(["gpt-5.5"]);
-    expect(Object.keys(usage.byProject)).toEqual(["portable-agent-layer"]);
+    expect(Object.keys(usage.byProject)).toEqual(["widgets"]);
+  });
+
+  test("a session without a cwd, or in no repo, is filed under (unknown)", () => {
+    const none = tempDir();
+    rollout(none, "sessions", sessionIn({}));
+    expect(Object.keys(readCodex(none, undefined, NOW).byProject)).toEqual(["(unknown)"]);
+    const plain = tempDir();
+    rollout(plain, "sessions", sessionIn({ cwd: folderWithoutRepo() }));
+    expect(Object.keys(readCodex(plain, undefined, NOW).byProject)).toEqual([
+      "(unknown)",
+    ]);
   });
 
   test("reads archived sessions too", () => {
@@ -87,7 +113,7 @@ describe("readCodex", () => {
 
   test("keeps only the sessions of the project asked for", () => {
     const dir = tempDir();
-    rollout(dir, "sessions", session);
+    rollout(dir, "sessions", sessionIn({ cwd: repoNamed("portable-agent-layer") }));
     expect(readCodex(dir, "letterbox", NOW).buckets.total.calls).toBe(0);
     expect(readCodex(dir, "agent-layer", NOW).buckets.total.calls).toBe(1);
   });
@@ -110,13 +136,14 @@ describe("readOpencode", () => {
     });
     insert.finalize();
     db.close();
+
     return path;
   }
 
-  const assistant = (tokens: object, cost?: number) => ({
+  const assistant = (tokens: object, cost?: number, root?: string) => ({
     role: "assistant",
     modelID: "kimi-k3",
-    path: { root: "/work/letterbox" },
+    ...(root === undefined ? {} : { path: { root } }),
     tokens,
     ...(cost === undefined ? {} : { cost }),
   });
@@ -160,7 +187,18 @@ describe("readOpencode", () => {
     const usage = readOpencode(path, undefined, NOW);
     expect(usage.buckets.month.calls).toBe(0);
     expect(usage.buckets.total.calls).toBe(1);
-    expect(Object.keys(usage.byProject)).toEqual(["letterbox"]);
+  });
+
+  test("files a message under the repo of its root, or (unknown) without one", () => {
+    const path = database([
+      { created: TODAY, data: assistant({ input: 10 }, 0, repoNamed("widgets")) },
+      { created: TODAY, data: assistant({ input: 10 }, 0) },
+      { created: TODAY, data: assistant({ input: 10 }, 0, folderWithoutRepo()) },
+    ]);
+    const usage = readOpencode(path, undefined, NOW);
+    expect(Object.keys(usage.byProject).sort()).toEqual(["(unknown)", "widgets"]);
+    expect(usage.byProject["(unknown)"].total.calls).toBe(2);
+    expect(usage.byProject.unknown).toBeUndefined();
   });
 
   test("reads nothing from a missing database, or one it cannot query", () => {
@@ -200,7 +238,7 @@ describe("readCopilot", () => {
   test("adds up the shutdown of every run of a resumed session", () => {
     const dir = tempDir();
     session(dir, "a", [
-      { type: "session.start", data: { context: { cwd: "/work/klint" } } },
+      { type: "session.start", data: { context: { cwd: repoNamed("klint") } } },
       shutdown(TODAY, 100, 3),
       { type: "session.resume", data: {} },
       shutdown(TODAY, 100, 2),
@@ -215,6 +253,18 @@ describe("readCopilot", () => {
       unpriced: 5,
     });
     expect(Object.keys(usage.byProject)).toEqual(["klint"]);
+  });
+
+  test("a session without a cwd, or in no repo, is filed under (unknown)", () => {
+    const dir = tempDir();
+    session(dir, "a", [shutdown(TODAY, 100, 1)]);
+    session(dir, "b", [
+      { type: "session.start", data: { context: { cwd: folderWithoutRepo() } } },
+      shutdown(TODAY, 100, 1),
+    ]);
+    const usage = readCopilot(dir, undefined, NOW);
+    expect(Object.keys(usage.byProject)).toEqual(["(unknown)"]);
+    expect(usage.byProject["(unknown)"].total.calls).toBe(2);
   });
 
   test("reads every session, and nothing from a missing directory", () => {

@@ -1,0 +1,104 @@
+/**
+ * One event per tool call, on every agent: which tool, how it ended, and the
+ * cheap facts about it. The call's arguments go to the content store.
+ */
+
+import { appendEvent, logQuietly } from "../bronze/events";
+import { toolUseIdOf, unappliedVerdictOf } from "../bronze/ledger-hook";
+import { isSensitivePath } from "../bronze/sensitive-path";
+import { appendToolOutput, type ToolOutputRow } from "../bronze/tool-output";
+import { FILE_TARGET_KEYS, normalizeToolUse, type ToolUseRequest } from "../core/agent";
+import { hookSessionId } from "../core/hook-payload";
+import { isPalSpawnedInference } from "../core/spawn-guard";
+import { callTraits, sizeOf, stringIn } from "./call-traits";
+import { permissionWaitSec } from "./waiting-on-user";
+
+const RESULT_KEYS = ["tool_response", "toolResult", "tool_output", "result"];
+const DURATION_KEYS = ["duration_ms", "durationMs"];
+
+function numberIn(source: unknown, keys: string[]): number | null {
+  if (typeof source !== "object" || source === null) return null;
+  const record = source as Record<string, unknown>;
+  const found = keys.map((k) => record[k]).find((v) => typeof v === "number");
+
+  return (found as number | undefined) ?? null;
+}
+
+export function resultOf(payload: Record<string, unknown>): unknown {
+  return RESULT_KEYS.map((k) => payload[k]).find((v) => v !== undefined);
+}
+
+function outcomeOf(payload: Record<string, unknown>): string {
+  const verdict = unappliedVerdictOf(payload);
+  if (verdict) return verdict.outcome;
+
+  return typeof payload.error === "string" && payload.error ? "failed" : "ok";
+}
+
+function subagentRun(result: unknown) {
+  return {
+    subagentTokens: numberIn(result, ["totalTokens"]),
+    subagentTools: numberIn(result, ["totalToolUseCount"]),
+  };
+}
+
+function deniedByAutoMode(payload: Record<string, unknown>): boolean {
+  return (payload.hook_event_name ?? payload.hookEventName) === "PermissionDenied";
+}
+
+function toolCallFields(payload: Record<string, unknown>, call: ToolUseRequest) {
+  const result = resultOf(payload);
+
+  return {
+    ...callTraits(call),
+    outcome: outcomeOf(payload),
+    denial: deniedByAutoMode(payload) ? "classifier:auto-mode" : null,
+    toolUseId: toolUseIdOf(payload),
+    durationMs: numberIn(payload, DURATION_KEYS) ?? numberIn(result, ["totalDurationMs"]),
+    outputChars: sizeOf(result),
+    ...subagentRun(result),
+  };
+}
+
+function contentOf(payload: Record<string, unknown>, call: ToolUseRequest) {
+  const reason = unappliedVerdictOf(payload)?.reason;
+
+  return { tool: call.toolName, input: call.toolInput, ...(reason && { reason }) };
+}
+
+function outputUnlessSensitive(
+  call: ToolUseRequest,
+  output: unknown
+): Pick<ToolOutputRow, "output" | "withheld"> {
+  const file = stringIn(call.toolInput, FILE_TARGET_KEYS);
+
+  return file && isSensitivePath(file) ? { output: null, withheld: true } : { output };
+}
+
+/** Logs the call a post-tool, failure or denial payload describes; ignores anything else. */
+export function logToolCall(payload: Record<string, unknown> | null): void {
+  if (isPalSpawnedInference()) return;
+  logQuietly("tool_call", () => {
+    const call = normalizeToolUse(payload);
+    if (!payload || !call) return;
+    const session = hookSessionId(payload) ?? null;
+    const fields = {
+      ...toolCallFields(payload, call),
+      promptWaitSec: permissionWaitSec(session, call.toolName),
+    };
+    const ts = new Date().toISOString();
+    const id = appendEvent("tool_call", fields, {
+      ts,
+      session,
+      content: contentOf(payload, call),
+    });
+    const output = resultOf(payload);
+    if (id && output !== undefined)
+      appendToolOutput({
+        id,
+        ts,
+        tool: call.toolName,
+        ...outputUnlessSensitive(call, output),
+      });
+  });
+}
