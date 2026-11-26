@@ -298,7 +298,7 @@ The user's data sits in four folders under `~/.pal/`. Each holds one kind of dat
 | `memory/` | What PAL learned and recalls: knowledge, relationship, self-model, wisdom, adaptation rules | yes | yes |
 | `records/` | What happened, one folder per store: copied agent transcripts (`raw/claude/`), the bronze event log (`bronze/`), the ledger, ratings, claim checks, the sessions archive | yes, except `records/raw/` and the event text and tool output in `records/bronze/` | yes |
 | `work/` | The user's work, one folder per store: projects with their session history (`projects/`), history from unregistered folders (`unbound-history/`), the progress tree, task ISAs (`tasks/`), scheduled prompts (`schedules/`) | yes | yes |
-| `state/` | This machine's working state that is not cache. Empty until those files move | no | yes |
+| `state/` | This machine's working state that is not cache: sessions and session names, the hooks' per-session files, collector cursors, the transcript-copy list, scheduled-prompt marks. An install keeps it in `memory/state/` until the owner runs the move. Never synced | no | yes |
 
 Beside them, `settings.json` is the user's configuration, `cache/` holds what is rebuilt on the next read, and `backups/` holds the archives and manifests that migrations write.
 
@@ -308,13 +308,6 @@ A store moves between folders only through an owner-run migration (`pal cli migr
 
 ```
 memory/
-├── state/                         # Runtime state
-│   ├── sessions.json              # Session registry (name, cwd, status, summary)
-│   ├── projects.json              # Multi-session project tracking
-│   ├── counts.json                # Cached counts for greeting
-│   ├── last-responses.json        # Cached responses for rating correlation
-│   └── debug.log                  # Hook execution logs
-│
 ├── adaptation/                    # Rules drafted from corrections, and approved opinions
 │
 ├── relationship/
@@ -343,7 +336,7 @@ Session interaction
   │
   ├─► [Stop] Correction check ──► adaptation/ rule drafts, approved with `pal cli rule`
   │
-  └─► [Stop] Synthesis ──► state/synthesis.json (read by the control room)
+  └─► [Stop] Synthesis ──► cache/synthesis.json (read by the control room)
 ```
 
 ### Opinion Lifecycle

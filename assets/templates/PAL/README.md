@@ -73,7 +73,6 @@ Persistent storage across sessions:
 - **adaptation/** — Rules drafted from the user's corrections, and approved opinions
 - **relationship/** — The approved opinions, rendered for native loading
 - **failures/** — Low-rating session context dumps from older versions
-- **state/** — Session registry, counts cache, debug logs
 
 ### Tools (`src/tools/`)
 CLI utilities: `pal cli rule` (review rules and opinions), `pal cli analyze` (learning analysis), `pal cli usage` (token usage tracking), `pal cli export` / `pal cli import` (state portability).
