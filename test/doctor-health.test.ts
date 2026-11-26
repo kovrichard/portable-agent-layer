@@ -244,6 +244,9 @@ describe("pending migrations", () => {
     );
     expect(findings[0].title).toContain("a verified backup is taken first");
     expect(findings[0].title).toContain("pal cli migrate --undo <id>");
+    expect(findings[0].fix?.say).toBe(
+      "Close your other agent sessions, then run each one below"
+    );
     expect(findings[0].notice).toBe("2 data moves wait for you, required before PAL 1.0");
     expect(findings.slice(1).every((f) => f.notice === undefined)).toBe(true);
   });
