@@ -21,8 +21,15 @@ describe("this machine's state folder", () => {
     mkdirSync(resolve(home, "memory", "state"), { recursive: true });
 
     expect(paths.state()).toBe(resolve(home, "memory", "state"));
-    expect(paths.progress()).toBe(resolve(home, "memory", "state", "progress"));
     expect(existsSync(resolve(home, "state"))).toBe(false);
+  });
+
+  test("looking for legacy project files creates no folder, and finds them after the move", () => {
+    expect(paths.legacyProjects()).toBe(resolve(home, "memory", "state", "progress"));
+    expect(existsSync(resolve(home, "memory"))).toBe(false);
+
+    mkdirSync(resolve(home, "state"), { recursive: true });
+    expect(paths.legacyProjects()).toBe(resolve(home, "memory", "state", "progress"));
   });
 
   test("once the root folder exists it wins over the old one", () => {

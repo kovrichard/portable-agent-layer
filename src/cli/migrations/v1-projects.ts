@@ -6,7 +6,7 @@ import { legacyJsonToProgress } from "../../progress/projects-legacy";
 import type { Migration, MigrationResult } from "./migration";
 
 function pendingJsonFiles(): string[] {
-  const progressDir = paths.progress();
+  const progressDir = paths.legacyProjects();
   if (!existsSync(progressDir)) return [];
 
   return readdirSync(progressDir)
@@ -28,7 +28,7 @@ export const v1Projects: Migration = {
   },
 
   run(dryRun = false): MigrationResult {
-    const progressDir = paths.progress();
+    const progressDir = paths.legacyProjects();
     const files = pendingJsonFiles();
 
     let migrated = 0;

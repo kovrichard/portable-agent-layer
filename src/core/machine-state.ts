@@ -25,7 +25,6 @@ const STATE_FILES = [
   "transcript-handoff/",
   "waiting-on-user/",
   "reply-sent-back/",
-  "progress/",
 ] as const;
 
 const FORMER_STATE = "memory/state/";
