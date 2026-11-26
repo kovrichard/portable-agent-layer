@@ -43,7 +43,11 @@ const tree = cliTree({
   },
   uninstall: ({ argv }) => uninstall(argv),
   update: ({ values }) =>
-    update({ canary: values.canary === true, stable: values.stable === true }),
+    update({
+      canary: values.canary === true,
+      stable: values.stable === true,
+      major: values.major === true,
+    }),
   export: ({ argv }) => exportState(argv),
   import: ({ argv }) => importState(argv),
   status: () => status(),
@@ -332,7 +336,7 @@ async function uninstall(args: string[]) {
   );
 }
 
-async function update(flags: { canary?: boolean; stable?: boolean }) {
+async function update(flags: { canary?: boolean; stable?: boolean; major?: boolean }) {
   const {
     checkForUpdate,
     clearUpdateCache,
@@ -369,6 +373,7 @@ async function update(flags: { canary?: boolean; stable?: boolean }) {
       {
         check: () => checkForUpdate(true, to),
         switched: (checked) => channelSwitchLine(style, from, to, checked),
+        major: flags.major,
         reinstall: (env) => {
           clearUpdateCache();
 

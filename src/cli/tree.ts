@@ -133,6 +133,11 @@ function lifecycleCommands(admin: AdminHandlers): Record<string, Leaf> {
           type: "boolean",
           description: "Switch back to the stable channel",
         },
+        major: {
+          type: "boolean",
+          description:
+            "Install a new major release; without it, updates stay within this major",
+        },
       },
       run: admin.update,
     }),
