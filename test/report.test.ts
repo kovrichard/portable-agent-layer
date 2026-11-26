@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
 import type { Identifiers } from "../src/report/leaks";
@@ -11,6 +12,7 @@ import {
   listReports,
   newIssueUrl,
   REPORT_LABEL,
+  REPORT_MARK,
   readReport,
   sendReport,
   UPSTREAM_REPO,
@@ -60,6 +62,23 @@ describe("drafting", () => {
     expect(report.body).toContain("| PAL | 0.118.0 (canary) |");
     expect(readReport(report.id)).toEqual(report);
     expect(listReports().map((r) => r.id)).toEqual([report.id]);
+  });
+
+  test("ends with a visible line saying the tool drafted it and a workflow may label it", () => {
+    const lastLine = draft().body.trim().split("\n").at(-1) ?? "";
+
+    expect(lastLine.startsWith(REPORT_MARK)).toBe(true);
+    expect(lastLine).toContain(REPORT_LABEL);
+  });
+
+  test("the labelling workflow matches the line the tool writes", () => {
+    const workflow = readFileSync(
+      resolve(import.meta.dir, "..", ".github", "workflows", "label-user-reports.yml"),
+      "utf-8"
+    );
+
+    expect(workflow).toContain(`grep -qF '${REPORT_MARK}'`);
+    expect(workflow).toContain(`--add-label ${REPORT_LABEL}`);
   });
 
   test("the environment holds only the allowlisted fields", () => {

@@ -49,7 +49,7 @@ Two rules hold through every step:
    ```bash
    pal cli report draft --title "<component: what is wrong>" --body-file <body-file>
    ```
-   The command rewrites the home path to `~`, appends an `## Environment` table and prints the report id and the leak check. When the leak check names a line, rewrite that line in the body file so the detail is gone (not disguised), and run the draft command again. Repeat until the leak check reports nothing. Use the id of the last draft from here on.
+   The command rewrites the home path to `~`, appends an `## Environment` table and a closing line saying the tool drafted it, and prints the report id and the leak check. When the leak check names a line, rewrite that line in the body file so the detail is gone (not disguised), and run the draft command again. Repeat until the leak check reports nothing. Use the id of the last draft from here on.
 
 4. **Look for an existing issue.**
    ```bash

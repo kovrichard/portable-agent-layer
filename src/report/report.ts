@@ -22,6 +22,8 @@ import { type ReportMeta, renderMeta, reportMeta } from "./meta";
 
 export const UPSTREAM_REPO = PAL_REPO_URL.replace("https://github.com/", "");
 export const REPORT_LABEL = "user-report";
+export const REPORT_MARK = "Drafted by `pal cli report`";
+const REPORT_FOOTER = `---\n${REPORT_MARK} on the reporter's machine and sent on their approval. A workflow in this repository may label it \`${REPORT_LABEL}\`.`;
 const URL_BODY_LIMIT = 6000;
 
 export interface Report {
@@ -97,7 +99,7 @@ export function draftReport(
   meta: ReportMeta = reportMeta(),
   home: string = homedir()
 ): Report {
-  const body = `${withHomeAsTilde(prose.trim(), home)}\n\n${renderMeta(meta)}\n`;
+  const body = `${withHomeAsTilde(prose.trim(), home)}\n\n${renderMeta(meta)}\n\n${REPORT_FOOTER}\n`;
   const report = {
     id: nextId(),
     title: withHomeAsTilde(title, home),
