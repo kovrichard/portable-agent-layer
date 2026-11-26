@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
 import { reportCommandWith } from "../src/cli/report";
 import type { Identifiers } from "../src/report/leaks";
+import type { Git } from "../src/report/pull-request";
 import { draftReport, type Gh, listReports, readReport } from "../src/report/report";
 import { runCommand } from "../src/tools/lib/command";
 import { freshTestDir } from "./lib/test-home";
@@ -30,7 +31,11 @@ function ghAnswering(authed: boolean, out: string): { gh: Gh; calls: string[][] 
   return { gh, calls };
 }
 
-async function run(args: string[], gh?: Gh): Promise<{ code: number; out: string }> {
+async function run(
+  args: string[],
+  gh?: Gh,
+  git?: (dir: string) => Git
+): Promise<{ code: number; out: string }> {
   const lines: string[] = [];
   const capture = (...parts: unknown[]) => {
     lines.push(parts.join(" "));
@@ -44,7 +49,7 @@ async function run(args: string[], gh?: Gh): Promise<{ code: number; out: string
   });
 
   try {
-    const code = await runCommand(reportCommandWith({ gh, ids: () => IDS }), args, [
+    const code = await runCommand(reportCommandWith({ gh, git, ids: () => IDS }), args, [
       "pal",
       "cli",
       "report",
@@ -194,6 +199,79 @@ describe("pal cli report", () => {
     expect(calls).toEqual([]);
   });
 
+  describe("send --pr", () => {
+    function gitAnswering(commits: string, dirs: string[] = []) {
+      return (dir: string): Git => {
+        dirs.push(dir);
+
+        return (args) => ({ ok: true, out: args[0] === "log" ? commits : "" });
+      };
+    }
+
+    const ghForPr: Gh = (args) => ({
+      ok: true,
+      out: args[0] === "api" ? "ada" : "https://github.com/x/y/pull/7",
+    });
+
+    test("opens a pull request from the checkout in --dir", async () => {
+      const dirs: string[] = [];
+      const { code, out } = await run(
+        ["send", drafted().id, "--approved", "--pr", "--dir", "/work/pal"],
+        ghForPr,
+        gitAnswering("fix: the crash", dirs)
+      );
+
+      expect(code).toBe(0);
+      expect(out).toContain("Opened: https://github.com/x/y/pull/7");
+      expect(dirs).toEqual(["/work/pal"]);
+    });
+
+    test("without --dir it uses the current folder", async () => {
+      const dirs: string[] = [];
+      await run(
+        ["send", drafted().id, "--approved", "--pr"],
+        ghForPr,
+        gitAnswering("fix", dirs)
+      );
+
+      expect(dirs).toEqual([process.cwd()]);
+    });
+
+    test("says why it refused, and fails", async () => {
+      const { code, out } = await run(
+        ["send", drafted().id, "--approved", "--pr"],
+        ghForPr,
+        gitAnswering("")
+      );
+
+      expect(code).toBe(1);
+      expect(out).toContain("No commits ahead of canary: commit the fix first.");
+    });
+
+    test("names where the leak is, and fails", async () => {
+      const { code, out } = await run(
+        ["send", drafted().id, "--approved", "--pr"],
+        ghForPr,
+        gitAnswering("fix: crash in acme-billing")
+      );
+
+      expect(code).toBe(1);
+      expect(out).toContain("In the commits:");
+      expect(out).toContain("  line 1: project (acme-billing)");
+    });
+
+    test("--pr and --comment together are a usage error", async () => {
+      const { code, out } = await run(
+        ["send", drafted().id, "--approved", "--pr", "--comment", "375"],
+        ghForPr,
+        gitAnswering("fix")
+      );
+
+      expect(code).not.toBe(0);
+      expect(out).toContain("Pass --pr or --comment, not both");
+    });
+  });
+
   test("list shows each report as draft or sent", async () => {
     const report = drafted();
     await run(["send", drafted().id, "--approved"], ghAnswering(true, "u").gh);
@@ -229,6 +307,12 @@ describe("pal cli report", () => {
 
     expect(send).toContain("The user read the report and said yes");
     expect(send).toContain("Add it to this issue instead");
+    expect(send).toContain(
+      "Open a pull request with the fix committed in a PAL checkout instead of an issue"
+    );
+    expect(send).toContain(
+      "The PAL checkout holding the fix (default: the current folder)"
+    );
     expect(draft).toContain("The issue title");
     expect(draft).toContain(
       "Markdown: what happened, how to reproduce, cause, fix, tests"

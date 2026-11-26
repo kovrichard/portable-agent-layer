@@ -11,4 +11,5 @@ test("the labelling workflow matches the line pal cli report writes", () => {
 
   expect(workflow).toContain(`grep -qF '${REPORT_MARK}'`);
   expect(workflow).toContain(`--add-label ${REPORT_LABEL}`);
+  expect(workflow).toContain("pull_request_target:");
 });

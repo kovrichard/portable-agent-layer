@@ -13,8 +13,9 @@ pal cli report draft --title "<title>" --body-file <path>   # anonymise, add the
 pal cli report show <id>                                    # the report exactly as it would be sent
 pal cli report similar <id>                                 # upstream issues that may already describe it
 pal cli report send <id> --approved [--comment <number>]    # file it, or add it to an existing issue
+pal cli report send <id> --approved --pr [--dir <path>]     # open a pull request with the fix committed in a PAL checkout
 pal cli report decline <id>                                 # record that you chose not to send
 pal cli report list
 ```
 
-Limits: a sent report is public and cannot be withdrawn by PAL. The leak check matches known names and shapes; it cannot judge whether a sentence describes your work too closely, so read the report before you answer. Without `gh`, PAL prints a prefilled link or a file to paste and you file it yourself.
+Limits: a sent report is public and cannot be withdrawn by PAL. The leak check matches known names and shapes; it cannot judge whether a sentence describes your work too closely, so read the report before you answer. Without `gh`, PAL prints a prefilled link or a file to paste and you file it yourself. A pull request needs `gh` signed in; its commit messages and diff pass the same leak check, and its branch is pushed to your fork of the PAL repository.

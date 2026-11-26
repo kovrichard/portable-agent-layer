@@ -64,6 +64,7 @@ Two rules hold through every step:
    Put the full output in your reply to the user, unshortened and unparaphrased, leak check included. Then ask one question with these options:
    - send as a new issue
    - add as a comment to #N (only when step 4 found a match; name its title)
+   - open a pull request with the fix (only when this session committed and tested a fix in a checkout of the PAL repository; name its folder)
    - don't send
 
    Say in the same reply that sending makes the report public and cannot be undone. Then stop and wait for the answer. When the user asks for a change, edit the body file and go back to step 3.
@@ -77,12 +78,16 @@ Two rules hold through every step:
      ```bash
      pal cli report send <id> --approved --comment <issue-number>
      ```
+   - Yes, pull request: the report becomes its description, and the commits ahead of `canary` in that checkout are its change. The leak check also runs on their messages and diff, and the branch goes to the user's fork.
+     ```bash
+     pal cli report send <id> --approved --pr --dir <pal-checkout>
+     ```
    - No, or anything that is not a clear yes:
      ```bash
      pal cli report decline <id>
      ```
 
-   Relay what the send command prints: the issue URL, or the prefilled link or the file to paste when `gh` is not available. When it refuses because the leak check found something, go back to step 3; do not look for a way around the refusal.
+   Relay what the send command prints: the issue or pull request URL, the reason it refused a pull request, or the prefilled link or the file to paste when `gh` is not available. When it refuses because the leak check found something, go back to step 3; do not look for a way around the refusal.
 
 `pal cli report list` shows the reports drafted on this machine and what became of each; use it when the user asks about an earlier report.
 
