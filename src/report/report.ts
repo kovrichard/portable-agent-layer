@@ -116,8 +116,11 @@ export function reportLeaks(
   report: Report,
   ids: Identifiers = machineIdentifiers()
 ): Leak[] {
-  return findLeaks(`${report.title}\n${report.body}`, ids);
+  return findLeaks(shownText(report), ids);
 }
+
+/** What `pal cli report show` prints, so a leak's line number points into it. */
+export const shownText = (report: Report) => `# ${report.title}\n\n${report.body}`;
 
 function searchTerms(title: string): string {
   return title
