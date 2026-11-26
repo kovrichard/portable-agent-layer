@@ -54,24 +54,23 @@ $palSettings = Join-Path $env:USERPROFILE ".pal\settings.json"
 if (-not (Test-Path $palSettings)) { $palSettings = Join-Path $env:USERPROFILE ".pal\memory\pal-settings.json" }
 
 $OPEN_ISCS = 0
-$PROJECT_NAME = ""
 $projectsDir = Join-Path $env:USERPROFILE ".pal\work\projects"
 if (-not (Test-Path $projectsDir)) { $projectsDir = Join-Path $env:USERPROFILE ".pal\memory\projects" }
-if (Test-Path $projectsDir) {
+$bindingsFile = Join-Path $env:USERPROFILE ".pal\bindings.json"
+if ((Test-Path $projectsDir) -and (Test-Path $bindingsFile)) {
   try {
     $CWD_NORM = $CWD.Replace('/', '\').TrimEnd('\')
-    foreach ($slug in Get-ChildItem $projectsDir -Directory | Select-Object -ExpandProperty Name) {
-      $isa = Join-Path $projectsDir "$slug\ISA.md"
-      if (-not (Test-Path $isa)) { continue }
-      $content = Get-Content $isa -Raw -ErrorAction SilentlyContinue
-      $pathMatch = [regex]::Match($content, 'path:\s*"?([^"\n\r]+)"?')
-      if ($pathMatch.Success) {
-        $projPath = $pathMatch.Groups[1].Value.Trim().Replace('/', '\').TrimEnd('\')
-        if ($projPath -eq $CWD_NORM -or $CWD_NORM.StartsWith($projPath)) {
-          $PROJECT_NAME = $slug
-          $OPEN_ISCS = ([regex]::Matches($content, '- \[ \] ISC-')).Count
-          break
-        }
+    $bindings = Get-Content $bindingsFile -Raw | ConvertFrom-Json
+    $project = $bindings.PSObject.Properties |
+      ForEach-Object { [pscustomobject]@{ Slug = $_.Name; Path = ([string]$_.Value).Replace('/', '\').TrimEnd('\') } } |
+      Where-Object { $CWD_NORM -eq $_.Path -or $CWD_NORM.StartsWith($_.Path + '\', [StringComparison]::OrdinalIgnoreCase) } |
+      Sort-Object { $_.Path.Length } -Descending |
+      Select-Object -First 1
+    if ($project) {
+      $isa = Join-Path $projectsDir "$($project.Slug)\ISA.md"
+      if (Test-Path $isa) {
+        $content = Get-Content $isa -Raw -ErrorAction SilentlyContinue
+        $OPEN_ISCS = ([regex]::Matches($content, '- \[ \] ISC-')).Count
       }
     }
   } catch { $OPEN_ISCS = 0 }

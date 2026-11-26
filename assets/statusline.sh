@@ -85,17 +85,17 @@ PAL_SETTINGS="$HOME/.pal/settings.json"
 OPEN_ISCS=0
 PROJECTS_DIR="$HOME/.pal/work/projects"
 [ -d "$PROJECTS_DIR" ] || PROJECTS_DIR="$HOME/.pal/memory/projects"
-if [ -d "$PROJECTS_DIR" ]; then
+BINDINGS="$HOME/.pal/bindings.json"
+if [ -d "$PROJECTS_DIR" ] && [ -f "$BINDINGS" ]; then
   CWD_NORM="${CWD%/}"
-  for ISA in "$PROJECTS_DIR"/*/ISA.md; do
-    [ -f "$ISA" ] || continue
-    PROJ_PATH=$(grep -m1 'path:' "$ISA" | sed 's/.*path:[[:space:]]*//' | tr -d '"' | tr -d "'" | xargs)
-    PROJ_PATH="${PROJ_PATH%/}"
-    if [ "$PROJ_PATH" = "$CWD_NORM" ] || [[ "$CWD_NORM" == "${PROJ_PATH}/"* ]]; then
-      OPEN_ISCS=$(grep -c '- \[ \] ISC-' "$ISA" 2>/dev/null || echo 0)
-      break
-    fi
-  done
+  PROJECT=$(jq -r --arg cwd "$CWD_NORM" '
+    to_entries
+    | map(select(.value as $p | ($p | rtrimstr("/")) as $p | $cwd == $p or ($cwd | startswith($p + "/"))))
+    | max_by(.value | length) | .key // empty' "$BINDINGS" 2>/dev/null)
+  ISA="$PROJECTS_DIR/$PROJECT/ISA.md"
+  if [ -n "$PROJECT" ] && [ -f "$ISA" ]; then
+    OPEN_ISCS=$(grep -c -- '- \[ \] ISC-' "$ISA" 2>/dev/null) || OPEN_ISCS=0
+  fi
 fi
 
 # Create context progress bar (20 chars wide)
