@@ -5,8 +5,7 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { paths } from "../core/paths";
+import { movedOutOfState, paths } from "../core/paths";
 import { isEnabled } from "../core/settings";
 import type { Reaction } from "./interaction-reaction";
 
@@ -30,7 +29,7 @@ const TEXT_MAX = 1000;
 const REPLY_END_MAX = 600;
 
 function samplesFile(): string {
-  return resolve(paths.state(), "reaction-samples.json");
+  return movedOutOfState(paths.adaptation(), "reaction-samples.json");
 }
 
 /** @lintignore exercised directly by test/interaction-samples.test.ts */

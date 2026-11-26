@@ -5,8 +5,7 @@
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { paths } from "../core/paths";
+import { movedOutOfState, paths } from "../core/paths";
 import { isMaintainerEnv } from "./algorithm-review";
 import type { Reaction } from "./interaction-reaction";
 import { type ReactionSample, readSamples } from "./interaction-samples";
@@ -38,7 +37,7 @@ const DRIFT_MIN_NEW = 20;
 const DRIFT_MIN_DELTA = 0.15;
 
 function markFile(): string {
-  return resolve(paths.state(), "reaction-audit.json");
+  return movedOutOfState(paths.adaptation(), "reaction-audit.json");
 }
 
 function readAuditMark(): AuditMark | null {

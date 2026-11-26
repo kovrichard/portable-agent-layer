@@ -125,6 +125,14 @@ export function stateDir(): string {
   return formerStateDir();
 }
 
+/** A file that left the state folder for `dir`: its old copy is read until the owner's move takes it. */
+export function movedOutOfState(dir: string, name: string): string {
+  const current = resolve(dir, name);
+  const former = resolve(stateDir(), name);
+
+  return existsSync(current) || !existsSync(former) ? current : former;
+}
+
 // User state paths (in PAL_HOME / repo root)
 export const paths = {
   telos: () => home("telos"),
