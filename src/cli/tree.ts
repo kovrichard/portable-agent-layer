@@ -32,6 +32,7 @@ import { runMigrate } from "./migrate";
 import { patternsCommand } from "./patterns";
 import { telosCommand, timezoneCommand } from "./personal-context";
 import { progressCommand } from "./progress";
+import { reportCommand } from "./report";
 import { ruleCommand } from "./rule";
 import { minimumCommand, timeboxCommand, unattendedCommand } from "./run-mode";
 import { scheduleCommand } from "./schedule";
@@ -205,6 +206,10 @@ function adminCommands(admin: AdminHandlers): Record<string, Leaf | Group> {
   };
 }
 
+function usageCommands(): Record<string, Leaf | Group> {
+  return { usage: usageCommand, cost: costCommand, wrapped: wrappedCommand };
+}
+
 export function cliTree(admin: AdminHandlers): Group {
   return group({
     summary: "Admin commands for the Portable Agent Layer",
@@ -212,10 +217,9 @@ export function cliTree(admin: AdminHandlers): Group {
     details: ENVIRONMENT,
     commands: {
       ...adminCommands(admin),
-      usage: usageCommand,
-      cost: costCommand,
-      wrapped: wrappedCommand,
+      ...usageCommands(),
       env: envCommand,
+      report: reportCommand,
       auth: authCommand,
       patterns: patternsCommand,
       content: contentCommand,
