@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
+import { appendEvent } from "../src/bronze/events";
 import type { Finding } from "../src/cli/doctor/finding";
 import {
   hookErrorFindings,
+  lastClaudeSuccessAt,
   loginExpiryFindings,
   migrationFindings,
   updateFinding,
@@ -15,6 +17,7 @@ import {
   routeFinding,
 } from "../src/cli/doctor/inference";
 import { palEnvPath } from "../src/core/pal-env";
+import { reload } from "../src/core/settings";
 import { loginCacheFile, readLoginCache } from "../src/inference/login-cache";
 import { debugHome } from "./lib/fake-spawn";
 import { freshTestDir } from "./lib/test-home";
@@ -86,6 +89,23 @@ describe("hook errors", () => {
   test("a line logged before spawns were tagged reads as the native login", () => {
     const [finding] = hookErrorFindings([expiredLogin], noToken);
     expect(finding.fix?.command).toBe("claude auth login");
+  });
+
+  test("a background call that succeeded after the last rejection clears it", () => {
+    const loggedInAgain = { ...noToken, lastClaudeSuccessAt: at(10) };
+    const [finding] = hookErrorFindings([rejectedBy("native")], loggedInAgain);
+
+    expect(finding.severity).toBe("ok");
+    expect(finding.id).toBe("hook-errors.inference");
+    expect(finding.title).toContain("log in again");
+  });
+
+  test("a success from before the last rejection does not clear it", () => {
+    const stillFailing = { ...noToken, lastClaudeSuccessAt: at(90) };
+
+    expect(hookErrorFindings([rejectedBy("native")], stillFailing)[0].severity).toBe(
+      "fail"
+    );
   });
 
   test("a rejected token fails and says to renew it", () => {
@@ -453,5 +473,31 @@ describe("~/.pal/.env", () => {
 
     expect(byId("key.PAL_GEMINI_API_KEY")?.severity).toBe("ok");
     expect(byId("key.PAL_XAI_API_KEY")).toBeUndefined();
+  });
+});
+
+describe("the last background call to Claude that logged in", () => {
+  beforeEach(() => {
+    process.env.PAL_HOME = freshTestDir(import.meta.file);
+    reload();
+  });
+
+  const call = (minutesAgo: number, fields: Record<string, unknown>) =>
+    appendEvent("inference_call", fields, {
+      ts: new Date(Date.now() - minutesAgo * MINUTE).toISOString(),
+    });
+
+  test("is the newest Claude call without a failure", () => {
+    call(30, { route: "claude-spawn", failure: null });
+    call(5, { route: "claude-spawn", failure: "login rejected" });
+    call(3, { route: "codex-spawn", failure: null });
+
+    expect(Math.round((Date.now() - lastClaudeSuccessAt(Date.now())) / MINUTE)).toBe(30);
+  });
+
+  test("is 0 when none did in the last day", () => {
+    call(25 * 60, { route: "claude-spawn", failure: null });
+
+    expect(lastClaudeSuccessAt(Date.now())).toBe(0);
   });
 });

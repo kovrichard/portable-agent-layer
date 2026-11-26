@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { eventsSince } from "../../bronze/events";
 import { type HookErrorGroup, recentHookErrors } from "../../core/log";
 import { palEnvPath } from "../../core/pal-env";
 import { palHome } from "../../core/paths";
@@ -19,6 +20,7 @@ interface PendingMigration {
 
 interface ErrorContext {
   now: number;
+  lastClaudeSuccessAt?: number;
 }
 
 const MINUTE_MS = 60_000;
@@ -38,6 +40,12 @@ function claudeLoginExpiredFinding(
   group: HookErrorGroup,
   context: ErrorContext
 ): Finding {
+  if ((context.lastClaudeSuccessAt ?? 0) > group.lastAt)
+    return passed(
+      `hook-errors.${group.source}`,
+      `Background calls to Claude log in again — the last failed login was ${ago(group.lastAt, context.now)}`
+    );
+
   const title = `Background calls to Claude could not log in — ${group.count} failed in the last 24h, last ${ago(group.lastAt, context.now)}: ${group.last}`;
 
   if (loggedClaudeAuthMode(group.lastMessage ?? "") === "token")
@@ -156,9 +164,26 @@ export function updateFinding(cache: UpdateCache | null): Finding {
   });
 }
 
+const DAY_MS = 24 * 60 * MINUTE_MS;
+
+export function lastClaudeSuccessAt(now: number): number {
+  return eventsSince("inference_call", new Date(now - DAY_MS))
+    .filter((call) => String(call.route ?? "").startsWith("claude") && !call.failure)
+    .reduce((latest, call) => Math.max(latest, Date.parse(call.ts)), 0);
+}
+
+function errorContext(groups: HookErrorGroup[]): ErrorContext {
+  const now = Date.now();
+  const loginRejected = groups.some((group) => CLAUDE_LOGIN_REJECTED.test(group.last));
+
+  return loginRejected ? { now, lastClaudeSuccessAt: lastClaudeSuccessAt(now) } : { now };
+}
+
 export function healthFindings(): Finding[] {
+  const hookErrors = recentHookErrors();
+
   return [
-    ...hookErrorFindings(recentHookErrors()),
+    ...hookErrorFindings(hookErrors, errorContext(hookErrors)),
     ...loginExpiryFindings(readLoginCache()),
     ...migrationFindings(checkPendingMigrations()),
     updateFinding(cachedStatus()),
