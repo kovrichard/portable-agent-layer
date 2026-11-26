@@ -285,6 +285,7 @@
     }
   },
   "enabledPlugins": {
-    "dark-factory@pal": false
+    "dark-factory@pal": false,
+    "pal-notice@pal": true
   }
 }
