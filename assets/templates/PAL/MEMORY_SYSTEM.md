@@ -6,16 +6,10 @@ PAL has its own memory system that persists across sessions AND across tools (Cl
 
 All memory lives under `~/.pal/memory/`. Every store PAL records to, with its group and folder, is listed in `src/bronze/bronze.ts` in the PAL package.
 
+This machine's working state is not memory and lives beside it in `~/.pal/state/` (an install that has not run the move keeps it in `memory/state/`). It is never exported or synced: sessions, session names, the hooks' per-session files, collector cursors and scheduled-prompt marks. What regenerates (agenda, goal links, counts, synthesis) lives in `~/.pal/cache/`.
+
 ```
 memory/
-├── state/                              # Runtime state (managed by hooks)
-│   ├── sessions.json                   # Session registry
-│   ├── counts.json                     # Cached counts for greeting
-│   ├── last-responses.json             # Cached responses for rating correlation
-│   ├── captured-learnings.json         # Session-intelligence dedup map
-│   ├── session-names.json              # Generated session titles
-│   └── debug.log[.1-.5]                # Rotated hook execution logs
-│
 ├── signals/
 │   └── interaction/YYYY-MM.jsonl       # Measured features of each user turn (never the text)
 │
@@ -43,7 +37,7 @@ memory/
 
 ## Where to write
 
-Almost everything in `records/`, and in `state/`, `signals/`, `relationship/`, `learning/` and `wisdom/` under `memory/`, is hook-managed — **never edit these directly**. Use the relevant skill or tool instead.
+Almost everything in `records/` and `state/`, and in `signals/`, `relationship/`, `learning/` and `wisdom/` under `memory/`, is hook-managed — **never edit these directly**. Use the relevant skill or tool instead.
 
 | You want to capture | Go through | Lands at |
 |---------------------|------------|----------|
@@ -51,7 +45,7 @@ Almost everything in `records/`, and in `state/`, `signals/`, `relationship/`, `
 | What a session did | Session-intelligence handler (automatic) | `work/projects/<slug>/history.jsonl` |
 | A rating signal | UserPromptOrchestrator rating capture | `records/ratings/ratings.jsonl` |
 | How a user turn went (pace, length, skimming, how it received the last reply) | Prompt-time interaction measurement (automatic, every agent; see the per-agent turn contract in SYSTEM_ARCHITECTURE.md); read it with `pal cli interaction report` | `signals/interaction/YYYY-MM.jsonl` |
-| A rolling sample of labelled messages, for auditing the reaction rules | Prompt-time interaction measurement (automatic, `reactionSampling`) | `state/reaction-samples.json` |
+| A rolling sample of labelled messages, for auditing the reaction rules | Prompt-time interaction measurement (automatic, `reactionSampling`) | `memory/adaptation/reaction-samples.json` |
 | Where a session's work stopped | `pal cli progress stopped`, or the session-intelligence handler at the end of a session | `work/progress-tree/events.jsonl` |
 
 ## Format conventions

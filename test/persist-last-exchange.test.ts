@@ -6,7 +6,7 @@ import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
 const HOME = testHome(import.meta.file);
-const STATE = resolve(HOME, "memory", "state");
+const STATE = resolve(HOME, "state");
 
 const messages = [
   { role: "user", content: "the user's last message" },

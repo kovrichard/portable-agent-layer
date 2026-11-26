@@ -83,6 +83,18 @@ describe("caches-in-state leftover", () => {
   test("finds nothing on a clean install", () => {
     expect(cachesInState().find()).toEqual([]);
   });
+
+  test.each(["agenda.json", "goal-links.json", "counts.json", "synthesis.json"])(
+    "moves %s, which regenerates, into the cache",
+    (name) => {
+      write(at("memory", "state", name), "{}");
+
+      cachesInState().remove();
+
+      expect(existsSync(at("memory", "state", name))).toBe(false);
+      expect(existsSync(at("cache", name))).toBe(true);
+    }
+  );
 });
 
 describe("machine-local state never crosses machines", () => {
@@ -91,6 +103,12 @@ describe("machine-local state never crosses machines", () => {
     "memory/state/transcript-copies.json",
     "memory/state/last-exchange/abc.json",
     "memory/state/auto-update.lock",
+    "memory/state/sessions.json",
+    "memory/state/session-names.json",
+    "memory/state/scheduled-prompts-fired.json",
+    "memory/state/waiting-on-user/notified-s1.json",
+    "state/collector-cursors.json",
+    "state/anything-new.json",
   ])("%s is refused by import", (path) => {
     expect(isMachineLocalState(path)).toBe(true);
     expect(isNeverImport(path)).toBe(true);
@@ -102,10 +120,12 @@ describe("machine-local state never crosses machines", () => {
   });
 
   test.each([
-    "memory/state/sessions.json",
+    "memory/state/sessions-archive/2026-11.jsonl",
+    "memory/state/import-log.jsonl",
     "memory/state/last-exchange-notes.json",
     "memory/state/auto-update.json.old",
     "memory/progress-tree/events.jsonl",
+    "work/progress-tree/events.jsonl",
   ])("%s still travels", (path) => {
     expect(isMachineLocalState(path)).toBe(false);
     expect(isNeverImport(path)).toBe(false);
@@ -116,10 +136,14 @@ describe("machine-local state never crosses machines", () => {
     write(at("memory", "state", "last-exchange", "s1.json"), "{}");
     write(at("memory", "content", "claude", "t.gz"), "x");
     write(at("memory", "state", "sessions.json"), "{}");
+    write(at("memory", "state", "sessions-archive", "2026-11.jsonl"), "{}");
+    write(at("state", "collector-cursors.json"), "{}");
 
     const files = collectExportFiles();
 
-    expect(files).toContain("memory/state/sessions.json");
+    expect(files).toContain("memory/state/sessions-archive/2026-11.jsonl");
+    expect(files.filter((f) => f.includes("sessions.json"))).toEqual([]);
+    expect(files.filter((f) => f.startsWith("state/"))).toEqual([]);
     expect(files.filter((f) => f.includes("collector-cursors"))).toEqual([]);
     expect(files.filter((f) => f.includes("last-exchange"))).toEqual([]);
     expect(files.filter((f) => f.startsWith("memory/content"))).toEqual([]);
@@ -444,13 +468,13 @@ describe("pal cli migrate --undo", () => {
 
   test("names the undoable migrations when the id cannot be undone", () => {
     expect(printedBy(["--undo", "v1-projects"])).toEqual([
-      '  Nothing to undo for "v1-projects". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores, v15-work-stores, v16-bronze-to-records',
+      '  Nothing to undo for "v1-projects". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores, v15-work-stores, v16-bronze-to-records, v17-state-to-root',
     ]);
   });
 
   test("names them too when no id is given", () => {
     expect(printedBy(["--undo"])[0]).toBe(
-      '  Nothing to undo for "". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores, v15-work-stores, v16-bronze-to-records'
+      '  Nothing to undo for "". Undoable: v11-memory-backups, v12-raw-to-records, v13-settings-to-root, v14-records-stores, v15-work-stores, v16-bronze-to-records, v17-state-to-root'
     );
   });
 });

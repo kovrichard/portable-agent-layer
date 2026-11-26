@@ -112,21 +112,43 @@ function pkg(...segments: string[]): string {
 /** The folders under the PAL home that hold the user's data, by kind: learned, recorded, work, machine state. */
 const DATA_ROOTS = ["memory", "records", "work", "state"] as const;
 
+const formerStateDir = () => home("memory", "state");
+
+/**
+ * This machine's working state. An install whose owner has not run the move to
+ * `state/` yet keeps using `memory/state`; once `state/` exists it wins.
+ */
+export function stateDir(): string {
+  const current = home("state");
+  if (existsSync(current) || !existsSync(formerStateDir())) return current;
+
+  return formerStateDir();
+}
+
+/** A file that left the state folder for `dir`: its old copy is read until the owner's move takes it. */
+export function movedOutOfState(dir: string, name: string): string {
+  const current = resolve(dir, name);
+  const former = resolve(formerStateDir(), name);
+
+  return existsSync(current) || !existsSync(former) ? current : former;
+}
+
 // User state paths (in PAL_HOME / repo root)
 export const paths = {
   telos: () => home("telos"),
   memory: () => home("memory"),
   dataRoots: () => DATA_ROOTS.map((root) => home(root)),
   signals: () => ensureDir(home("memory", "signals")),
-  state: () => ensureDir(home("memory", "state")),
+  state: () => ensureDir(stateDir()),
+  formerState: formerStateDir,
   research: () => ensureDir(home("memory", "research")),
   wisdomState: () => ensureDir(home("memory", "wisdom", "state")),
   adaptation: () => ensureDir(home("memory", "adaptation")),
   knowledge: () => ensureDir(home("memory", "knowledge")),
   knowledgeDomain: (d: string) => ensureDir(home("memory", "knowledge", d)),
   failures: () => ensureDir(home("memory", "learning", "failures")),
-  progress: () => ensureDir(home("memory", "state", "progress")),
-  transcriptHandoff: () => ensureDir(home("memory", "state", "transcript-handoff")),
+  legacyProjects: () => resolve(formerStateDir(), "progress"),
+  transcriptHandoff: () => ensureDir(resolve(stateDir(), "transcript-handoff")),
   backups: () => ensureDir(home("backups")),
   cache: () => ensureDir(home("cache")),
   debug: () => ensureDir(home("debug")),

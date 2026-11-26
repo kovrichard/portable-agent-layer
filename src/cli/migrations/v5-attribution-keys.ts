@@ -17,7 +17,7 @@ function attributionFiles(): string[] {
     "reflections",
     "algorithm-reflections.jsonl"
   );
-  const files = [reflections, resolve(paths.state(), "threads.jsonl")];
+  const files = [reflections, resolve(paths.formerState(), "threads.jsonl")];
   const signalsDir = paths.signals();
   if (existsSync(signalsDir)) {
     for (const name of readdirSync(signalsDir)) {

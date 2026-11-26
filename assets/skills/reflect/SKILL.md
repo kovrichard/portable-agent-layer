@@ -46,7 +46,7 @@ Based on the type, investigate the relevant chain:
 1. Read the relevant handler source code in `hooks/handlers/`
 2. Check the orchestrator that calls it (`StopOrchestrator.ts` or `UserPromptOrchestrator.ts`)
 3. Check `~/.claude/settings.json` to confirm the hook is registered
-4. Check PAL logs at `portable-agent-layer/memory/state/debug.log` for errors
+4. Check PAL logs at `~/.pal/debug/debug.log` for errors (written while `pal cli debug on`)
 5. Check if the handler has conditions that weren't met (e.g., message count < 2, missing session_id)
 
 ### For instruction-driven behaviors:

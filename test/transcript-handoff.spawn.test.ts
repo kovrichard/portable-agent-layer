@@ -42,7 +42,7 @@ const messages = Array.from({ length: 8 }, (_, i) => ({
 }));
 
 function handoffDir(): string {
-  return resolve(home, "memory", "state", "transcript-handoff");
+  return resolve(home, "state", "transcript-handoff");
 }
 
 function ageFile(file: string, hoursAgo: number): void {
@@ -134,7 +134,7 @@ describe("Stop hook transcript hand-off folder", () => {
   });
 
   test("returns without throwing when the hand-off folder is a regular file", async () => {
-    mkdirSync(resolve(home, "memory", "state"), { recursive: true });
+    mkdirSync(resolve(home, "state"), { recursive: true });
     writeFileSync(handoffDir(), "not a folder");
 
     await runStopHandlers(messages, { sessionId: "handoff-broken" });
@@ -155,7 +155,7 @@ describe("detached children delete their hand-off file", () => {
 
   async function runChild(name: string, content: string): Promise<string> {
     const dir = freshTestDir(import.meta.file);
-    mkdirSync(resolve(dir, "memory", "state"), { recursive: true });
+    mkdirSync(resolve(dir, "state"), { recursive: true });
     const file = resolve(dir, "handoff.txt");
     writeFileSync(file, content);
     const proc = Bun.spawn(

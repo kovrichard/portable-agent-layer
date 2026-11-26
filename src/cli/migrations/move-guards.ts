@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "../../bronze/bronze";
-import { palHome, paths } from "../../core/paths";
+import { palHome, paths, stateDir } from "../../core/paths";
 import { filesUnder } from "./file-hash";
 import { recordMemoryMove } from "./verified-move";
 
@@ -122,11 +122,7 @@ export function busyReasons(seams: Partial<GuardSeams> = {}): string[] {
   return [
     ...recentEventReason(all),
     ...liveProcessReason(paths.serverState(), "the control room", all),
-    ...liveProcessReason(
-      resolve(paths.memory(), "state", "collect.lock"),
-      "a bronze collect",
-      all
-    ),
+    ...liveProcessReason(resolve(stateDir(), "collect.lock"), "a bronze collect", all),
   ];
 }
 

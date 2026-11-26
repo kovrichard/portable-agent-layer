@@ -20,7 +20,7 @@ function transcriptOf(...contents: string[]): Message[] {
 }
 
 function cachePath(): string {
-  return resolve(HOME, "memory", "state", "last-responses.json");
+  return resolve(HOME, "state", "last-responses.json");
 }
 
 function readCache(): Record<string, { response: string; ts: string }> {
@@ -28,7 +28,7 @@ function readCache(): Record<string, { response: string; ts: string }> {
 }
 
 function seedCache(entries: Record<string, { response: string; ts: string }>) {
-  mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+  mkdirSync(resolve(HOME, "state"), { recursive: true });
   writeFileSync(cachePath(), JSON.stringify(entries), "utf-8");
 }
 
@@ -55,10 +55,7 @@ describe("runStopHandlers — the final reply", () => {
     });
 
     const exchange = JSON.parse(
-      readFileSync(
-        resolve(HOME, "memory", "state", "last-exchange", "latest.json"),
-        "utf-8"
-      )
+      readFileSync(resolve(HOME, "state", "last-exchange", "latest.json"), "utf-8")
     );
     expect(exchange.userMessage).toBe("second ask");
     expect(exchange.assistantMessage).toBe("the final answer");
@@ -71,7 +68,7 @@ describe("runStopHandlers — the final reply", () => {
     });
 
     const tracks = JSON.parse(
-      readFileSync(resolve(HOME, "memory", "state", "interaction-sessions.json"), "utf-8")
+      readFileSync(resolve(HOME, "state", "interaction-sessions.json"), "utf-8")
     );
     expect(tracks["s-shape"].reply).toMatchObject({ listItems: 2, asked: true });
   });
@@ -136,7 +133,7 @@ describe("runStopHandlers — last-response cache", () => {
   });
 
   test("starts a fresh cache when the existing file is corrupt", async () => {
-    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
+    mkdirSync(resolve(HOME, "state"), { recursive: true });
     writeFileSync(cachePath(), "{ not json", "utf-8");
 
     await runStopHandlers(transcriptOf("q", "recovered"), { sessionId: "sess-a" });

@@ -8,6 +8,7 @@ import { freshTestDir } from "./lib/test-home";
 // which is why every case below checks what the untouched lines look like after.
 
 let HOME: string;
+const V5 = "v5-attribution-keys";
 
 function writeJsonl(relPath: string, lines: string[]): string {
   const file = resolve(HOME, relPath);
@@ -56,7 +57,7 @@ describe("v5-attribution-keys", () => {
       JSON.stringify({ id: "t1", m: "mach-1", title: "keep me", status: "open" }),
     ]);
     const { runMigrate } = await migration();
-    runMigrate([]);
+    runMigrate([V5]);
     const [record] = readLines(file);
     expect(record.machine).toBe("mach-1");
     expect(record.m).toBeUndefined();
@@ -73,7 +74,7 @@ describe("v5-attribution-keys", () => {
       JSON.stringify({ type: "rating", m: "mach-1" }),
     ]);
     const { runMigrate } = await migration();
-    runMigrate([]);
+    runMigrate([V5]);
     expect(readLines(reflections)[0].machine).toBe("mach-1");
     expect(readLines(ratings)[0].machine).toBe("mach-1");
   });
@@ -84,7 +85,7 @@ describe("v5-attribution-keys", () => {
       JSON.stringify({ id: "t1", m: "mach-1" }),
     ]);
     const { runMigrate } = await migration();
-    runMigrate([]);
+    runMigrate([V5]);
     const [malformed, migrated] = readFileSync(file, "utf-8").trim().split("\n");
     expect(malformed).toBe("not json at all");
     expect(JSON.parse(migrated).machine).toBe("mach-1");
@@ -95,7 +96,7 @@ describe("v5-attribution-keys", () => {
       JSON.stringify({ id: "t1", m: "old", machine: "authoritative" }),
     ]);
     const { runMigrate } = await migration();
-    runMigrate([]);
+    runMigrate([V5]);
     expect(readLines(file)[0].machine).toBe("authoritative");
     expect(readLines(file)[0].m).toBeUndefined();
   });
@@ -105,9 +106,9 @@ describe("v5-attribution-keys", () => {
       JSON.stringify({ id: "t1", m: "mach-1" }),
     ]);
     const { runMigrate, pendingMigrations } = await migration();
-    runMigrate([]);
+    runMigrate([V5]);
     const after = readFileSync(file, "utf-8");
-    runMigrate([]);
+    runMigrate([V5]);
     expect(readFileSync(file, "utf-8")).toBe(after);
     expect(pendingMigrations().map((p) => p.id)).not.toContain("v5-attribution-keys");
   });

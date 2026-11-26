@@ -24,7 +24,7 @@ export interface Agenda {
 
 /** @lintignore exercised directly by test/agenda-store.test.ts */
 export function agendaPath(): string {
-  return resolve(paths.state(), "agenda.json");
+  return resolve(paths.cache(), "agenda.json");
 }
 
 export function readAgenda(): Agenda | null {

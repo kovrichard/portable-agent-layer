@@ -215,11 +215,11 @@ describe("collecting Claude Code's model calls", () => {
     expect(await collectClaude(projects, LATER)).toBe(0);
   });
 
-  test("the cursor is kept per source under memory/state", async () => {
+  test("the cursor is kept per source in this machine's state", async () => {
     write(block("msg_1", 10));
     await collectClaude(projects, LATER);
     const cursors = JSON.parse(
-      readFileSync(resolve(home, "memory", "state", "collector-cursors.json"), "utf-8")
+      readFileSync(resolve(home, "state", "collector-cursors.json"), "utf-8")
     );
     expect(cursors.claude["-repo/s.jsonl"]).toBe(readFileSync(transcript).length);
   });

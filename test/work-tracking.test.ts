@@ -149,7 +149,7 @@ describe("writeSession / project history I/O", () => {
 
     for (let n = 0; n < 51; n++) writeSession(session(n));
     const hot = JSON.parse(
-      readFileSync(resolve(TEST_HOME, "memory", "state", "sessions.json"), "utf-8")
+      readFileSync(resolve(TEST_HOME, "state", "sessions.json"), "utf-8")
     ) as { sessionId: string }[];
     const archived = readFileSync(archive, "utf-8")
       .trim()

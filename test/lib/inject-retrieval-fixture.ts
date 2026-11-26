@@ -20,6 +20,7 @@ export function injectRetrievalHome(file: string): string {
       resolve(home, "memory", "learning"),
       resolve(home, "memory", "wisdom"),
       resolve(home, "memory", "state"),
+      resolve(home, "state"),
       resolve(home, "memory", "adaptation"),
     ]) {
       removeOnceReleased(dir);

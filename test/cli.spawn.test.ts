@@ -88,9 +88,9 @@ describe("pal cli init", () => {
     expect(telosFiles.length).toBeGreaterThan(0);
   }, 15000);
 
-  test("creates memory state directory", () => {
-    const stateDir = resolve(TEST_HOME, "memory", "state");
-    expect(existsSync(stateDir)).toBe(true);
+  test("creates the state directory at the root, not under memory", () => {
+    expect(existsSync(resolve(TEST_HOME, "state"))).toBe(true);
+    expect(existsSync(resolve(TEST_HOME, "memory", "state"))).toBe(false);
   });
 });
 

@@ -6,7 +6,7 @@ import { legacyJsonToProgress } from "../../progress/projects-legacy";
 import { ok } from "./project-io";
 
 export function cmdMigrate(): undefined {
-  const progressDir = paths.progress();
+  const progressDir = paths.legacyProjects();
   if (!existsSync(progressDir)) {
     ok({ migrated: 0, skipped: 0, results: [] });
 
