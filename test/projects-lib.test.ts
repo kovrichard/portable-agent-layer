@@ -88,7 +88,7 @@ describe("read/write/delete", () => {
   });
 
   test("a handoff an older PAL left in the record is not read back", () => {
-    const dir = resolve(TEST_HOME, "memory", "projects", "old");
+    const dir = resolve(TEST_HOME, "work", "projects", "old");
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       resolve(dir, "ISA.md"),
@@ -99,7 +99,7 @@ describe("read/write/delete", () => {
 
   test("malformed ISA.md in projects dir is skipped, not crashed on", () => {
     writeProject(fakeProject({ name: "valid", path: "/tmp/v" }));
-    const dir = resolve(TEST_HOME, "memory", "projects", "broken");
+    const dir = resolve(TEST_HOME, "work", "projects", "broken");
     mkdirSync(dir, { recursive: true });
     writeFileSync(resolve(dir, "ISA.md"), "not valid frontmatter {{{");
     const all = readAllProjects();

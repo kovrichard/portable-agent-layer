@@ -1,13 +1,23 @@
-import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import { storeLocation } from "../../bronze/bronze";
 import { mergeJsonlLines } from "../../core/import-merge";
-import { paths } from "../../core/paths";
+import { palHome, paths } from "../../core/paths";
 import { discardEmptyFolder, type Migration, type MigrationResult } from "./migration";
 
 export const EVENTS_FILE = "events.jsonl";
 const OLD_PROGRESS_TREE_LABEL = "memory/work-tree/";
 const oldProgressTreeFolder = () => resolve(paths.memory(), "work-tree");
-export const newProgressTreeFolder = () => resolve(paths.memory(), "progress-tree");
+const newProgressTreeFolder = () => storeLocation("progress-tree");
+const newFolderLabel = () =>
+  `${relative(palHome(), newProgressTreeFolder()).replaceAll("\\", "/")}/`;
 
 interface FolderStep {
   results: string[];
@@ -33,7 +43,7 @@ function appendOldProgressTree(): FolderStep {
   const appended = mergeOldProgressTreeEvents();
   discardEmptyFolder(oldProgressTreeFolder());
   const results = [
-    `${OLD_PROGRESS_TREE_LABEL}: ${appended} event(s) appended before memory/progress-tree/events.jsonl`,
+    `${OLD_PROGRESS_TREE_LABEL}: ${appended} event(s) appended before ${newFolderLabel()}events.jsonl`,
   ];
 
   if (!existsSync(oldProgressTreeFolder())) return { results, skipped: 0 };
@@ -53,18 +63,19 @@ function progressTreeFolderStep(dryRun: boolean): FolderStep {
 
   if (dryRun) {
     const verb = bothExist
-      ? "would append its events before memory/progress-tree/events.jsonl"
-      : "would move to memory/progress-tree/";
+      ? `would append its events before ${newFolderLabel()}events.jsonl`
+      : `would move to ${newFolderLabel()}`;
 
     return { results: [`${OLD_PROGRESS_TREE_LABEL}: ${verb}`], skipped: 0 };
   }
 
   try {
     if (!bothExist) {
+      mkdirSync(dirname(newProgressTreeFolder()), { recursive: true });
       renameSync(oldProgressTreeFolder(), newProgressTreeFolder());
 
       return {
-        results: [`${OLD_PROGRESS_TREE_LABEL}: moved to memory/progress-tree/`],
+        results: [`${OLD_PROGRESS_TREE_LABEL}: moved to ${newFolderLabel()}`],
         skipped: 0,
       };
     }

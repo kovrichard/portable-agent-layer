@@ -1,10 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeLocation } from "../../bronze/bronze";
 import { resolveAnchor } from "../../core/anchor";
 import { appendEvent, scopeOf } from "../../progress/progress-tree";
 import { readThreads, type Thread } from "../../tools/lib/thread";
 import type { Migration, MigrationResult } from "./migration";
-import { EVENTS_FILE, newProgressTreeFolder } from "./v9-progress-tree-names";
+import { EVENTS_FILE } from "./v9-progress-tree-names";
 
 function nodeOf(line: string): string[] {
   try {
@@ -17,7 +18,7 @@ function nodeOf(line: string): string[] {
 }
 
 function progressTreeNodeIds(): Set<string> {
-  const file = resolve(newProgressTreeFolder(), EVENTS_FILE);
+  const file = resolve(storeLocation("progress-tree"), EVENTS_FILE);
   if (!existsSync(file)) return new Set();
 
   return new Set(readFileSync(file, "utf-8").split("\n").flatMap(nodeOf));

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
-import { paths } from "../../core/paths";
+import { storeLocation } from "../../bronze/bronze";
 import { readBindings } from "../../core/project-bindings";
 import { foldHistoryInto } from "../../progress/parked-history";
 import { projectPathOnThisMachine, readAllProjects } from "../../progress/projects";
@@ -20,10 +20,10 @@ interface StrandedHistory {
   parked: boolean;
 }
 
-const unboundHistoryAtV6 = () => resolve(paths.state(), "unbound-history");
+const unboundHistory = () => storeLocation("unbound-history");
 
 function orphanHistoryFolders(): { slug: string; file: string }[] {
-  const base = paths.projectHistory();
+  const base = storeLocation("project-history");
   if (!existsSync(base)) return [];
   const out: { slug: string; file: string }[] = [];
 
@@ -38,7 +38,7 @@ function orphanHistoryFolders(): { slug: string; file: string }[] {
 }
 
 function parkedHistoryFiles(): { slug: string; file: string }[] {
-  const base = unboundHistoryAtV6();
+  const base = unboundHistory();
   if (!existsSync(base)) return [];
 
   return readdirSync(base)
@@ -76,8 +76,8 @@ function strandedHistory(): StrandedHistory[] {
 
 function destinationFor(item: StrandedHistory): string {
   return item.owner
-    ? resolve(paths.projectHistory(), item.owner, "history.jsonl")
-    : resolve(unboundHistoryAtV6(), `${item.slug}.jsonl`);
+    ? resolve(storeLocation("project-history"), item.owner, "history.jsonl")
+    : resolve(unboundHistory(), `${item.slug}.jsonl`);
 }
 
 export const v6HistorySlugs: Migration = {

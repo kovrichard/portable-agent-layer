@@ -26,7 +26,7 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
   settings.json                    # The user's configuration
   memory/                          # What PAL learned and recalls (knowledge, relationship, rules)
   records/                         # What happened, one folder per store (raw transcripts, ledger, ratings, history)
-  work/                            # The user's work (projects, progress tree, commitments), as those stores move
+  work/                            # The user's work (projects, progress tree, task ISAs, schedules)
   state/                           # This machine's working state, never exported
   cache/                           # Rebuilt on the next read; safe to delete
   backups/                         # Archives and manifests written by migrations

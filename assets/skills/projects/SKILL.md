@@ -23,7 +23,7 @@ metadata:
     - "file a ticket"
 ---
 
-Manage the user's project registry. Each project lives at `~/.pal/memory/projects/{slug}/ISA.md`. Frontmatter holds operational state (next steps, blockers, handoff); the body holds ISA spec sections (Problem, Goal, Criteria, Context, Decisions, etc.). The Stop hook auto-touches `updated` whenever the cwd resolves into a registered project — just *being* in the project keeps it warm.
+Manage the user's project registry. Each project lives at `~/.pal/work/projects/{slug}/ISA.md` (`memory/projects/` on a home that has not run `pal cli migrate v15-work-stores`). Frontmatter holds operational state (next steps, blockers, handoff); the body holds ISA spec sections (Problem, Goal, Criteria, Context, Decisions, etc.). The Stop hook auto-touches `updated` whenever the cwd resolves into a registered project — just *being* in the project keeps it warm.
 
 ## CLI
 
@@ -55,7 +55,7 @@ Output is JSON.
 | `complete-isc \| reopen-isc <name> <id>` | Archive a finished ISC, or pull one back into the open set |
 | `retire-isc <name> <id> [--by <id>]` | Close an ISC that stopped being valid, not as done |
 | `prune-isc <name>` | Sweep legacy done ISCs from Criteria into the Changelog archive |
-| `scaffold-task-isa <title>` / `complete-task-isa <slug>` | Create and close a one-shot task ISA in `memory/work/` |
+| `scaffold-task-isa <title>` / `complete-task-isa <slug>` | Create and close a one-shot task ISA in `work/tasks/` |
 | `isa-init <name>` | Mark a project as ISA-initialized |
 | `complete <name>` / `archive <name>` / `pause <name>` / `unpause <name>` | Status transitions |
 | `rm <name>` | Delete the project directory entirely |

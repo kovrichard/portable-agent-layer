@@ -32,7 +32,7 @@ let HOME: string;
 
 const settingsFile = () => resolve(HOME, "memory", "pal-settings.json");
 const oldFolder = () => resolve(HOME, "memory", "work-tree");
-const newFolder = () => resolve(HOME, "memory", "progress-tree");
+const newFolder = () => resolve(HOME, "work", "progress-tree");
 
 function writeSettings(value: unknown): void {
   mkdirSync(resolve(HOME, "memory"), { recursive: true });
@@ -101,7 +101,7 @@ describe("v9-progress-tree-names: data folder", () => {
     expect(pendingIds()).toContain(MIGRATION);
   });
 
-  test("moves memory/work-tree to memory/progress-tree", () => {
+  test("moves memory/work-tree to work/progress-tree", () => {
     writeEvents(oldFolder(), [OLD_1, OLD_2]);
 
     quietly(() => runMigrate([]));
@@ -156,22 +156,22 @@ describe("v9-progress-tree-names: what it reports", () => {
     writeSettings({ dynamicContext: { workTree: true } });
     writeEvents(oldFolder(), [EVENT]);
     expect(v9Detail()).toBe("memory/work-tree/");
-    expect(v9Lines()).toEqual(["memory/work-tree/: moved to memory/progress-tree/"]);
+    expect(v9Lines()).toEqual(["memory/work-tree/: moved to work/progress-tree/"]);
   });
 
   test("with both folders it reports how many events it appended", () => {
     writeEvents(oldFolder(), [EVENT, '{"type":"open","id":"old-2"}']);
     writeEvents(newFolder(), ['{"type":"open","id":"new-1"}']);
     expect(v9Lines()).toEqual([
-      "memory/work-tree/: 2 event(s) appended before memory/progress-tree/events.jsonl",
+      "memory/work-tree/: 2 event(s) appended before work/progress-tree/events.jsonl",
     ]);
   });
 
   test.each([
-    [false, "memory/work-tree/: would move to memory/progress-tree/"],
+    [false, "memory/work-tree/: would move to work/progress-tree/"],
     [
       true,
-      "memory/work-tree/: would append its events before memory/progress-tree/events.jsonl",
+      "memory/work-tree/: would append its events before work/progress-tree/events.jsonl",
     ],
   ])("a dry run with the new folder present=%p says what it would do", (both, line) => {
     writeEvents(oldFolder(), [EVENT]);
@@ -188,7 +188,7 @@ describe("v9-progress-tree-names: what it reports", () => {
     const output = quietly(() => runMigrate([]));
 
     expect(output).toContain(
-      "memory/work-tree/: 1 event(s) appended before memory/progress-tree/events.jsonl"
+      "memory/work-tree/: 1 event(s) appended before work/progress-tree/events.jsonl"
     );
     expect(output).toContain(
       "memory/work-tree/: skipped (holds files other than events.jsonl)"
@@ -203,7 +203,7 @@ describe("v9-progress-tree-names: what it reports", () => {
     writeEvents(newFolder(), [EVENT]);
 
     expect(v9Lines()).toEqual([
-      "memory/work-tree/: 0 event(s) appended before memory/progress-tree/events.jsonl",
+      "memory/work-tree/: 0 event(s) appended before work/progress-tree/events.jsonl",
       "memory/work-tree/: skipped (holds files other than events.jsonl)",
     ]);
     expect(readEventLines(newFolder())).toEqual([EVENT]);

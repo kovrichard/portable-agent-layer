@@ -427,7 +427,7 @@ describe("help", () => {
       ],
       ["retire-isc <name> <id>", "Close ISC-N as no longer valid, not as done"],
       ["prune-isc <name>", "Archive done ISCs from Criteria into the Changelog"],
-      ["scaffold-task-isa <title...>", "Create a one-shot task ISA in memory/work/"],
+      ["scaffold-task-isa <title...>", "Create a one-shot task ISA in work/tasks/"],
       ["complete-task-isa <slug>", "Mark a task ISA as complete"],
     ]) {
       expect(stdout).toMatch(

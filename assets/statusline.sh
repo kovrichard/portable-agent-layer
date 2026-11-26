@@ -83,7 +83,8 @@ PAL_SETTINGS="$HOME/.pal/settings.json"
 
 # PAL: Open ISC count — find project matching current directory
 OPEN_ISCS=0
-PROJECTS_DIR="$HOME/.pal/memory/projects"
+PROJECTS_DIR="$HOME/.pal/work/projects"
+[ -d "$PROJECTS_DIR" ] || PROJECTS_DIR="$HOME/.pal/memory/projects"
 if [ -d "$PROJECTS_DIR" ]; then
   CWD_NORM="${CWD%/}"
   for ISA in "$PROJECTS_DIR"/*/ISA.md; do

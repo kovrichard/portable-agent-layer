@@ -178,9 +178,8 @@ describe("v7-retired-settings-keys", () => {
 
 const HISTORY_LINE = '{"ts":"2026-01-01T00:00:00.000Z","summary":"worked"}\n';
 const orphanHistory = (slug: string) =>
-  homeFile("memory", "projects", slug, "history.jsonl");
-const parkedHistory = (file: string) =>
-  homeFile("memory", "state", "unbound-history", file);
+  homeFile("work", "projects", slug, "history.jsonl");
+const parkedHistory = (file: string) => homeFile("work", "unbound-history", file);
 
 describe("v6-history-slugs", () => {
   test("counts orphan folders and parked files whose project has appeared", () => {
@@ -215,7 +214,7 @@ describe("v6-history-slugs", () => {
       results: ["stray: 1 entr(ies) moved to unbound-history"],
     });
     expect(readFileSync(parkedHistory("stray.jsonl"), "utf-8")).toBe(HISTORY_LINE);
-    expect(existsSync(homeFile("memory", "projects", "stray"))).toBe(false);
+    expect(existsSync(homeFile("work", "projects", "stray"))).toBe(false);
   });
 
   test("files parked history under the project now checked out under that name", () => {

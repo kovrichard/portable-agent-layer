@@ -12,7 +12,7 @@ import {
 const home = projectCliHome(import.meta.file);
 
 function taskIsa(slug: string): string {
-  return resolve(home(), "memory", "work", slug, "ISA.md");
+  return resolve(home(), "work", "tasks", slug, "ISA.md");
 }
 
 function isoWithinTheLastMinute(text: string | undefined): void {
@@ -55,7 +55,7 @@ describe("scaffold-task-isa", () => {
 
     expect(run.code).toBe(1);
     expect(run.stderr).toContain("error: <title...> is empty");
-    expect(existsSync(resolve(home(), "memory", "work"))).toBe(false);
+    expect(existsSync(resolve(home(), "work", "tasks"))).toBe(false);
   });
 });
 

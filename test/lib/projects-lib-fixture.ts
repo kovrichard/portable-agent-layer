@@ -14,7 +14,7 @@ export function projectsHome(file: string): string {
     mkdirSync(home, { recursive: true });
   });
   beforeEach(() => {
-    removeOnceReleased(resolve(home, "memory", "projects"));
+    removeOnceReleased(resolve(home, "work", "projects"));
   });
 
   return home;

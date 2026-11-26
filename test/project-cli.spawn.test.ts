@@ -25,7 +25,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  const isaDir = resolve(TEST_HOME, "memory", "projects");
+  const isaDir = resolve(TEST_HOME, "work", "projects");
   removeOnceReleased(isaDir);
   const legacyDir = resolve(TEST_HOME, "memory", "state", "progress");
   removeOnceReleased(legacyDir);
@@ -49,7 +49,7 @@ async function runCli(
 }
 
 function isaFiles(): string[] {
-  const base = resolve(TEST_HOME, "memory", "projects");
+  const base = resolve(TEST_HOME, "work", "projects");
   if (!existsSync(base)) return [];
 
   return readdirSync(base).filter((slug) => existsSync(resolve(base, slug, "ISA.md")));
@@ -60,7 +60,7 @@ function isaFiles(): string[] {
 // assertions read the file directly, mirroring the production `^## ` split.
 function section(slug: string, heading: string): string {
   const isa = readFileSync(
-    resolve(TEST_HOME, "memory", "projects", slug, "ISA.md"),
+    resolve(TEST_HOME, "work", "projects", slug, "ISA.md"),
     "utf-8"
   );
   const hit = isa.split(/^## /m).find((part) => part.startsWith(`${heading}\n`));
@@ -800,7 +800,7 @@ describe("project CLI", () => {
   describe("what a project serves", () => {
     function frontmatter(slug: string): string {
       return readFileSync(
-        resolve(TEST_HOME, "memory", "projects", slug, "ISA.md"),
+        resolve(TEST_HOME, "work", "projects", slug, "ISA.md"),
         "utf-8"
       );
     }

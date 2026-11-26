@@ -29,6 +29,6 @@ describe("injectPromptContext handler", () => {
     const { injectPromptContext } = await loadHandlers();
     const out = await captureStdout(() => injectPromptContext("anything goes here"));
     expect(out).toContain("Progress: Gate [n1]");
-    removeOnceReleased(resolve(TEST_HOME, "memory", "progress-tree"));
+    removeOnceReleased(resolve(TEST_HOME, "work", "progress-tree"));
   });
 });

@@ -21,6 +21,8 @@ export type StoreName =
   | "sessions-archive"
   | "project-history"
   | "unbound-history"
+  | "task-isas"
+  | "schedules"
   | "review-queue"
   | "import-log";
 
@@ -156,7 +158,8 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "progress-tree",
     group: "outside",
-    location: "memory/progress-tree",
+    location: "work/progress-tree",
+    formerLocation: "memory/progress-tree",
     files: "events.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
@@ -173,7 +176,8 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "project-history",
     group: "outside",
-    location: "memory/projects",
+    location: "work/projects",
+    formerLocation: "memory/projects",
     files: "<project>/history.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -181,8 +185,28 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "unbound-history",
     group: "outside",
-    location: "memory/state/unbound-history",
+    location: "work/unbound-history",
+    formerLocation: "memory/state/unbound-history",
     files: "<slug>.jsonl",
+    appendOnly: false,
+    alsoInEventLog: false,
+  },
+  {
+    name: "task-isas",
+    group: "outside",
+    location: "work/tasks",
+    formerLocation: "memory/work",
+    files: "<slug>/ISA.md",
+    appendOnly: false,
+    alsoInEventLog: false,
+  },
+  {
+    name: "schedules",
+    group: "outside",
+    location: "work/schedules",
+    formerLocation: "memory",
+    formerFiles: { match: /^schedules\.json$/ },
+    files: "schedules.json",
     appendOnly: false,
     alsoInEventLog: false,
   },

@@ -1,12 +1,13 @@
 /**
  * Prompts the user scheduled for a time of day, for themselves or for one
  * project. A due schedule is added to the next prompt inside its window; nothing
- * fires while no session is open. Kept in PAL's memory, never in a repository.
+ * fires while no session is open. Kept in the PAL home, never in a repository.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ensureDir, paths } from "../core/paths";
+import { storeDir } from "../bronze/bronze";
+import { paths } from "../core/paths";
 import { localClock, localDay, localMinuteOfDay } from "../core/wall-clock";
 import { newNodeId, scopeOf } from "./progress-tree";
 
@@ -34,7 +35,7 @@ interface Fired {
 }
 
 function schedulesFile(): string {
-  return resolve(ensureDir(paths.memory()), "schedules.json");
+  return resolve(storeDir("schedules"), "schedules.json");
 }
 
 function firedFile(): string {

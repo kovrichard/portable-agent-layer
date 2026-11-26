@@ -27,6 +27,7 @@ import { v11MemoryBackups } from "./migrations/v11-memory-backups";
 import { v12RawToRecords } from "./migrations/v12-raw-to-records";
 import { v13SettingsToRoot } from "./migrations/v13-settings-to-root";
 import { v14RecordsStores } from "./migrations/v14-records-stores";
+import { v15WorkStores } from "./migrations/v15-work-stores";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -69,6 +70,7 @@ const MIGRATIONS: Migration[] = [
   v12RawToRecords,
   v13SettingsToRoot,
   v14RecordsStores,
+  v15WorkStores,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 

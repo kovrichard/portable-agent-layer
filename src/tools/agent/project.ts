@@ -2,7 +2,7 @@
 /**
  * Project — register and manage user projects via ISA.md files.
  *
- * Each project is stored at `~/.pal/memory/projects/{slug}/ISA.md`.
+ * Each project is stored at `~/.pal/work/projects/{slug}/ISA.md`.
  * Frontmatter holds operational state; body holds ISA spec sections.
  *
  * Usage: pal cli project <command> --help

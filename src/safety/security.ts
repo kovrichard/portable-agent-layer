@@ -140,6 +140,7 @@ const HOOK_MANAGED_DIRS = [
   "memory/relationship",
   "memory/wisdom/state",
   "memory/projects",
+  "work/projects",
   "memory/state/progress",
   "records",
   "debug",

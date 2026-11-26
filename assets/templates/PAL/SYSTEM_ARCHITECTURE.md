@@ -297,7 +297,7 @@ The user's data sits in four folders under `~/.pal/`. Each holds one kind of dat
 |---|---|---|---|
 | `memory/` | What PAL learned and recalls: knowledge, relationship, self-model, wisdom, adaptation rules, and the bronze event log until its own move | yes | yes |
 | `records/` | What happened, one folder per store: copied agent transcripts (`raw/claude/`), the ledger, ratings, claim checks, the sessions archive | yes, except `records/raw/` | yes |
-| `work/` | The user's work: projects with their session history, the progress tree, commitments, schedules. Empty until those stores move | yes | yes |
+| `work/` | The user's work, one folder per store: projects with their session history (`projects/`), history from unregistered folders (`unbound-history/`), the progress tree, task ISAs (`tasks/`), scheduled prompts (`schedules/`) | yes | yes |
 | `state/` | This machine's working state that is not cache. Empty until those files move | no | yes |
 
 Beside them, `settings.json` is the user's configuration, `cache/` holds what is rebuilt on the next read, and `backups/` holds the archives and manifests that migrations write.
@@ -320,13 +320,16 @@ memory/
 ├── relationship/
 │   └── opinions-context.md        # Approved opinions, rendered for native loading
 │
-├── projects/                      # Per-project ISA.md and session history
-│
 └── failures/                      # Low-rating captures from older versions, no longer written
 
 records/                           # What happened, one folder per store
 ├── ratings/ratings.jsonl          # Explicit + implicit ratings
 └── ...                            # ledger, claim checks, labelled turns, rule events, reflections, ...
+
+work/                              # The user's work, one folder per store
+├── projects/<slug>/               # Per-project ISA.md and session history
+├── progress-tree/events.jsonl     # The progress tree's event log
+└── ...                            # unbound history, task ISAs, schedules
 ```
 
 ### Data Flow

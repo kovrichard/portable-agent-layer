@@ -36,7 +36,7 @@ describe("an export carries no filesystem paths", () => {
     await addProject("alpha", dir);
 
     const record = readFileSync(
-      resolve(HOME, "memory", "projects", "alpha", "ISA.md"),
+      resolve(HOME, "work", "projects", "alpha", "ISA.md"),
       "utf-8"
     );
     expect(record).toContain('name: "alpha"');
