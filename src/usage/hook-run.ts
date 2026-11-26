@@ -36,10 +36,16 @@ function hookName(entry: string): string {
   return basename(entry).replace(/\.[cm]?[jt]s$/, "");
 }
 
+/** The `--only=<part>` a hook was registered with, so two parts of one hook tell apart. */
+function hookPart(argv: string[]): string | null {
+  return argv.find((arg) => arg.startsWith("--only="))?.slice("--only=".length) ?? null;
+}
+
 export function logHookRun(
   entry: string,
   exitCode: number,
-  durationMs: number = performance.now()
+  durationMs: number = performance.now(),
+  argv: string[] = process.argv
 ): void {
   logQuietly("hook_run", () =>
     appendEvent(
@@ -47,6 +53,7 @@ export function logHookRun(
       {
         hook: hookName(entry),
         event: run.event,
+        part: hookPart(argv),
         durationMs: Math.round(durationMs),
         exitCode,
       },
