@@ -21,6 +21,8 @@ export interface Finding {
   group?: Group;
   /** The few words a passing check takes up when its agent's checks share one line. */
   brief?: string;
+  /** A short line the status bars and the model's context repeat until it is fixed. */
+  notice?: string;
 }
 
 export function passed(id: string, title: string, brief?: string): Finding {

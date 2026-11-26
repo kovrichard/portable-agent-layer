@@ -217,13 +217,54 @@ describe("pending migrations", () => {
   });
 
   test("one its owner runs warns apart, with the command that runs only it", () => {
-    const [finding] = migrationFindings([
+    const [, finding] = migrationFindings([
       { id: "v13-x", description: "Move the file", ownerRun: true },
     ]);
 
     expect(finding.severity).toBe("warn");
     expect(finding.id).toBe("owner-migration.v13-x");
     expect(finding.fix?.command).toBe("pal cli migrate v13-x");
+  });
+
+  test("the owner's moves get one summary that says why they are manual and that 1.0 needs them", () => {
+    const findings = migrationFindings([
+      { id: "v9-x", description: "Move the thing", ownerRun: false },
+      { id: "v13-x", description: "Move the file", ownerRun: true },
+      { id: "v14-x", description: "Move the stores", ownerRun: true },
+    ]);
+
+    expect(findings.map((f) => f.id)).toEqual([
+      "owner-migrations",
+      "migration.v9-x",
+      "owner-migration.v13-x",
+      "owner-migration.v14-x",
+    ]);
+    expect(findings[0].title).toStartWith(
+      "2 data moves wait for you, required before PAL 1.0"
+    );
+    expect(findings[0].title).toContain("a verified backup is taken first");
+    expect(findings[0].title).toContain("pal cli migrate --undo <id>");
+    expect(findings[0].fix?.say).toBe(
+      "Close your other agent sessions, then run each one below"
+    );
+    expect(findings[0].notice).toBe("2 data moves wait for you, required before PAL 1.0");
+    expect(findings.slice(1).every((f) => f.notice === undefined)).toBe(true);
+  });
+
+  test("one waiting move is named in the singular", () => {
+    const [summary] = migrationFindings([
+      { id: "v13-x", description: "Move the file", ownerRun: true },
+    ]);
+
+    expect(summary.notice).toStartWith("1 data move waits for you");
+  });
+
+  test("moves PAL runs on its own get no summary", () => {
+    const findings = migrationFindings([
+      { id: "v9-x", description: "Move the thing", ownerRun: false },
+    ]);
+
+    expect(findings.map((f) => f.id)).toEqual(["migration.v9-x"]);
   });
 });
 

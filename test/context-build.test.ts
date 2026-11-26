@@ -3,11 +3,37 @@ import { buildSystemReminder } from "../src/context/context";
 import { reload } from "../src/core/settings";
 import { addOpinion } from "../src/opinions/adaptation-rules";
 import { appendProjectHistory } from "../src/progress/work-tracking";
+import { readHealthNotice } from "../src/usage/health-cache";
 import { freshPalHomeEachTest } from "./lib/context-build-fixture";
 
 const { write } = freshPalHomeEachTest(import.meta.file);
 
 describe("buildSystemReminder", () => {
+  test("opens with the doctor's notice and asks the model to pass it on", () => {
+    write(
+      "cache/health.json",
+      JSON.stringify({ failing: 0, warnings: 3, notice: "2 data moves wait for you" })
+    );
+
+    const reminder = buildSystemReminder({ agent: "claude" });
+
+    expect(reminder).toContain(
+      "## PAL notice\n2 data moves wait for you. Tell the user once"
+    );
+  });
+
+  test("carries no notice section when the doctor left none", () => {
+    write("cache/health.json", JSON.stringify({ failing: 0, warnings: 3, notice: null }));
+
+    expect(buildSystemReminder({ agent: "claude" })).not.toContain("PAL notice");
+  });
+
+  test("without a notice, the first section follows the time line directly", () => {
+    write("cache/health.json", JSON.stringify({ failing: 0, warnings: 0, notice: null }));
+
+    expect(buildSystemReminder({ agent: "claude" })).toMatch(/ UTC\n💡/);
+  });
+
   function optInToDueReminders() {
     write(
       "memory/pal-settings.json",
@@ -110,5 +136,27 @@ describe("a handoff left by an earlier PAL", () => {
     const out = buildSystemReminder();
     expect(out).not.toContain("the remaining work");
     expect(out).not.toContain("someone else work");
+  });
+});
+
+describe("readHealthNotice", () => {
+  test("reads the doctor's notice", () => {
+    write("cache/health.json", JSON.stringify({ notice: "1 data move waits for you" }));
+
+    expect(readHealthNotice()).toBe("1 data move waits for you");
+  });
+
+  test.each([
+    ["an empty notice", JSON.stringify({ notice: "" })],
+    ["a notice that is not text", JSON.stringify({ notice: 42 })],
+    ["a cache that is not JSON", "{ half"],
+  ])("gives null for %s", (_, content) => {
+    write("cache/health.json", content);
+
+    expect(readHealthNotice()).toBeNull();
+  });
+
+  test("gives null when the doctor never ran", () => {
+    expect(readHealthNotice()).toBeNull();
   });
 });

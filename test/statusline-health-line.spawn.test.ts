@@ -126,6 +126,21 @@ describe("the health line", () => {
     expectLine(YELLOW, "1 warning — pal cli doctor");
   });
 
+  test("a notice takes the warnings' place in yellow", () => {
+    health({ failing: 0, warnings: 6, notice: "5 data moves wait for you" });
+    expectLine(YELLOW, "5 data moves wait for you — pal cli doctor");
+  });
+
+  test("a failure still outranks a notice", () => {
+    health({
+      failing: 1,
+      warnings: 6,
+      worst: "TELOS is not scaffolded",
+      notice: "moves",
+    });
+    expectLine(RED, "TELOS is not scaffolded — pal cli doctor");
+  });
+
   test("all fine shows nothing", () => {
     health({ failing: 0, warnings: 0 });
     expect(healthLines()).toEqual([]);

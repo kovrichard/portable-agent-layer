@@ -101,9 +101,33 @@ export function loginExpiryFindings(
   ];
 }
 
+const MOVES_EXPLAINED =
+  "they move your data, so they run only when you start them: PAL must be idle, a verified backup is taken first, every file is hash-checked, and pal cli migrate --undo <id> puts it back. PAL reads the old folders until then. PAL 1.0 will not start until every one has run";
+
+function ownerMovesFinding(pending: PendingMigration[]): Finding[] {
+  const count = pending.filter((migration) => migration.ownerRun).length;
+  if (count === 0) return [];
+  const moves = count === 1 ? "1 data move waits" : `${count} data moves wait`;
+
+  return [
+    {
+      ...warning(
+        "owner-migrations",
+        `${moves} for you, required before PAL 1.0 — ${MOVES_EXPLAINED}`,
+        { say: "Close your other agent sessions, then run each one below" }
+      ),
+      notice: `${moves} for you, required before PAL 1.0`,
+    },
+  ];
+}
+
 export function migrationFindings(pending: PendingMigration[]): Finding[] {
   if (pending.length === 0) return [passed("migrations", "No pending migrations")];
 
+  return [...ownerMovesFinding(pending), ...pendingMigrationFindings(pending)];
+}
+
+function pendingMigrationFindings(pending: PendingMigration[]): Finding[] {
   return pending.map((migration) => {
     const detail = migration.detail ? ` (${migration.detail})` : "";
 
