@@ -21,7 +21,7 @@ import {
   logQuietly,
 } from "../bronze/events";
 import { hearsPromptContext } from "../core/agent";
-import { ensureDir, paths } from "../core/paths";
+import { paths } from "../core/paths";
 import { isSystemText, stripInjectedTags } from "../core/prompt-text";
 import { isEnabled } from "../core/settings";
 import { localClock } from "../core/wall-clock";
@@ -155,7 +155,7 @@ function measureTurn(
 }
 
 function legacyTurnsDir(): string {
-  return ensureDir(resolve(paths.signals(), "interaction"));
+  return paths.legacyTurns();
 }
 
 function logTurn(event: TurnEvent, prompt: string, text: string, id: string): void {
@@ -216,6 +216,7 @@ function readLegacyTurns(file: string): TurnEvent[] {
 }
 
 function legacyTurnsSince(since: Date): TurnEvent[] {
+  if (!existsSync(legacyTurnsDir())) return [];
   const fromMonth = since.toISOString().slice(0, 7);
   const sinceTs = since.toISOString();
 

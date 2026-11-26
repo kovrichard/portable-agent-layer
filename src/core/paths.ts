@@ -139,6 +139,7 @@ export const paths = {
   memory: () => home("memory"),
   dataRoots: () => DATA_ROOTS.map((root) => home(root)),
   signals: () => ensureDir(home("memory", "signals")),
+  legacyTurns: () => home("memory", "signals", "interaction"),
   state: () => ensureDir(stateDir()),
   formerState: formerStateDir,
   research: () => ensureDir(home("memory", "research")),
