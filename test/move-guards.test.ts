@@ -33,28 +33,28 @@ const idle: GuardSeams = {
 };
 
 function eventAt(
-  minutesAgo: number,
+  secondsAgo: number,
   type: "turn" | "memory_move" | "migration_run" = "turn"
 ) {
-  appendEvent(type, {}, { ts: new Date(NOW - minutesAgo * MINUTE).toISOString() });
+  appendEvent(type, {}, { ts: new Date(NOW - secondsAgo * 1000).toISOString() });
 }
 
 describe("busyReasons", () => {
   test("is empty on an idle home", () => {
-    eventAt(6);
+    eventAt(21);
 
     expect(busyReasons(idle)).toEqual([]);
   });
 
-  test("names a bronze event from the last five minutes", () => {
-    eventAt(6);
-    eventAt(2);
+  test("names a bronze event from the last 20 seconds", () => {
+    eventAt(21);
+    eventAt(12);
 
-    expect(busyReasons(idle)).toEqual(["a bronze event was written 120s ago"]);
+    expect(busyReasons(idle)).toEqual(["a bronze event was written 12s ago"]);
   });
 
-  test("counts an event exactly five minutes old, not one just older", () => {
-    eventAt(5);
+  test("counts an event exactly 20 seconds old, not one just older", () => {
+    eventAt(20);
 
     expect(busyReasons(idle)).toHaveLength(1);
   });
@@ -66,7 +66,7 @@ describe("busyReasons", () => {
     expect(busyReasons(idle)).toEqual([]);
   });
 
-  test("does not read an event file untouched for five minutes", () => {
+  test("does not read an event file untouched for 20 seconds", () => {
     eventAt(1);
     const old = (NOW - 10 * MINUTE) / 1000;
     const month = new Date(NOW - MINUTE).toISOString().slice(0, 7);
@@ -76,7 +76,7 @@ describe("busyReasons", () => {
   });
 
   test("finds the newest event at the end of a large file", () => {
-    for (let i = 0; i < 3000; i += 1) eventAt(30);
+    for (let i = 0; i < 3000; i += 1) eventAt(1800);
     eventAt(0);
 
     expect(busyReasons(idle)).toEqual(["a bronze event was written 0s ago"]);
@@ -177,7 +177,7 @@ describe("moveGuardRefusal", () => {
     eventAt(1);
 
     expect(moveGuardRefusal("layout", { seams: idle })).toBe(
-      "PAL is in use: a bronze event was written 60s ago"
+      "PAL is in use: a bronze event was written 1s ago"
     );
     expect(memoryMoveEvents(HOME)).toEqual([
       expect.objectContaining({
@@ -187,7 +187,7 @@ describe("moveGuardRefusal", () => {
       }),
     ]);
     expect(memoryMoveDetails(HOME)).toEqual([
-      expect.objectContaining({ busy: ["a bronze event was written 60s ago"] }),
+      expect.objectContaining({ busy: ["a bronze event was written 1s ago"] }),
     ]);
   });
 
@@ -199,7 +199,7 @@ describe("moveGuardRefusal", () => {
     expect(
       moveGuardRefusal("layout", { seams: { ...idle, isAlive: (pid) => pid === 4242 } })
     ).toBe(
-      "PAL is in use: a bronze event was written 60s ago; the control room is running (pid 4242)"
+      "PAL is in use: a bronze event was written 1s ago; the control room is running (pid 4242)"
     );
   });
 

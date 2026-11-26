@@ -20,7 +20,7 @@ export interface GuardSeams {
   freeBytes: (dir: string) => number;
 }
 
-const BUSY_WINDOW_MS = 5 * 60_000;
+const BUSY_WINDOW_MS = 20_000;
 const TAIL_BYTES = 256 * 1024;
 const OWN_EVENT_TYPES = new Set(["memory_move", "migration_run"]);
 
