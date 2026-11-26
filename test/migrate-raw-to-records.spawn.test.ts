@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { storeLocation } from "../src/bronze/bronze";
+import { storeDir, storeLocation } from "../src/bronze/bronze";
 import {
   applyPendingMigrations,
   checkPendingMigrations,
@@ -32,6 +32,15 @@ function printedBy(args: string[]): string {
   }
 
   return lines.join("\n");
+}
+
+function migrationRuns(): Record<string, unknown>[] {
+  const dir = storeDir("events");
+
+  return readdirSync(dir)
+    .flatMap((file) => readFileSync(resolve(dir, file), "utf-8").split("\n"))
+    .filter((line) => line.includes('"migration_run"'))
+    .map((line) => JSON.parse(line));
 }
 
 function writeRaw(rel: string, body: string): void {
@@ -108,9 +117,54 @@ describe("run by its owner", () => {
   });
 });
 
+describe("what a named run prints", () => {
+  test("a dry run says so before it names the move", () => {
+    expect(printedBy([ID, "--dry-run"])).toStartWith(
+      `  Dry run — no files will be written.\n\n  Running: ${ID} — `
+    );
+  });
+
+  test("a real run names the move, prints each result indented and ends with a blank line", () => {
+    const printed = printedBy([ID, "--force"]);
+
+    expect(printed).toStartWith(`  Running: ${ID} — `);
+    expect(printed).toContain("\n    moved 1 folder(s)");
+    expect(printed).toEndWith("\n");
+  });
+
+  test("a move already done has nothing to do", () => {
+    printedBy([ID, "--force"]);
+    expect(printedBy([ID, "--force"])).toBe(`  ${ID}: nothing to do.`);
+  });
+
+  test("a bare migrate lists it under its own heading until it has run", () => {
+    expect(printedBy([])).toContain(
+      `  Waiting for you to run them (they move recorded data):\n    pal cli migrate ${ID} — `
+    );
+    printedBy([ID, "--force"]);
+    expect(printedBy([])).not.toContain("Waiting for you");
+  });
+
+  test("a sweep that folded files in lands in bronze as a sweep", () => {
+    printedBy([ID, "--force"]);
+    writeRaw("-proj/late.jsonl.gz", "late write");
+    applyPendingMigrations();
+
+    expect(migrationRuns().at(-1)).toMatchObject({
+      migration: ID,
+      dryRun: false,
+      undo: false,
+      sweep: true,
+    });
+  });
+});
+
 describe("an unknown name", () => {
   test("lists the migrations there are and runs none", () => {
-    expect(printedBy(["v99-nothing"])).toContain(`No migration "v99-nothing"`);
+    const printed = printedBy(["v99-nothing"]);
+
+    expect(printed).toStartWith(`  No migration "v99-nothing". Known: `);
+    expect(printed).toContain(`, ${ID}`);
     expect(existsSync(NEW())).toBe(false);
   });
 });
