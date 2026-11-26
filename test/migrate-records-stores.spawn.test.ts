@@ -105,7 +105,7 @@ describe("before the owner runs it", () => {
   });
 
   test("a dry run names each store's files and moves nothing", () => {
-    const printed = printedBy([ID, "--dry-run"]);
+    const printed = printedBy([ID, "--dry-run"]).replaceAll(/\\+/g, "/");
     expect(printed).toContain("records/ratings/ratings.jsonl");
     expect(printed).not.toContain("rules.json");
     expect(existsSync(at("records"))).toBe(false);
