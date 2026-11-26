@@ -1,0 +1,6 @@
+{
+  "name": "pal-notice",
+  "version": "0.1.0",
+  "description": "Keeps PAL's standing notice (such as data moves required before 1.0) in a band above the prompt until it is fixed.",
+  "types": "./types/index.d.ts"
+}
