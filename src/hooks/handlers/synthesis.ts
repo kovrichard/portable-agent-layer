@@ -12,7 +12,7 @@ import { paths } from "../../core/paths";
 const SYNTHESIS_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function runSynthesis(): Promise<void> {
-  const statePath = resolve(paths.state(), "synthesis.json");
+  const statePath = resolve(paths.cache(), "synthesis.json");
 
   if (existsSync(statePath)) {
     try {

@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { refreshAgenda } from "../src/hooks/handlers/agenda";
 import { canInfer } from "../src/inference/inference";
-import { readAgenda } from "../src/progress/agenda-store";
+import { agendaPath, readAgenda } from "../src/progress/agenda-store";
 import { freshTestDir } from "./lib/test-home";
 
 // The only model call behind the morning screen. Both gates in front of it are
@@ -38,7 +38,7 @@ function withoutInference(): void {
 
 function writeAgendaFile(generatedAt: string): void {
   writeFileSync(
-    resolve(HOME, "memory", "state", "agenda.json"),
+    agendaPath(),
     JSON.stringify({ generatedAt, moves: [{ move: "the old move", because: "then" }] }),
     "utf-8"
   );
@@ -72,7 +72,7 @@ describe("refreshAgenda", () => {
 
   test("an unreadable agenda is treated as none, not as fresh", async () => {
     withoutInference();
-    writeFileSync(resolve(HOME, "memory", "state", "agenda.json"), "{{{", "utf-8");
+    writeFileSync(agendaPath(), "{{{", "utf-8");
     expect(await refreshAgenda(NOW)).toBe("no-inference");
   });
 });

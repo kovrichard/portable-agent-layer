@@ -272,7 +272,7 @@ export function ratingSeries(limit = SERIES_LENGTH): RatingPoint[] {
 }
 
 function readSynthesis(): Record<string, unknown> | null {
-  const file = resolve(paths.state(), "synthesis.json");
+  const file = resolve(paths.cache(), "synthesis.json");
   if (!existsSync(file)) return null;
 
   try {

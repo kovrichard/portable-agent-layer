@@ -173,7 +173,7 @@ describe("what each route answers", () => {
     });
 
     writeFileSync(
-      resolve(controlRoomHome(), "memory", "state", "agenda.json"),
+      resolve(controlRoomHome(), "cache", "agenda.json"),
       JSON.stringify({
         generatedAt: new Date().toISOString(),
         moves: [{ move: "Send the one-pager", because: "blocked on you" }],

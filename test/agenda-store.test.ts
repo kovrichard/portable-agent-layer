@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { agendaPath, readAgenda, writeAgenda } from "../src/progress/agenda-store";
 import { freshTestDir } from "./lib/test-home";
@@ -15,13 +15,12 @@ beforeEach(() => {
 });
 
 function writeRaw(content: string): void {
-  mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
-  writeFileSync(resolve(HOME, "memory", "state", "agenda.json"), content, "utf-8");
+  writeFileSync(agendaPath(), content, "utf-8");
 }
 
 describe("agendaPath", () => {
-  test("it lives in the state directory of the active home", () => {
-    expect(agendaPath()).toBe(resolve(HOME, "memory", "state", "agenda.json"));
+  test("it lives in the cache of the active home, since it regenerates and never travels", () => {
+    expect(agendaPath()).toBe(resolve(HOME, "cache", "agenda.json"));
   });
 });
 
@@ -50,7 +49,6 @@ describe("readAgenda", () => {
 
 describe("writeAgenda", () => {
   test("round-trips through the file", async () => {
-    mkdirSync(resolve(HOME, "memory", "state"), { recursive: true });
     const agenda = {
       generatedAt: "2026-09-05T06:00:00.000Z",
       moves: [{ move: "Send the one-pager", because: "waiting on you since Tuesday" }],

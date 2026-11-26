@@ -1,5 +1,5 @@
 /**
- * Stop handler: writes fresh counts to memory/state/counts.json
+ * Stop handler: writes fresh counts to cache/counts.json
  * so the session-start greeting can read a single file instead of
  * scanning directories and JSONL files.
  */
@@ -8,7 +8,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ratingsFile } from "../../bronze/signals";
-import { assets, ensureDir, paths } from "../../core/paths";
+import { assets, paths } from "../../core/paths";
 
 interface Counts {
   signals: number;
@@ -81,6 +81,6 @@ function getCounts(): Counts {
 
 export async function updateCounts(): Promise<void> {
   const counts = getCounts();
-  const countsPath = resolve(ensureDir(paths.state()), "counts.json");
+  const countsPath = resolve(paths.cache(), "counts.json");
   await writeFile(countsPath, JSON.stringify(counts, null, 2), "utf-8");
 }

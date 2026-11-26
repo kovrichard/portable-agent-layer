@@ -32,7 +32,7 @@ export interface GoalProgress {
 }
 
 function goalLinksPath(): string {
-  return resolve(paths.state(), "goal-links.json");
+  return resolve(paths.cache(), "goal-links.json");
 }
 
 export function readGoalLinks(): GoalLinks | null {

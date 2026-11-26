@@ -83,6 +83,18 @@ describe("caches-in-state leftover", () => {
   test("finds nothing on a clean install", () => {
     expect(cachesInState().find()).toEqual([]);
   });
+
+  test.each(["agenda.json", "goal-links.json", "counts.json", "synthesis.json"])(
+    "moves %s, which regenerates, into the cache",
+    (name) => {
+      write(at("memory", "state", name), "{}");
+
+      cachesInState().remove();
+
+      expect(existsSync(at("memory", "state", name))).toBe(false);
+      expect(existsSync(at("cache", name))).toBe(true);
+    }
+  );
 });
 
 describe("machine-local state never crosses machines", () => {

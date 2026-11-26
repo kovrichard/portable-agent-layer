@@ -279,6 +279,10 @@ const CACHES_MOVED_OUT_OF_STATE = [
   "skill-index.json",
   "nudges-shown.json",
   "collect-last-run",
+  "agenda.json",
+  "goal-links.json",
+  "counts.json",
+  "synthesis.json",
 ];
 
 const oldStateCache = (name: string) => resolve(paths.state(), name);

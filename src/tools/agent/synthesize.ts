@@ -9,14 +9,14 @@
  *   pal cli synthesize [--days 7] [--force]
  *
  * Guards: skips if last synthesis was < 24h ago (unless --force).
- * Output: ~/.pal/memory/state/synthesis.json
+ * Output: ~/.pal/cache/synthesis.json
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reflectionsFile } from "../../bronze/bronze";
 import { ratingsFile } from "../../bronze/signals";
-import { ensureDir, paths } from "../../core/paths";
+import { paths } from "../../core/paths";
 import { leaf, runCommand, UsageError } from "../lib/command";
 import { scriptArgs } from "../lib/script-args";
 
@@ -53,12 +53,8 @@ interface SynthesisState {
 
 // ── Helpers ──
 
-function stateDir(): string {
-  return ensureDir(paths.state());
-}
-
 function synthesisPath(): string {
-  return resolve(stateDir(), "synthesis.json");
+  return resolve(paths.cache(), "synthesis.json");
 }
 
 function shouldRun(force: boolean): boolean {
@@ -234,7 +230,7 @@ export const command = leaf({
     },
     force: { type: "boolean", description: "Skip 24h guard" },
   },
-  details: "Output: ~/.pal/memory/state/synthesis.json",
+  details: "Output: ~/.pal/cache/synthesis.json",
   run: ({ values }) =>
     synthesizeUnlessFresh(lookbackDays(values.days), values.force ?? false),
 });
