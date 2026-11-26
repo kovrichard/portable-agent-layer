@@ -246,8 +246,9 @@ export const EVENT_FIELDS = {
     "early",
   ],
   worktree_pruned: ["branch"],
+  worktree_prune_failed: ["branch"],
   git_state_injected: ["trigger", "source", "changed", "committedFiles", "chars"],
-  hook_run: ["hook", "event", "durationMs", "exitCode"],
+  hook_run: ["hook", "event", "part", "durationMs", "exitCode"],
   repo_state: ["head", "branch", "changed", "ahead", "behind"],
 } as const satisfies Record<string, readonly string[]>;
 

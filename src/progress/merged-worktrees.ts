@@ -104,6 +104,12 @@ export function removeWorktree(
   const refusal = gitRefusal(spawnSync("git", ["-C", cwd, "worktree", "remove", path]));
   if (refusal === null)
     appendEvent("worktree_pruned", { branch }, { cwd, content: { path, branch } });
+  else
+    appendEvent(
+      "worktree_prune_failed",
+      { branch },
+      { cwd, content: { path, branch, reason: refusal } }
+    );
 
   return refusal;
 }

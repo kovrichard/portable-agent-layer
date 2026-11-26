@@ -6,6 +6,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { logError } from "../core/log";
 import {
   appendEvent,
   buildTree,
@@ -239,7 +240,7 @@ export function settleAttachedPrs(
 ): void {
   try {
     checkCandidates(scope, cwd, options);
-  } catch {
-    return;
+  } catch (err) {
+    logError("progress:settle-prs", err);
   }
 }
