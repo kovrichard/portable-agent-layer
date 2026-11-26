@@ -59,7 +59,7 @@ describe("drafting", () => {
     const report = draft();
 
     expect(report.body).toContain("crashed in ~/x.");
-    expect(report.body).toContain("| PAL | 0.118.0 (canary) |");
+    expect(report.body).toContain("| PAL version | 0.118.0 (canary) |");
     expect(readReport(report.id)).toEqual(report);
     expect(listReports().map((r) => r.id)).toEqual([report.id]);
   });

@@ -46,7 +46,7 @@ export function reportMeta(): ReportMeta {
 
 export function renderMeta(meta: ReportMeta): string {
   const rows: [string, string][] = [
-    ["PAL", `${meta.palVersion} (${meta.channel})`],
+    ["PAL version", `${meta.palVersion} (${meta.channel})`],
     ["OS", `${meta.os}, ${meta.arch}`],
     ["Agent", meta.agent],
     ["Bun", meta.bun],

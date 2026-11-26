@@ -30,7 +30,7 @@ If you found it, with the PAL source file and line.
 
 | | |
 |---|---|
-| PAL | version (channel) |
+| PAL version | output of `pal cli version` (canary or stable) |
 | OS | |
 | Agent | |
 | Bun | |
