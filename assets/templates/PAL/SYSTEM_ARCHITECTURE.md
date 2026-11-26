@@ -289,9 +289,22 @@ Hooks are registered in the agent's settings file during `pal cli install`. Each
 
 ## Memory System Architecture
 
-### Directory Structure
+### Data Folders
 
-Every store PAL records to, with its group and folder, is listed in `src/bronze/bronze.ts`.
+The user's data sits in four folders under `~/.pal/`. Each holds one kind of data:
+
+| Folder | Holds | Export | Backup before a layout move |
+|---|---|---|---|
+| `memory/` | What PAL learned and recalls: knowledge, relationship, self-model, wisdom, adaptation rules, and the bronze event log until its own move | yes | yes |
+| `records/` | What happened, one folder per store: copied agent transcripts (`raw/claude/`), the ledger, ratings, claim checks, the sessions archive | yes, except `records/raw/` | yes |
+| `work/` | The user's work: projects with their session history, the progress tree, commitments, schedules. Empty until those stores move | yes | yes |
+| `state/` | This machine's working state that is not cache. Empty until those files move | no | yes |
+
+Beside them, `settings.json` is the user's configuration, `cache/` holds what is rebuilt on the next read, and `backups/` holds the archives and manifests that migrations write.
+
+A store moves between folders only through an owner-run migration (`pal cli migrate <id>`), and reads its former folder until that runs. Every store PAL records to, with its group and folder, is listed in `src/bronze/bronze.ts`.
+
+### Directory Structure
 
 ```
 memory/

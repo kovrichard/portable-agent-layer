@@ -23,6 +23,13 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
     MISSION.md, GOALS.md, BELIEFS.md,
     CHALLENGES.md, STRATEGIES.md, IDEAS.md, LEARNED.md,
     MODELS.md, NARRATIVES.md
+  settings.json                    # The user's configuration
+  memory/                          # What PAL learned and recalls (knowledge, relationship, rules)
+  records/                         # What happened, one folder per store (raw transcripts, ledger, ratings, history)
+  work/                            # The user's work (projects, progress tree, commitments), as those stores move
+  state/                           # This machine's working state, never exported
+  cache/                           # Rebuilt on the next read; safe to delete
+  backups/                         # Archives and manifests written by migrations
 
 <PAL package>/                     # The PAL codebase
   src/
@@ -35,13 +42,9 @@ PAL is a persistent, cross-platform, cross-agent layer for portable AI workflows
   assets/
     skills/                        # Bundled skills (16+)
     templates/PAL/                 # Templates for PAL home files
-
-<PAL package>/memory/              # Persistent memory (gitignored)
-  state/                           # Runtime state (sessions, counts, caches)
-  adaptation/                      # Rules drafted from corrections, and approved opinions
-  relationship/                    # opinions-context.md, the opinions rendered for native loading
-  failures/                        # Low-rating context dumps from older versions
 ```
+
+The four data folders, `memory/`, `records/`, `work/` and `state/`, are described in SYSTEM_ARCHITECTURE.md under "Data Folders".
 
 ## Core Subsystems
 

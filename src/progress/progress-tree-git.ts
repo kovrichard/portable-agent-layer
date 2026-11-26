@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { progressSession } from "./progress-session";
 import { appendEvent, readTree, scopeOf } from "./progress-tree";
 import { openSessionNode } from "./progress-tree-session-node";
-import { attachNewWorktrees, worktreePaths } from "./progress-tree-worktrees";
+import { attachShellWorktree, worktreePaths } from "./progress-tree-worktrees";
 
 function sameList(a: string[] | undefined, b: string[]): boolean {
   return a !== undefined && a.length === b.length && a.every((x, i) => x === b[i]);
@@ -108,13 +108,16 @@ export function attachGitProgress(
   cwd: string,
   file?: string,
   now: Date = new Date(),
-  session: string | undefined = progressSession()
+  session: string | undefined = progressSession(),
+  shellCwd: string = cwd
 ): void {
   const scope = scopeOf(cwd);
   const tree = readTree(scope, file, session);
   if (tree.nodes.size === 0) return;
   const current = snapshot(cwd);
   if (!current) return;
+  const active = tree.active ? tree.nodes.get(tree.active) : undefined;
+  if (active) attachShellWorktree(cwd, shellCwd, { scope, node: active, file, now });
   const cursor = tree.gitCursor;
   const worktrees = worktreePaths(cwd);
   if (
@@ -131,7 +134,6 @@ export function attachGitProgress(
       tree.active ??
       (commits.length > 0 ? openSessionNode(scope, session, file, now) : null);
     if (node) attachMoves({ scope, node, branch, commits, file, now });
-    attachNewWorktrees(cwd, cursor.worktrees, { scope, node, file, now });
   }
 
   appendEvent(
