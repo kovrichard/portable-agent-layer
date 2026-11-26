@@ -63,6 +63,7 @@ export const EVENT_FIELDS = {
     "utcOffsetMin",
   ],
   session_end: ["reason", "durationSec", "turns", "messages", "status"],
+  sync: ["pushed", "pulled", "written", "quarantined", "refused"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
   context_injected: ["instructionsChars", "semiStaticChars", "dynamicChars"],
   hook_timing: ["hook", "totalMs", "handlers"],

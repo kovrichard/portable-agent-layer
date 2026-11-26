@@ -73,6 +73,20 @@ function splitLines(raw: string): string[] {
   return raw.split("\n").filter((l) => l.trim().length > 0);
 }
 
+/** The incoming lines the local body lacks, each once, in incoming order. */
+export function linesNotIn(localRaw: string, incomingRaw: string): string[] {
+  const seen = new Set(splitLines(localRaw));
+  const added: string[] = [];
+
+  for (const line of splitLines(incomingRaw)) {
+    if (seen.has(line)) continue;
+    seen.add(line);
+    added.push(line);
+  }
+
+  return added;
+}
+
 /**
  * Union of two JSONL bodies, local order preserved, incoming lines appended
  * only when not already present. Exact-line identity is the dedupe key — no
@@ -85,15 +99,7 @@ export function mergeJsonlLines(
   incomingRaw: string
 ): { text: string; added: number } {
   const local = splitLines(localRaw);
-  const seen = new Set(local);
-  const added: string[] = [];
-
-  for (const line of splitLines(incomingRaw)) {
-    if (seen.has(line)) continue;
-    seen.add(line);
-    added.push(line);
-  }
-
+  const added = linesNotIn(localRaw, incomingRaw);
   const all = [...local, ...added];
 
   return { text: all.length > 0 ? `${all.join("\n")}\n` : "", added: added.length };
