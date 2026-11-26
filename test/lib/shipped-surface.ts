@@ -3,7 +3,7 @@
  *
  *   .claude/CLAUDE.md                                  a file
  *   .claude/skills/think -> {root}/home/skills/think   a link and its target
- *   home/memory/pal-settings.json#dynamicContext.wisdom  a config key
+ *   home/settings.json#dynamicContext.wisdom          a config key
  *   .claude/settings.json#permissions.allow[]=Read(//*)  a string in a config list
  *   .codex/hooks.json#hook=LoadContext.ts               a hook script a config runs
  *
@@ -34,6 +34,7 @@ export const ROOTS = [
 ];
 
 const CONFIGS = [
+  "home/settings.json",
   "home/memory/pal-settings.json",
   ".claude/settings.json",
   ".cursor/cli-config.json",

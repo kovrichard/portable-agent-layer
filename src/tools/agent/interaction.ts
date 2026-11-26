@@ -17,7 +17,7 @@ memory/signals/interaction/ files (features only, no text) and prints turns, cha
 turns, replies filed and hints sent, and for each label (short, long, fast,
 skimming, friction) how the replies written while it was active compare with
 the replies written while none was. Last, the replies that claimed a result
-(memory/signals/claim-checks/), and which of them had no command behind the
+(records/claim-checks/), and which of them had no command behind the
 claim or were sent back.`;
 
 const DAY_MS = 86_400_000;

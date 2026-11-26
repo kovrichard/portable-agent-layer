@@ -11,6 +11,7 @@ import { buildManifest, MANIFEST_NAME } from "./export-manifest";
 import { ensureRegistered } from "./machine";
 import { isMachineLocalState } from "./machine-state";
 import { palHome } from "./paths";
+import { SETTINGS_FILE } from "./settings";
 
 /**
  * Directories within PAL_HOME that contain user state worth exporting.
@@ -68,6 +69,9 @@ export function collectExportFiles(): string[] {
   for (const dir of EXPORT_DIRS) {
     files.push(...walkDir(resolve(root, dir), root));
   }
+
+  const settings = resolve(root, SETTINGS_FILE);
+  if (existsSync(settings)) files.push(SETTINGS_FILE);
 
   return files;
 }

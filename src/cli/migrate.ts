@@ -24,6 +24,9 @@ import { v8FactoryHome } from "./migrations/v8-factory-home";
 import { v9ProgressTreeNames } from "./migrations/v9-progress-tree-names";
 import { v10ThreadsToProgressTree } from "./migrations/v10-threads-to-progress-tree";
 import { v11MemoryBackups } from "./migrations/v11-memory-backups";
+import { v12RawToRecords } from "./migrations/v12-raw-to-records";
+import { v13SettingsToRoot } from "./migrations/v13-settings-to-root";
+import { v14RecordsStores } from "./migrations/v14-records-stores";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -63,8 +66,15 @@ const MIGRATIONS: Migration[] = [
   v9ProgressTreeNames,
   v10ThreadsToProgressTree,
   v11MemoryBackups,
+  v12RawToRecords,
+  v13SettingsToRoot,
+  v14RecordsStores,
   ...LEFTOVERS.map(leftoverMigration),
 ];
+
+function runsOnInstall(migration: Migration): boolean {
+  return !migration.requiresOwner;
+}
 
 // ── Public API ────────────────────────────────────────────────────
 
@@ -72,11 +82,13 @@ interface PendingMigration {
   id: string;
   description: string;
   detail?: string;
+  ownerRun: boolean;
 }
 
 interface RunKind {
   dryRun: boolean;
   undo: boolean;
+  sweep?: boolean;
 }
 
 function recordRun(
@@ -116,8 +128,32 @@ function recorded(
 }
 
 /** Runs a migration and lands one migration_run event in bronze, a failure included. */
-export function runRecorded(migration: Migration, dryRun: boolean): MigrationResult {
-  return recorded(migration, { dryRun, undo: false }, () => migration.run(dryRun));
+export function runRecorded(
+  migration: Migration,
+  dryRun: boolean,
+  options: { force?: boolean } = {}
+): MigrationResult {
+  return recorded(migration, { dryRun, undo: false }, () =>
+    migration.run(dryRun, options)
+  );
+}
+
+/** A sweep that found nothing is not an event; one that folded files in is. */
+function sweepRecorded(
+  migration: Migration & Required<Pick<Migration, "sweep">>
+): string[] {
+  const result = migration.sweep();
+  if (result.migrated === 0) return [];
+  recordRun(migration, { dryRun: false, undo: false, sweep: true }, result);
+
+  return result.results.map((line) => `${migration.id}: ${line}`);
+}
+
+/** Every install folds in what old processes wrote to old paths after a move. */
+function sweepLateWrites(): string[] {
+  return MIGRATIONS.flatMap((m) =>
+    m.sweep ? sweepRecorded({ ...m, sweep: m.sweep }) : []
+  );
 }
 
 export function undoRecorded(
@@ -126,11 +162,16 @@ export function undoRecorded(
   return recorded(migration, { dryRun: false, undo: true }, () => migration.undo());
 }
 
-/** Install runs these first, so one install leaves nothing an older PAL wrote. */
+/**
+ * Install runs these first, so one install leaves nothing an older PAL wrote.
+ * A migration that moves recorded data waits for its owner; the doctor lists it.
+ */
 export function applyPendingMigrations(): string[] {
-  return MIGRATIONS.filter((m) => m.check().pending).flatMap((m) =>
-    runRecorded(m, false).results.map((line) => `${m.id}: ${line}`)
+  const applied = MIGRATIONS.filter((m) => runsOnInstall(m) && m.check().pending).flatMap(
+    (m) => runRecorded(m, false).results.map((line) => `${m.id}: ${line}`)
   );
+
+  return [...applied, ...sweepLateWrites()];
 }
 
 /** Returns migrations that have pending work. Used by doctor. */
@@ -138,7 +179,9 @@ export function checkPendingMigrations(): PendingMigration[] {
   return MIGRATIONS.flatMap((m) => {
     const { pending, detail } = m.check();
 
-    return pending ? [{ id: m.id, description: m.description, detail }] : [];
+    return pending
+      ? [{ id: m.id, description: m.description, detail, ownerRun: !runsOnInstall(m) }]
+      : [];
   });
 }
 
@@ -202,7 +245,52 @@ export function runMigrate(args: string[]): void {
     return;
   }
 
+  const named = args.find((a) => !a.startsWith("-"));
+  if (named !== undefined) {
+    runNamed(named, dryRun, args.includes("--force"));
+
+    return;
+  }
+
   const pending = MIGRATIONS.filter((m) => m.check().pending);
+  const waiting = pending.filter((m) => !runsOnInstall(m));
+  runAll(pending.filter(runsOnInstall), dryRun);
+  printWaitingForOwner(waiting);
+}
+
+function printWaitingForOwner(waiting: Migration[]): void {
+  if (waiting.length === 0) return;
+  console.log("  Waiting for you to run them (they move recorded data):");
+
+  for (const m of waiting) console.log(`    pal cli migrate ${m.id} — ${m.description}`);
+  console.log("");
+}
+
+function runNamed(id: string, dryRun: boolean, force: boolean): void {
+  const migration = MIGRATIONS.find((m) => m.id === id);
+  if (!migration) {
+    console.log(
+      `  No migration "${id}". Known: ${MIGRATIONS.map((m) => m.id).join(", ")}`
+    );
+
+    return;
+  }
+
+  if (!migration.check().pending) {
+    console.log(`  ${id}: nothing to do.`);
+
+    return;
+  }
+
+  if (dryRun) console.log("  Dry run — no files will be written.\n");
+  console.log(`  Running: ${id} — ${migration.description}`);
+
+  for (const line of runRecorded(migration, dryRun, { force }).results)
+    console.log(`    ${line}`);
+  console.log("");
+}
+
+function runAll(pending: Migration[], dryRun: boolean): void {
   if (pending.length === 0) {
     console.log("  Nothing to migrate — all up to date.");
 

@@ -198,7 +198,7 @@ function editJson(path: string, edit: (data: Record<string, unknown>) => void): 
 }
 
 function knowEachOther(root: string): void {
-  editJson(resolve(root, "home", "memory", "pal-settings.json"), (settings) => {
+  editJson(resolve(root, "home", "settings.json"), (settings) => {
     settings.identity = {
       principal: { name: "Ada", timezone: "UTC" },
       ai: { name: "Hal", catchphrase: "Ready." },
@@ -233,7 +233,7 @@ function prepare(mode: Mode): Sandbox {
   const pkg = mode === "package" ? installFromTarball(root) : checkOut(root);
   const installed = sh(root, "pal cli install");
 
-  if (!existsSync(resolve(root, "home", "memory", "pal-settings.json")))
+  if (!existsSync(resolve(root, "home", "settings.json")))
     throw new Error(`pal cli install failed: ${installed.output}`);
   knowEachOther(root);
   snapshot(root);
@@ -277,7 +277,7 @@ interface Breakage {
 const BREAKAGES: Breakage[] = [
   {
     id: "settings.missing",
-    break: (s) => removeOnceReleased(at(s, "home", "memory", "pal-settings.json")),
+    break: (s) => removeOnceReleased(at(s, "home", "settings.json")),
   },
   {
     id: "telos.missing",

@@ -40,24 +40,24 @@ beforeEach(() => {
 });
 
 const LOCATION_TODAY: Record<StoreName, string> = {
-  transcripts: "memory/content/claude",
+  transcripts: "records/raw/claude",
   events: "memory/events",
   "event-text": "memory/content/events",
   "tool-output": "memory/content/tool-output",
-  ledger: "memory/ledger",
-  ratings: "memory/signals",
-  "claim-checks": "memory/signals/claim-checks",
-  "labelled-turns": "memory/adaptation",
-  "rule-events": "memory/adaptation",
-  "rule-candidates": "memory/adaptation",
-  "run-estimates": "memory/learning",
-  reflections: "memory/learning/reflections",
+  ledger: "records/ledger",
+  ratings: "records/ratings",
+  "claim-checks": "records/claim-checks",
+  "labelled-turns": "records/labelled-turns",
+  "rule-events": "records/rule-events",
+  "rule-candidates": "records/rule-candidates",
+  "run-estimates": "records/run-estimates",
+  reflections: "records/reflections",
   "progress-tree": "memory/progress-tree",
-  "sessions-archive": "memory/state/sessions-archive",
+  "sessions-archive": "records/sessions-archive",
   "project-history": "memory/projects",
   "unbound-history": "memory/state/unbound-history",
-  "review-queue": "memory/knowledge",
-  "import-log": "memory/state",
+  "review-queue": "records/review-queue",
+  "import-log": "records/import-log",
 };
 
 function checkout(name: string): string {

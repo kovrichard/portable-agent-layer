@@ -208,12 +208,22 @@ describe("the optional CLAUDE_CODE_OAUTH_TOKEN", () => {
 describe("pending migrations", () => {
   test("each warns, with the command that runs it", () => {
     const [finding] = migrationFindings([
-      { id: "v9-x", description: "Move the thing", detail: "2 files" },
+      { id: "v9-x", description: "Move the thing", detail: "2 files", ownerRun: false },
     ]);
 
     expect(finding.severity).toBe("warn");
     expect(finding.title).toContain("Move the thing (2 files)");
     expect(finding.fix?.command).toBe("pal cli migrate");
+  });
+
+  test("one its owner runs warns apart, with the command that runs only it", () => {
+    const [finding] = migrationFindings([
+      { id: "v13-x", description: "Move the file", ownerRun: true },
+    ]);
+
+    expect(finding.severity).toBe("warn");
+    expect(finding.id).toBe("owner-migration.v13-x");
+    expect(finding.fix?.command).toBe("pal cli migrate v13-x");
   });
 });
 

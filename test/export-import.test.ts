@@ -108,7 +108,7 @@ function archive(path: string, files: Record<string, string>, ageSeconds = 0): s
 }
 
 function importLog(): Record<string, unknown>[] {
-  return readFileSync(resolve(home, "memory", "state", "import-log.jsonl"), "utf-8")
+  return readFileSync(resolve(home, "records", "import-log", "import-log.jsonl"), "utf-8")
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line));

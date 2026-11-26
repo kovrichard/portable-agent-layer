@@ -139,7 +139,7 @@ describe("import into a NON-EMPTY home", () => {
     expect(cli(DST, ["import", WORK]).status).toBe(0);
     expect(cli(DST, ["import", WORK]).status).toBe(0);
 
-    const logLines = lines(DST, "memory/state/import-log.jsonl");
+    const logLines = lines(DST, "records/import-log/import-log.jsonl");
     expect(logLines.length).toBe(2);
     expect(JSON.parse(logLines[0])).toHaveProperty("archive");
   });
@@ -182,7 +182,9 @@ describe("machine identity crosses on import", () => {
     // ...and can now name the machine those records came from.
     expect(existsSync(resolve(DST, "memory", "machines", `${srcId}.md`))).toBe(true);
 
-    const logged = lines(DST, "memory/state/import-log.jsonl").map((l) => JSON.parse(l));
+    const logged = lines(DST, "records/import-log/import-log.jsonl").map((l) =>
+      JSON.parse(l)
+    );
     expect(logged[0].sourceMachineId).toBe(srcId);
   });
 });

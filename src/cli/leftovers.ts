@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { resolve } from "node:path";
 import { palHome, paths, platform } from "../core/paths";
+import { formerSettingsPath, SETTINGS_FILE } from "../core/settings";
 import { readJson, writeJson } from "../targets/json-file";
 
 /** Something an older PAL wrote that the current one neither writes nor reads. */
@@ -22,7 +23,10 @@ export interface Leftover {
 type Json = Record<string, unknown>;
 
 const claudeSettings = () => resolve(platform.claudeDir(), "settings.json");
-const palSettings = () => resolve(paths.memory(), "pal-settings.json");
+const everyPalSettingsFile = () =>
+  [...new Set([formerSettingsPath(), resolve(palHome(), SETTINGS_FILE)])].filter(
+    existsSync
+  );
 
 function isPathScopedFileToolRule(rule: string): boolean {
   return /^(?:Grep|Glob)\(/.test(rule);
@@ -80,8 +84,8 @@ const claudeFactoryHomeOverride: Leftover = {
   },
 };
 
-function startupFiles(): string[] {
-  const settings = readJson<Json>(palSettings(), {});
+function startupFiles(settingsFile: string): string[] {
+  const settings = readJson<Json>(settingsFile, {});
   const files = (settings.loadAtStartup as { files?: unknown } | undefined)?.files;
 
   return Array.isArray(files)
@@ -91,16 +95,28 @@ function startupFiles(): string[] {
 
 const isProjectsFile = (file: string) => file.endsWith("PROJECTS.md");
 
+const loadsProjectsFile = (settingsFile: string) =>
+  startupFiles(settingsFile).some(isProjectsFile);
+
+function stopLoadingProjectsFile(settingsFile: string): void {
+  const settings = readJson<Json>(settingsFile, {});
+  const startup = settings.loadAtStartup as { files: string[] };
+  startup.files = startup.files.filter((file) => !isProjectsFile(file));
+  writeJson(settingsFile, settings);
+}
+
 const startupProjectsFile: Leftover = {
   id: "startup-projects-md",
   description:
     "Stop loading PROJECTS.md at startup — projects moved to the project store",
-  find: () => startupFiles().filter(isProjectsFile),
+  find: () =>
+    everyPalSettingsFile().flatMap((file) =>
+      startupFiles(file)
+        .filter(isProjectsFile)
+        .map((entry) => `${file}: ${entry}`)
+    ),
   remove() {
-    const settings = readJson<Json>(palSettings(), {});
-    const startup = settings.loadAtStartup as { files: string[] };
-    startup.files = startup.files.filter((file) => !isProjectsFile(file));
-    writeJson(palSettings(), settings);
+    everyPalSettingsFile().filter(loadsProjectsFile).forEach(stopLoadingProjectsFile);
   },
 };
 

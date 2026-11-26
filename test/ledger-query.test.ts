@@ -16,7 +16,7 @@ beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
   PROJECT = freshTestDir(import.meta.file);
   process.env.PAL_HOME = HOME;
-  mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+  mkdirSync(resolve(HOME, "records", "ledger"), { recursive: true });
 });
 
 async function query() {
@@ -60,7 +60,7 @@ function entry(overrides: EntryOverrides = {}): Record<string, unknown> {
 
 function writeLedger(name: string, rows: Record<string, unknown>[]): void {
   writeFileSync(
-    resolve(HOME, "memory", "ledger", name),
+    resolve(HOME, "records", "ledger", name),
     `${rows.map((r) => JSON.stringify(r)).join("\n")}\n`,
     "utf-8"
   );
@@ -84,7 +84,7 @@ describe("history that rotation moved aside", () => {
 
   test("a half-written line is skipped rather than failing the query", async () => {
     writeFileSync(
-      resolve(HOME, "memory", "ledger", "actions.jsonl"),
+      resolve(HOME, "records", "ledger", "actions.jsonl"),
       `${JSON.stringify(entry({ id: "good" }))}\n{"id":"trunc`,
       "utf-8"
     );

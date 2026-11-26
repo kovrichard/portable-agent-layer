@@ -70,7 +70,7 @@ test("the rating handler judges all three questions through judge(), off by defa
   );
   await child.exited;
 
-  const turnsDir = resolve(home, "memory", "adaptation");
+  const turnsDir = resolve(home, "records", "labelled-turns");
   const turn = readdirSync(turnsDir)
     .filter((f) => f.startsWith("turns-"))
     .flatMap((f) => readFileSync(resolve(turnsDir, f), "utf-8").trim().split("\n"))

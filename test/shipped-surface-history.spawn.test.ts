@@ -22,12 +22,17 @@ function git(...args: string[]): string {
 }
 
 function everyListedItem(json: string): Set<string> {
-  const { current, retired } = JSON.parse(json) as {
+  const {
+    current,
+    retired,
+    ownerRun = [],
+  } = JSON.parse(json) as {
     current: string[];
     retired: string[];
+    ownerRun?: string[];
   };
 
-  return new Set([...current, ...retired]);
+  return new Set([...current, ...retired, ...ownerRun]);
 }
 
 function isShallowClone(): boolean {

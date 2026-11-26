@@ -1,6 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { assets, palHome } from "../core/paths";
+import { settingsPath } from "../core/settings";
 import { log } from "./log";
 
 /** Copy template files into telos/ without overwriting existing ones */
@@ -21,17 +22,15 @@ export function scaffoldTelos(): void {
   }
 }
 
-/** Copy pal-settings.json template to memory/ without overwriting */
+/** Copy the settings template into place without overwriting, old place included. */
 export function scaffoldPalSettings(): void {
-  const src = resolve(assets.skills(), "..", "templates", "pal-settings.json");
+  const src = resolve(assets.skills(), "..", "templates", "settings.json");
   if (!existsSync(src)) return;
 
-  const memDir = resolve(palHome(), "memory");
-  mkdirSync(memDir, { recursive: true });
+  const dst = settingsPath();
+  if (existsSync(dst)) return;
 
-  const dst = resolve(memDir, "pal-settings.json");
-  if (!existsSync(dst)) {
-    copyFileSync(src, dst);
-    log.info("Created pal-settings.json from template");
-  }
+  mkdirSync(dirname(dst), { recursive: true });
+  copyFileSync(src, dst);
+  log.info(`Created ${relative(palHome(), dst)} from template`);
 }

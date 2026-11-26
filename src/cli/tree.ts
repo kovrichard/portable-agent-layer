@@ -176,11 +176,16 @@ function maintenanceCommands(admin: AdminHandlers): Record<string, Leaf> {
       run: admin.doctor,
     }),
     migrate: leaf({
-      summary: "Run pending data migrations",
+      summary: "Run pending data migrations, or the one named",
+      args: "[id]",
       options: {
         list: { type: "boolean", description: "List pending and done migrations" },
         "dry-run": DRY_RUN,
         undo: { type: "string", description: "Undo a migration that supports it, by id" },
+        force: {
+          type: "boolean",
+          description: "Run a named move even though PAL looks busy",
+        },
       },
       run: ({ argv }) => runMigrate(argv),
     }),

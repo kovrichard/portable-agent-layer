@@ -145,13 +145,7 @@ describe("writeSession / project history I/O", () => {
       handoff: "",
       messageCount: 1,
     });
-    const archive = resolve(
-      TEST_HOME,
-      "memory",
-      "state",
-      "sessions-archive",
-      "2026-03.jsonl"
-    );
+    const archive = resolve(TEST_HOME, "records", "sessions-archive", "2026-03.jsonl");
 
     for (let n = 0; n < 51; n++) writeSession(session(n));
     const hot = JSON.parse(

@@ -15,7 +15,7 @@
 import { isEnabled, raw } from "../core/settings";
 
 /** The tags shipped as built-in defaults. Users may add their own tags via
- *  pal-settings.json `steering.rules`, so the effective tag set is open-ended. */
+ *  the settings file's `steering.rules`, so the effective tag set is open-ended. */
 type SteeringTag =
   | "debugging"
   | "destructive"
@@ -82,7 +82,7 @@ const STEERING_RULES: Array<SteeringRule & { tag: SteeringTag }> = [
 
 const MAX_STEERING_BYTES = 1000;
 
-/** Merge shipped defaults with the user's pal-settings.json extension:
+/** Merge shipped defaults with the user's extension in the settings file:
  *  `steering.disable` removes built-ins by tag; `steering.rules` appends personal
  *  rules. Malformed user entries (missing field or bad regex) are skipped, never
  *  thrown — a broken personal rule must not disable steering for everyone. */

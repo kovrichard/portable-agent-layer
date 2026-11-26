@@ -89,7 +89,7 @@ describe("PreserveTranscripts entrypoint", () => {
     );
     expect(run.exitCode).toBe(0);
     expect(
-      existsSync(resolve(home, "memory", "content", "claude", "-proj", "s1.jsonl.gz"))
+      existsSync(resolve(home, "records", "raw", "claude", "-proj", "s1.jsonl.gz"))
     ).toBe(true);
   });
 });
@@ -97,7 +97,7 @@ describe("PreserveTranscripts entrypoint", () => {
 describe("transcriptArchive", () => {
   test("is the Claude folder of the PAL home's content store, where usage reads deleted transcripts", async () => {
     process.env.PAL_HOME = root;
-    expect(transcriptArchive()).toBe(resolve(root, "memory", "content", "claude"));
+    expect(transcriptArchive()).toBe(resolve(root, "records", "raw", "claude"));
   });
 });
 

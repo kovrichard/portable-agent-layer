@@ -366,6 +366,14 @@ describe("checkBashCommand", () => {
     expect(checkBashCommand("echo 'x' > ~/.pal/memory/signals/foo.txt")).toBeTruthy();
   });
 
+  test("blocks writing to the records PAL keeps, and allows reading them", () => {
+    expect(
+      checkBashCommand("echo 'x' >> ~/.pal/records/ledger/actions.jsonl")
+    ).toBeTruthy();
+    expect(checkBashCommand("cat ~/.pal/records/ledger/actions.jsonl")).toBeNull();
+    expect(checkBashCommand("echo x > /src/MyRepo/records/a.txt")).toBeNull();
+  });
+
   test("allows reading from managed dirs under managed roots", () => {
     expect(checkBashCommand("cat ~/.pal/memory/signals/ratings.jsonl")).toBeNull();
     expect(checkBashCommand("ls ~/.pal/memory/learning/session")).toBeNull();
@@ -504,6 +512,18 @@ describe("checkFilePath", () => {
 
   test("allows a repository's own .pal/docs folder", () => {
     expect(checkFilePath("/src/MyRepo/.pal/docs/README.md")).toBeNull();
+  });
+
+  test("the settings file at the PAL home's root is hook-managed", () => {
+    expect(checkFilePath(home(".pal", "settings.json"))).toMatch(
+      /settings\.json is managed/
+    );
+  });
+
+  test("every other settings.json stays editable, an agent's own included", () => {
+    expect(checkFilePath(home(".claude", "settings.json"))).toBeNull();
+    expect(checkFilePath(home(".pal", "telos", "settings.json"))).toBeNull();
+    expect(checkFilePath("/home/user/project/.vscode/settings.json")).toBeNull();
   });
 
   test("does not block .pal paths that don't match docs/skills/tools", () => {

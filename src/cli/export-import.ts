@@ -2,11 +2,13 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import type AdmZipArchive from "adm-zip";
 import { appendImportLog } from "../bronze/import-log";
+import { newerLayoutRefusal } from "../core/export-manifest";
 import { mergeArchive, readManifest, summarize } from "../core/import-merge";
 import { logDebug } from "../core/log";
 import { ensureRegistered, writeRegistryEntry } from "../core/machine";
 import { palHome, toPath } from "../core/paths";
 import { log } from "../targets/log";
+import { archiveLayoutFor } from "./archive-layout";
 
 export async function exportState(args: string[]) {
   const { collectExportFiles, exportZip, timestamp } = await import("../core/export");
@@ -159,6 +161,12 @@ export async function importState(args: string[]) {
     `zip=${zipPath} entries=${entries.length} dryRun=${dryRun} overwrite=${overwrite}`
   );
 
+  const refusal = newerLayoutRefusal(readManifest(archiveEntriesOf(entries)));
+  if (refusal) {
+    log.error(`Import refused: ${refusal}`);
+    process.exit(1);
+  }
+
   if (dryRun) {
     printImportDryRun(entries, home, overwrite);
 
@@ -225,7 +233,12 @@ function archiveEntriesOf(entries: ZipEntry[]) {
 
 function importByMerge(entries: ZipEntry[], home: string, zipPath: string) {
   ensureRegistered(home);
-  const result = mergeArchive(archiveEntriesOf(entries), home, importQuarantineDir(home));
+  const result = mergeArchive(
+    archiveEntriesOf(entries),
+    home,
+    importQuarantineDir(home),
+    archiveLayoutFor(home)
+  );
   const source = readManifest(archiveEntriesOf(entries));
   if (source) {
     writeRegistryEntry({ id: source.machineId, label: source.label, os: source.os });

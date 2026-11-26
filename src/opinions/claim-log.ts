@@ -1,6 +1,6 @@
 /**
  * The claim check at stop: every reply that makes a result or status claim is logged to
- * memory/signals/claim-checks/ with its verdict. The claiming sentence is kept
+ * records/claim-checks/ with its verdict. The claiming sentence is kept
  * only when no command backed it, so the log can be audited. Sending the reply
  * back is opt-in (dynamicContext.claimCheckBlocks).
  */

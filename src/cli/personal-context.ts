@@ -1,7 +1,7 @@
 /**
  * pal cli telos / pal cli timezone — the personal context PAL carries about you.
  *
- * Both exist for the onboarding skill. pal-settings.json is hook-protected, so
+ * Both exist for the onboarding skill. The settings file is hook-protected, so
  * an agent cannot write the timezone itself, and a skill that restated the
  * answered/unanswered rule in prose would drift from the code that decides it.
  */

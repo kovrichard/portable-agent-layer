@@ -23,7 +23,7 @@ let HOME: string;
 
 beforeEach(() => {
   HOME = freshTestDir(import.meta.file);
-  mkdirSync(resolve(HOME, "memory", "ledger"), { recursive: true });
+  mkdirSync(resolve(HOME, "records", "ledger"), { recursive: true });
 });
 
 async function runValidator(payload: unknown, agent = "claude"): Promise<string> {
@@ -44,7 +44,7 @@ function preToolUse(toolName: string, toolArgs: Record<string, unknown>) {
 }
 
 function entries(): LedgerEntry[] {
-  const file = resolve(HOME, "memory", "ledger", "actions.jsonl");
+  const file = resolve(HOME, "records", "ledger", "actions.jsonl");
   if (!existsSync(file)) return [];
 
   return readFileSync(file, "utf-8")
@@ -105,8 +105,8 @@ describe("a rule refusing is recorded", () => {
 
   test("a ledger it cannot write still denies — recording never softens a block", async () => {
     // A file where the ledger directory has to go: every write path throws.
-    removeOnceReleased(resolve(HOME, "memory", "ledger"));
-    writeFileSync(resolve(HOME, "memory", "ledger"), "not a directory", "utf-8");
+    removeOnceReleased(resolve(HOME, "records", "ledger"));
+    writeFileSync(resolve(HOME, "records", "ledger"), "not a directory", "utf-8");
 
     const out = await runValidator(preToolUse("Bash", { command: DANGEROUS }));
     expect(out).toContain("deny");

@@ -14,6 +14,7 @@ interface PendingMigration {
   id: string;
   description: string;
   detail?: string;
+  ownerRun: boolean;
 }
 
 interface ErrorContext {
@@ -105,6 +106,13 @@ export function migrationFindings(pending: PendingMigration[]): Finding[] {
 
   return pending.map((migration) => {
     const detail = migration.detail ? ` (${migration.detail})` : "";
+
+    if (migration.ownerRun)
+      return warning(
+        `owner-migration.${migration.id}`,
+        `Waiting for you to run it: ${migration.description}`,
+        { say: "Run it", command: `pal cli migrate ${migration.id}`, external: false }
+      );
 
     return warning(
       `migration.${migration.id}`,

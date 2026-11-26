@@ -305,7 +305,7 @@ describe("savePending on a sensitive target", () => {
     const { savePending } = await import("../src/bronze/ledger");
     savePending(SNAPSHOT);
     const parked = readFileSync(
-      resolve(HOME, "memory", "ledger", "pending", "toolu_redact_1.json"),
+      resolve(HOME, "records", "ledger", "pending", "toolu_redact_1.json"),
       "utf-8"
     );
     expect(parked).not.toContain("parked-secret");

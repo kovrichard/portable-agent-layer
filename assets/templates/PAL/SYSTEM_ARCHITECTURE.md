@@ -89,7 +89,7 @@ Prompts should never replicate functionality that code can provide:
 - Hooks are TypeScript, not prompt instructions
 - Tools are CLI programs, not natural language procedures
 - Memory is structured JSON/JSONL, not freeform text
-- Configuration is `pal-settings.json`, not prose in CLAUDE.md
+- Configuration is `~/.pal/settings.json`, not prose in CLAUDE.md
 
 ### 7. Clear Thinking + Prompting is King
 
@@ -302,17 +302,18 @@ memory/
 │   ├── last-responses.json        # Cached responses for rating correlation
 │   └── debug.log                  # Hook execution logs
 │
-├── signals/                       # User feedback
-│   └── ratings.jsonl              # Explicit + implicit ratings
-│
 ├── adaptation/                    # Rules drafted from corrections, and approved opinions
 │
 ├── relationship/
 │   └── opinions-context.md        # Approved opinions, rendered for native loading
 │
-├── projects/                      # Per-project session history
+├── projects/                      # Per-project ISA.md and session history
 │
 └── failures/                      # Low-rating captures from older versions, no longer written
+
+records/                           # What happened, one folder per store
+├── ratings/ratings.jsonl          # Explicit + implicit ratings
+└── ...                            # ledger, claim checks, labelled turns, rule events, reflections, ...
 ```
 
 ### Data Flow
@@ -320,7 +321,7 @@ memory/
 ```
 Session interaction
   │
-  ├─► [Prompt] Rating capture ──► signals/ratings.jsonl
+  ├─► [Prompt] Rating capture ──► records/ratings/ratings.jsonl
   │
   ├─► [Stop] Session intelligence (Haiku) ──► projects/<slug>/ history, progress-tree stopped-at
   │
@@ -361,7 +362,7 @@ A rule the user states            A correction PAL detects
 - Progress tree, active projects
 - Changes per-session or is project-scoped — can't be pre-compiled
 - Injected as `<system-reminder>` block via stdout
-- Each section independently toggleable in `pal-settings.json → dynamicContext`
+- Each section independently toggleable in `~/.pal/settings.json → dynamicContext`
 
 ### Semi-Static Registry
 

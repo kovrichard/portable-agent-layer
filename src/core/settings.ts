@@ -1,5 +1,5 @@
 /**
- * PalSettings — single source of truth for pal-settings.json.
+ * PalSettings — single source of truth for the settings file (see settingsPath).
  *
  * Reads once, caches in memory for the process lifetime.
  * All consumers import from here instead of reading the file directly.
@@ -7,7 +7,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { paths } from "./paths";
+import { palHome } from "./paths";
 
 // ── Types ──
 
@@ -68,8 +68,24 @@ const IDENTITY_DEFAULTS: Identity = {
 
 let cached: { path: string; data: PalSettingsData } | null = null;
 
-function settingsPath(): string {
-  return resolve(paths.memory(), "pal-settings.json");
+export const SETTINGS_FILE = "settings.json";
+
+/** Where settings lived before they moved to the PAL home's root. */
+export function formerSettingsPath(home: string = palHome()): string {
+  return resolve(home, "memory", "pal-settings.json");
+}
+
+/**
+ * The settings file: `~/.pal/settings.json`, or the former
+ * `memory/pal-settings.json` while the owner has not run the move. Once the new
+ * file exists it wins, so a late write to the old path never sends it back.
+ */
+export function settingsPath(home: string = palHome()): string {
+  const current = resolve(home, SETTINGS_FILE);
+  if (existsSync(current)) return current;
+  const former = formerSettingsPath(home);
+
+  return existsSync(former) ? former : current;
 }
 
 function readSettingsFile(p: string): PalSettingsData {
