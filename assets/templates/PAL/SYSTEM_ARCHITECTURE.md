@@ -295,7 +295,7 @@ The user's data sits in four folders under `~/.pal/`. Each holds one kind of dat
 
 | Folder | Holds | Export | Backup before a layout move |
 |---|---|---|---|
-| `memory/` | What PAL learned and recalls: knowledge, relationship, self-model, wisdom, adaptation rules | yes | yes |
+| `memory/` | What PAL learned and recalls: knowledge, opinions, wisdom, adaptation rules, who the user is and their machines | yes | yes |
 | `records/` | What happened, one folder per store: copied agent transcripts (`raw/claude/`), the bronze event log (`bronze/`), the ledger, ratings, claim checks, the sessions archive | yes, except `records/raw/` and the event text and tool output in `records/bronze/` | yes |
 | `work/` | The user's work, one folder per store: projects with their session history (`projects/`), history from unregistered folders (`unbound-history/`), the progress tree, task ISAs (`tasks/`), scheduled prompts (`schedules/`) | yes | yes |
 | `state/` | This machine's working state that is not cache: sessions and session names, the hooks' per-session files, collector cursors, the transcript-copy list, scheduled-prompt marks. An install keeps it in `memory/state/` until the owner runs the move. Never synced | no | yes |
@@ -313,7 +313,7 @@ memory/
 ├── relationship/
 │   └── opinions-context.md        # Approved opinions, rendered for native loading
 │
-└── failures/                      # Low-rating captures from older versions, no longer written
+└── learning/failures/             # Low-rating captures from older versions, no longer written
 
 records/                           # What happened, one folder per store
 ├── ratings/ratings.jsonl          # Explicit + implicit ratings

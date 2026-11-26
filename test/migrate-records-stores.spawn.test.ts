@@ -36,7 +36,7 @@ const OLD_FILES: Record<string, string> = {
 const STAYS: Record<string, string> = {
   "memory/adaptation/rules.json": "[]",
   "memory/signals/interaction/x.json": "{}",
-  "memory/learning/failures-digest.md": "# digest\n",
+  "memory/learning/failures/2026/10/low.md": "# failure\n",
   "memory/state/sessions.json": "{}",
   "memory/projects/alpha/ISA.md": "---\nname: alpha\n---\n",
   "memory/projects/alpha/history.jsonl": '{"h":1}\n',

@@ -5,11 +5,15 @@ import {
   readlinkSync,
   renameSync,
   rmdirSync,
+  rmSync,
   unlinkSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { storeLocation } from "../bronze/bronze";
+import { loggedEventIds } from "../bronze/events";
 import { palHome, paths, platform } from "../core/paths";
 import { formerSettingsPath, SETTINGS_FILE } from "../core/settings";
+import { legacyTurnId, legacyTurns } from "../opinions/interaction";
 import { readJson, writeJson } from "../targets/json-file";
 import { v10ThreadsToProgressTree } from "./migrations/v10-threads-to-progress-tree";
 
@@ -319,7 +323,7 @@ const cachesInState: Leftover = {
 };
 
 const DEAD_STATE_FILES = ["last-handoff.json", "signal-cache.json"];
-const DEAD_EMPTY_FOLDERS = ["memory/content", "memory/wisdom/state"];
+const DEAD_EMPTY_FOLDERS = ["memory/content"];
 const OLD_TOKEN_USAGE = "memory/signals/token-usage.jsonl";
 
 const pendingFailureFiles = () =>
@@ -347,12 +351,58 @@ const deadFolders = () =>
 const deadStateFiles: Leftover = {
   id: "dead-state-files",
   description:
-    "Remove files no PAL reads any more: the old handoff, signal cache, pending failures, token usage, the threads the progress tree took over, and two empty folders",
+    "Remove files no PAL reads any more: the old handoff, signal cache, pending failures, token usage, the threads the progress tree took over, and the empty content folder",
   find: () => [...deadFiles(), ...deadFolders()],
   remove() {
     for (const path of deadFiles()) unlinkSync(path);
 
     for (const folder of deadFolders()) rmdirSync(folder);
+  },
+};
+
+const RETIRED_LEARNED_STORES = [
+  "memory/relationship/reflections",
+  "memory/self-model",
+  "memory/learning/session",
+  "memory/learning/failures-digest.md",
+  "memory/learning/.retrieval-index.json",
+];
+const oldRelationship = () => resolve(palHome(), "memory/relationship");
+
+const dailyRelationshipNotes = () =>
+  existsSync(oldRelationship())
+    ? readdirSync(oldRelationship())
+        .filter((name) => /^\d{4}-\d{2}$/.test(name))
+        .map((name) => resolve(oldRelationship(), name))
+    : [];
+
+function everyLegacyTurnInBronze(): boolean {
+  if (!existsSync(storeLocation("events"))) return false;
+  const logged = loggedEventIds();
+
+  return legacyTurns().every((turn) => logged.has(legacyTurnId(turn)));
+}
+
+const legacyTurnsCarriedOver = () =>
+  existsSync(paths.legacyTurns()) && everyLegacyTurnInBronze()
+    ? [paths.legacyTurns()]
+    : [];
+
+function retiredLearnedPaths(): string[] {
+  return [
+    ...RETIRED_LEARNED_STORES.map((path) => resolve(palHome(), path)),
+    ...dailyRelationshipNotes(),
+  ].filter((path) => existsSync(path));
+}
+
+const retiredLearnedStores: Leftover = {
+  id: "retired-learned-stores",
+  description:
+    "Remove learned stores no PAL writes or reads any more: relationship notes and reflections, the self-model, session learnings, the failures digest, the retrieval index, and the old turns once the event log holds every one",
+  find: () => [...retiredLearnedPaths(), ...legacyTurnsCarriedOver()],
+  remove() {
+    for (const path of [...retiredLearnedPaths(), ...legacyTurnsCarriedOver()])
+      rmSync(path, { recursive: true });
   },
 };
 
@@ -370,4 +420,5 @@ export const LEFTOVERS: Leftover[] = [
   debugLogPrev,
   cachesInState,
   deadStateFiles,
+  retiredLearnedStores,
 ];

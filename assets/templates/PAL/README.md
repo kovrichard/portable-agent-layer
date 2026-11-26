@@ -69,7 +69,6 @@ Event hooks across the session lifecycle:
 
 ### Memory (`memory/`)
 Persistent storage across sessions:
-- **signals/** — User satisfaction ratings (explicit + implicit)
 - **adaptation/** — Rules drafted from the user's corrections, and approved opinions
 - **relationship/** — The approved opinions, rendered for native loading
 - **failures/** — Low-rating session context dumps from older versions

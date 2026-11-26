@@ -58,7 +58,7 @@ describe("files no PAL reads any more", () => {
     expect(existsSync(at("memory", "state", "threads.jsonl"))).toBe(true);
   });
 
-  test("removes the empty content and wisdom/state folders, never wisdom's notes", () => {
+  test("removes the empty content folder, never wisdom's state or notes", () => {
     mkdirSync(at("memory", "content"), { recursive: true });
     mkdirSync(at("memory", "wisdom", "state"), { recursive: true });
     write(at("memory", "wisdom", "frames", "workflow.md"), "# frame");
@@ -66,7 +66,7 @@ describe("files no PAL reads any more", () => {
     deadStateFiles().remove();
 
     expect(existsSync(at("memory", "content"))).toBe(false);
-    expect(existsSync(at("memory", "wisdom", "state"))).toBe(false);
+    expect(existsSync(at("memory", "wisdom", "state"))).toBe(true);
     expect(existsSync(at("memory", "wisdom", "frames", "workflow.md"))).toBe(true);
   });
 
