@@ -32,6 +32,18 @@ function hookRuns(): Record<string, unknown>[] {
 }
 
 describe("a logged hook run", () => {
+  test("names the part a hook registered with --only, so two parts of one hook tell apart", () => {
+    logHookRun("PostToolOrchestrator.ts", 0, 1, [
+      "bun",
+      "x",
+      "--agent=claude",
+      "--only=ledger",
+    ]);
+    logHookRun("PostToolOrchestrator.ts", 0, 1, ["bun", "x", "--agent=claude"]);
+
+    expect(hookRuns().map((run) => run.part)).toEqual(["ledger", null]);
+  });
+
   test("names the entry without its folder or extension, with the rounded duration", () => {
     logHookRun("/pal/src/hooks/StopOrchestrator.ts", 2, 41.6);
 

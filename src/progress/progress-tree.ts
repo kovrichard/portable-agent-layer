@@ -8,6 +8,7 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "../bronze/bronze";
+import { mainCheckoutOf } from "./main-checkout";
 import { sameArtifact } from "./progress-artifact-match";
 import { progressSession } from "./progress-session";
 import { readAllProjects, resolveProjectFromCwd } from "./projects";
@@ -147,8 +148,11 @@ function progressTreeFile(): string {
 }
 
 /** A registered project is its own scope wherever in it the agent stands; anything else is its folder. */
+/** One session's nodes stay in one scope, whichever worktree of the project it worked in. */
 export function scopeOf(cwd: string): string {
-  return resolveProjectFromCwd(cwd, readAllProjects())?.name ?? resolve(cwd);
+  const checkout = mainCheckoutOf(cwd);
+
+  return resolveProjectFromCwd(checkout, readAllProjects())?.name ?? checkout;
 }
 
 export function newNodeId(

@@ -127,7 +127,7 @@ async function lib() {
   return import("../src/progress/merged-worktrees");
 }
 
-function prunedEvents(): Record<string, unknown>[] {
+function prunedEvents(type = "worktree_pruned"): Record<string, unknown>[] {
   const dir = resolve(ROOT, "pal", "records", "bronze", "events");
   if (!existsSync(dir)) return [];
 
@@ -135,7 +135,7 @@ function prunedEvents(): Record<string, unknown>[] {
     .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").split("\n"))
     .filter(Boolean)
     .map((l) => JSON.parse(l))
-    .filter((e) => e.type === "worktree_pruned");
+    .filter((e) => e.type === type);
 }
 
 describe("a worktree whose branch was merged and deleted on the remote", () => {
@@ -213,6 +213,9 @@ describe("a worktree whose branch was merged and deleted on the remote", () => {
     });
     expect(existsSync(path)).toBe(true);
     expect(prunedEvents()).toEqual([]);
+    expect(prunedEvents("worktree_prune_failed")).toEqual([
+      expect.objectContaining({ branch: "feat/done" }),
+    ]);
   });
 
   test.skipIf(process.platform === "win32")(
