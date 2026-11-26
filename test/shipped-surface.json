@@ -15,6 +15,7 @@
     ".claude/settings.json#attribution.sessionUrl",
     ".claude/settings.json#autoMemoryEnabled",
     ".claude/settings.json#enabledPlugins.dark-factory@pal",
+    ".claude/settings.json#enabledPlugins.pal-status@pal",
     ".claude/settings.json#extraKnownMarketplaces.pal.source.path",
     ".claude/settings.json#extraKnownMarketplaces.pal.source.source",
     ".claude/settings.json#hook=AttentionEvent.ts",

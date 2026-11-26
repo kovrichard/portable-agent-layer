@@ -20,4 +20,8 @@ describe("the Claude Code settings template", () => {
     expect(settings.extraKnownMarketplaces?.pal).toBeDefined();
     expect(settings.enabledPlugins?.["dark-factory@pal"]).toBe(false);
   });
+
+  test("turns on the status band, so a required data move shows on every machine", () => {
+    expect(settings.enabledPlugins?.["pal-status@pal"]).toBe(true);
+  });
 });

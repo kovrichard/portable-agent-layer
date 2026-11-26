@@ -12,9 +12,9 @@
       "description": "A software factory of agents that turns a request into a green, reviewed pull request."
     },
     {
-      "name": "pal-notice",
-      "source": "./assets/plugins/pal-notice",
-      "description": "Keeps PAL's standing notice, such as data moves required before 1.0, in a band above the prompt until it is fixed."
+      "name": "pal-status",
+      "source": "./assets/plugins/pal-status",
+      "description": "PAL's status above the prompt. Today it holds PAL's standing notice, such as data moves required before 1.0, until it is fixed."
     }
   ]
 }

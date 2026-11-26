@@ -3,7 +3,7 @@ import { atom, read, update } from "claude-code";
 
 import type { Notice } from "../types";
 
-const notice = atom({ plugin: "pal-notice", key: "notice" } as const, null as Notice);
+const notice = atom({ plugin: "pal-status", key: "notice" } as const, null as Notice);
 
 const READ_HEALTH = ["sh", "-c", 'cat "$HOME/.pal/cache/health.json"'] as const;
 const RECHECK_MS = 60_000;

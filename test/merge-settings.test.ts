@@ -312,7 +312,10 @@ describe("PAL's plugin marketplace", () => {
       "/pkg"
     );
     expect(shipped.extraKnownMarketplaces).toEqual(marketplace("/pkg"));
-    expect(shipped.enabledPlugins).toEqual({ "dark-factory@pal": false });
+    expect(shipped.enabledPlugins).toEqual({
+      "dark-factory@pal": false,
+      "pal-status@pal": true,
+    });
   });
 
   test("install adds the marketplace and the plugin beside the user's own", () => {
