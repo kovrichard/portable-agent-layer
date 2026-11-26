@@ -135,6 +135,24 @@ beforeEach(() => {
   reload();
 });
 
+describe("a transcript copied into another session's folder", () => {
+  test("logs its denials once", async () => {
+    write(...EVENING_LEADS);
+    await collectClaudeDenials(projects, NOW);
+    mkdirSync(resolve(projects, "-sales", "other-session", "subagents"), {
+      recursive: true,
+    });
+    writeFileSync(
+      resolve(projects, "-sales", "other-session", "subagents", "agent-a1.jsonl"),
+      readFileSync(transcript)
+    );
+
+    await collectClaudeDenials(projects, NOW);
+
+    expect(denials()).toHaveLength(6);
+  });
+});
+
 describe("collecting Claude Code's permission denials", () => {
   test("the evening-leads job's six don't-ask denials are all found, and nothing else", async () => {
     write(...EVENING_LEADS);
