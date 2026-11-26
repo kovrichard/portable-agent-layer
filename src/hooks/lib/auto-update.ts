@@ -18,7 +18,12 @@ import { appendEvent, logQuietly } from "../../bronze/events";
 import { logDebug, logError } from "../../core/log";
 import { assets, palPkg, paths } from "../../core/paths";
 import { raw as rawSettings } from "../../core/settings";
-import { cachedStatus, getInstalledVersion, isRepoMode } from "../handlers/update-check";
+import {
+  cachedStatus,
+  getInstalledVersion,
+  isRepoMode,
+  startsNewMajor,
+} from "../handlers/update-check";
 
 export interface AutoUpdateLedger {
   attemptedAt?: string;
@@ -160,11 +165,19 @@ function heldByLastRun(ledger: AutoUpdateLedger | null, now: number): boolean {
   return now - new Date(ledger.attemptedAt).getTime() < waitAfter(ledger);
 }
 
-/** The unattended gate: opted in, not held by the last run, and safe to pull. */
+function onlyANewMajorIsOut(): boolean {
+  const cache = cachedStatus();
+
+  return cache !== null && startsNewMajor(cache);
+}
+
+/** The unattended gate: opted in, not held by the last run, within this major, and safe to pull. */
 export function shouldAutoUpdate(now: number = Date.now()): boolean {
   if (!isAutoUpdateEnabled()) return false;
 
   if (heldByLastRun(readLedger(), now)) return false;
+
+  if (onlyANewMajorIsOut()) return false;
 
   if (hasUncommittedChanges()) {
     recordSkip(DIRTY_TREE);

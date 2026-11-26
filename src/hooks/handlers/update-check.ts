@@ -19,6 +19,8 @@ export interface UpdateCache {
   current: string;
   latest: string;
   mode: "repo" | "package";
+  /** Set by the check so the statusline scripts need no version logic of their own. */
+  major?: boolean;
 }
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -156,6 +158,22 @@ export function isNewerRelease(latest: string, current: string): boolean {
   return Bun.semver.order(latest, current) === 1;
 }
 
+export const MAJOR_UPDATE_COMMAND = "pal cli update --major";
+
+function majorOf(version: string): number | null {
+  const major = /^(\d+)\./.exec(version)?.[1];
+
+  return major === undefined ? null : Number(major);
+}
+
+/** A release in a later major than the installed one: installed only when the user asks. */
+export function startsNewMajor(update: UpdateCache): boolean {
+  const from = majorOf(update.current);
+  const to = majorOf(update.latest);
+
+  return update.available && from !== null && to !== null && to > from;
+}
+
 /** latest is the stable release from main; canary is the prerelease from the canary branch. */
 export type Channel = "latest" | "canary";
 
@@ -214,7 +232,8 @@ export function checkPackage(
 /** Run update check. Caches result. Use force=true to skip cache (e.g. for `pal cli update`). */
 export async function checkForUpdate(
   force = false,
-  channel: UpdateChannel = updateChannel()
+  channel: UpdateChannel = updateChannel(),
+  fetchImpl: typeof fetch = fetch
 ): Promise<UpdateCache> {
   if (!force) {
     const cached = readCache();
@@ -225,7 +244,10 @@ export async function checkForUpdate(
     }
   }
 
-  const result = isRepoMode() ? await checkRepo() : await checkPackage(channel);
+  const checked = isRepoMode()
+    ? await checkRepo()
+    : await checkPackage(channel, fetchImpl);
+  const result = { ...checked, major: startsNewMajor(checked) };
   writeCache(result);
 
   if (result.available) {
@@ -251,6 +273,9 @@ export function clearUpdateCache(): void {
 export function getUpdateNotice(): string | null {
   const cache = cachedStatus();
   if (!cache?.available) return null;
+
+  if (startsNewMajor(cache))
+    return `📦 PAL ${cache.latest} is a new major release, installed only on request: ${MAJOR_UPDATE_COMMAND}`;
 
   return `📦 Update available: ${cache.current} → ${cache.latest} (pal cli update)`;
 }

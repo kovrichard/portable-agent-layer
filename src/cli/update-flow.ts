@@ -4,7 +4,12 @@
  */
 
 import { palPkg } from "../core/paths";
-import type { UpdateCache, UpdateChannel } from "../hooks/handlers/update-check";
+import {
+  MAJOR_UPDATE_COMMAND,
+  startsNewMajor,
+  type UpdateCache,
+  type UpdateChannel,
+} from "../hooks/handlers/update-check";
 import { type Captured, runCaptured } from "./install-flow";
 import { type Done, LiveRail } from "./ui/live";
 import { mark, railGap, railTop } from "./ui/rail";
@@ -27,6 +32,14 @@ function versionJump(style: Style, from: string, to: string): string {
   return `  ${style.gradient(pal)}  ${style.soft(from)} ${arrow} ${style.bold(style.gradient(to))}`;
 }
 
+function majorWaits(style: Style, update: UpdateCache): string {
+  const text = `PAL ${update.latest} is a new major release; this install stays on ${update.current}`;
+
+  if (!style.term.rich) return `warn ${text} -> ${MAJOR_UPDATE_COMMAND} to take it`;
+
+  return `  ${mark(style, "warn")} ${text} ${style.dim(style.glyph.arrow)} ${style.cmd(MAJOR_UPDATE_COMMAND)} ${style.soft("to take it")}`;
+}
+
 type Run = (cmd: string, args: string[], cwd?: string) => Promise<Captured>;
 
 export interface UpdateSteps {
@@ -34,6 +47,7 @@ export interface UpdateSteps {
   reinstall: (env: Record<string, string>) => number;
   run?: Run;
   switched?: (update: UpdateCache) => string | null;
+  major?: boolean;
 }
 
 export const CANARY_NEEDS_PACKAGE =
@@ -131,7 +145,7 @@ async function downloaded(rail: LiveRail, style: Style, update: UpdateCache, run
 
 /** Exit code for the parent; the reinstall runs in a fresh process that reads PAL_UPDATED_FROM. */
 export async function runUpdate(
-  { check, reinstall, run = runCaptured, switched }: UpdateSteps,
+  { check, reinstall, run = runCaptured, switched, major }: UpdateSteps,
   style: Style = createStyle(),
   rail: LiveRail = new LiveRail(style)
 ): Promise<number> {
@@ -142,6 +156,13 @@ export async function runUpdate(
 
   if (!update.available) {
     rail.line(upToDate(style, update.current));
+    rail.line();
+
+    return 0;
+  }
+
+  if (startsNewMajor(update) && !major) {
+    rail.line(majorWaits(style, update));
     rail.line();
 
     return 0;

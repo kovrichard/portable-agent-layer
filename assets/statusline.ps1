@@ -142,7 +142,7 @@ if (Test-Path $updateCache) {
       if (Test-Path $palSettings) {
         try { $autoUpdate = (Get-Content $palSettings -Raw | ConvertFrom-Json).autoUpdate.enabled -eq $true } catch {}
       }
-      $UPDATE_LINE = if ($autoUpdate) { "[update] $versionStr  restart to apply" } else { "[update] $versionStr  run: pal cli update" }
+      $UPDATE_LINE = if ($uc.major -eq $true) { "[new major] $versionStr  run: pal cli update --major" } elseif ($autoUpdate) { "[update] $versionStr  restart to apply" } else { "[update] $versionStr  run: pal cli update" }
     }
   } catch {}
 }

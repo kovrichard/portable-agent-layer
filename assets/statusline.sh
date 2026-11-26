@@ -187,7 +187,10 @@ if [ -f "$UPDATE_CACHE" ]; then
     # With daily updates on, PAL applies this when the session closes — so the
     # next step is to restart, not to run the command yourself.
     AUTO_UPDATE=$(jq -r '.autoUpdate.enabled // false' "$PAL_SETTINGS" 2>/dev/null)
-    if [ "$AUTO_UPDATE" = "true" ]; then
+    UC_MAJOR=$(jq -r '.major // false' "$UPDATE_CACHE" 2>/dev/null)
+    if [ "$UC_MAJOR" = "true" ]; then
+      UPDATE_LINE="📦 new major: $VERSION_STR  run: pal cli update --major"
+    elif [ "$AUTO_UPDATE" = "true" ]; then
       UPDATE_LINE="📦 update: $VERSION_STR  restart to apply"
     else
       UPDATE_LINE="📦 update: $VERSION_STR  run: pal cli update"

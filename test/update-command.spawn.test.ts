@@ -14,6 +14,7 @@ import {
   clearUpdateCache,
   getUpdateNotice,
   isNewerRelease,
+  startsNewMajor,
   type UpdateCache,
 } from "../src/hooks/handlers/update-check";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -26,11 +27,11 @@ const release = (mode: UpdateCache["mode"], available = true): UpdateCache =>
 
 const pipe: Terminal = { rich: false, color: "none", unicode: true, width: 80 };
 
-function updating(update: UpdateCache, code = 0) {
+function updating(update: UpdateCache, code = 0, major = false, terminal = pipe) {
   let out = "";
   const ran: string[][] = [];
   const reinstalls: Record<string, string>[] = [];
-  const style = createStyle(pipe);
+  const style = createStyle(terminal);
   const result = runUpdate(
     {
       check: async () => update,
@@ -44,6 +45,7 @@ function updating(update: UpdateCache, code = 0) {
 
         return 0;
       },
+      ...(major ? { major } : {}),
     },
     style,
     new LiveRail(style, (text) => {
@@ -107,6 +109,87 @@ describe("pal cli update — the flow", () => {
       "fail Download: try: bun add -g portable-agent-layer@0.90.0"
     );
     expect(run.output()).toContain("remote said no");
+  });
+});
+
+const majorRelease = (current: string, latest: string, available = true): UpdateCache =>
+  ({ available, current, latest, mode: "package" }) as UpdateCache;
+
+describe("pal cli update — a new major", () => {
+  test("is not installed by a plain update, which names the command that takes it", async () => {
+    const run = updating(majorRelease("0.117.0", "1.0.0"));
+
+    expect(await run.result).toBe(0);
+    expect(run.ran).toEqual([]);
+    expect(run.reinstalls).toEqual([]);
+    expect(run.output()).toEndWith(
+      "warn PAL 1.0.0 is a new major release; this install stays on 0.117.0 -> pal cli update --major to take it\n\n"
+    );
+  });
+
+  test("a rich terminal marks it as a warning and styles the command", async () => {
+    const rich = { ...pipe, rich: true };
+    const run = updating(majorRelease("0.117.0", "1.0.0"), 0, false, rich);
+
+    expect(await run.result).toBe(0);
+    expect(run.ran).toEqual([]);
+    expect(run.output()).toContain(
+      "PAL 1.0.0 is a new major release; this install stays on 0.117.0"
+    );
+    expect(run.output()).toContain("pal cli update --major");
+    expect(run.output()).toContain("to take it");
+    expect(run.output()).not.toContain("warn PAL");
+  });
+
+  test("is installed with --major", async () => {
+    const run = updating(majorRelease("0.117.0", "1.0.0"), 0, true);
+
+    expect(await run.result).toBe(0);
+    expect(run.ran).toEqual([["bun", "add", "-g", "portable-agent-layer@1.0.0"]]);
+    expect(run.reinstalls).toEqual([{ PAL_UPDATED_FROM: "0.117.0" }]);
+  });
+
+  test("counts the first number only, and a canary of the next major is one", () => {
+    expect(startsNewMajor(majorRelease("0.117.0", "1.0.0"))).toBe(true);
+    expect(startsNewMajor(majorRelease("0.117.0", "1.0.0-canary.1"))).toBe(true);
+    expect(startsNewMajor(majorRelease("1.9.0", "2.0.0"))).toBe(true);
+    expect(startsNewMajor(majorRelease("0.117.0", "0.118.0"))).toBe(false);
+    expect(startsNewMajor(majorRelease("0.117.0", "0.118.0-canary.1"))).toBe(false);
+    expect(startsNewMajor(majorRelease("1.0.0", "1.4.2"))).toBe(false);
+  });
+
+  test("needs a release that is actually newer and readable", () => {
+    expect(startsNewMajor(majorRelease("0.117.0", "1.0.0", false))).toBe(false);
+    expect(startsNewMajor(majorRelease("0.117.0", "abc1234 (ahead)"))).toBe(false);
+    expect(startsNewMajor(majorRelease("2.0.0", "1.0.0"))).toBe(false);
+  });
+
+  test("the check stores its verdict for the statusline scripts", async () => {
+    process.env.PAL_HOME = freshTestDir(import.meta.file);
+    process.env.PAL_PKG = freshTestDir(import.meta.file);
+    writeFileSync(resolve(process.env.PAL_PKG, "package.json"), '{"version":"0.117.0"}');
+    const npmSays = (version: string) =>
+      (async () => Response.json({ version })) as unknown as typeof fetch;
+    const stored = () =>
+      JSON.parse(readFileSync(resolve(paths.cache(), "update-available.json"), "utf-8"));
+
+    await checkForUpdate(true, "stable", npmSays("1.0.0"));
+    expect(stored()).toMatchObject({ latest: "1.0.0", major: true });
+
+    await checkForUpdate(true, "stable", npmSays("0.118.0"));
+    expect(stored()).toMatchObject({ latest: "0.118.0", major: false });
+  });
+
+  test("the update notice names it as a major and the command that takes it", () => {
+    process.env.PAL_HOME = freshTestDir(import.meta.file);
+    writeFileSync(
+      resolve(paths.cache(), "update-available.json"),
+      JSON.stringify({ ...majorRelease("0.117.0", "1.0.0"), checkedAt: "" })
+    );
+
+    expect(getUpdateNotice()).toBe(
+      "📦 PAL 1.0.0 is a new major release, installed only on request: pal cli update --major"
+    );
   });
 });
 

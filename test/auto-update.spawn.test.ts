@@ -134,6 +134,35 @@ describe("the daily gate", () => {
   });
 });
 
+function setChecked(current: string, latest: string): void {
+  writeFileSync(
+    resolve(paths.cache(), "update-available.json"),
+    JSON.stringify({ checkedAt: "", available: true, current, latest, mode: "package" }),
+    "utf-8"
+  );
+}
+
+describe("a new major", () => {
+  test("is never installed unattended", () => {
+    setSettings({ enabled: true, decided: true });
+    setChecked("0.117.0", "1.0.0");
+    expect(shouldAutoUpdate()).toBe(false);
+  });
+
+  test("is not recorded as a skip, so closing a session prints nothing about it", () => {
+    setSettings({ enabled: true, decided: true });
+    setChecked("0.117.0", "1.0.0");
+    expect(autoUpdateOnClose()).toBeNull();
+    expect(readLedger()).toBeNull();
+  });
+
+  test("a release within the installed major still goes through", () => {
+    setSettings({ enabled: true, decided: true });
+    setChecked("0.117.0", "0.118.0");
+    expect(shouldAutoUpdate()).toBe(true);
+  });
+});
+
 describe("uncommitted work", () => {
   test("a dirty clone waits, and says why", () => {
     setSettings({ enabled: true, decided: true });
