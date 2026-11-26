@@ -8,10 +8,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { parseLines } from "../src/bronze/events";
 import { agentDirOverrides } from "../src/core/paths";
 import { reload } from "../src/core/settings";
 import { collectEvents } from "../src/tools/lib/collectors";
 import { collectClaude } from "../src/tools/lib/collectors/claude";
+import { writeCursor } from "../src/tools/lib/collectors/cursors";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
@@ -31,8 +33,7 @@ function streamed(): Record<string, unknown>[] {
 
   return readdirSync(dir)
     .filter((f) => f.endsWith(".jsonl"))
-    .flatMap((f) => readFileSync(resolve(dir, f), "utf-8").trim().split("\n"))
-    .map((l) => JSON.parse(l))
+    .flatMap((f) => parseLines<Record<string, unknown>>(resolve(dir, f)))
     .filter((e) => e.type === "model_call");
 }
 
@@ -81,6 +82,67 @@ beforeEach(() => {
   transcript = resolve(projects, "-repo", "s.jsonl");
   mkdirSync(resolve(home, "memory"), { recursive: true });
   reload();
+});
+
+describe("a forked session's copy of earlier calls (#375)", () => {
+  test("is not logged a second time", async () => {
+    write(block("msg_1", 818), block("msg_2", 40));
+    await collectClaude(projects, LATER);
+    writeFileSync(
+      resolve(projects, "-repo", "fork.jsonl"),
+      `${[block("msg_1", 818, { sessionId: "ses-fork" }), block("msg_3", 5, { sessionId: "ses-fork" })].join("\n")}\n`
+    );
+
+    await collectClaude(projects, LATER);
+
+    expect(streamed().map((call) => call.outputTokens)).toEqual([818, 40, 5]);
+  });
+});
+
+describe("a subagent transcript copied into other sessions' folders (#375)", () => {
+  function subagentIn(session: string): void {
+    const dir = resolve(projects, "-repo", session, "subagents");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, "agent-a1.jsonl"),
+      `${[block("msg_1", 818, { isSidechain: true }), block("msg_2", 40, { isSidechain: true })].join("\n")}\n`
+    );
+  }
+
+  test("is logged once, whether the copies arrive in one run or later", async () => {
+    subagentIn("ses-1");
+    subagentIn("ses-2");
+    subagentIn("ses-3");
+    await collectClaude(projects, LATER);
+    subagentIn("ses-4");
+    subagentIn("ses-5");
+
+    await collectClaude(projects, LATER);
+
+    expect(streamed().map((call) => call.outputTokens)).toEqual([818, 40]);
+  });
+
+  test("a call an older version logged under a random id is not logged again", async () => {
+    write(block("msg_1", 818));
+    await collectClaude(projects, LATER);
+    writeCursor("claude", {});
+    appendFileSync(
+      resolve(home, "records", "bronze", "events", "2026-10.jsonl"),
+      '{"type":"model_call", half\n'
+    );
+
+    await collectClaude(projects, LATER);
+
+    expect(streamed()).toHaveLength(1);
+  });
+
+  test("two different calls in the same millisecond are both logged", async () => {
+    write(block("msg_1", 818), block("msg_2", 819));
+
+    await collectClaude(projects, LATER);
+
+    expect(streamed().map((call) => call.outputTokens)).toEqual([818, 819]);
+  });
 });
 
 describe("collecting Claude Code's model calls", () => {

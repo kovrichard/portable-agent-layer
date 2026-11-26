@@ -15,6 +15,7 @@ import { cacheWritesOf, type TranscriptUsage } from "../../../inference/transcri
 import { type Billing, UNKNOWN } from "../../../usage/billing";
 import { claudeTranscripts } from "../usage-buckets";
 import { readCursor, writeCursor } from "./cursors";
+import { alreadyLoggedCheck } from "./logged-keys";
 
 const SETTLE_MS = 5 * 60_000;
 
@@ -99,35 +100,43 @@ async function settledMessages(
   };
 }
 
-function emitModelCall(line: ClaudeLine, billing: Billing): void {
+function modelCallFields(line: ClaudeLine, billing: Billing) {
   const usage = line.message?.usage ?? {};
-  appendEvent(
-    "model_call",
-    {
-      ...billing,
-      model: line.message?.model,
-      requestedModel: line.requestedModel,
-      inputTokens: usage.input_tokens,
-      outputTokens: usage.output_tokens,
-      ...cacheWritesOf(usage),
-      cacheRead: usage.cache_read_input_tokens,
-      thinkingTokens: usage.output_tokens_details?.thinking_tokens,
-      thinkingMs: line.thinkingDurationMs,
-      webSearches: usage.server_tool_use?.web_search_requests,
-      webFetches: usage.server_tool_use?.web_fetch_requests,
-      serviceTier: usage.service_tier,
-      speed: usage.speed,
-      effort: line.effort,
-      stopReason: line.message?.stop_reason,
-      entrypoint: line.entrypoint,
-      sidechain: line.isSidechain,
-    },
-    {
-      ts: line.timestamp,
-      session: line.sessionId ?? null,
-      runtime: "claude",
-      cwd: line.cwd,
-    }
+
+  return {
+    ...billing,
+    model: line.message?.model,
+    requestedModel: line.requestedModel,
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    ...cacheWritesOf(usage),
+    cacheRead: usage.cache_read_input_tokens,
+    thinkingTokens: usage.output_tokens_details?.thinking_tokens,
+    thinkingMs: line.thinkingDurationMs,
+    webSearches: usage.server_tool_use?.web_search_requests,
+    webFetches: usage.server_tool_use?.web_fetch_requests,
+    serviceTier: usage.service_tier,
+    speed: usage.speed,
+    effort: line.effort,
+    stopReason: line.message?.stop_reason,
+    entrypoint: line.entrypoint,
+    sidechain: line.isSidechain,
+  };
+}
+
+function emitModelCall(line: ModelCallLine, fields: Record<string, unknown>): void {
+  appendEvent("model_call", fields, {
+    ts: line.timestamp,
+    session: line.sessionId ?? null,
+    runtime: "claude",
+    cwd: line.cwd,
+  });
+}
+
+/** Without the session: a forked session copies earlier calls under a new session id. */
+function callKey(call: Record<string, unknown>): string {
+  return [call.ts, call.model, call.inputTokens, call.outputTokens, call.cacheRead].join(
+    "|"
   );
 }
 
@@ -192,6 +201,7 @@ export async function collectClaude(
   copiesDir?: string
 ): Promise<number> {
   const cursor = readCursor("claude");
+  const alreadyLogged = alreadyLoggedCheck("model_call", callKey);
   let emitted = 0;
 
   for (const transcript of claudeTranscriptSources(projectsDir, now, copiesDir)) {
@@ -200,8 +210,13 @@ export async function collectClaude(
     const read = await settledMessages(transcript, offset);
     if (read.resumeAt === offset) continue;
 
-    for (const line of read.messages) emitModelCall(line, billingAt(line.timestamp));
-    emitted += read.messages.length;
+    for (const line of read.messages) {
+      const fields = modelCallFields(line, billingAt(line.timestamp));
+      if (await alreadyLogged({ ...fields, ts: line.timestamp })) continue;
+      emitModelCall(line, fields);
+      emitted += 1;
+    }
+
     cursor[transcript.key] = read.resumeAt;
     writeCursor("claude", cursor);
   }
