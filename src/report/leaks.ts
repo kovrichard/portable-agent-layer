@@ -68,8 +68,10 @@ function knownPeopleAndCompanies(): { kind: string; value: string }[] {
   }));
 }
 
-export function machineIdentifiers(): Identifiers {
-  const people = [raw().identity?.principal?.name ?? "", gitConfig("user.name")];
+export function machineIdentifiers(
+  gitConfigOf: (key: string) => string = gitConfig
+): Identifiers {
+  const people = [raw().identity?.principal?.name ?? "", gitConfigOf("user.name")];
 
   return {
     home: homedir(),
@@ -77,7 +79,7 @@ export function machineIdentifiers(): Identifiers {
       { kind: "user-name", value: userInfo().username },
       { kind: "host-name", value: hostname() },
       ...people.map((value) => ({ kind: "user-name", value })),
-      { kind: "email", value: gitConfig("user.email") },
+      { kind: "email", value: gitConfigOf("user.email") },
       ...projectWords(),
       ...knownPeopleAndCompanies(),
     ].filter((word) => word.value.length >= MIN_WORD),
