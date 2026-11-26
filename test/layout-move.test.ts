@@ -58,7 +58,7 @@ describe("runLayoutMove", () => {
 
     expect(result.migrated).toBe(1);
     expect(result.results).toHaveLength(1);
-    expect(result.results[0]).toContain(TO);
+    expect(JSON.parse(result.results[0].split("\n")[0]).to).toBe(TO);
     expect(result.results[0]).toBe(result.results[0].trim());
     expect(existsSync(TO)).toBe(false);
   });
