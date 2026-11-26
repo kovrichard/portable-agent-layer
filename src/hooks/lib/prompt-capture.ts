@@ -5,10 +5,11 @@
  */
 
 import { logError } from "../../core/log";
+import { capturePalBugSignal } from "../handlers/pal-bug";
 import { captureRating } from "../handlers/rating";
 import { captureSessionName } from "../handlers/session-name";
 
-const HANDLER_NAMES = ["rating", "session-name"];
+const HANDLER_NAMES = ["rating", "session-name", "pal-bug"];
 
 export async function capturePrompt(
   prompt: string,
@@ -19,6 +20,7 @@ export async function capturePrompt(
   const results = await Promise.allSettled([
     captureRating(prompt, sessionId, sentAt),
     captureSessionName(prompt, sessionId ?? ""),
+    capturePalBugSignal(prompt, sessionId),
   ]);
   results.forEach((result, i) => {
     if (result.status === "rejected") {
