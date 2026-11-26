@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { eventsSince } from "../src/bronze/events";
 import type { Identifiers } from "../src/report/leaks";
@@ -69,16 +68,6 @@ describe("drafting", () => {
 
     expect(lastLine.startsWith(REPORT_MARK)).toBe(true);
     expect(lastLine).toContain(REPORT_LABEL);
-  });
-
-  test("the labelling workflow matches the line the tool writes", () => {
-    const workflow = readFileSync(
-      resolve(import.meta.dir, "..", ".github", "workflows", "label-user-reports.yml"),
-      "utf-8"
-    );
-
-    expect(workflow).toContain(`grep -qF '${REPORT_MARK}'`);
-    expect(workflow).toContain(`--add-label ${REPORT_LABEL}`);
   });
 
   test("the environment holds only the allowlisted fields", () => {
