@@ -240,6 +240,18 @@ describe("v11-memory-backups: moving", () => {
     expect(manifests()).toEqual([]);
   });
 
+  test("names the entries in name order, whatever order the folder lists them in", () => {
+    const names = Array.from(
+      { length: 12 },
+      (_, i) => `snap-${String(i).padStart(2, "0")}`
+    );
+
+    for (const name of [...names].reverse())
+      write(at("memory", "backups", name, "x"), "y");
+
+    expect(v11MemoryBackups.check().detail).toBe(names.join(", "));
+  });
+
   test("leaves an entry whose name is already taken in place and counts it skipped", () => {
     seedBackups();
     write(at("backups", "b-snapshot", "other.txt"), "already here");
