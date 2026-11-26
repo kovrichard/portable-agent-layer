@@ -286,6 +286,6 @@
   },
   "enabledPlugins": {
     "dark-factory@pal": false,
-    "pal-notice@pal": true
+    "pal-status@pal": true
   }
 }

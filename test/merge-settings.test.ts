@@ -314,7 +314,7 @@ describe("PAL's plugin marketplace", () => {
     expect(shipped.extraKnownMarketplaces).toEqual(marketplace("/pkg"));
     expect(shipped.enabledPlugins).toEqual({
       "dark-factory@pal": false,
-      "pal-notice@pal": true,
+      "pal-status@pal": true,
     });
   });
 

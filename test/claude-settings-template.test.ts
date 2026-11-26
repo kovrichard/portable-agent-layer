@@ -21,7 +21,7 @@ describe("the Claude Code settings template", () => {
     expect(settings.enabledPlugins?.["dark-factory@pal"]).toBe(false);
   });
 
-  test("turns on the notice band, so a required data move shows on every machine", () => {
-    expect(settings.enabledPlugins?.["pal-notice@pal"]).toBe(true);
+  test("turns on the status band, so a required data move shows on every machine", () => {
+    expect(settings.enabledPlugins?.["pal-status@pal"]).toBe(true);
   });
 });
