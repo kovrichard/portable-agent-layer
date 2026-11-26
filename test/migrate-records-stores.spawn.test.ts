@@ -29,9 +29,7 @@ const OLD_FILES: Record<string, string> = {
   "memory/learning/run-estimates.jsonl": '{"r":1}\n',
   "memory/learning/reflections/algorithm-reflections.jsonl": '{"q":1}\n',
   "memory/state/sessions-archive/2026-11.jsonl": '{"s":1}\n',
-  "memory/state/unbound-history/loose.jsonl": '{"u":1}\n',
   "memory/state/import-log.jsonl": '{"i":1}\n',
-  "memory/projects/alpha/history.jsonl": '{"h":1}\n',
   "memory/knowledge/_review.jsonl": '{"v":1}\n',
 };
 
@@ -41,6 +39,8 @@ const STAYS: Record<string, string> = {
   "memory/learning/failures-digest.md": "# digest\n",
   "memory/state/sessions.json": "{}",
   "memory/projects/alpha/ISA.md": "---\nname: alpha\n---\n",
+  "memory/projects/alpha/history.jsonl": '{"h":1}\n',
+  "memory/state/unbound-history/loose.jsonl": '{"u":1}\n',
   "memory/knowledge/People/ada.md": "# Ada\n",
   "memory/progress-tree/events.jsonl": '{"p":1}\n',
 };
@@ -57,9 +57,7 @@ const MOVED_TO: Record<string, string> = {
   "memory/learning/reflections/algorithm-reflections.jsonl":
     "records/reflections/algorithm-reflections.jsonl",
   "memory/state/sessions-archive/2026-11.jsonl": "records/sessions-archive/2026-11.jsonl",
-  "memory/state/unbound-history/loose.jsonl": "records/unbound-history/loose.jsonl",
   "memory/state/import-log.jsonl": "records/import-log/import-log.jsonl",
-  "memory/projects/alpha/history.jsonl": "records/project-history/alpha/history.jsonl",
   "memory/knowledge/_review.jsonl": "records/review-queue/_review.jsonl",
 };
 
@@ -97,7 +95,7 @@ describe("before the owner runs it", () => {
     for (const rel of Object.keys(OLD_FILES)) expect(existsSync(at(rel))).toBe(true);
     expect(existsSync(at("records"))).toBe(false);
     expect(storeLocation("ratings")).toBe(at("memory", "signals"));
-    expect(storeLocation("project-history")).toBe(at("memory", "projects"));
+    expect(storeLocation("labelled-turns")).toBe(at("memory", "adaptation"));
   });
 
   test("the doctor lists it with the command that runs it", () => {
@@ -132,23 +130,23 @@ describe("run by its owner", () => {
   test("every moved store reads its new folder", () => {
     printedBy([ID, "--force"]);
     expect(storeLocation("ratings")).toBe(at("records", "ratings"));
-    expect(storeLocation("project-history")).toBe(at("records", "project-history"));
+    expect(storeLocation("labelled-turns")).toBe(at("records", "labelled-turns"));
     expect(storeLocation("ledger")).toBe(at("records", "ledger"));
+    expect(storeLocation("project-history")).toBe(at("memory", "projects"));
   });
 
-  test("a late append and a new project's history at the old places are folded in by the next install", () => {
+  test("a late append and a new month's file at the old places are folded in by the next install", () => {
     printedBy([ID, "--force"]);
     write("memory/signals/ratings.jsonl", '{"rating":9}\n{"rating":3}\n');
-    write("memory/projects/beta/ISA.md", "---\nname: beta\n---\n");
-    write("memory/projects/beta/history.jsonl", '{"h":2}\n');
+    write("memory/adaptation/turns-2026-12.jsonl", '{"t":2}\n');
     const swept = applyPendingMigrations().filter((line) => line.startsWith(ID));
 
     expect(swept.join("\n")).toContain("swept 2 late file(s)");
     expect(readFileSync(at("records/ratings/ratings.jsonl"), "utf-8")).toBe(
       '{"rating":9}\n{"rating":3}\n'
     );
-    expect(readFileSync(at("records/project-history/beta/history.jsonl"), "utf-8")).toBe(
-      '{"h":2}\n'
+    expect(readFileSync(at("records/labelled-turns/turns-2026-12.jsonl"), "utf-8")).toBe(
+      '{"t":2}\n'
     );
     expect(existsSync(at("memory/signals/ratings.jsonl"))).toBe(false);
   });

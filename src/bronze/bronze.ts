@@ -26,7 +26,6 @@ export type StoreName =
 
 interface FormerFiles {
   match: RegExp;
-  inProjectFolders?: true;
 }
 
 export interface RecordedStore {
@@ -174,9 +173,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "project-history",
     group: "outside",
-    location: "records/project-history",
-    formerLocation: "memory/projects",
-    formerFiles: { match: /^history\.jsonl$/, inProjectFolders: true },
+    location: "memory/projects",
     files: "<project>/history.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -184,8 +181,7 @@ const STORES: readonly RecordedStore[] = [
   {
     name: "unbound-history",
     group: "outside",
-    location: "records/unbound-history",
-    formerLocation: "memory/state/unbound-history",
+    location: "memory/state/unbound-history",
     files: "<slug>.jsonl",
     appendOnly: false,
     alsoInEventLog: false,
@@ -241,25 +237,9 @@ function filesNamedIn(dir: string, match: RegExp): string[] {
     .map((entry) => entry.name);
 }
 
-function foldersIn(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
-}
-
-/** The store's files left in a shared former folder, relative to it, with forward slashes. */
+/** The store's files left in a shared former folder. */
 function formerFilesOf(store: RecordedStore, files: FormerFiles, home: string): string[] {
-  const former = at(home, store.formerLocation as string);
-
-  if (!files.inProjectFolders) return filesNamedIn(former, files.match);
-
-  return foldersIn(former).flatMap((project) =>
-    filesNamedIn(resolve(former, project), files.match).map(
-      (name) => `${project}/${name}`
-    )
-  );
+  return filesNamedIn(at(home, store.formerLocation as string), files.match);
 }
 
 function formerHoldsStore(store: RecordedStore, home: string): boolean {
@@ -321,9 +301,8 @@ function formerStoreOf(path: string): RecordedStore | undefined {
 
     if (!s.formerFiles) return true;
     const below = path.slice(s.formerLocation.length + 1).split("/");
-    const depth = s.formerFiles.inProjectFolders ? 2 : 1;
 
-    return below.length === depth && s.formerFiles.match.test(below[depth - 1]);
+    return below.length === 1 && s.formerFiles.match.test(below[0]);
   });
 }
 

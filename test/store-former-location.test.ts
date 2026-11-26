@@ -48,13 +48,6 @@ describe("a store that shared its former folder", () => {
     touch("memory", "signals", "ratings.jsonl");
     expect(storeLocation("ratings")).toBe(at("memory", "signals"));
   });
-
-  test("a project folder holding only its ISA does not keep history in memory/", () => {
-    touch("memory", "projects", "p", "ISA.md");
-    expect(storeLocation("project-history")).toBe(at("records", "project-history"));
-    touch("memory", "projects", "p", "history.jsonl");
-    expect(storeLocation("project-history")).toBe(at("memory", "projects"));
-  });
 });
 
 describe("movedStores", () => {
@@ -79,11 +72,6 @@ describe("movedStores", () => {
         from: at("memory", "adaptation", "turns-2026-10.jsonl"),
         to: at("records", "labelled-turns", "turns-2026-10.jsonl"),
       },
-      {
-        store: "project-history",
-        from: at("memory", "projects", "p", "history.jsonl"),
-        to: at("records", "project-history", "p", "history.jsonl"),
-      },
     ]);
   });
 });
@@ -103,10 +91,7 @@ describe("currentArchivePath", () => {
       "records/ratings/ratings.jsonl"
     );
     expect(currentArchivePath("memory/projects/p/history.jsonl")).toBe(
-      "records/project-history/p/history.jsonl"
-    );
-    expect(currentArchivePath("memory/projects/p/ISA.md")).toBe(
-      "memory/projects/p/ISA.md"
+      "memory/projects/p/history.jsonl"
     );
     expect(currentArchivePath("memory/adaptation/rules.json")).toBe(
       "memory/adaptation/rules.json"

@@ -54,8 +54,8 @@ const LOCATION_TODAY: Record<StoreName, string> = {
   reflections: "records/reflections",
   "progress-tree": "memory/progress-tree",
   "sessions-archive": "records/sessions-archive",
-  "project-history": "records/project-history",
-  "unbound-history": "records/unbound-history",
+  "project-history": "memory/projects",
+  "unbound-history": "memory/state/unbound-history",
   "review-queue": "records/review-queue",
   "import-log": "records/import-log",
 };
@@ -68,7 +68,7 @@ function checkout(name: string): string {
 }
 
 function registerProject(name: string): string {
-  const record = resolve(HOME, "memory", "projects", name);
+  const record = resolve(storeDir("project-history"), name);
   mkdirSync(record, { recursive: true });
   writeFileSync(
     resolve(record, "ISA.md"),
