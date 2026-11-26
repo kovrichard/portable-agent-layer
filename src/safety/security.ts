@@ -120,7 +120,6 @@ const HOOK_MANAGED_FILES = [
   "captured-learnings.json",
   "session-names.json",
   "last-responses.json",
-  "pending-failure.json",
   "graduated.json",
   "update-available.json",
   "opinions.json",

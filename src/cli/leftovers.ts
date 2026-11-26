@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 import { palHome, paths, platform } from "../core/paths";
 import { formerSettingsPath, SETTINGS_FILE } from "../core/settings";
 import { readJson, writeJson } from "../targets/json-file";
+import { v10ThreadsToProgressTree } from "./migrations/v10-threads-to-progress-tree";
 
 /** Something an older PAL wrote that the current one neither writes nor reads. */
 export interface Leftover {
@@ -317,6 +318,44 @@ const cachesInState: Leftover = {
   },
 };
 
+const DEAD_STATE_FILES = ["last-handoff.json", "signal-cache.json"];
+const DEAD_EMPTY_FOLDERS = ["memory/content", "memory/wisdom/state"];
+const OLD_TOKEN_USAGE = "memory/signals/token-usage.jsonl";
+
+const pendingFailureFiles = () =>
+  existsSync(paths.formerState())
+    ? readdirSync(paths.formerState())
+        .filter((name) => /^pending-failure(\..+)?\.json$/.test(name))
+        .map((name) => resolve(paths.formerState(), name))
+    : [];
+
+const threadsMovedToTree = () => !v10ThreadsToProgressTree.check().pending;
+const oldThreads = () => resolve(paths.formerState(), "threads.jsonl");
+
+function deadFiles(): string[] {
+  return [
+    ...DEAD_STATE_FILES.map((name) => resolve(paths.formerState(), name)),
+    ...pendingFailureFiles(),
+    resolve(palHome(), OLD_TOKEN_USAGE),
+    ...(threadsMovedToTree() ? [oldThreads()] : []),
+  ].filter((path) => existsSync(path));
+}
+
+const deadFolders = () =>
+  DEAD_EMPTY_FOLDERS.map((folder) => resolve(palHome(), folder)).filter(isEmptyFolder);
+
+const deadStateFiles: Leftover = {
+  id: "dead-state-files",
+  description:
+    "Remove files no PAL reads any more: the old handoff, signal cache, pending failures, token usage, the threads the progress tree took over, and two empty folders",
+  find: () => [...deadFiles(), ...deadFolders()],
+  remove() {
+    for (const path of deadFiles()) unlinkSync(path);
+
+    for (const folder of deadFolders()) rmdirSync(folder);
+  },
+};
+
 export const LEFTOVERS: Leftover[] = [
   claudeFileToolRules,
   claudeFactoryHomeOverride,
@@ -330,4 +369,5 @@ export const LEFTOVERS: Leftover[] = [
   opinionTrackingDocCopy,
   debugLogPrev,
   cachesInState,
+  deadStateFiles,
 ];
