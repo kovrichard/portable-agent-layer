@@ -136,7 +136,7 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/adaptation",
     formerFiles: { match: /^candidates\.jsonl$/ },
     files: "candidates.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {

@@ -4,11 +4,12 @@
  * whose trigger failed becomes a draft that can only be kept as an opinion, since
  * the mistake recurs even when no pattern catches it, but only once its kind has
  * recurred enough to measure. One the log is still too short to judge waits and
- * is proven again as the log grows.
+ * is proven again as the log grows. A new proof is appended as the candidate's
+ * whole state, and reading keeps each candidate's newest proof.
  */
 
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "../bronze/bronze";
 import {
@@ -34,6 +35,8 @@ export interface CandidateInput extends DraftInput {
 export type Candidate = CandidateInput & {
   id: string;
   createdAt: string;
+  /** When it was proven again; absent on the line that recorded it. */
+  provedAt?: string;
 } & ({ verdict: ProofVerdict; proof: TriggerProof } | { verdict: "untriggered" });
 
 function candidatesPath(): string {
@@ -50,21 +53,40 @@ function parseLine(line: string): Candidate | null {
   }
 }
 
+function newerProof(kept: Candidate, other: Candidate): Candidate {
+  const keptAt = kept.provedAt ?? "";
+  const otherAt = other.provedAt ?? "";
+  if (keptAt !== otherAt) return otherAt > keptAt ? other : kept;
+
+  return JSON.stringify(other) > JSON.stringify(kept) ? other : kept;
+}
+
+/** Each candidate once, as last proven, in the order they were recorded. */
 export function readCandidates(): Candidate[] {
   const path = candidatesPath();
   if (!existsSync(path)) return [];
+  const byId = new Map<string, Candidate>();
 
-  return readFileSync(path, "utf-8")
-    .split("\n")
-    .map(parseLine)
-    .filter((candidate): candidate is Candidate => candidate !== null);
+  for (const line of readFileSync(path, "utf-8").split("\n")) {
+    const candidate = parseLine(line);
+    if (!candidate) continue;
+    const seen = byId.get(candidate.id);
+    byId.set(candidate.id, seen ? newerProof(seen, candidate) : candidate);
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+  );
 }
 
-function writeCandidates(candidates: Candidate[]): void {
-  const path = candidatesPath();
-  const pending = `${path}.${process.pid}.tmp`;
-  writeFileSync(pending, candidates.map((c) => `${JSON.stringify(c)}\n`).join(""));
-  renameSync(pending, path);
+function appendCandidate(candidate: Candidate): void {
+  appendFileSync(candidatesPath(), `${JSON.stringify(candidate)}\n`);
+}
+
+function provedAfter(candidate: Candidate, now: Date): string {
+  const previous = candidate.provedAt ? Date.parse(candidate.provedAt) + 1 : 0;
+
+  return new Date(Math.max(now.getTime(), previous)).toISOString();
 }
 
 function prove(candidate: Candidate, turns: RequestedTurn[]): Candidate {
@@ -116,18 +138,24 @@ export function recordCandidate(
     createdAt: now.toISOString(),
   } as Candidate;
   const candidate = prove(fresh, turns);
-  writeCandidates([...readCandidates(), candidate]);
+  appendCandidate(candidate);
   promoteIfDecided(candidate, turns);
 
   return candidate;
 }
 
-export function reproveWaiting(turns: RequestedTurn[]): void {
-  const candidates = readCandidates();
-  if (!candidates.some((c) => c.verdict === "waiting")) return;
-  const updated = candidates.map((c) => (c.verdict === "waiting" ? prove(c, turns) : c));
-  writeCandidates(updated);
+const proofOf = (candidate: Candidate) =>
+  JSON.stringify(
+    "proof" in candidate ? [candidate.verdict, candidate.proof] : candidate.verdict
+  );
 
-  for (const candidate of updated.filter((_c, i) => candidates[i].verdict === "waiting"))
+/** Proves each waiting candidate again and appends the proofs that changed. */
+export function reproveWaiting(turns: RequestedTurn[], now: Date = new Date()): void {
+  for (const waiting of readCandidates().filter((c) => c.verdict === "waiting")) {
+    const reproved = prove(waiting, turns);
+    if (proofOf(reproved) === proofOf(waiting)) continue;
+    const candidate = { ...reproved, provedAt: provedAfter(waiting, now) };
+    appendCandidate(candidate);
     promoteIfDecided(candidate, turns);
+  }
 }

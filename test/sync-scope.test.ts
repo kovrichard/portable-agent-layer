@@ -10,7 +10,7 @@ describe("syncKindOf", () => {
     ["records/bronze/event-text/2026-11.jsonl", "segments"],
     ["work/progress-tree/events.jsonl", "segments"],
     ["records/ratings/ratings.jsonl", "segments"],
-    ["records/rule-candidates/candidates.jsonl", "whole"],
+    ["records/rule-candidates/candidates.jsonl", "segments"],
     ["work/projects/pal/history.jsonl", "segments"],
     ["records/import-log/import-log.jsonl", "segments"],
     ["work/unbound-history/loose.jsonl", "segments"],
