@@ -13,6 +13,7 @@ describe("syncKindOf", () => {
     ["records/rule-candidates/candidates.jsonl", "whole"],
     ["work/projects/pal/history.jsonl", "segments"],
     ["records/import-log/import-log.jsonl", "segments"],
+    ["work/unbound-history/loose.jsonl", "segments"],
     ["work/projects/pal/tickets.jsonl", "segments"],
     ["work/projects/pal/ISA.md", "whole"],
     ["memory/sales/diary-events.jsonl", "whole"],

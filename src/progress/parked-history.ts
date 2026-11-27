@@ -1,32 +1,34 @@
 /**
  * History from a directory no project claimed is parked under the directory's
  * name. Once exactly one project is bound to a directory of that name, the
- * parked history is its own and moves in.
+ * parked history is its own and is copied in. The parked file stays: both
+ * stores only grow, so two machines merge them line by line.
  */
 
 import {
+  appendFileSync,
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
-  unlinkSync,
-  writeFileSync,
 } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { storeDir, storeLocation } from "../bronze/bronze";
-import { mergeJsonlLines } from "../core/import-merge";
+import { linesNotIn } from "../core/import-merge";
 import { logError } from "../core/log";
 
 type Bindings = Record<string, string>;
 
-/** Union both sides so a destination that already has history keeps it. */
+/** Appends the lines of `source` that `target` lacks. */
 export function foldHistoryInto(target: string, source: string): number {
   const local = existsSync(target) ? readFileSync(target, "utf-8") : "";
-  const { text, added } = mergeJsonlLines(local, readFileSync(source, "utf-8"));
+  const added = linesNotIn(local, readFileSync(source, "utf-8"));
+  if (added.length === 0) return 0;
+  const separator = local === "" || local.endsWith("\n") ? "" : "\n";
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, text, "utf-8");
+  appendFileSync(target, `${separator}${added.join("\n")}\n`, "utf-8");
 
-  return added;
+  return added.length;
 }
 
 /** The project bound to a directory named `slug`, when exactly one is. */
@@ -55,7 +57,6 @@ export function adoptParkedHistory(bindings: Bindings, home: string): void {
 
     try {
       foldHistoryInto(historyFileOf(home, owner), resolve(dir, file));
-      unlinkSync(resolve(dir, file));
     } catch (err) {
       logError("parked-history:adopt", err);
     }

@@ -1,13 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { relative, resolve } from "node:path";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import { type StoreName, storeDir, storeNamed } from "../src/bronze/bronze";
 import { appendEvent } from "../src/bronze/events";
 import { appendImportLog } from "../src/bronze/import-log";
@@ -24,6 +17,7 @@ import { watchReplyRules } from "../src/opinions/adaptation-steering";
 import { appendTurn } from "../src/opinions/adaptation-turns";
 import { watchClaims } from "../src/opinions/claim-log";
 import { writeBinding } from "../src/progress/bindings";
+import { foldHistoryInto } from "../src/progress/parked-history";
 import { appendEvent as appendProgressEvent } from "../src/progress/progress-tree";
 import { addSchedule, newSchedule } from "../src/progress/scheduled-prompts";
 import { appendProjectHistory, writeSession } from "../src/progress/work-tracking";
@@ -300,18 +294,31 @@ describe("each recorded store's writer files into the registry's folder", () => 
 });
 
 describe("parked history moves between the registry's history folders", () => {
-  test("binding a project adopts history parked in unbound-history into project-history", () => {
+  test("binding a project copies history parked in unbound-history into project-history", () => {
     const parked = resolve(storeDir("unbound-history"), "alpha.jsonl");
-    writeFileSync(parked, `${JSON.stringify(historyEntry)}\n`);
+    const line = JSON.stringify(historyEntry);
+    writeFileSync(parked, `${line}\n`);
 
     registerProject("alpha");
 
-    expect(existsSync(parked)).toBe(false);
+    expect(readFileSync(parked, "utf-8")).toBe(`${line}\n`);
     expect(
       readFileSync(
         resolve(storeDir("project-history"), "alpha", "history.jsonl"),
         "utf-8"
       )
     ).toContain(historyEntry.title);
+  });
+
+  test("copying parked history only appends what the project's history lacks", () => {
+    const history = resolve(storeDir("project-history"), "alpha", "history.jsonl");
+    const parked = resolve(storeDir("unbound-history"), "alpha.jsonl");
+    mkdirSync(dirname(history), { recursive: true });
+    writeFileSync(history, '{"own":1}');
+    writeFileSync(parked, '{"own":1}\n{"parked":1}\n');
+
+    expect(foldHistoryInto(history, parked)).toBe(1);
+    expect(foldHistoryInto(history, parked)).toBe(0);
+    expect(readFileSync(history, "utf-8")).toBe('{"own":1}\n{"parked":1}\n');
   });
 });

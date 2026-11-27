@@ -191,7 +191,7 @@ const STORES: readonly RecordedStore[] = [
     location: "work/unbound-history",
     formerLocation: "memory/state/unbound-history",
     files: "<slug>.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {
