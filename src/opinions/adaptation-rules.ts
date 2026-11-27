@@ -7,11 +7,10 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { paths } from "../core/paths";
+import { readRuleLog, saveRule } from "./rule-log";
 
-type RuleStatus = "draft" | "approved" | "denied" | "retired";
+/** "merged" is a widening whose trigger was folded into the rule it widens. */
+type RuleStatus = "draft" | "approved" | "denied" | "retired" | "merged";
 type Decision = "approved" | "denied" | "opinion";
 
 export const OPINION_CAP = 8;
@@ -74,6 +73,11 @@ export function isTriggerRule<R extends Deliverable>(
   return rule.status === "approved" && rule.delivery !== "always" && !!rule.trigger;
 }
 
+/** Every rule but the widenings already folded into the rule they widen. */
+export function readRules(): AdaptationRule[] {
+  return readRuleLog<AdaptationRule>().filter((rule) => rule.status !== "merged");
+}
+
 function opinionLine(rule: Pick<AdaptationRule, "when" | "steering">): string {
   return `- ${rule.when}: ${rule.steering}`;
 }
@@ -113,30 +117,6 @@ function opinionRefusal(rules: AdaptationRule[], added: AdaptationRule): string 
 
 type DecideResult = { ok: true; rule: AdaptationRule } | { ok: false; reason: string };
 
-export function rulesPath(): string {
-  return resolve(paths.adaptation(), "rules.json");
-}
-
-export function readRules(): AdaptationRule[] {
-  const path = rulesPath();
-  if (!existsSync(path)) return [];
-
-  try {
-    const parsed = JSON.parse(readFileSync(path, "utf-8"));
-
-    return Array.isArray(parsed) ? (parsed as AdaptationRule[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeRules(rules: AdaptationRule[]): void {
-  const path = rulesPath();
-  const pending = `${path}.${process.pid}.tmp`;
-  writeFileSync(pending, `${JSON.stringify(rules, null, 2)}\n`, "utf-8");
-  renameSync(pending, path);
-}
-
 export function addDraft(input: DraftInput): AdaptationRule {
   const rule: AdaptationRule = {
     ...input,
@@ -144,7 +124,7 @@ export function addDraft(input: DraftInput): AdaptationRule {
     status: "draft",
     createdAt: new Date().toISOString(),
   };
-  writeRules([...readRules(), rule]);
+  saveRule(rule);
 
   return rule;
 }
@@ -162,11 +142,8 @@ function approveWidening(
     evidence: [...target.evidence, ...widening.evidence],
     proof: widening.proof,
   };
-  writeRules(
-    rules
-      .filter((r) => r.id !== widening.id)
-      .map((r) => (r.id === target.id ? widened : r))
-  );
+  saveRule(widened);
+  saveRule({ ...widening, status: "merged", decidedAt: new Date().toISOString() });
 
   return { ok: true, rule: widened };
 }
@@ -180,8 +157,8 @@ function decided(rule: AdaptationRule, decision: Decision): AdaptationRule {
   return { ...rule, status: decision, decidedAt };
 }
 
-function replaceRule(rules: AdaptationRule[], rule: AdaptationRule): DecideResult {
-  writeRules(rules.map((r) => (r.id === rule.id ? rule : r)));
+function replaceRule(rule: AdaptationRule): DecideResult {
+  saveRule(rule);
 
   return { ok: true, rule };
 }
@@ -225,7 +202,7 @@ export function decideRule(id: string, decision: Decision): DecideResult {
   const result = decided(rule, decision);
   const refusal = isOpinion(result) ? opinionRefusal(rules, result) : null;
 
-  return refusal ? { ok: false, reason: refusal } : replaceRule(rules, result);
+  return refusal ? { ok: false, reason: refusal } : replaceRule(result);
 }
 
 export interface OpinionInput {
@@ -248,20 +225,19 @@ export function addOpinion(input: OpinionInput): DecideResult {
   const rules = readRules();
   const refusal = opinionRefusal(rules, opinion);
   if (refusal) return { ok: false, reason: refusal };
-  writeRules([...rules, opinion]);
+  saveRule(opinion);
 
   return { ok: true, rule: opinion };
 }
 
 export function retireRule(id: string): DecideResult {
-  const rules = readRules();
-  const rule = rules.find((r) => r.id === id);
+  const rule = readRules().find((r) => r.id === id);
   if (!rule) return { ok: false, reason: `No rule with id ${id}` };
 
   if (rule.status !== "approved")
     return { ok: false, reason: `Rule ${id} is ${rule.status}, not approved` };
 
-  return replaceRule(rules, {
+  return replaceRule({
     ...rule,
     status: "retired",
     retiredAt: new Date().toISOString(),

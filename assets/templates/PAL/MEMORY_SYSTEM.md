@@ -42,7 +42,7 @@ Almost everything in `records/` and `state/`, and in `relationship/`, `learning/
 
 | You want to capture | Go through | Lands at |
 |---------------------|------------|----------|
-| A rule the user states should hold from now on | `pal cli rule add-opinion` (algorithm LEARN phase) | `adaptation/rules.json` |
+| A rule the user states should hold from now on | `pal cli rule add-opinion` (algorithm LEARN phase) | `records/rules/rules.jsonl` |
 | What a session did | Session-intelligence handler (automatic) | `work/projects/<slug>/history.jsonl` |
 | A rating signal | UserPromptOrchestrator rating capture | `records/ratings/ratings.jsonl` |
 | How a user turn went (pace, length, skimming, how it received the last reply) | Prompt-time interaction measurement (automatic, every agent; see the per-agent turn contract in SYSTEM_ARCHITECTURE.md); read it with `pal cli interaction report` | `turn` events in `records/bronze/events/` |
@@ -51,7 +51,7 @@ Almost everything in `records/` and `state/`, and in `relationship/`, `learning/
 
 ## Format conventions
 
-- **Opinions**: One `when` situation and one imperative `steering` line each, stored in `adaptation/rules.json` and rendered to `relationship/opinions-context.md`.
+- **Opinions**: One `when` situation and one imperative `steering` line each, stored as an append-only log in `records/rules/rules.jsonl` (each line a rule's whole state; the newest line per rule counts) and rendered to `relationship/opinions-context.md`.
 
 ## When NOT to write
 

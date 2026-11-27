@@ -11,6 +11,7 @@ describe("syncKindOf", () => {
     ["work/progress-tree/events.jsonl", "segments"],
     ["records/ratings/ratings.jsonl", "segments"],
     ["records/rule-candidates/candidates.jsonl", "segments"],
+    ["records/rules/rules.jsonl", "segments"],
     ["work/projects/pal/history.jsonl", "segments"],
     ["records/import-log/import-log.jsonl", "segments"],
     ["work/unbound-history/loose.jsonl", "segments"],

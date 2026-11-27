@@ -15,6 +15,7 @@ export type StoreName =
   | "labelled-turns"
   | "rule-events"
   | "rule-candidates"
+  | "rules"
   | "run-estimates"
   | "reflections"
   | "progress-tree"
@@ -136,6 +137,14 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/adaptation",
     formerFiles: { match: /^candidates\.jsonl$/ },
     files: "candidates.jsonl",
+    appendOnly: true,
+    alsoInEventLog: false,
+  },
+  {
+    name: "rules",
+    group: "outside",
+    location: "records/rules",
+    files: "rules.jsonl",
     appendOnly: true,
     alsoInEventLog: false,
   },

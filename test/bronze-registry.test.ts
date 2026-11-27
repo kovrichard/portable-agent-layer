@@ -33,11 +33,11 @@ const groupOf = (stores: RecordedStore[]): StoreGroup[] => [
 ];
 
 describe("the store registry", () => {
-  test("lists 20 stores under unique names", () => {
+  test("lists 21 stores under unique names", () => {
     const names = everyStore().map((store) => store.name);
 
-    expect(names).toHaveLength(20);
-    expect(new Set(names).size).toBe(20);
+    expect(names).toHaveLength(21);
+    expect(new Set(names).size).toBe(21);
   });
 
   test("each group function returns only its own group", () => {

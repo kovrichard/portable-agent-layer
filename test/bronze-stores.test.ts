@@ -46,6 +46,7 @@ const LOCATION_TODAY: Record<StoreName, string> = {
   "labelled-turns": "records/labelled-turns",
   "rule-events": "records/rule-events",
   "rule-candidates": "records/rule-candidates",
+  rules: "records/rules",
   "run-estimates": "records/run-estimates",
   reflections: "records/reflections",
   "progress-tree": "work/progress-tree",
@@ -177,6 +178,8 @@ const WRITE_ONE: Record<StoreName, () => unknown> = {
       },
       []
     ),
+  rules: () =>
+    addDraft({ when: "Reporting a result", steering: "Quote it.", evidence: [] }),
   "run-estimates": () =>
     recordRunEstimate(
       {
