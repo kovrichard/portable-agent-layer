@@ -286,7 +286,9 @@ const BREAKAGES: Breakage[] = [
   {
     id: "binding.demo",
     break: (s) => {
+      mkdirSync(at(s, "moved-away"), { recursive: true });
       sh(s.root, `pal cli project create demo --path ${at(s, "moved-away")}`);
+      removeOnceReleased(at(s, "moved-away"));
     },
     path: (s) => {
       mkdirSync(at(s, "demo"), { recursive: true });
