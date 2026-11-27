@@ -198,6 +198,21 @@ describe("a sync run reports its progress", () => {
     ]);
   });
 
+  test("a run with nothing new fetches no file key or path", async () => {
+    await joinedPair();
+    put("A", GOALS, "# Goals\n");
+    await runSync(homes.A);
+    await runSync(homes.B);
+    server.requests.length = 0;
+    await runSync(homes.B);
+    const fetched = server.requests
+      .filter((r) => r.method === "GET" && r.key)
+      .map((r) => r.key.split("/")[1]);
+
+    expect(fetched).not.toContain("key");
+    expect(fetched).not.toContain("path");
+  });
+
   test("the status file says idle after a run and holds no notice", async () => {
     await joinedPair();
     await runSync(homes.A);
