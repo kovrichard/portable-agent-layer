@@ -39,6 +39,7 @@ import { scheduleCommand } from "./schedule";
 import { serverCommand } from "./server";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
+import { syncCommand } from "./sync";
 import { telemetryCommand } from "./telemetry";
 import { usageCommand } from "./usage";
 import { worktreeCommand } from "./worktree";
@@ -220,6 +221,7 @@ export function cliTree(admin: AdminHandlers): Group {
       ...usageCommands(),
       env: envCommand,
       report: reportCommand,
+      sync: syncCommand,
       auth: authCommand,
       patterns: patternsCommand,
       content: contentCommand,

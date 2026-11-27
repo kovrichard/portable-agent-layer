@@ -23,7 +23,7 @@ export interface SyncState {
 const EMPTY: SyncState = { counter: 0, pushed: {}, applied: {}, seen: {}, whole: {} };
 
 /** This install's sync folder, in whichever state folder it still uses before the v17 move. */
-const syncStateDir = (home: string) => resolve(stateDir(home), "sync");
+export const syncStateDir = (home: string) => resolve(stateDir(home), "sync");
 
 const stateFile = (home: string) => resolve(syncStateDir(home), "state.json");
 

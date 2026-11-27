@@ -17,7 +17,6 @@ import {
   reminderTarget,
   writeCopilotInstructions,
 } from "../context/session-context";
-import { refreshCachesOnStart } from "../context/start-refresh";
 import { getActiveAgent } from "../core/agent";
 import { hookSessionId } from "../core/hook-payload";
 import { logContextSnapshot, logDebug, logError } from "../core/log";
@@ -26,8 +25,8 @@ import { recordHookRunOnExit } from "../usage/hook-run";
 import { logSessionStart, type SessionStartPayload } from "../usage/session-events";
 import { autoUpdateOnStart } from "./lib/auto-update";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
+import { startBackgroundWork } from "./lib/start-work";
 import { readStdinJSON } from "./lib/stdin";
-import { heartbeatOnStart } from "./lib/telemetry";
 
 recordHookRunOnExit();
 
@@ -52,8 +51,7 @@ try {
   logError("LoadContext:auto-update", err);
 }
 
-heartbeatOnStart();
-refreshCachesOnStart();
+startBackgroundWork();
 
 try {
   const active = getActiveAgent();

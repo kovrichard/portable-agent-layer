@@ -49,6 +49,7 @@ import { resetTab } from "../handlers/tab";
 import { captureWorkSession } from "../handlers/work-session";
 import { spawnCollectIfDue } from "./collect-trigger";
 import { fileFinalReply } from "./hook-turn";
+import { startSyncIfDue } from "./sync-trigger";
 
 type Transcript = Message[];
 
@@ -213,6 +214,7 @@ export async function runStopHandlers(
     "desktop-notify": notifyDesktop(options.sessionId),
     "context-digests": Promise.resolve(writeContextDigests()),
     "collect-events": Promise.resolve(spawnCollectIfDue()),
+    sync: Promise.resolve(startSyncIfDue("turn")),
   };
   const names = Object.keys(handlers);
   const results = await Promise.allSettled(
