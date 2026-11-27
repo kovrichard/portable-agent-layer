@@ -118,10 +118,11 @@ export function writeRegistryEntry(
  */
 function sameEntry(meta: Record<string, unknown>, fields: RegistryFields): boolean {
   const { updated: _, ...stored } = meta;
+  const names = Object.keys(fields);
 
   return (
-    JSON.stringify(Object.entries(stored).sort()) ===
-    JSON.stringify(Object.entries(fields).sort())
+    Object.keys(stored).length === names.length &&
+    names.every((name) => stored[name] === fields[name])
   );
 }
 

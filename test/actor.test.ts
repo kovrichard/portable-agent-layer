@@ -134,6 +134,31 @@ describe("actor registry", () => {
     expect(readFileSync(file, "utf-8")).toBe(before);
   });
 
+  test("an entry with no note stays untouched too", async () => {
+    const { writeActorEntry } = await lib();
+    const file = writeActorEntry({ id: "id-a", label: "ada" });
+    const before = readFileSync(file, "utf-8");
+    await Bun.sleep(5);
+    writeActorEntry({ id: "id-a", label: "ada" });
+
+    expect(readFileSync(file, "utf-8")).toBe(before);
+  });
+
+  test("a new note, or a dropped alias, restamps the entry", async () => {
+    const { writeActorEntry } = await lib();
+    const file = writeActorEntry({ id: "id-a", label: "ada", aliasOf: "id-b" }, "old");
+    const first = readFileSync(file, "utf-8");
+    await Bun.sleep(5);
+    writeActorEntry({ id: "id-a", label: "ada", aliasOf: "id-b" }, "new");
+    const second = readFileSync(file, "utf-8");
+    await Bun.sleep(5);
+    writeActorEntry({ id: "id-a", label: "ada" });
+
+    expect(second).not.toBe(first);
+    expect(second).toContain("new");
+    expect(readFileSync(file, "utf-8")).not.toContain("aliasOf");
+  });
+
   test("a changed label or alias still restamps the entry", async () => {
     const { writeActorEntry } = await lib();
     const file = writeActorEntry({ id: "id-a", label: "ada" });

@@ -81,7 +81,7 @@ function settle(
  * machines: it is left unread, and its version noted so later runs skip it.
  */
 function leaveLocal(ctx: SyncContext, path: string, version: number): void {
-  ctx.state.whole[path] = { hash: ctx.state.whole[path]?.hash ?? "", version };
+  ctx.state.whole[path] = { hash: "", version };
 }
 
 async function pullFile(ctx: SyncContext, id: string, version: number): Promise<void> {

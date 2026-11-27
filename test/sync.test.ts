@@ -216,7 +216,19 @@ describe("the reaction samples stay on their machine", () => {
 
     expect((await sync("B")).refused).toEqual([]);
     expect(read("B", SAMPLES)).toBe('[{"text":"mine"}]');
-    expect(readSyncState(homes.B).whole[SAMPLES]?.version).toBe(1);
+    expect(readSyncState(homes.B).whole[SAMPLES]).toEqual({ hash: "", version: 1 });
+  });
+
+  test("a log stored as a whole file is still refused as out of scope", async () => {
+    const store = directoryStore(storeRoot);
+    const { id, dataKey } = await fileKeys(store, account).forPath(EVENTS);
+    const plain = new TextEncoder().encode('{"id":"x"}\n');
+    await store.put(
+      `whole/${id}/1`,
+      await sealBlob(dataKey, plain, { fileId: id, machine: "whole", seq: 1 })
+    );
+
+    expect((await sync("B")).refused).toEqual([`${id}: out-of-scope`]);
   });
 });
 
