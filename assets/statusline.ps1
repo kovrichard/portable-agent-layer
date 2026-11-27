@@ -147,6 +147,20 @@ if (Test-Path $updateCache) {
   } catch {}
 }
 
+# PAL: Sync - a run in progress, or a problem that needs the user; silent when healthy.
+# A run older than ten minutes died, as the sync lock treats it.
+$SYNC_LINE = ""
+$syncCache = Join-Path $env:USERPROFILE ".pal\cache\sync.json"
+if (Test-Path $syncCache) {
+  try {
+    $sync = Get-Content $syncCache -Raw -ErrorAction Stop | ConvertFrom-Json
+    $nowSec = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $started = if ($sync.startedAt -is [long] -or $sync.startedAt -is [int] -or $sync.startedAt -is [double]) { [long]$sync.startedAt } else { 0 }
+    if ($sync.running -eq $true -and ($nowSec - $started) -lt 600) { $SYNC_LINE = "[sync] syncing" }
+    elseif ($sync.notice -is [string] -and $sync.notice) { $SYNC_LINE = "! sync: $($sync.notice)" }
+  } catch {}
+}
+
 # PAL: Health - what the doctor (health.json) and a rejected Claude call (login-rejected.json) left
 $palCache = Join-Path $env:USERPROFILE ".pal\cache"
 $healthFailing = 0
@@ -281,6 +295,7 @@ Write-Host ($BAR_COLOR + $BAR + $RESET + " " + $CTX_STR + $DIM + $RATE_STR + $RE
 
 # Line 3: Update available (only when cache says available AND versions differ)
 if ($UPDATE_LINE) { Write-Host ($YELLOW + $UPDATE_LINE + $RESET) }
+if ($SYNC_LINE) { Write-Host ($YELLOW + $SYNC_LINE + $RESET) }
 
 # Line 3a: Health - the worst failure or the warning count, pointing to the doctor
 if ($HEALTH_LINE) { Write-Host ($HEALTH_COLOR + $HEALTH_LINE + $RESET) }

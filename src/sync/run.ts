@@ -9,7 +9,8 @@ import { resolve } from "node:path";
 import { readAccount, storeFor } from "./account";
 import type { SyncResult } from "./context";
 import { syncStateDir } from "./state";
-import { syncOnce } from "./sync";
+import { markFinished, markRunning } from "./status";
+import { type PhaseRunner, syncOnce } from "./sync";
 
 const LOCK_STALE_MS = 10 * 60_000;
 
@@ -38,20 +39,32 @@ function takeLock(home: string, now: number): boolean {
   }
 }
 
-export async function runSync(home: string, now: number = Date.now()): Promise<SyncRun> {
+const messageOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+export async function runSync(
+  home: string,
+  phase?: PhaseRunner,
+  now: number = Date.now()
+): Promise<SyncRun> {
   const account = readAccount(home);
   if (!account) return { outcome: "not-set-up" };
 
   if (!takeLock(home, now)) return { outcome: "busy" };
+  markRunning(home, now);
 
   try {
     const result = await syncOnce({
       store: storeFor(account.store),
       account: account.key,
       home,
+      phase,
     });
+    markFinished(home, Date.now(), { result });
 
     return { outcome: "synced", result };
+  } catch (err) {
+    markFinished(home, Date.now(), { error: messageOf(err) });
+    throw err;
   } finally {
     rmSync(lockFile(home), { force: true });
   }

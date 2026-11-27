@@ -96,7 +96,7 @@ function kitPage(key: string, store: string): string {
     "if you lose every machine. Nobody can reset it, PAL included.",
     "",
     `Store: ${store}`,
-    `Add a machine: pal cli sync join --store ${store}`,
+    `Add a machine: pal cli sync join --store "${store}"`,
     "(on that machine, the path where it reaches the same folder)",
   ].join("\n");
 }
@@ -348,10 +348,12 @@ describe("sync runs", () => {
     writeFileSync(lock, "1");
     utimesSync(lock, lockedAt / 1000, lockedAt / 1000);
 
-    expect(await runSync(homes.A, lockedAt + 10 * 60_000 - 1)).toEqual({
+    expect(await runSync(homes.A, undefined, lockedAt + 10 * 60_000 - 1)).toEqual({
       outcome: "busy",
     });
-    expect((await runSync(homes.A, lockedAt + 10 * 60_000)).outcome).toBe("synced");
+    expect((await runSync(homes.A, undefined, lockedAt + 10 * 60_000)).outcome).toBe(
+      "synced"
+    );
     expect(existsSync(lock)).toBe(false);
   });
 
