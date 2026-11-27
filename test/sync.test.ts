@@ -216,7 +216,9 @@ describe("a dishonest server", () => {
 
   test("a tampered segment is refused, and the rest still syncs", async () => {
     await sync("A");
-    const segment = blobFiles().find((file) => file.includes(`${"seg"}/mA/`)) as string;
+    const segment = blobFiles().find((file) =>
+      file.startsWith(resolve(storeRoot, "seg", "mA"))
+    ) as string;
     const bytes = readFileSync(segment);
     bytes[bytes.length - 1] ^= 1;
     writeFileSync(segment, bytes);
