@@ -63,7 +63,8 @@ function settle(
     return;
   }
 
-  if (local && !unchangedHere) quarantine(ctx, path, local, "local");
+  if (local && !unchangedHere && path !== ACTOR_PATH)
+    quarantine(ctx, path, local, "local");
   writeFile(file, incoming);
 
   if (local && path === ACTOR_PATH) recordAdoptedActor(local.toString("utf-8"), ctx.home);

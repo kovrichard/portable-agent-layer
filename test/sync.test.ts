@@ -209,10 +209,11 @@ describe("a machine joining with its own actor", () => {
     put("A", "memory/actor.json", actor("actor-a"));
     put("B", "memory/actor.json", actor("actor-b"));
     await sync("A");
-    await sync("B");
+    const join = await sync("B");
     await converge();
 
     expect(read("B", "memory/actor.json")).toBe(actor("actor-a"));
+    expect(join.quarantined).not.toContain("memory/actor.json");
 
     for (const machine of ["A", "B"] as const)
       expect(read(machine, "memory/actors/actor-b.md")).toContain('aliasOf: "actor-a"');
