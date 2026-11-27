@@ -15,11 +15,24 @@ import { pullSegments, pushSegments, writeManifest } from "./segments";
 import { readSyncState, writeSyncState } from "./state";
 import { pullWhole, pushWhole } from "./whole";
 
+export type SyncPhase = "upload-logs" | "take-in-logs" | "take-in-files" | "upload-files";
+
+/** Runs one phase; its work resolves to how many items it moved, for a progress line. */
+export type PhaseRunner = (
+  phase: SyncPhase,
+  work: () => Promise<number>
+) => Promise<void>;
+
+const quietly: PhaseRunner = async (_phase, work) => {
+  await work();
+};
+
 export interface SyncOptions {
   store: BlobStore;
   account: Uint8Array<ArrayBuffer>;
   home?: string;
   machine?: string;
+  phase?: PhaseRunner;
 }
 
 const changedAnything = (result: SyncResult) =>
@@ -39,11 +52,38 @@ const pathsOf = (ctx: SyncContext, kind: "segments" | "whole") =>
  * at the end of the file and skips them; whole files come down first, so a
  * change on both machines is seen before either is uploaded.
  */
-async function exchange(ctx: SyncContext): Promise<void> {
-  await pushSegments(ctx, pathsOf(ctx, "segments"));
-  await pullSegments(ctx);
-  await pullWhole(ctx);
-  await pushWhole(ctx, pathsOf(ctx, "whole"));
+async function exchange(ctx: SyncContext, phase: PhaseRunner): Promise<void> {
+  const { result } = ctx;
+  const counted = (count: () => number, work: () => Promise<void>) => async () => {
+    const before = count();
+    await work();
+
+    return count() - before;
+  };
+  const uploads = () => result.pushed;
+
+  await phase(
+    "upload-logs",
+    counted(uploads, () => pushSegments(ctx, pathsOf(ctx, "segments")))
+  );
+  await phase(
+    "take-in-logs",
+    counted(
+      () => result.pulled,
+      () => pullSegments(ctx)
+    )
+  );
+  await phase(
+    "take-in-files",
+    counted(
+      () => result.written.length,
+      () => pullWhole(ctx)
+    )
+  );
+  await phase(
+    "upload-files",
+    counted(uploads, () => pushWhole(ctx, pathsOf(ctx, "whole")))
+  );
 }
 
 function logRun(result: SyncResult): void {
@@ -67,7 +107,7 @@ export async function syncOnce(options: SyncOptions): Promise<SyncResult> {
     state: readSyncState(home),
     result: emptyResult(),
   };
-  await exchange(ctx);
+  await exchange(ctx, options.phase ?? quietly);
 
   if (changedAnything(ctx.result)) {
     logRun(ctx.result);

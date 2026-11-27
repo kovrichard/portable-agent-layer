@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { syncCommandWith } from "../src/cli/sync";
+import { railPhases, syncCommandWith } from "../src/cli/sync";
+import { LiveRail } from "../src/cli/ui/live";
+import { createStyle } from "../src/cli/ui/style";
 import { readAccount, storeConfigOf, storeWhere } from "../src/sync/account";
 import { runSync } from "../src/sync/run";
+import { readSyncStatus } from "../src/sync/status";
+import type { PhaseRunner, SyncPhase } from "../src/sync/sync";
 import { runCommand } from "../src/tools/lib/command";
 import { fakeS3 } from "./lib/fake-s3";
 import { freshTestDir } from "./lib/test-home";
@@ -139,5 +143,75 @@ describe("two machines syncing through S3", () => {
 
     expect(setup.code).not.toBe(0);
     expect(setup.out).toContain('the AWS profile "nobody" has no access key');
+  });
+});
+
+async function joinedPair() {
+  const setup = await cli("A", ["setup", "--store", where()]);
+  await cli("B", ["join", "--store", where()], keyIn(setup.out));
+}
+
+function recordedPhases() {
+  const seen: [SyncPhase, number][] = [];
+  const phase: PhaseRunner = async (name, work) => {
+    seen.push([name, await work()]);
+  };
+
+  return { seen, phase };
+}
+
+describe("a sync run reports its progress", () => {
+  test("each phase in order, with how many items it moved", async () => {
+    await joinedPair();
+    put("A", GOALS, "# Goals\n");
+    await runSync(homes.A);
+    const { seen, phase } = recordedPhases();
+    await runSync(homes.B, phase);
+
+    expect(seen.map(([name]) => name)).toEqual([
+      "upload-logs",
+      "take-in-logs",
+      "take-in-files",
+      "upload-files",
+    ]);
+    expect(Object.fromEntries(seen)["take-in-files"]).toBeGreaterThanOrEqual(1);
+    expect(readFileSync(resolve(homes.B, GOALS), "utf-8")).toBe("# Goals\n");
+  });
+
+  test("the hand-run command prints one line per phase", async () => {
+    await joinedPair();
+    put("A", GOALS, "# Goals\n");
+    let out = "";
+    const rail = new LiveRail(
+      createStyle({ rich: false, color: "none", unicode: true, width: 80 }),
+      (text) => {
+        out += text;
+      }
+    );
+    await runSync(homes.A, railPhases(rail));
+
+    expect(out.trim().split("\n")).toEqual([
+      expect.stringMatching(/^ok {3}Upload logs: \d+ file\(s\) with new lines$/),
+      expect.stringMatching(/^ok {3}Take in logs: \d+ line\(s\) from other machines$/),
+      expect.stringMatching(/^ok {3}Take in files: \d+ file\(s\) written$/),
+      expect.stringMatching(/^ok {3}Upload files: [1-9]\d* changed file\(s\)$/),
+    ]);
+  });
+
+  test("the status file says idle after a run and holds no notice", async () => {
+    await joinedPair();
+    await runSync(homes.A);
+
+    expect(readSyncStatus(homes.A)).toMatchObject({ running: false, notice: null });
+  });
+
+  test("a run that fails records the failure for the statusline and still throws", async () => {
+    await joinedPair();
+    writeFileSync(process.env.AWS_SHARED_CREDENTIALS_FILE ?? "", "");
+
+    await expect(runSync(homes.A)).rejects.toThrow('the AWS profile "pal-sync"');
+    expect(readSyncStatus(homes.A).notice).toStartWith(
+      'failing: the AWS profile "pal-sync"'
+    );
   });
 });

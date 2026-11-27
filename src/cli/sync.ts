@@ -3,8 +3,7 @@
  * user's other machines, through a store that never sees a key or a path.
  */
 
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { writeFileSync } from "node:fs";
 import { eventsSince } from "../bronze/events";
 import { palHome, toPath } from "../core/paths";
 import {
@@ -23,13 +22,32 @@ import {
   RecoveryKeyError,
 } from "../sync/recovery-key";
 import { runSync, type SyncRun } from "../sync/run";
+import { quarantineCount } from "../sync/status";
+import type { PhaseRunner, SyncPhase } from "../sync/sync";
 import { group, type Leaf, leaf, UsageError } from "../tools/lib/command";
 import { askLine } from "./ask-line";
+import { LiveRail } from "./ui/live";
+import { createStyle } from "./ui/style";
 
 export interface SyncDeps {
   home: () => string;
   readRecoveryKey: () => Promise<string>;
-  sync: (home: string) => Promise<SyncRun>;
+  sync: (home: string, phase?: PhaseRunner) => Promise<SyncRun>;
+}
+
+const PHASE_LINES: Record<SyncPhase, [string, (moved: number) => string]> = {
+  "upload-logs": ["Upload logs", (n) => `${n} file(s) with new lines`],
+  "take-in-logs": ["Take in logs", (n) => `${n} line(s) from other machines`],
+  "take-in-files": ["Take in files", (n) => `${n} file(s) written`],
+  "upload-files": ["Upload files", (n) => `${n} changed file(s)`],
+};
+
+/** Each phase of a hand-run sync as one line of the install's live rail. */
+export function railPhases(rail: LiveRail): PhaseRunner {
+  return async (phase, work) => {
+    const [name, detail] = PHASE_LINES[phase];
+    await rail.step(name, "working", async () => ({ detail: [detail(await work())] }));
+  };
 }
 
 const NOT_SET_UP =
@@ -165,17 +183,12 @@ function printRun(run: SyncRun): number {
 function runLeaf(deps: SyncDeps): Leaf {
   return leaf({
     summary: "Sync now",
-    run: async () => printRun(await deps.sync(deps.home())),
+    run: async () => {
+      const rail = new LiveRail(createStyle());
+
+      return printRun(await deps.sync(deps.home(), railPhases(rail)));
+    },
   });
-}
-
-function quarantineCount(home: string): number {
-  const dir = resolve(home, "backups", "sync-quarantine");
-
-  return existsSync(dir)
-    ? readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile())
-        .length
-    : 0;
 }
 
 function statusLeaf(deps: SyncDeps): Leaf {

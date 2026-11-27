@@ -348,10 +348,12 @@ describe("sync runs", () => {
     writeFileSync(lock, "1");
     utimesSync(lock, lockedAt / 1000, lockedAt / 1000);
 
-    expect(await runSync(homes.A, lockedAt + 10 * 60_000 - 1)).toEqual({
+    expect(await runSync(homes.A, undefined, lockedAt + 10 * 60_000 - 1)).toEqual({
       outcome: "busy",
     });
-    expect((await runSync(homes.A, lockedAt + 10 * 60_000)).outcome).toBe("synced");
+    expect((await runSync(homes.A, undefined, lockedAt + 10 * 60_000)).outcome).toBe(
+      "synced"
+    );
     expect(existsSync(lock)).toBe(false);
   });
 

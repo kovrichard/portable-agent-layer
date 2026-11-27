@@ -199,6 +199,20 @@ if [ -f "$UPDATE_CACHE" ]; then
   fi
 fi
 
+# PAL: Sync — a run in progress, or a problem that needs the user; silent when healthy.
+# A run older than ten minutes died, as the sync lock treats it.
+SYNC_LINE=""
+SYNC_JQ='(.running == true), (.startedAt | if type == "number" then floor else 0 end),
+  (.notice | if type == "string" then . else "" end)'
+SYNC_FIELDS=$(jq -r "$SYNC_JQ" "$HOME/.pal/cache/sync.json" 2>/dev/null)
+{ read -r SYNC_RUNNING; read -r SYNC_STARTED; IFS= read -r SYNC_NOTICE; } <<< "$SYNC_FIELDS"
+[[ "$SYNC_STARTED" =~ ^[0-9]+$ ]] || SYNC_STARTED=0
+if [ "$SYNC_RUNNING" = "true" ] && [ $(( $(date +%s) - SYNC_STARTED )) -lt 600 ]; then
+  SYNC_LINE="🔄 syncing"
+elif [ -n "$SYNC_NOTICE" ]; then
+  SYNC_LINE="⚠️  sync: $SYNC_NOTICE"
+fi
+
 # PAL: Health — what the doctor (health.json) and a rejected Claude call (login-rejected.json) left
 PAL_CACHE="$HOME/.pal/cache"
 HEALTH_JQ='def count(f): f | if type == "number" and . > 0 then floor else 0 end;
@@ -314,6 +328,7 @@ fi
 
 # Line 3: Update available (only when cache says available AND versions differ)
 [ -n "$UPDATE_LINE" ] && echo -e "${YELLOW}${UPDATE_LINE}${RESET}"
+[ -n "$SYNC_LINE" ] && printf '%b%s%b\n' "$YELLOW" "$SYNC_LINE" "$RESET"
 
 # Line 3a: Health — the worst failure or the warning count, pointing to the doctor
 [ -n "$HEALTH_LABEL" ] && printf '%b%s%b\n' "$HEALTH_COLOR" "⚠️  $HEALTH_LABEL — pal cli doctor" "$RESET"
