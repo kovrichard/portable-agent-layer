@@ -1,0 +1,211 @@
+# PAL bug detection evaluation
+#
+# Evaluates the prompt in src/report/pal-bug.ts, which reads a user's message that
+# names a PAL surface and says whether it reports that the installed PAL itself
+# misbehaved. Its verdicts run in shadow mode; this set is the gate before they
+# ship. build-prompt.ts writes the system prompt and the schema from src/ before
+# each run; the user template below mirrors palBugUser(), and
+# test/pal-bug.test.ts fails when the two drift apart.
+#
+# Pass bar, written before the first run: at least 8
+# of the 10 positives caught, and at most 2 false positives among the 30 hard
+# negatives, on each of two runs on the small tier.
+#
+# P: PAL misbehaved. P1-P6 are reworded from a real turn log; P7-P10 are written
+#    from the four user reports #13, #266, #297 and #375.
+# N: hard negatives. Every one names a PAL surface: PAL is the topic of the work,
+#    the user asks for a feature, corrects the assistant's own claim, says
+#    something works, or the problem is in another tool or the user's project.
+#
+# Run:
+#   bun run eval:pal-bug
+
+description: pal bug — does the message report that PAL itself misbehaved?
+
+prompts:
+  - label: pal-bug
+    raw: |
+      The user's message:
+      <message>
+      {{message}}
+      </message>
+
+providers:
+  - id: file://../lib/pal-infer.js
+    label: small
+    config:
+      tier: small
+      agent: claude
+      caller: pal-bug
+      system: eval/pal-bug/generated/system.txt
+      schema: eval/pal-bug/generated/schema.json
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/matches-verdict.js
+
+tests:
+  # P — PAL misbehaved
+  - description: "P1 update on the stable channel offers a canary"
+    vars:
+      message: "first a bug: I ran pal cli update --stable on a different machine, and it says 0.115.0-canary.4 is the latest. The problem is not that 4 is not the latest but that it offers a canary on the stable channel at all"
+      expect: bug
+  - description: "P2 an old compaction warning leaked into the context"
+    vars:
+      message: "I don't understand how the previous compaction warning could leak into your context"
+      expect: bug
+  - description: "P3 the status line never updates"
+    vars:
+      message: "feedback: the factory session in the statusline says starting and it never updates. does it only update when I type something in the terminal?"
+      expect: bug
+  - description: "P4 injected PR state is false"
+    vars:
+      message: "aren't open PRs injected in your context like the git state? those are false infos already"
+      expect: bug
+  - description: "P5 a stop hook blocks the terminal"
+    vars:
+      message: "ok, no idea which it is, but stop hook 6/11 blocks the entire terminal for about half a minute. that is wrong"
+      expect: bug
+  - description: "P6 doctor fails"
+    vars:
+      message: "doctor fails badly"
+      expect: bug
+  - description: "P7 the guard blocks a repo's own AGENTS.md (#13)"
+    vars:
+      message: "why can't you edit AGENTS.md here? the pal guard blocks it in this worktree, but it's this repo's own file, not my global one"
+      expect: bug
+  - description: "P8 doctor misses an expired login (#266)"
+    vars:
+      message: "pal cli doctor says everything is fine, but my claude login expired days ago and none of the background stuff has worked since"
+      expect: bug
+  - description: "P9 an update dropped the opinions (#297)"
+    vars:
+      message: "after the PAL update all my opinions are gone and the opinions skill just errors"
+      expect: bug
+  - description: "P10 usage counts one call many times (#375)"
+    vars:
+      message: "why does pal cli usage show the same model call like a hundred times? the numbers are way off"
+      expect: bug
+
+  # N — PAL named, nothing in PAL misbehaved
+  - description: "N1 asks where a PAL system lives"
+    vars:
+      message: "PAL collects message stats, reply speed, skimming, etc. Where is that system?"
+      expect: none
+  - description: "N2 asks what is being merged in PAL"
+    vars:
+      message: "ok, where are we with PAL? What feature are we merging right now?"
+      expect: none
+  - description: "N3 an architecture idea for PAL"
+    vars:
+      message: "might be an impossibly complex task, but what if we refactor the entire PAL core into rust at one point?"
+      expect: none
+  - description: "N4 asks which store is more useful"
+    vars:
+      message: "the progress tree is more useful and active?"
+      expect: none
+  - description: "N5 a feature request"
+    vars:
+      message: "merge is running. I need another pal feature. Configurable time-based prompts, user scoped and/or project scoped"
+      expect: none
+  - description: "N6 asks whether repo hooks apply"
+    vars:
+      message: "do repo hooks apply?"
+      expect: none
+  - description: "N7 corrects the assistant's claim about hooks"
+    vars:
+      message: "you are wrong on all of them. no repo hook calls pal commands. they could, but they don't and never will"
+      expect: none
+  - description: "N8 points out the assistant contradicted itself"
+    vars:
+      message: "there is a test saying that a failed skill install doesn't block the rest. Didn't you say update fails now? How are both true?"
+      expect: none
+  - description: "N9 corrects the assistant's count"
+    vars:
+      message: "I expect 6 agents, as every one of them uses hooks AFAIK"
+      expect: none
+  - description: "N10 corrects which store the assistant used"
+    vars:
+      message: "isn't the opinions.json the old system tho?"
+      expect: none
+  - description: "N11 a feature ticket"
+    vars:
+      message: "another ticket: cost estimates and cost controls will be a requirement of PAL. we could call it tokenbox, similar to timebox"
+      expect: none
+  - description: "N12 tells the assistant to stop guessing"
+    vars:
+      message: "Stop. We are guessing. Model context sizes and the auto-compact window are settings we can depend on deterministically. Tokens can be counted too"
+      expect: none
+  - description: "N13 slide content about hooks"
+    vars:
+      message: 'slide 39 needs another point: "Hooks can also run inference, but more about that later"'
+      expect: none
+  - description: "N14 disagrees with a design"
+    vars:
+      message: "Evals in a hook is what? That's the only thing I don't agree with. They should never run automatically, only when asked"
+      expect: none
+  - description: "N15 a design discussion"
+    vars:
+      message: "shouldn't it be progress tree prune? And shouldn't a node closure clean up its attached resources? Discuss"
+      expect: none
+  - description: "N16 corrects the assistant about an outdated install"
+    vars:
+      message: "pal doesn't have them anymore. Btw yes, they are arch rules. I updated pal too long ago"
+      expect: none
+  - description: "N17 says the status line works"
+    vars:
+      message: "fyi: auto update in the status line is working"
+      expect: none
+  - description: "N18 the assistant ignored what was injected"
+    vars:
+      message: "you have a Repo: ... clean · pushed line in your context already?"
+      expect: none
+  - description: "N19 a naming idea"
+    vars:
+      message: "I am the primary advocate of agent hooks. I'd like to be The Agent Hooks Guy, or something similar. which is best?"
+      expect: none
+  - description: "N20 says the compaction nudge works"
+    vars:
+      message: "nice, I was about to ask whether the compaction nudge works. glad it does"
+      expect: none
+  - description: "N21 a bug in another tool"
+    vars:
+      message: "Small bug in klint: the second run migrated test/klint.yaml but printed migrated klint.yaml. Reinstalling the skill didn't help"
+      expect: none
+  - description: "N22 asks for a hook profile"
+    vars:
+      message: "nice, profile our hooks please"
+      expect: none
+  - description: "N23 a question about bronze"
+    vars:
+      message: "if bronze is built correctly, we cannot really mess up the dataset because we can format it from bronze any way we want, right?"
+      expect: none
+  - description: "N24 a status line feature idea"
+    vars:
+      message: "what if we surface general errors in the statusline and all of them point the user to the doctor for details and the fix?"
+      expect: none
+  - description: "N25 the project's own CI"
+    vars:
+      message: "why is the doctor-fixes job skipped on windows? And why do the tests take 7 minutes on windows?"
+      expect: none
+  - description: "N26 the project's own tests"
+    vars:
+      message: "tests should be allowed to be longer imo. Fix this. Also, doesn't pal have the patterns for tsx testing already?"
+      expect: none
+  - description: "N27 where a note belongs"
+    vars:
+      message: "I think it doesn't belong in pal memory. reconsider"
+      expect: none
+  - description: "N28 corrects the assistant about skills"
+    vars:
+      message: "what are you talking about? user skills never go to .pal. this is a non issue. what did you update?"
+      expect: none
+  - description: "N29 corrects the assistant's reading of a command"
+    vars:
+      message: "my point is that the scheduled prompt command you wrote just injects context in the conversation after a given time. It does not run anything itself"
+      expect: none
+  - description: "N30 asks doctor for more detail"
+    vars:
+      message: "I think the doctor could be a bit more verbose about these migrations. why is it manual, and warn that they are required before 1.0"
+      expect: none

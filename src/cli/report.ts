@@ -12,6 +12,7 @@ import {
   shownText,
   similarIssues,
 } from "../report/report";
+import { listSignals, type Signal } from "../report/signals";
 import { group, type Leaf, leaf, UsageError } from "../tools/lib/command";
 
 export interface ReportDeps {
@@ -141,6 +142,54 @@ const declineLeaf = leaf({
   run: ({ positionals }) => declineReport(readReport(idOf(positionals))),
 });
 
+const SHADOW_WINDOW_DAYS = 14;
+
+function verdictWord(signal: Signal): string {
+  if (signal.trigger !== "message") return "signal";
+
+  if (signal.verdict === null) return "no-verdict";
+
+  return signal.verdict ? "bug" : "no-bug";
+}
+
+function signalLine(signal: Signal): string {
+  const when = signal.ts.slice(0, 16).replace("T", " ");
+  const said = signal.message === null ? "" : `  "${signal.message.slice(0, 160)}"`;
+
+  return `${when}  ${signal.trigger}  ${verdictWord(signal)}  ${signal.surface || "-"}${said}`;
+}
+
+function sinceDate(value: string | undefined): Date {
+  if (!value) return new Date(Date.now() - SHADOW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const since = new Date(value);
+  if (Number.isNaN(since.getTime())) throw new UsageError(`Not a date: ${value}`);
+
+  return since;
+}
+
+const signalsLeaf = leaf({
+  summary:
+    "Shadow signals that PAL itself may be broken (judged messages, doctor checks that stay failed), to label before any may suggest a report",
+  options: {
+    since: {
+      type: "string",
+      value: "<date>",
+      description: `From this date (default: the last ${SHADOW_WINDOW_DAYS} days)`,
+    },
+    bugs: { type: "boolean", description: "Only messages judged a PAL bug" },
+  },
+  run: ({ values }) => {
+    const since = sinceDate(values.since);
+    const signals = listSignals(since).filter(
+      (signal) => !values.bugs || signal.verdict === true
+    );
+    if (signals.length === 0)
+      console.log(`No signals since ${since.toISOString().slice(0, 10)}.`);
+
+    for (const signal of signals) console.log(signalLine(signal));
+  },
+});
+
 export function reportCommandWith(deps: ReportDeps) {
   return group({
     summary: "Anonymous reports to the PAL repository about a bug in PAL itself",
@@ -151,6 +200,7 @@ export function reportCommandWith(deps: ReportDeps) {
       send: sendLeaf(deps),
       decline: declineLeaf,
       list: listLeaf,
+      signals: signalsLeaf,
     },
   });
 }
