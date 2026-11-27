@@ -1,4 +1,5 @@
 import { getInstalledVersion } from "../../hooks/handlers/update-check";
+import { recordDoctorRun } from "../../report/doctor-signal";
 import { releaseHealthMarker } from "../../usage/health-cache";
 import { createStyle } from "../ui/style";
 import {
@@ -41,6 +42,7 @@ export function doctorReport(
 ): DoctorReport {
   const findings = doctorFindings(health);
   saveHealthSummary(findings);
+  recordDoctorRun(findings);
 
   return {
     version: getInstalledVersion(),

@@ -28,6 +28,7 @@ const SUBPROCESS_SUITES = new Set([
 const SUITES_THAT_READ_THE_GIT_CHECKOUT = new Set([
   "test/check-exact-versions.spawn.test.ts",
   "test/dark-factory-no-repo-hooks.test.ts",
+  "test/report-workflow.test.ts",
 ]);
 
 function isInProcessSuite(file) {
@@ -65,6 +66,7 @@ export default {
     "src/opinions/**/*.ts",
     "src/progress/**/*.ts",
     "src/sync/**/*.ts",
+    "src/report/**/*.ts",
     "src/safety/**/*.ts",
     "src/context/**/*.ts",
     "src/hooks/lib/**/*.ts",
