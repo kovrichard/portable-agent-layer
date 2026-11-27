@@ -21,6 +21,7 @@ import { logSessionEnd } from "../usage/session-events";
 import { autoUpdateOnClose } from "./lib/auto-update";
 import { duplicatesCursorHooks } from "./lib/cursor-shadow";
 import { readStdinJSON } from "./lib/stdin";
+import { startSyncIfDue } from "./lib/sync-trigger";
 
 recordHookRunOnExit();
 
@@ -37,6 +38,7 @@ spawnTranscriptPreserve();
 try {
   logSessionEnd(input);
   autoUpdateOnClose(input?.reason);
+  startSyncIfDue("end");
 } catch (err) {
   logError("SessionClose", err);
 }

@@ -104,6 +104,7 @@ export default {
     "!src/hooks/lib/stdin.ts",
     "!src/core/which.ts",
     "!src/cli/index.ts",
+    "!src/cli/ask-line.ts",
     "!src/cli/server.ts",
     "!src/cli/setup-attribution.ts",
     "!src/cli/setup-auto-update.ts",

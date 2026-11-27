@@ -192,13 +192,12 @@ describe("the session-start refresh", () => {
     expect(order).toEqual(["login", "health"]);
   });
 
-  test("is what LoadContext calls", () => {
-    const loadContext = readFileSync(
-      resolve(import.meta.dir, "..", "src", "hooks", "LoadContext.ts"),
-      "utf-8"
-    );
+  test("is what LoadContext starts, through its background work", () => {
+    const source = (...path: string[]) =>
+      readFileSync(resolve(import.meta.dir, "..", "src", "hooks", ...path), "utf-8");
 
-    expect(loadContext).toContain("\nrefreshCachesOnStart();\n");
-    expect(loadContext).not.toContain("refreshLoginOnStart");
+    expect(source("LoadContext.ts")).toContain("\nstartBackgroundWork();\n");
+    expect(source("lib", "start-work.ts")).toMatch(/^\s*refreshCachesOnStart\(\);$/m);
+    expect(source("LoadContext.ts")).not.toContain("refreshLoginOnStart");
   });
 });

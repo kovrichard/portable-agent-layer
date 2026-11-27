@@ -7,7 +7,7 @@
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { bronzeStores, storesOutsideBronze } from "../bronze/bronze";
-import { EXPORT_DIRS } from "../core/export";
+import { EXPORT_DIRS } from "../core/export-dirs";
 import { palHome } from "../core/paths";
 
 export type SyncKind = "segments" | "whole";

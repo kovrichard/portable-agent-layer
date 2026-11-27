@@ -302,6 +302,9 @@ async function autoUpdateOnDispose(event: OpencodeEvent): Promise<void> {
     const { autoUpdateOnClose } =
       await lib<typeof import("../../hooks/lib/auto-update")>("auto-update.ts");
     autoUpdateOnClose();
+    const { startSyncIfDue } =
+      await lib<typeof import("../../hooks/lib/sync-trigger")>("sync-trigger.ts");
+    startSyncIfDue("end");
   }
 }
 

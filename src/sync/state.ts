@@ -5,6 +5,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { stateDir } from "../core/paths";
 
 export interface SyncState {
   /** This machine's manifest counter. */
@@ -21,7 +22,10 @@ export interface SyncState {
 
 const EMPTY: SyncState = { counter: 0, pushed: {}, applied: {}, seen: {}, whole: {} };
 
-const stateFile = (home: string) => resolve(home, "state", "sync", "state.json");
+/** This install's sync folder, in whichever state folder it still uses before the v17 move. */
+export const syncStateDir = (home: string) => resolve(stateDir(home), "sync");
+
+const stateFile = (home: string) => resolve(syncStateDir(home), "state.json");
 
 export function readSyncState(home: string): SyncState {
   const file = stateFile(home);

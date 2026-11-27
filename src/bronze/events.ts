@@ -64,6 +64,7 @@ export const EVENT_FIELDS = {
   ],
   session_end: ["reason", "durationSec", "turns", "messages", "status"],
   sync: ["pushed", "pulled", "written", "quarantined", "refused"],
+  sync_account: ["action", "store"],
   actor_adopted: ["from", "to"],
   upstream_report: ["action", "report", "leaks", "via"],
   doctor_run: ["failing", "warnings"],
