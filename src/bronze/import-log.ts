@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "./bronze";
 
@@ -18,14 +18,8 @@ export interface ImportLogEntry {
 
 /** Append one record per import so a merged corpus stays attributable. */
 export function appendImportLog(home: string, entry: ImportLogEntry): void {
-  const logPath = resolve(storeDir("import-log", home), "import-log.jsonl");
-  const line = `${JSON.stringify(entry)}\n`;
-
-  if (existsSync(logPath)) {
-    writeFileSync(logPath, readFileSync(logPath, "utf-8") + line);
-
-    return;
-  }
-
-  writeFileSync(logPath, line);
+  appendFileSync(
+    resolve(storeDir("import-log", home), "import-log.jsonl"),
+    `${JSON.stringify(entry)}\n`
+  );
 }

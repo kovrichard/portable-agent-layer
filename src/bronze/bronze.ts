@@ -230,7 +230,7 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/state",
     formerFiles: { match: /^import-log\.jsonl$/ },
     files: "import-log.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
 ];
