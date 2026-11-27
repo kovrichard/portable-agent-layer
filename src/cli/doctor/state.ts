@@ -4,6 +4,7 @@ import { palHome, palPkg } from "../../core/paths";
 import { settingsPath } from "../../core/settings";
 import { telosStatus } from "../../opinions/telos-topics";
 import { auditBindings, type BindingIssue } from "../../progress/projects";
+import { quarantineCount } from "../../sync/status";
 import {
   type LegacyOpinions,
   opinionCount,
@@ -303,6 +304,20 @@ export function legacyOpinionsFindings(legacy: LegacyOpinions): Finding[] {
   ];
 }
 
+/** A quarantined copy holds edits the live file may lack; only the user can merge them. */
+export function syncQuarantineFindings(home: string): Finding[] {
+  const count = quarantineCount(home);
+  if (count === 0) return [];
+
+  return [
+    warning(
+      "sync.quarantine",
+      `${count} file(s) differed from the sync account and wait unmerged in ${resolve(home, "backups", "sync-quarantine")}`,
+      { say: "Merge what each copy adds into its live file, then delete the copy" }
+    ),
+  ];
+}
+
 export function stateFindings(): Finding[] {
   const home = palHome();
 
@@ -310,6 +325,7 @@ export function stateFindings(): Finding[] {
     ...telosFindings(home),
     ...settingsFindings(),
     ...bindingFindings(),
+    ...syncQuarantineFindings(home),
     ...legacyOpinionsFindings(readLegacyOpinions()),
     dependencyFinding(),
   ];

@@ -2,8 +2,11 @@
  * Every other file travels whole, as numbered versions under
  * `whole/<fileId>/<version>`; the version number is claimed with a put that
  * refuses to replace, so two machines never both write the same version.
- * When both changed a file, the local copy stays and the other is quarantined
- * under backups/sync-quarantine/.
+ * Once a version is agreed, a file both machines changed keeps the local copy
+ * and quarantines the incoming one. Before any agreement, on a machine's first
+ * sync, the account's copy wins and the local one is quarantined: a joining
+ * machine's newest files are often the templates `pal cli init` just wrote.
+ * Quarantined copies sit under backups/sync-quarantine/ until the user merges them.
  */
 
 import { createHash } from "node:crypto";
