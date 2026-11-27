@@ -17,6 +17,8 @@ export interface HostedFile {
   kind: SyncKind;
 }
 
+const REBUILT_AT_EVERY_SESSION_END = ["memory/relationship/opinions-context.md"];
+
 /**
  * The ledger rotates its active file, which per-file segments cannot follow;
  * every action is also a bronze event, which does travel.
@@ -27,6 +29,7 @@ const LOCAL_ONLY = [
   "memory/state",
   "memory/content",
   "memory/downloads",
+  ...REBUILT_AT_EVERY_SESSION_END,
 ];
 
 const SEGMENT_LOCATIONS = [...bronzeStores(), ...storesOutsideBronze()]

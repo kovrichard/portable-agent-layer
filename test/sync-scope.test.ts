@@ -27,6 +27,8 @@ describe("syncKindOf", () => {
     ["telos/backups/GOALS.md", null],
     ["skills/listen.bak-20261110/SKILL.md", null],
     ["memory/adaptation/rules.json.tmp", null],
+    ["memory/relationship/opinions-context.md", null],
+    ["memory/relationship/notes.md", "whole"],
   ] as const)
     test(`${path} → ${kind}`, () => {
       expect(syncKindOf(path)).toBe(kind);
