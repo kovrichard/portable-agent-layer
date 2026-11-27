@@ -103,7 +103,7 @@ describe("two machines syncing through S3", () => {
     const setup = await cli("A", ["setup", "--store", where()]);
     expect(setup.code).toBe(0);
     expect(setup.out).toContain(
-      `Add a machine: pal cli sync join --store s3://bucket/pal?`
+      `Add a machine: pal cli sync join --store "s3://bucket/pal?`
     );
 
     expect((await cli("B", ["join", "--store", where()], keyIn(setup.out))).code).toBe(0);

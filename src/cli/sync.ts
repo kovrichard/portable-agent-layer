@@ -82,7 +82,7 @@ function kitText(recoveryKey: string, store: StoreConfig): string {
     "if you lose every machine. Nobody can reset it, PAL included.",
     "",
     `Store: ${storeWhere(store)}`,
-    `Add a machine: pal cli sync join --store ${storeWhere(store)}`,
+    `Add a machine: pal cli sync join --store "${storeWhere(store)}"`,
     store.kind === "dir"
       ? "(on that machine, the path where it reaches the same folder)"
       : "(on that machine, with its own AWS key under the same profile name)",

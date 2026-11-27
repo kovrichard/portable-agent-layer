@@ -96,7 +96,7 @@ function kitPage(key: string, store: string): string {
     "if you lose every machine. Nobody can reset it, PAL included.",
     "",
     `Store: ${store}`,
-    `Add a machine: pal cli sync join --store ${store}`,
+    `Add a machine: pal cli sync join --store "${store}"`,
     "(on that machine, the path where it reaches the same folder)",
   ].join("\n");
 }
