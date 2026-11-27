@@ -72,6 +72,36 @@ describe("AWS credentials", () => {
     expect(() => awsCredentials("nobody", env)).toThrow('the AWS profile "nobody"');
   });
 
+  test("a profile with only half a key is refused", () => {
+    write("credentials", "[half]\naws_access_key_id = ONLY\n");
+
+    expect(() => awsCredentials("half", env)).toThrow("has no access key");
+  });
+
+  test("half a key in the environment falls back to the profile", () => {
+    expect(
+      awsCredentials(undefined, { ...env, AWS_ACCESS_KEY_ID: "ENV" }).accessKeyId
+    ).toBe("DEF");
+  });
+
+  test("without file overrides, the files are read from the given home's .aws", () => {
+    const home = resolve(env.dir ?? "", "home");
+    mkdirSync(resolve(home, ".aws"), { recursive: true });
+    writeFileSync(
+      resolve(home, ".aws", "credentials"),
+      "[home]\naws_access_key_id = HOME\naws_secret_access_key = s\n"
+    );
+    writeFileSync(
+      resolve(home, ".aws", "config"),
+      "[profile home]\nregion = eu-west-1\n"
+    );
+
+    expect(awsCredentials("home", {}, home)).toMatchObject({
+      accessKeyId: "HOME",
+      region: "eu-west-1",
+    });
+  });
+
   test("missing files read as no profiles", () => {
     const none = {
       AWS_SHARED_CREDENTIALS_FILE: "/nonexistent/c",
@@ -84,8 +114,12 @@ describe("AWS credentials", () => {
 
 describe("the ini reader", () => {
   test("keeps keys per section, trims spaces, skips comments and lines before a section", () => {
-    const text = "stray = 1\n[a]\n# note\n; note\nk = v = w\n  x=y  \n[ b ]\nk=2\r\n";
+    const text =
+      "stray = 1\n[a]\n# note = 1\n; note = 2\nk = v = w\n  x=y;z  \n  [ b ]  \nk=2\r\nnot [c] = 3\n";
 
-    expect(parseIni(text)).toEqual({ a: { k: "v = w", x: "y" }, b: { k: "2" } });
+    expect(parseIni(text)).toEqual({
+      a: { k: "v = w", x: "y;z" },
+      b: { k: "2", "not [c]": "3" },
+    });
   });
 });

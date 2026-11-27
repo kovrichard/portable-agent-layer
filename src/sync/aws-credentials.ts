@@ -16,6 +16,12 @@ export interface AwsCredentials {
 }
 
 type Env = Record<string, string | undefined>;
+
+/** Where the AWS tools look: the environment's overrides, else the home's `.aws`. */
+interface Lookup {
+  env: Env;
+  home: string;
+}
 type Ini = Record<string, Record<string, string>>;
 
 export class AwsCredentialsError extends Error {}
@@ -43,19 +49,21 @@ function readIni(path: string): Ini {
   return existsSync(path) ? parseIni(readFileSync(path, "utf-8")) : {};
 }
 
-const awsFile = (env: Env, variable: string, name: string) =>
-  env[variable] ?? resolve(homedir(), ".aws", name);
+const awsFile = ({ env, home }: Lookup, variable: string, name: string) =>
+  env[variable] ?? resolve(home, ".aws", name);
 
-function profileSettings(env: Env, profile: string): Record<string, string> {
-  const config = readIni(awsFile(env, "AWS_CONFIG_FILE", "config"));
+function profileSettings(lookup: Lookup, profile: string): Record<string, string> {
+  const config = readIni(awsFile(lookup, "AWS_CONFIG_FILE", "config"));
   const configSection = profile === "default" ? "default" : `profile ${profile}`;
-  const credentials = readIni(awsFile(env, "AWS_SHARED_CREDENTIALS_FILE", "credentials"));
+  const credentials = readIni(
+    awsFile(lookup, "AWS_SHARED_CREDENTIALS_FILE", "credentials")
+  );
 
   return { ...config[configSection], ...credentials[profile] };
 }
 
-function fromProfile(env: Env, profile: string): AwsCredentials {
-  const settings = profileSettings(env, profile);
+function fromProfile(lookup: Lookup, profile: string): AwsCredentials {
+  const settings = profileSettings(lookup, profile);
   const accessKeyId = settings.aws_access_key_id;
   const secretAccessKey = settings.aws_secret_access_key;
   if (!accessKeyId || !secretAccessKey)
@@ -67,7 +75,7 @@ function fromProfile(env: Env, profile: string): AwsCredentials {
     accessKeyId,
     secretAccessKey,
     sessionToken: settings.aws_session_token,
-    region: settings.region ?? env.AWS_REGION,
+    region: settings.region ?? lookup.env.AWS_REGION,
   };
 }
 
@@ -85,9 +93,12 @@ function fromEnvironment(env: Env): AwsCredentials | null {
 /** A named profile wins; without one, the environment, then AWS_PROFILE or "default". */
 export function awsCredentials(
   profile: string | undefined,
-  env: Env = process.env
+  env: Env = process.env,
+  home: string = homedir()
 ): AwsCredentials {
-  if (profile) return fromProfile(env, profile);
+  const lookup = { env, home };
 
-  return fromEnvironment(env) ?? fromProfile(env, env.AWS_PROFILE ?? "default");
+  if (profile) return fromProfile(lookup, profile);
+
+  return fromEnvironment(env) ?? fromProfile(lookup, env.AWS_PROFILE ?? "default");
 }
