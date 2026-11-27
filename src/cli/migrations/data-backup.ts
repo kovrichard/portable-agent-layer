@@ -11,6 +11,7 @@ export interface BackupReport {
   archive: string;
   files: number;
   reason?: string;
+  error?: string;
   differ: string[];
 }
 
@@ -45,18 +46,14 @@ function differingCopies(copy: string): { files: number; differ: string[] } {
   return { files: originals.length, differ };
 }
 
-function refusedBackup(
-  archive: string,
-  reason: string,
-  detail: Record<string, unknown>
-): BackupReport {
+function refusedBackup(archive: string, reason: string, error: string): BackupReport {
   recordMemoryMove(
     "memory-backup",
     { outcome: "refused", reason, archive: basename(archive) },
-    detail
+    { error }
   );
 
-  return { ok: false, archive, files: 0, reason, differ: [] };
+  return { ok: false, archive, files: 0, reason, error, differ: [] };
 }
 
 function tarFailure(run: TarRunner, args: string[], cwd: string): string | null {
@@ -116,8 +113,7 @@ export function backupDataVerified(run: TarRunner = runTar): BackupReport {
     ],
     dirname(archive)
   );
-  if (archiveError)
-    return refusedBackup(archive, "archive failed", { error: archiveError });
+  if (archiveError) return refusedBackup(archive, "archive failed", archiveError);
 
   mkdirSync(verifyDir, { recursive: true });
 
@@ -127,8 +123,7 @@ export function backupDataVerified(run: TarRunner = runTar): BackupReport {
       ["-xf", basename(archive), "-C", basename(verifyDir)],
       dirname(archive)
     );
-    if (extractError)
-      return refusedBackup(archive, "extract failed", { error: extractError });
+    if (extractError) return refusedBackup(archive, "extract failed", extractError);
 
     return verifiedAgainstCopy(archive, verifyDir);
   } finally {

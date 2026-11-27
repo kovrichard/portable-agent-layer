@@ -90,6 +90,36 @@ describe("runLayoutMove", () => {
     expect(existsSync(TO)).toBe(false);
   });
 
+  test("a backup tar could not write names what tar said", () => {
+    const result = runLayoutMove(ID, MOVES, false, {
+      ...idle,
+      backup: () => ({
+        ...okBackup(),
+        ok: false,
+        reason: "archive failed",
+        error: "boom",
+      }),
+    });
+
+    expect(result.results).toEqual(["refused: backup archive failed: boom"]);
+  });
+
+  test("a backup that changed under its check names the files and what to do", () => {
+    const differ = Array.from({ length: 12 }, (_, i) => `records/f${i}.jsonl`);
+    const result = runLayoutMove(ID, MOVES, false, {
+      ...idle,
+      backup: () => ({ ...okBackup(), ok: false, reason: "backup differs", differ }),
+    });
+
+    expect(result.results).toEqual([
+      "refused: 12 file(s) changed while the backup was checked, so something is still writing to PAL's data:",
+      ...differ.slice(0, 10).map((file) => `  ${file}`),
+      "  and 2 more",
+      "Close every agent session, then run it again from a plain shell.",
+    ]);
+    expect(existsSync(TO)).toBe(false);
+  });
+
   test("moves the files and reports the count, hashes and backup", () => {
     const result = runLayoutMove(ID, MOVES, false, idle);
 

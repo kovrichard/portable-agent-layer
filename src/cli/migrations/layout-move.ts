@@ -26,6 +26,32 @@ function refusal(results: string[], skipped: number): MigrationResult {
   return { migrated: 0, skipped, results };
 }
 
+const LISTED_FILES = 10;
+
+function listedFiles(files: string[]): string[] {
+  const more = files.length - LISTED_FILES;
+
+  return [
+    ...files.slice(0, LISTED_FILES).map((file) => `  ${file}`),
+    ...(more > 0 ? [`  and ${more} more`] : []),
+  ];
+}
+
+/** Names what failed the backup: the files that changed under it, or the tar error. */
+function backupRefusal(backup: BackupReport): string[] {
+  if (backup.differ.length > 0)
+    return [
+      `refused: ${backup.differ.length} file(s) changed while the backup was checked, so something is still writing to PAL's data:`,
+      ...listedFiles(backup.differ),
+      "Close every agent session, then run it again from a plain shell.",
+    ];
+
+  const reason = backup.reason ?? "failed";
+  const said = backup.error ? `: ${backup.error}` : "";
+
+  return [`refused: backup ${reason}${said}`];
+}
+
 /**
  * The owner-run move of recorded data: refuse while PAL is busy or the disk is
  * short, take a verified backup of every data folder, then rename with a hashed
@@ -47,8 +73,7 @@ export function runLayoutMove(
   if (guard) return refusal([`refused: ${guard}`], left.length);
 
   const backup = (options.backup ?? backupDataVerified)();
-  if (!backup.ok)
-    return refusal([`refused: backup ${backup.reason ?? "failed"}`], left.length);
+  if (!backup.ok) return refusal(backupRefusal(backup), left.length);
 
   const report = moveVerified(id, left);
   if (report.outcome !== "moved")

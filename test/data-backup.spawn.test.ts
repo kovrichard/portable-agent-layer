@@ -104,7 +104,12 @@ describe("backupDataVerified", () => {
   test("refuses when the archive cannot be written, and says what tar said", () => {
     const report = backupDataVerified(() => ({ status: 2, stderr: "tar: boom\n" }));
 
-    expect(report).toMatchObject({ ok: false, reason: "archive failed", files: 0 });
+    expect(report).toMatchObject({
+      ok: false,
+      reason: "archive failed",
+      error: "tar: boom",
+      files: 0,
+    });
     expect(memoryMoveEvents(HOME)).toEqual([
       expect.objectContaining({ outcome: "refused", reason: "archive failed" }),
     ]);
