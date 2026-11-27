@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { eventsSince } from "../src/bronze/events";
 import { syncCommandWith } from "../src/cli/sync";
 import { startSyncIfDue } from "../src/hooks/lib/sync-trigger";
@@ -60,7 +61,7 @@ async function cli(machine: Machine, args: string[], recoveryKey = "") {
 const keyIn = (out: string) => (out.match(KEY_LINE) ?? []).map((l) => l.trim()).join("-");
 
 async function setUpA() {
-  const setup = await cli("A", ["setup", "--dir", bucket]);
+  const setup = await cli("A", ["setup", "--store", bucket]);
   expect(setup.code).toBe(0);
 
   return keyIn(setup.out);
@@ -71,7 +72,7 @@ describe("setup and join", () => {
     put("A", GOALS, "Ship sync.\n");
     const key = await setUpA();
     await cli("A", []);
-    const join = await cli("B", ["join", "--dir", bucket], key);
+    const join = await cli("B", ["join", "--store", bucket], key);
 
     expect(join.code).toBe(0);
     expect(join.out).toContain("Synced:");
@@ -88,7 +89,7 @@ describe("setup and join", () => {
 
   test("a second setup on the same store is refused and leaves that machine unset", async () => {
     await setUpA();
-    const second = await cli("B", ["setup", "--dir", bucket]);
+    const second = await cli("B", ["setup", "--store", bucket]);
 
     expect(second.code).not.toBe(0);
     expect(second.out).toContain("already holds an account");
@@ -102,7 +103,7 @@ describe("setup and join", () => {
     await cli("A", []);
     const join = await cli(
       "B",
-      ["join", "--dir", bucket],
+      ["join", "--store", bucket],
       formatRecoveryKey(randomKey())
     );
 
@@ -115,14 +116,14 @@ describe("setup and join", () => {
     const key = await setUpA();
     const typo = `${key.slice(0, 5)}${key[5] === "7" ? "8" : "7"}${key.slice(6)}`;
 
-    expect((await cli("B", ["join", "--dir", bucket], typo)).out).toContain("typo");
+    expect((await cli("B", ["join", "--store", bucket], typo)).out).toContain("typo");
     expect(readAccount(homes.B)).toBeNull();
   });
 
   test("joining a folder no machine set up says to run setup", async () => {
     const join = await cli(
       "B",
-      ["join", "--dir", bucket],
+      ["join", "--store", bucket],
       formatRecoveryKey(randomKey())
     );
 
@@ -132,14 +133,14 @@ describe("setup and join", () => {
   test("setting up a machine twice is refused", async () => {
     await setUpA();
 
-    expect((await cli("A", ["setup", "--dir", resolve(dir, "other")])).out).toContain(
+    expect((await cli("A", ["setup", "--store", resolve(dir, "other")])).out).toContain(
       "already set up on this machine"
     );
   });
 
   test("setup and join are decisions in bronze", async () => {
     const key = await setUpA();
-    await cli("B", ["join", "--dir", bucket], key);
+    await cli("B", ["join", "--store", bucket], key);
 
     expect(eventsSince("sync_account", new Date(0)).map((e) => e.action)).toEqual([
       "join",
@@ -150,8 +151,25 @@ describe("setup and join", () => {
     ]);
   });
 
-  test("--dir is required", async () => {
-    expect((await cli("A", ["setup"])).out).toContain("Pass --dir");
+  test("--store is required", async () => {
+    expect((await cli("A", ["setup"])).out).toContain("Pass --store");
+  });
+
+  test("--store takes a file:// URL for the same folder as its path", async () => {
+    const key = await setUpA();
+    const join = await cli("B", ["join", "--store", pathToFileURL(bucket).href], key);
+
+    expect(join.code).toBe(0);
+  });
+
+  test.each([
+    ["s3://bucket/pal", "S3 stores are not supported yet"],
+    ["ftp://host/pal", 'unknown store "ftp://"'],
+  ])("--store %s is refused, saying why", async (where, reason) => {
+    const setup = await cli("A", ["setup", "--store", where]);
+
+    expect(setup.code).not.toBe(0);
+    expect(setup.out).toContain(reason);
   });
 });
 

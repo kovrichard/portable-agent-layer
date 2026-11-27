@@ -8,6 +8,7 @@
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { appendEvent } from "../bronze/events";
 import { type BlobStore, directoryStore } from "./blob-store";
 import { randomKey, unwrapDataKey, wrapDataKey } from "./crypto";
@@ -31,6 +32,22 @@ const CHECK_ID = "account";
 export const accountKeyFile = (home: string) =>
   resolve(syncStateDir(home), "account.key");
 const accountFile = (home: string) => resolve(syncStateDir(home), "account.json");
+
+/**
+ * Where the store is, as a person types it: a folder path or `file://` URL for
+ * a folder this machine can reach (a NAS mount, a synced folder), `s3://…` once
+ * S3 exists.
+ */
+export function storeConfigOf(where: string, toPath: (p: string) => string): StoreConfig {
+  const scheme = /^([a-z][a-z0-9+.-]*):\/\//i.exec(where)?.[1]?.toLowerCase();
+  if (scheme === undefined) return { kind: "dir", path: toPath(where) };
+
+  if (scheme === "file") return { kind: "dir", path: toPath(fileURLToPath(where)) };
+
+  if (scheme === "s3")
+    throw new AccountError("S3 stores are not supported yet; pass a folder for now");
+  throw new AccountError(`unknown store "${scheme}://"; pass a folder path or s3://…`);
+}
 
 export function storeFor(config: StoreConfig): BlobStore {
   return directoryStore(config.path);

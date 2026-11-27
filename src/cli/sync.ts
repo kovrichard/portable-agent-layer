@@ -13,6 +13,7 @@ import {
   readAccount,
   type StoreConfig,
   setupAccount,
+  storeConfigOf,
 } from "../sync/account";
 import type { SyncResult } from "../sync/context";
 import {
@@ -29,13 +30,22 @@ export interface SyncDeps {
 }
 
 const NOT_SET_UP =
-  "Sync is not set up on this machine: pal cli sync setup --dir <folder>";
+  "Sync is not set up on this machine: pal cli sync setup --store <where>";
 
-function storeOf(dir: string | undefined): StoreConfig {
-  if (!dir)
-    throw new UsageError("Pass --dir <folder>: the folder both machines sync through");
+const STORE_OPTION = {
+  type: "string",
+  value: "<where>",
+  description:
+    "Where both machines sync through: a folder they can both reach, or s3://…",
+} as const;
 
-  return { kind: "dir", path: toPath(dir) };
+function storeOf(where: string | undefined): StoreConfig {
+  if (!where)
+    throw new UsageError(
+      "Pass --store <where>: a folder both machines can reach (a NAS mount, a synced folder)"
+    );
+
+  return storeConfigOf(where, toPath);
 }
 
 function kitText(recoveryKey: string, store: StoreConfig): string {
@@ -51,7 +61,8 @@ function kitText(recoveryKey: string, store: StoreConfig): string {
     "if you lose every machine. Nobody can reset it, PAL included.",
     "",
     `Store: ${store.path}`,
-    `Add a machine: pal cli sync join --dir ${store.path}`,
+    `Add a machine: pal cli sync join --store ${store.path}`,
+    "(on that machine, the path where it reaches the same folder)",
   ].join("\n");
 }
 
@@ -69,11 +80,7 @@ function setupLeaf(deps: SyncDeps): Leaf {
   return leaf({
     summary: "Create the sync account on this machine and print its recovery key",
     options: {
-      dir: {
-        type: "string",
-        value: "<folder>",
-        description: "The folder to sync through",
-      },
+      store: STORE_OPTION,
       kit: {
         type: "string",
         value: "<file>",
@@ -81,7 +88,7 @@ function setupLeaf(deps: SyncDeps): Leaf {
       },
     },
     run: async ({ values }) => {
-      const store = storeOf(values.dir);
+      const store = await failsAsUsage(async () => storeOf(values.store));
       const key = await failsAsUsage(() => setupAccount(deps.home(), store));
       const text = kitText(formatRecoveryKey(key), store);
       console.log(`Sync is set up.\n\n${text}`);
@@ -99,15 +106,9 @@ function setupLeaf(deps: SyncDeps): Leaf {
 function joinLeaf(deps: SyncDeps): Leaf {
   return leaf({
     summary: "Join the sync account another machine set up, with its recovery key",
-    options: {
-      dir: {
-        type: "string",
-        value: "<folder>",
-        description: "The folder to sync through",
-      },
-    },
+    options: { store: STORE_OPTION },
     run: async ({ values }) => {
-      const store = storeOf(values.dir);
+      const store = await failsAsUsage(async () => storeOf(values.store));
       await failsAsUsage(async () =>
         joinAccount(deps.home(), store, parseRecoveryKey(await deps.readRecoveryKey()))
       );
