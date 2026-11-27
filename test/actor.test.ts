@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { freshTestDir } from "./lib/test-home";
 
@@ -122,6 +122,27 @@ describe("actor registry", () => {
         .map((e) => e.label)
         .sort()
     ).toEqual(["ada", "grace"]);
+  });
+
+  test("re-registering an unchanged actor leaves its file untouched, so synced machines agree", async () => {
+    const { writeActorEntry } = await lib();
+    const file = writeActorEntry({ id: "id-a", label: "ada" }, "notes");
+    const before = readFileSync(file, "utf-8");
+    await Bun.sleep(5);
+    writeActorEntry({ id: "id-a", label: "ada" });
+
+    expect(readFileSync(file, "utf-8")).toBe(before);
+  });
+
+  test("a changed label or alias still restamps the entry", async () => {
+    const { writeActorEntry } = await lib();
+    const file = writeActorEntry({ id: "id-a", label: "ada" });
+    const before = readFileSync(file, "utf-8");
+    await Bun.sleep(5);
+    writeActorEntry({ id: "id-a", label: "ada", aliasOf: "id-b" });
+
+    expect(readFileSync(file, "utf-8")).not.toBe(before);
+    expect(readFileSync(file, "utf-8")).toContain("aliasOf");
   });
 
   test("re-registering updates the label without duplicating the entry", async () => {
