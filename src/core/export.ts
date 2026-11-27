@@ -7,20 +7,12 @@ import { existsSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import AdmZip from "adm-zip";
 import { ensureActorRegistered } from "./actor";
+import { EXPORT_DIRS } from "./export-dirs";
 import { buildManifest, MANIFEST_NAME } from "./export-manifest";
 import { ensureRegistered } from "./machine";
 import { isMachineLocalState } from "./machine-state";
 import { palHome } from "./paths";
 import { SETTINGS_FILE } from "./settings";
-
-/**
- * Directories within PAL_HOME that contain user state worth exporting.
- * `skills` and `agents` hold user-authored personal skills and subagents.
- * Shipped skills live in `skills/` only as symlinks back to the repo, and
- * walkDir skips symlinks (see below) — so only real, user-owned files travel.
- */
-/** The folders that carry the user's own data; sync travels the same ones. */
-export const EXPORT_DIRS = ["telos", "memory", "records", "work", "skills", "agents"];
 
 /** Subdirectories/files to skip during export. */
 const SKIP_PATTERNS = [

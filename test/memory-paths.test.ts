@@ -21,7 +21,7 @@ const KNOWN_TODAY: Record<string, number> = {
   "cli/legacy-opinions.ts": 2,
   "context/semi-static.ts": 1,
   "core/actor.ts": 2,
-  "core/export.ts": 1,
+  "core/export-dirs.ts": 1,
   "core/log.ts": 1,
   "core/machine.ts": 1,
   "core/settings.ts": 1,
