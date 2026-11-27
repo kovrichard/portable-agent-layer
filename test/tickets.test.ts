@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { readProject, saveProjectTickets, writeProject } from "../src/progress/projects";
 import {
+  importedTicketId,
+  pendingImports,
   renderTickets,
   replayTickets,
   serializeTicket,
@@ -222,16 +224,72 @@ describe("a project's tickets", () => {
     });
   });
 
-  test("of a project not yet migrated stay in its ISA.md", () => {
+  test("still in an old ISA.md are imported into the log by the first ticket change", () => {
     writeProject(fakeProject());
     const legacy = `${readFileSync(isa(), "utf-8")}\n## Criteria\n\n- [ ] ISC-1: old\n`;
     writeFileSync(isa(), legacy);
     const p = readProject("demo");
     if (!p) throw new Error("demo missing");
-    p.criteria = "- [ ] ISC-1: old\n- [ ] ISC-k7m2: new";
+    const [imported] = p.oldIscNumbers?.["1"] ?? [];
+    p.criteria = `${p.criteria}\n- [ ] ISC-k7m2: new`;
     saveProjectTickets(p, NOON);
 
-    expect(existsSync(log())).toBe(false);
-    expect(readFileSync(isa(), "utf-8")).toContain("- [ ] ISC-k7m2: new");
+    expect(readFileSync(isa(), "utf-8")).toBe(legacy);
+    expect(readFileSync(log(), "utf-8").trim().split("\n")).toEqual([
+      serializeTicket({
+        ticket: imported as string,
+        status: "open",
+        text: "old",
+        was: "1",
+      }),
+      serializeTicket(opened("k7m2", "new", NOON.toISOString())),
+    ]);
+    expect(readProject("demo")?.criteria).toBe(
+      `- [ ] ISC-${imported}: old\n- [ ] ISC-k7m2: new`
+    );
+  });
+});
+
+describe("importing old numbered tickets", () => {
+  const owner = { name: "pal", created: "2026-03-01T00:00:00.000Z" };
+
+  test("gives one old ticket the same six-character id anywhere", () => {
+    const id = importedTicketId("pal", "151", "ship it");
+
+    expect(id).toMatch(/^[0-9a-z]{6}$/);
+    expect(id).not.toMatch(/^\d+$/);
+    expect(importedTicketId("pal", "151", "ship it")).toBe(id);
+    expect(importedTicketId("pal", "151", "ship it now")).not.toBe(id);
+    expect(importedTicketId("other", "151", "ship it")).not.toBe(id);
+  });
+
+  test("two machines' imports merge: shared tickets once, one number's two tasks apart, a close wins", () => {
+    const onA = {
+      criteria: "- [ ] ISC-1: shared\n- [ ] ISC-2: only on A\n- [ ] ISC-3: closed on B",
+      changelog: "",
+    };
+    const onB = {
+      criteria: "- [ ] ISC-1: shared\n- [ ] ISC-2: only on B",
+      changelog: "### Archived 2026-11-20\n- [x] ISC-3: closed on B",
+    };
+    const synced = [
+      ...new Set([...pendingImports("", owner, onA), ...pendingImports("", owner, onB)]),
+    ];
+    const tickets = replayTickets(synced.join("\n"));
+
+    expect(synced.filter((line) => line.includes('"shared"'))).toHaveLength(1);
+    expect(tickets.map((t) => [t.was, t.text, t.status]).sort()).toEqual([
+      ["1", "shared", "open"],
+      ["2", "only on A", "open"],
+      ["2", "only on B", "open"],
+      ["3", "closed on B", "done"],
+    ]);
+  });
+
+  test("a ticket already imported is not imported again", () => {
+    const stored = { criteria: "- [ ] ISC-1: shared", changelog: "" };
+    const [line] = pendingImports("", owner, stored);
+
+    expect(pendingImports(`${line}\n`, owner, stored)).toEqual([]);
   });
 });

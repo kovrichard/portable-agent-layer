@@ -213,11 +213,12 @@ describe("reopen-isc", () => {
 });
 
 describe("list-isc", () => {
-  const criteria = "- [ ] ISC-1: open one\n- [x] ISC-2: legacy done";
-  const changelog = "### Archived 2026-01-01\n- [x] ISC-3: done\n- [~] ISC-4: dropped";
+  const criteria = "- [ ] ISC-1: open one";
+  const changelog =
+    "### Archived 2026-01-01\n- [x] ISC-2: done first\n- [x] ISC-3: done\n\n### Retired 2026-01-01\n- [~] ISC-4: dropped";
   const open = { id: "1", text: "open one", status: "open" };
   const done = [
-    { id: "2", text: "legacy done", status: "done" },
+    { id: "2", text: "done first", status: "done" },
     { id: "3", text: "done", status: "done" },
   ];
   const retired = { id: "4", text: "dropped", status: "retired" };
@@ -229,7 +230,7 @@ describe("list-isc", () => {
     [["--closed"], done],
     [["--retired"], [retired]],
   ])("flags %p select their ISCs", async (flags, iscs) => {
-    seedLegacy(criteria, changelog);
+    seed(criteria, changelog);
 
     expect(await projectCliJson("list-isc", "demo", ...flags)).toEqual({
       ...counts,
@@ -360,9 +361,9 @@ describe("edit-isc", () => {
   });
 
   test("keeps the box of an archived ISC and leaves Criteria alone", async () => {
-    seedLegacy(
+    seed(
       "- [ ] ISC-2: open",
-      "### Archived 2026-01-01\n- [x] ISC-1: done\n- [~] ISC-3: gone"
+      "### Archived 2026-01-01\n- [x] ISC-1: done\n\n### Retired 2026-01-01\n- [~] ISC-3: gone"
     );
 
     expect(await projectCliJson("edit-isc", "demo", "3", "line\ntwo")).toMatchObject({
@@ -372,15 +373,10 @@ describe("edit-isc", () => {
     expect(stored().changelog).toBe(
       String.raw`### Archived 2026-01-01
 - [x] ISC-1: done
+
+### Retired 2026-01-01
 - [~] ISC-3: line\ntwo`
     );
-  });
-
-  test("matches a loosely spaced or uppercase box", async () => {
-    seedLegacy("-  [X]  ISC-1: shouty");
-    await projectCliJson("edit-isc", "demo", "1", "calm");
-
-    expect(stored().criteria).toBe("- [x] ISC-1: calm");
   });
 
   test("blank text is a usage error", async () => {
@@ -401,22 +397,54 @@ describe("edit-isc", () => {
   });
 });
 
-describe("prune-isc", () => {
-  test("archives every closed ISC left in Criteria", async () => {
-    seedLegacy("- [x] ISC-1: done\n- [ ] ISC-2: open\n- [~] ISC-3: gone");
+describe("tickets written before the log", () => {
+  const imported = (status: string, text: string) =>
+    new RegExp(String.raw`^- \[${status}\] ISC-[0-9a-z]{6}: ${text}$`);
 
-    expect(await projectCliJson("prune-isc", "demo")).toEqual({
-      pruned: 2,
-      name: "demo",
-      remaining_open: 1,
-    });
-    expect(stored().criteria).toBe("- [ ] ISC-2: open");
-    expect(stored().changelog).toBe(
-      `### Archived ${today()}\n- [x] ISC-1: done\n- [~] ISC-3: gone`
-    );
-    expectTouched();
+  test("read under new ids, a closed one in Criteria archived on the project's first day", () => {
+    seedLegacy("- [x] ISC-1: done\n-  [X]  ISC-2: shouty\n- [ ] ISC-3: open");
+    const [heading, ...closed] = (stored().changelog ?? "").split("\n");
+
+    expect(stored().criteria).toMatch(imported(" ", "open"));
+    expect(heading).toBe("### Archived 2026-05-04");
+    expect(closed).toEqual([
+      expect.stringMatching(imported("x", "done")),
+      expect.stringMatching(imported("x", "shouty")),
+    ]);
+    expect(stored().oldIscNumbers?.["2"]).toEqual([
+      expect.stringMatching(/^[0-9a-z]{6}$/),
+    ]);
   });
 
+  test("answer to their old number", async () => {
+    seedLegacy("- [ ] ISC-7: ship it");
+    const [ticket] = stored().oldIscNumbers?.["7"] ?? [];
+
+    expect(await projectCliJson("complete-isc", "demo", "7")).toMatchObject({
+      id: ticket,
+      archived: true,
+    });
+    expect(stored().changelog).toBe(
+      `### Archived ${today()}\n- [x] ISC-${ticket}: ship it`
+    );
+  });
+
+  test("an old number that named two tasks is refused, naming both", async () => {
+    seedLegacy(
+      "- [ ] ISC-7: ship it",
+      "### Archived 2026-01-01\n- [x] ISC-7: other task"
+    );
+    const both = stored().oldIscNumbers?.["7"] ?? [];
+    const run = await projectCli("complete-isc", "demo", "7");
+
+    expect(both).toHaveLength(2);
+    expect(run.code).toBe(1);
+    expect(run.stderr).toContain(`ISC-${both[0]}`);
+    expect(run.stderr).toContain(`ISC-${both[1]}`);
+  });
+});
+
+describe("prune-isc", () => {
   test("leaves the record untouched when nothing is closed", async () => {
     seed("- [ ] ISC-1: open");
 
@@ -426,19 +454,6 @@ describe("prune-isc", () => {
       remaining_open: 1,
     });
     expectUntouched("- [ ] ISC-1: open");
-  });
-
-  test("moves an uppercase box like a lowercase one", async () => {
-    seedLegacy("- [X] ISC-1: shouty\n- [x] ISC-2: done");
-
-    expect(await projectCliJson("prune-isc", "demo")).toMatchObject({
-      pruned: 2,
-      remaining_open: 0,
-    });
-    expect(stored().criteria ?? "").toBe("");
-    expect(stored().changelog).toBe(
-      `### Archived ${today()}\n- [X] ISC-1: shouty\n- [x] ISC-2: done`
-    );
   });
 });
 

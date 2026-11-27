@@ -7,7 +7,7 @@
  * operates on, plus the clock it stamps with.
  */
 
-import { type Isc, parseIscs } from "../../progress/isc-line";
+import { allDigits, ID_ALPHABET, type Isc, parseIscs } from "../../progress/isc-line";
 
 /**
  * A full ISC line collapsed to a glanceable title for resume: cut at the first
@@ -20,7 +20,6 @@ export function iscTitle(text: string): string {
   return clause.length > 80 ? `${clause.slice(0, 79).trimEnd()}…` : clause;
 }
 
-const ID_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
 const ID_LENGTH = 4;
 
 /**
@@ -44,7 +43,7 @@ export function newIscId(
       () => ID_ALPHABET[Math.floor(random() * ID_ALPHABET.length)]
     ).join("");
 
-    if (!/^\d+$/.test(id) && !taken.has(id)) return id;
+    if (!allDigits(id) && !taken.has(id)) return id;
   }
 }
 

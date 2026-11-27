@@ -11,6 +11,8 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
+  allDigits,
+  ID_ALPHABET,
   ISC_BOX,
   type Isc,
   type IscStatus,
@@ -61,11 +63,19 @@ interface LoggedState {
   line: string;
 }
 
+const STATUS_RANK: Record<IscStatus, number> = { open: 0, done: 1, retired: 2 };
+
+/**
+ * Newer wins. Imported lines carry no time, so one ticket imported open on one
+ * machine and closed on another ties; the close is the later act, so it wins.
+ */
 function outranks(a: LoggedState, b: LoggedState): boolean {
   const atA = a.state.at ?? "";
   const atB = b.state.at ?? "";
+  if (atA !== atB) return atA > atB;
+  const rank = STATUS_RANK[a.state.status] - STATUS_RANK[b.state.status];
 
-  return atA === atB ? a.line > b.line : atA > atB;
+  return rank === 0 ? a.line > b.line : rank > 0;
 }
 
 const ARCHIVE_HEADING = /^### (Archived|Retired) (\d{4}-\d{2}-\d{2})\s*$/;
@@ -98,14 +108,62 @@ export function replayTickets(log: string): TicketState[] {
   return [...newest.values()].map((logged) => logged.state);
 }
 
-function readTicketLog(file: string): TicketState[] | null {
-  return existsSync(file) ? replayTickets(readFileSync(file, "utf-8")) : null;
+const readLog = (file: string) => (existsSync(file) ? readFileSync(file, "utf-8") : "");
+
+function appendLines(file: string, lines: string[]): void {
+  if (lines.length === 0) return;
+  mkdirSync(dirname(file), { recursive: true });
+  appendFileSync(file, lines.map((line) => `${line}\n`).join(""));
 }
 
-function appendTicketStates(file: string, states: TicketState[]): void {
-  if (states.length === 0) return;
-  mkdirSync(dirname(file), { recursive: true });
-  appendFileSync(file, states.map((s) => `${serializeTicket(s)}\n`).join(""));
+const IMPORTED_ID_LENGTH = 6;
+
+/**
+ * The same id on every machine for the same old ticket. An old number names
+ * different tasks on different machines, so the text goes into the hash too.
+ * Six characters, against four for a new ticket, so that hundreds of imported
+ * tickets in one project are still very unlikely to share one.
+ */
+export function importedTicketId(project: string, was: string, text: string): string {
+  const digest = new Bun.CryptoHasher("sha256")
+    .update(`${project}\n${was}\n${text}`)
+    .digest();
+  const chars = Array.from(digest, (byte) => ID_ALPHABET[byte % ID_ALPHABET.length]).join(
+    ""
+  );
+  const windows = Array.from({ length: chars.length - IMPORTED_ID_LENGTH + 1 }, (_, i) =>
+    chars.slice(i, i + IMPORTED_ID_LENGTH)
+  );
+
+  return windows.find((id) => !allDigits(id)) ?? `x${chars.slice(1, IMPORTED_ID_LENGTH)}`;
+}
+
+export interface TicketOwner {
+  name: string;
+  /** Dates a closed ticket that sat in Criteria with no archive heading. */
+  created: string;
+}
+
+/**
+ * The ticket lines an ISA.md still holds, as the states they import as. No
+ * time and no machine goes in, so two machines importing one ticket write the
+ * same line, and the sync keeps one.
+ */
+function importedStates(owner: TicketOwner, stored: TicketSections): TicketState[] {
+  const archivedOn = archiveDates(stored.changelog);
+
+  return [...parseIscs(stored.criteria), ...parseIscs(stored.changelog)].map((isc) => {
+    const numbered = allDigits(isc.id);
+    const closedOn = archivedOn.get(isc.id) ?? owner.created.slice(0, 10);
+
+    return {
+      ticket: numbered ? importedTicketId(owner.name, isc.id, isc.text) : isc.id,
+      status: isc.status,
+      text: isc.text,
+      since: isc.status === "open" ? undefined : closedOn,
+      was: numbered ? isc.id : undefined,
+    };
+  });
 }
 
 function oldNumber(state: TicketState): number {
@@ -167,12 +225,6 @@ export function withoutTickets(section: string): string {
     .trim();
 }
 
-export function hasTicketLines(sections: TicketSections): boolean {
-  return [sections.criteria, sections.changelog].some((s) =>
-    s.split("\n").some(isIscLine)
-  );
-}
-
 /** A clock that never repeats or goes back for one ticket, so its newest change wins. */
 function stampAfter(previous: string | undefined, now: Date): string {
   if (!previous || now.toISOString() > previous) return now.toISOString();
@@ -229,40 +281,70 @@ export function ticketChanges(
   return changes;
 }
 
-const ticketLogIn = (projectDir: string) => resolve(projectDir, "tickets.jsonl");
+export const ticketLogIn = (projectDir: string) => resolve(projectDir, "tickets.jsonl");
 
-/** The sections as read, tickets rendered in; null while the project has no log. */
-export function readTicketSections(
-  projectDir: string,
+const stripped = (sections: TicketSections): TicketSections => ({
+  criteria: withoutTickets(sections.criteria),
+  changelog: withoutTickets(sections.changelog),
+});
+
+/** Import lines the log does not hold yet, for ticket lines ISA.md still has. */
+export function pendingImports(
+  log: string,
+  owner: TicketOwner,
   stored: TicketSections
-): TicketSections | null {
-  const tickets = readTicketLog(ticketLogIn(projectDir));
-  if (!tickets) return null;
+): string[] {
+  const logged = new Set(log.split("\n"));
 
-  return renderTickets(tickets, {
-    criteria: withoutTickets(stored.criteria),
-    changelog: withoutTickets(stored.changelog),
-  });
+  return [...new Set(importedStates(owner, stored).map(serializeTicket))].filter(
+    (line) => !logged.has(line)
+  );
 }
 
-/**
- * Appends what changed in the tickets and returns the sections ISA.md keeps.
- * Null for a project with no log whose ISA.md still holds ticket lines: those
- * stay in ISA.md until it is migrated.
- */
-export function writeTicketSections(
+/** Each old number to the tickets that carry it now; two means it named two tasks. */
+function oldNumbersOf(tickets: TicketState[]): Record<string, string[]> {
+  const numbers: Record<string, string[]> = {};
+
+  for (const { was, ticket } of tickets)
+    if (was) numbers[was] = [...(numbers[was] ?? []), ticket];
+
+  return numbers;
+}
+
+export interface TicketView {
+  sections: TicketSections;
+  oldNumbers: Record<string, string[]>;
+}
+
+/** The sections as read: the log, plus any ticket line ISA.md still holds. */
+export function readTicketSections(
   projectDir: string,
-  sections: TicketSections,
-  storedHasTickets: () => boolean,
-  now: Date = new Date()
-): TicketSections | null {
-  const file = ticketLogIn(projectDir);
-  const current = readTicketLog(file);
-  if (!current && storedHasTickets()) return null;
-  appendTicketStates(file, ticketChanges(current ?? [], sections, now));
+  owner: TicketOwner,
+  stored: TicketSections
+): TicketView {
+  const log = readLog(ticketLogIn(projectDir));
+  const tickets = replayTickets([log, ...pendingImports(log, owner, stored)].join("\n"));
 
   return {
-    criteria: withoutTickets(sections.criteria),
-    changelog: withoutTickets(sections.changelog),
+    sections: renderTickets(tickets, stripped(stored)),
+    oldNumbers: oldNumbersOf(tickets),
   };
+}
+
+/** Appends the imports and the changes, and returns the sections ISA.md keeps. */
+export function writeTicketSections(
+  projectDir: string,
+  owner: TicketOwner,
+  sections: TicketSections,
+  stored: () => TicketSections,
+  now: Date = new Date()
+): TicketSections {
+  const file = ticketLogIn(projectDir);
+  const log = readLog(file);
+  const imports = pendingImports(log, owner, stored());
+  const current = replayTickets([log, ...imports].join("\n"));
+  const changes = ticketChanges(current, sections, now).map(serializeTicket);
+  appendLines(file, [...imports, ...changes]);
+
+  return stripped(sections);
 }

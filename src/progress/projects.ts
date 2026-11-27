@@ -32,8 +32,8 @@ import { writeBinding, writeBindings } from "./bindings";
 import { buildBody, extractSections, type IsaSections } from "./isa-body";
 import { lastActivity, recordProjectTouch } from "./project-activity";
 import {
-  hasTicketLines,
   readTicketSections,
+  type TicketOwner,
   type TicketSections,
   writeTicketSections,
 } from "./tickets";
@@ -63,6 +63,8 @@ export interface ProjectProgress extends IsaSections {
   /** The user's own placement on the grid, which overrules both guesses. */
   placed?: string;
   placed_by?: ServesAuthority;
+  /** Read-only: each old ticket number to the ids it imported as. */
+  oldIscNumbers?: Record<string, string[]>;
 }
 
 export const PROJECT_STALE_DAYS_DEFAULT = 14;
@@ -103,38 +105,41 @@ const sectionsOf = (p: IsaSections): TicketSections => ({
   changelog: p.changelog ?? "",
 });
 
-function ticketsAsRead(slug: string, stored: IsaSections) {
-  const read = readTicketSections(resolve(projectsDir(), slug), sectionsOf(stored));
+function ticketsAsRead(
+  owner: TicketOwner,
+  stored: IsaSections
+): Partial<ProjectProgress> {
+  const dir = resolve(projectsDir(), owner.name);
+  const { sections, oldNumbers } = readTicketSections(dir, owner, sectionsOf(stored));
+  const renamed = Object.keys(oldNumbers).length > 0;
 
-  return (
-    read && {
-      criteria: read.criteria || undefined,
-      changelog: read.changelog || undefined,
-    }
-  );
+  return {
+    criteria: sections.criteria || undefined,
+    changelog: sections.changelog || undefined,
+    ...(renamed && { oldIscNumbers: oldNumbers }),
+  };
 }
 
-function isaHasTicketLines(slug: string): boolean {
+function storedSections(slug: string): TicketSections {
   const file = isaFilePath(slug);
-  if (!existsSync(file)) return false;
+  if (!existsSync(file)) return sectionsOf({});
 
-  return hasTicketLines(
-    sectionsOf(extractSections(parse(readFileSync(file, "utf-8")).body))
-  );
+  return sectionsOf(extractSections(parse(readFileSync(file, "utf-8")).body));
 }
 
-function logTickets(p: ProjectProgress): TicketSections | null {
-  return writeTicketSections(resolve(projectsDir(), p.name), sectionsOf(p), () =>
-    isaHasTicketLines(p.name)
-  );
+function logTickets(p: ProjectProgress, at: Date = new Date()): TicketSections {
+  const owner = { name: p.name, created: p.created };
+  const dir = resolve(projectsDir(), p.name);
+
+  return writeTicketSections(dir, owner, sectionsOf(p), () => storedSections(p.name), at);
 }
 
 /**
  * Records a ticket change in the log alone, so ISA.md, which every machine
- * rewrites whole, stays as it is. A project not yet migrated is written whole.
+ * rewrites whole, stays as it is.
  */
 export function saveProjectTickets(p: ProjectProgress, at: Date = new Date()): void {
-  if (!logTickets(p)) writeProject({ ...p, updated: at.toISOString() });
+  logTickets(p, at);
   recordProjectTouch(p.name, at);
 }
 
@@ -216,7 +221,9 @@ export function readProject(
     const updated = lastActivity(meta.name, meta.updated);
     const sections = extractSections(body);
 
-    return { ...kept, updated, path, ...sections, ...ticketsAsRead(name, sections) };
+    const owner = { name, created: meta.created };
+
+    return { ...kept, updated, path, ...sections, ...ticketsAsRead(owner, sections) };
   } catch {
     return null;
   }

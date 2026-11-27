@@ -497,22 +497,22 @@ describe("keeping PAL up to date", () => {
 
 describe("snoozing a criterion", () => {
   test("a snoozed ISC stops counting as open, and waking it restores the count", async () => {
-    registerProject("demo", "## Criteria\n\n- [ ] ISC-1: one\n- [ ] ISC-2: two\n");
+    registerProject("demo", "## Criteria\n\n- [ ] ISC-k7m2: one\n- [ ] ISC-q9w3: two\n");
     const base = await listen();
     const openCount = async () =>
       (await getJson<ProjectCard[]>(`${base}/api/board`))[0].openIscs;
 
     expect(await openCount()).toBe(2);
 
-    await post(base, "/api/snooze", { project: "demo", id: 1, days: 7 });
+    await post(base, "/api/snooze", { project: "demo", id: "k7m2", days: 7 });
     expect(await openCount()).toBe(1);
 
     const detail = await getJson<{ iscs: { id: string; snoozedUntil: string | null }[] }>(
       `${base}/api/project?slug=demo`
     );
-    expect(detail.iscs.find((i) => i.id === "1")?.snoozedUntil).toBeTruthy();
+    expect(detail.iscs.find((i) => i.id === "k7m2")?.snoozedUntil).toBeTruthy();
 
-    await post(base, "/api/snooze", { project: "demo", id: 1, days: 0 });
+    await post(base, "/api/snooze", { project: "demo", id: "k7m2", days: 0 });
     expect(await openCount()).toBe(2);
   });
 

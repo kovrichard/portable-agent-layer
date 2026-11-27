@@ -464,7 +464,7 @@ describe("project CLI", () => {
     expect(changelog.match(/### Archived/g)).toHaveLength(1);
   });
 
-  test("prune-isc backfills legacy done ISCs sitting in Criteria", async () => {
+  test("done ISCs left in an old Criteria read as archived, so prune-isc has nothing to move", async () => {
     await runCli(["create", "prune", "--path", "/tmp/prune-fake"]);
     const isa = resolve(TEST_HOME, "work", "projects", "prune", "ISA.md");
     writeFileSync(
@@ -472,16 +472,13 @@ describe("project CLI", () => {
       `${readFileSync(isa, "utf-8")}\n## Criteria\n\n- [x] ISC-1: old done\n- [ ] ISC-2: still open\n- [x] ISC-3: also done\n`
     );
     const pruned = JSON.parse((await runCli(["prune-isc", "prune"])).stdout);
-    expect(pruned.pruned).toBe(2);
+    expect(pruned.pruned).toBe(0);
     expect(pruned.remaining_open).toBe(1);
 
-    const criteria = section("prune", "Criteria");
-    expect(criteria).toContain("[ ] ISC-2: still open");
-    expect(criteria).not.toContain("ISC-1");
-    expect(criteria).not.toContain("ISC-3");
+    expect(section("prune", "Criteria")).toMatch(/^- \[ \] ISC-[0-9a-z]{6}: still open$/);
     const changelog = section("prune", "Changelog");
-    expect(changelog).toContain("[x] ISC-1: old done");
-    expect(changelog).toContain("[x] ISC-3: also done");
+    expect(changelog).toContain(": old done");
+    expect(changelog).toContain(": also done");
 
     const list = JSON.parse((await runCli(["list-isc", "prune", "--closed"])).stdout);
     expect(list.iscs).toHaveLength(2);

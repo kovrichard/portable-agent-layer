@@ -1,6 +1,10 @@
 import { logCommitment } from "../../progress/commitment-events";
 import { encodeIscText, ISC_BOX, parseIscs } from "../../progress/isc-line";
-import { type ProjectProgress, saveProjectTickets } from "../../progress/projects";
+import {
+  type ProjectProgress,
+  readProject,
+  saveProjectTickets,
+} from "../../progress/projects";
 import { type Leaf, leaf, UsageError } from "../lib/command";
 import {
   archiveLine,
@@ -198,11 +202,34 @@ function cmdPruneIsc(name: string): undefined {
   ok({ pruned: done.length, name, remaining_open: openLeft });
 }
 
+/** An old number reaches the ticket it was imported as; one that names two is refused. */
+function currentTicketId(p: ProjectProgress, id: string): string {
+  const known = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")];
+  if (known.some((isc) => isc.id === id)) return id;
+  const renamed = p.oldIscNumbers?.[id] ?? [];
+
+  if (renamed.length > 1) {
+    const ids = renamed.map((ticket) => `ISC-${ticket}`).join(", ");
+    fail(
+      `ISC-${id} named ${renamed.length} different tickets; they are now ${ids}. Use one of those.`
+    );
+  }
+
+  return renamed[0] ?? id;
+}
+
+function ticketArg(name: string, value: string | undefined, label: string): string {
+  const id = iscIdArg(value, label);
+  const p = readProject(name);
+
+  return p ? currentTicketId(p, id) : id;
+}
+
 function iscLeaf(summary: string, act: (name: string, id: string) => undefined): Leaf {
   return leaf({
     summary,
     args: "<name> <id>",
-    run: ({ positionals }) => act(positionals[0], iscIdArg(positionals[1], "<id>")),
+    run: ({ positionals: [name, id] }) => act(name, ticketArg(name, id, "<id>")),
   });
 }
 
@@ -229,7 +256,7 @@ export const iscCommands = {
     summary: "Rewrite ISC-N's text, keeping its id and state",
     args: "<name> <id> <text...>",
     run: ({ positionals: [name, id, ...text] }) =>
-      cmdEditIsc(name, iscIdArg(id, "<id>"), joined(text)),
+      cmdEditIsc(name, ticketArg(name, id, "<id>"), joined(text)),
   }),
   "retire-isc": leaf({
     summary: "Close ISC-N as no longer valid, not as done",
@@ -240,8 +267,8 @@ export const iscCommands = {
     run: ({ positionals: [name, id], values }) =>
       cmdRetireIsc(
         name,
-        iscIdArg(id, "<id>"),
-        values.by === undefined ? null : iscIdArg(values.by, "--by")
+        ticketArg(name, id, "<id>"),
+        values.by === undefined ? null : ticketArg(name, values.by, "--by")
       ),
   }),
   "prune-isc": leaf({

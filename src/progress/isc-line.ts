@@ -19,6 +19,11 @@ export function statusFromBox(box: string): IscStatus {
   return "open";
 }
 
+/** Lowercase base32 without i, l, o, u, so an id reads back unambiguously. */
+export const ID_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
+
+export const allDigits = (id: string) => /^\d+$/.test(id);
+
 export interface Isc {
   /** Four random characters for a new ISC; older ones keep their number. */
   id: string;
