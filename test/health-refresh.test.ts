@@ -197,7 +197,7 @@ describe("the session-start refresh", () => {
       readFileSync(resolve(import.meta.dir, "..", "src", "hooks", ...path), "utf-8");
 
     expect(source("LoadContext.ts")).toContain("\nstartBackgroundWork();\n");
-    expect(source("lib", "start-work.ts")).toContain("\n  refreshCachesOnStart();\n");
+    expect(source("lib", "start-work.ts")).toMatch(/^\s*refreshCachesOnStart\(\);$/m);
     expect(source("LoadContext.ts")).not.toContain("refreshLoginOnStart");
   });
 });
