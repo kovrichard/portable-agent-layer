@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import {
   bindingFinding,
   stateFindings,
+  syncQuarantineFindings,
   unknownSettingsKeys,
   unresolvedDependencies,
 } from "../src/cli/doctor/state";
@@ -126,6 +127,30 @@ describe("PAL's dependencies", () => {
     expect(unresolvedDependencies(pkgWithDeps(["alpha", "beta"], ["alpha"]))).toEqual([
       "beta",
     ]);
+  });
+});
+
+describe("the sync quarantine", () => {
+  test("an empty or absent quarantine says nothing", () => {
+    expect(syncQuarantineFindings(HOME)).toEqual([]);
+  });
+
+  test("unmerged copies, nested ones included, are counted with where they wait", () => {
+    write(resolve(HOME, "backups/sync-quarantine/telos/GOALS.md.local"), "mine");
+    write(resolve(HOME, "backups/sync-quarantine/work/projects/a/ISA.md.v3"), "theirs");
+    const [finding] = syncQuarantineFindings(HOME);
+
+    expect(finding?.severity).toBe("warn");
+    expect(finding?.title).toBe(
+      `2 file(s) differed from the sync account and wait unmerged in ${resolve(HOME, "backups", "sync-quarantine")}`
+    );
+    expect(finding?.fix?.command).toBeUndefined();
+  });
+
+  test("is part of the doctor's state checks", () => {
+    write(resolve(HOME, "backups/sync-quarantine/telos/GOALS.md.local"), "mine");
+
+    expect(stateFindings().map((f) => f.id)).toContain("sync.quarantine");
   });
 });
 
