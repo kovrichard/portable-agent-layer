@@ -9,6 +9,7 @@ import {
   collectAntigravity,
 } from "../src/tools/lib/collectors/antigravity";
 import { assertNoCredentials } from "../src/tools/lib/collectors/sqlite";
+import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 // Columns and time format from a real conversation_summaries.db.
@@ -120,6 +121,27 @@ describe("collecting Antigravity's conversations", () => {
     expect(() =>
       assertNoCredentials({ ...ANTIGRAVITY_ALLOW_LIST, credential: ["id"] })
     ).toThrow(/never read/);
+  });
+
+  test("a WAL database whose writer has exited and removed its -wal file is read", () => {
+    const db = fixtureDb();
+    db.run("PRAGMA journal_mode = WAL");
+    upsert(db, "conv_1", 5, "2026-10-08 18:03:20.000000000+00:00");
+    db.run("PRAGMA wal_checkpoint(TRUNCATE)");
+    db.close();
+    removeOnceReleased(`${dbPath}-wal`);
+    removeOnceReleased(`${dbPath}-shm`);
+    expect(collectAntigravity(dbPath)).toBe(1);
+  });
+
+  test("a WAL database still open by its writer is read, including unflushed rows", () => {
+    const db = fixtureDb();
+    db.run("PRAGMA journal_mode = WAL");
+    db.run("PRAGMA wal_autocheckpoint = 0");
+    upsert(db, "conv_1", 5, "2026-10-08 18:03:20.000000000+00:00");
+    expect(existsSync(`${dbPath}-wal`)).toBe(true);
+    expect(collectAntigravity(dbPath)).toBe(1);
+    db.close();
   });
 
   test("no summaries database, nothing collected", () => {

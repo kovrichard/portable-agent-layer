@@ -6,6 +6,8 @@
  */
 
 import { Database } from "bun:sqlite";
+import { existsSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 export type AllowList = Readonly<Record<string, readonly string[]>>;
 
@@ -26,6 +28,17 @@ export interface ResumeAfter {
   idColumn: string;
   order: number | string;
   id: number | string;
+}
+
+/**
+ * A read-only connection to a WAL database must create its -shm file, which it
+ * may not, once the writer has exited and removed -wal and -shm. With no -wal
+ * nothing is pending, so the file can be read as immutable.
+ */
+function openWithoutWriting(dbPath: string): Database {
+  if (existsSync(`${dbPath}-wal`)) return new Database(dbPath, { readonly: true });
+
+  return new Database(`${pathToFileURL(dbPath).href}?immutable=1`, { readonly: true });
 }
 
 function quoted(identifier: string): string {
@@ -51,7 +64,7 @@ export function selectAllowed<Row>(
   const order = quoted(after.orderColumn);
   const id = quoted(after.idColumn);
   const sql = `SELECT ${columns.map(quoted).join(", ")} FROM ${quoted(table)} WHERE ${order} > ?1 OR (${order} = ?1 AND ${id} > ?2) ORDER BY ${order}, ${id}`;
-  const db = new Database(dbPath, { readonly: true });
+  const db = openWithoutWriting(dbPath);
 
   try {
     return db
