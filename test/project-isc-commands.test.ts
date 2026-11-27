@@ -6,6 +6,7 @@ import {
   projectCliHome,
   projectCliJson,
   SEEDED_AT,
+  seedLegacyProject,
   seedProject,
 } from "./lib/project-cli-fixture";
 
@@ -14,6 +15,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function seed(criteria?: string, changelog?: string): void {
   seedProject(home(), { criteria, changelog });
+}
+
+/** Shapes only a hand-edited ISA.md holds: a closed ticket in Criteria, a retired one under Archived. */
+function seedLegacy(criteria?: string, changelog?: string): void {
+  seedLegacyProject(home(), { criteria, changelog });
 }
 
 function stored() {
@@ -223,7 +229,7 @@ describe("list-isc", () => {
     [["--closed"], done],
     [["--retired"], [retired]],
   ])("flags %p select their ISCs", async (flags, iscs) => {
-    seed(criteria, changelog);
+    seedLegacy(criteria, changelog);
 
     expect(await projectCliJson("list-isc", "demo", ...flags)).toEqual({
       ...counts,
@@ -288,7 +294,7 @@ describe("retire-isc", () => {
   });
 
   test("--by names the superseding ISC on the archived line", async () => {
-    seed("- [x] ISC-1: stale\n- [ ] ISC-2: keep");
+    seed("- [ ] ISC-1: stale\n- [ ] ISC-2: keep");
 
     expect(await projectCliJson("retire-isc", "demo", "1", "--by", "2")).toMatchObject({
       supersededBy: "2",
@@ -354,7 +360,7 @@ describe("edit-isc", () => {
   });
 
   test("keeps the box of an archived ISC and leaves Criteria alone", async () => {
-    seed(
+    seedLegacy(
       "- [ ] ISC-2: open",
       "### Archived 2026-01-01\n- [x] ISC-1: done\n- [~] ISC-3: gone"
     );
@@ -371,7 +377,7 @@ describe("edit-isc", () => {
   });
 
   test("matches a loosely spaced or uppercase box", async () => {
-    seed("-  [X]  ISC-1: shouty");
+    seedLegacy("-  [X]  ISC-1: shouty");
     await projectCliJson("edit-isc", "demo", "1", "calm");
 
     expect(stored().criteria).toBe("- [x] ISC-1: calm");
@@ -397,7 +403,7 @@ describe("edit-isc", () => {
 
 describe("prune-isc", () => {
   test("archives every closed ISC left in Criteria", async () => {
-    seed("- [x] ISC-1: done\n- [ ] ISC-2: open\n- [~] ISC-3: gone");
+    seedLegacy("- [x] ISC-1: done\n- [ ] ISC-2: open\n- [~] ISC-3: gone");
 
     expect(await projectCliJson("prune-isc", "demo")).toEqual({
       pruned: 2,
@@ -423,7 +429,7 @@ describe("prune-isc", () => {
   });
 
   test("moves an uppercase box like a lowercase one", async () => {
-    seed("- [X] ISC-1: shouty\n- [x] ISC-2: done");
+    seedLegacy("- [X] ISC-1: shouty\n- [x] ISC-2: done");
 
     expect(await projectCliJson("prune-isc", "demo")).toMatchObject({
       pruned: 2,

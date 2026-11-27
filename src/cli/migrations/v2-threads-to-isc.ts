@@ -5,19 +5,9 @@ import {
   readProject,
   writeProject,
 } from "../../progress/projects";
+import { newIscId } from "../../tools/lib/project-isc";
 import { readThreads, type Thread, writeThreads } from "../../tools/lib/thread";
 import type { Migration, MigrationResult } from "./migration";
-
-function nextIscId(criteria: string): number {
-  const ids: number[] = [];
-
-  for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[[ x~]\]\s+ISC-(\d+):/i).exec(line);
-    if (m) ids.push(Number(m[1]));
-  }
-
-  return ids.length > 0 ? Math.max(...ids) + 1 : 1;
-}
 
 function pendingThreadsForProjects(): { thread: Thread; project: ProjectProgress }[] {
   const threads = readThreads().filter((t) => t.status === "open");
@@ -39,7 +29,7 @@ function addThreadAsIsc(thread: Thread, projectName: string): Thread | null {
   const p = readProject(projectName);
   if (!p) return null;
   const current = p.criteria ?? "";
-  const id = nextIscId(current);
+  const id = newIscId(current, p.changelog ?? "");
   const newLine = `- [ ] ISC-${id}: ${thread.title}`;
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = new Date().toISOString();

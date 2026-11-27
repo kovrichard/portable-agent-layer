@@ -14,6 +14,7 @@ import {
 } from "../../opinions/algorithm-review";
 import { loadAnalyzeNudge } from "../../opinions/analyze-nudge";
 import { type AgendaMove, readAgenda } from "../../progress/agenda-store";
+import { parseIscs } from "../../progress/isc-line";
 import {
   isStale,
   PROJECT_STALE_DAYS_DEFAULT,
@@ -25,7 +26,6 @@ import {
 import { readProjectHistory } from "../../progress/work-tracking";
 import { anchorSlugOf, type LedgerFilter, queryLedger } from "../ledger/query";
 import { viewStats } from "../ledger/view";
-import { parseIscs } from "../lib/project-isc";
 import { readSnoozes, snoozedUntil } from "./snooze";
 import { isInProgress, openWork, type WorkCard, workOf } from "./work";
 

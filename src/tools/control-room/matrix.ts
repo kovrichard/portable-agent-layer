@@ -13,6 +13,7 @@
 
 import { dueFrom, readTelosGoals, type TelosGoal } from "../../opinions/telos-goals";
 import { type GoalProgress, progressFor, readGoalLinks } from "../../progress/goal-links";
+import { parseIscs } from "../../progress/isc-line";
 import {
   type ProjectProgress,
   readAllProjects,
@@ -20,7 +21,6 @@ import {
   type ServesKind,
 } from "../../progress/projects";
 import { isImportant, SERVES_MEANING } from "../../progress/serves";
-import { parseIscs } from "../lib/project-isc";
 import { type ControlRoomPrefs, readPrefs } from "./prefs";
 import { readSnoozes, snoozedUntil } from "./snooze";
 import { isInProgress, openWork, type WorkCard, workOf } from "./work";

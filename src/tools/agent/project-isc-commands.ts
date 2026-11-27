@@ -1,20 +1,18 @@
 import { logCommitment } from "../../progress/commitment-events";
-import { type ProjectProgress, writeProject } from "../../progress/projects";
+import { encodeIscText, ISC_BOX, parseIscs } from "../../progress/isc-line";
+import { type ProjectProgress, saveProjectTickets } from "../../progress/projects";
 import { type Leaf, leaf, UsageError } from "../lib/command";
 import {
   archiveLine,
   completeIsc,
-  encodeIscText,
-  ISC_BOX,
   type IscMove,
   type IscSections,
   newIscId,
-  parseIscs,
   removeIscLine,
   reopenIsc,
   selectIscs,
 } from "../lib/project-isc";
-import { fail, iscIdArg, joined, nonBlank, now, ok, requireProject } from "./project-io";
+import { fail, iscIdArg, joined, nonBlank, ok, requireProject } from "./project-io";
 
 function cmdAddIsc(name: string, text: string): undefined {
   const title = nonBlank(text, "<title...>");
@@ -23,8 +21,7 @@ function cmdAddIsc(name: string, text: string): undefined {
   const id = newIscId(current, p.changelog ?? "");
   const newLine = `- [ ] ISC-${id}: ${encodeIscText(title)}`;
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
   logCommitment(name, id, "opened", "cli");
   ok({
     added: true,
@@ -61,8 +58,7 @@ function sectionsOf(p: ProjectProgress): IscSections {
 function applyIscMove(p: ProjectProgress, move: IscMove & { ok: true }): void {
   p.criteria = move.criteria;
   p.changelog = move.changelog;
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
 }
 
 // Reopening pulls the line back out of the Changelog (or legacy Criteria) into
@@ -147,8 +143,7 @@ function cmdRetireIsc(name: string, id: string, by: string | null): undefined {
     `${line.replace(/\[[ x]\]/i, "[~]")}${suffix}`,
     "Retired"
   );
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
   logCommitment(name, id, "dropped", "cli");
   ok({ retired: true, id, supersededBy: by, archived: true });
 }
@@ -174,8 +169,7 @@ function cmdEditIsc(name: string, id: string, newText: string): undefined {
 
   if (inCriteria) p.criteria = rewrite(p.criteria ?? "");
   else p.changelog = rewrite(p.changelog ?? "");
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
   ok({
     edited: true,
     id,
@@ -198,10 +192,7 @@ function cmdPruneIsc(name: string): undefined {
     p.changelog = archiveLine(p.changelog, line);
   }
 
-  if (done.length > 0) {
-    p.updated = now();
-    writeProject(p);
-  }
+  if (done.length > 0) saveProjectTickets(p);
 
   const openLeft = parseIscs(p.criteria ?? "").filter((i) => i.status === "open").length;
   ok({ pruned: done.length, name, remaining_open: openLeft });

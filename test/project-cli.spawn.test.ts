@@ -9,6 +9,7 @@ import {
 } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { readProject } from "../src/progress/projects";
 import { run } from "../src/tools/agent/project";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
@@ -55,17 +56,20 @@ function isaFiles(): string[] {
   return readdirSync(base).filter((slug) => existsSync(resolve(base, slug, "ISA.md")));
 }
 
-// Read a named ISA.md body section straight from disk. resume no longer exposes
-// the raw Criteria/Changelog blobs (it projects a lean view), so storage-format
-// assertions read the file directly, mirroring the production `^## ` split.
-function section(slug: string, heading: string): string {
-  const isa = readFileSync(
-    resolve(TEST_HOME, "work", "projects", slug, "ISA.md"),
-    "utf-8"
-  );
-  const hit = isa.split(/^## /m).find((part) => part.startsWith(`${heading}\n`));
+/** A body section as readProject gives it, tickets rendered in from their log. */
+function section(slug: string, heading: "Goal" | "Criteria" | "Changelog"): string {
+  const saved = process.env.PAL_HOME;
+  process.env.PAL_HOME = TEST_HOME;
 
-  return hit ? hit.slice(heading.length).trim() : "";
+  try {
+    const project = readProject(slug);
+    const key = heading.toLowerCase() as "goal" | "criteria" | "changelog";
+
+    return project?.[key] ?? "";
+  } finally {
+    if (saved === undefined) delete process.env.PAL_HOME;
+    else process.env.PAL_HOME = saved;
+  }
 }
 
 async function addIsc(slug: string, title: string): Promise<string> {
@@ -462,13 +466,11 @@ describe("project CLI", () => {
 
   test("prune-isc backfills legacy done ISCs sitting in Criteria", async () => {
     await runCli(["create", "prune", "--path", "/tmp/prune-fake"]);
-    // Simulate a legacy project: done ISCs written directly into Criteria.
-    await runCli([
-      "update-section",
-      "prune",
-      "criteria",
-      "- [x] ISC-1: old done\n- [ ] ISC-2: still open\n- [x] ISC-3: also done",
-    ]);
+    const isa = resolve(TEST_HOME, "work", "projects", "prune", "ISA.md");
+    writeFileSync(
+      isa,
+      `${readFileSync(isa, "utf-8")}\n## Criteria\n\n- [x] ISC-1: old done\n- [ ] ISC-2: still open\n- [x] ISC-3: also done\n`
+    );
     const pruned = JSON.parse((await runCli(["prune-isc", "prune"])).stdout);
     expect(pruned.pruned).toBe(2);
     expect(pruned.remaining_open).toBe(1);

@@ -1,17 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
-  archiveLine,
   decodeIscText,
-  dropEmptyArchiveHeadings,
   encodeIscText,
   ISC_BOX,
   type Isc,
+  parseIscs,
+  statusFromBox,
+} from "../src/progress/isc-line";
+import {
+  archiveLine,
+  dropEmptyArchiveHeadings,
   iscTitle,
   newIscId,
-  parseIscs,
   removeIscLine,
   selectIscs,
-  statusFromBox,
   taskSlug,
 } from "../src/tools/lib/project-isc";
 

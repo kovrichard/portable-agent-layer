@@ -8,6 +8,7 @@
  * context is whatever bullets the ISA carries.
  */
 
+import { type Isc, parseIscs } from "../../progress/isc-line";
 import {
   readProject,
   type ServesAuthority,
@@ -16,7 +17,6 @@ import {
 import { SERVES_MEANING } from "../../progress/serves";
 import { anchorSlugOf, queryLedger } from "../ledger/query";
 import { type LedgerViewRow, viewRows } from "../ledger/view";
-import { type Isc, parseIscs } from "../lib/project-isc";
 import { readSnoozes, snoozedUntil } from "./snooze";
 import { openWork, type WorkCard, workOf } from "./work";
 

@@ -1,71 +1,13 @@
 /**
- * ISCs — the numbered criteria a project is judged against, stored as markdown
- * lines inside a project's ISA.md.
+ * ISCs — the criteria a project is judged against, edited as the markdown lines
+ * readProject renders them as.
  *
- * The tool that edits them is only ever spawned, so the line format, the
- * escaping that keeps a multi-paragraph criterion on one line, and the archive
- * bookkeeping were reachable only by running the CLI. Each function here takes
- * the text it operates on, plus the clock it stamps with.
+ * The tool that edits them is only ever spawned, so the archive bookkeeping was
+ * reachable only by running the CLI. Each function here takes the text it
+ * operates on, plus the clock it stamps with.
  */
 
-export type IscStatus = "open" | "done" | "retired";
-
-export const ISC_BOX: Record<IscStatus, string> = {
-  open: "[ ]",
-  done: "[x]",
-  retired: "[~]",
-};
-
-export function statusFromBox(box: string): IscStatus {
-  if (box.toLowerCase() === "x") return "done";
-
-  if (box === "~") return "retired";
-
-  return "open";
-}
-
-export interface Isc {
-  /** Four random characters for a new ISC; older ones keep their number. */
-  id: string;
-  text: string;
-  status: IscStatus;
-}
-
-/**
- * An ISC is one markdown line, so a newline in its text would end the record
- * and strand every paragraph after it as unparseable debris. Backslashes are
- * escaped first so that decoding a literal "\n" in a regex cannot be mistaken
- * for the separator.
- */
-export function encodeIscText(text: string): string {
-  return text
-    .replaceAll("\\", "\\\\")
-    .replaceAll("\r\n", "\n")
-    .replaceAll("\r", "\n")
-    .replaceAll("\n", "\\n");
-}
-
-const ISC_UNESCAPE: Record<string, string> = { n: "\n", "\\": "\\" };
-
-export function decodeIscText(stored: string): string {
-  return stored.replaceAll(/\\(.)/g, (whole, ch) => ISC_UNESCAPE[ch] ?? whole);
-}
-
-export function parseIscs(criteria: string): Isc[] {
-  const out: Isc[] = [];
-
-  for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-([0-9a-z]+):\s+(.+)$/i).exec(line);
-    if (m)
-      out.push({
-        id: m[2].toLowerCase(),
-        text: decodeIscText(m[3].trim()),
-        status: statusFromBox(m[1]),
-      });
-  }
-
-  return out;
-}
+import { type Isc, parseIscs } from "../../progress/isc-line";
 
 /**
  * A full ISC line collapsed to a glanceable title for resume: cut at the first

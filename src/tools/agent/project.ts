@@ -11,6 +11,7 @@
 import { existsSync } from "node:fs";
 import { toPath } from "../../core/paths";
 import { writeBinding } from "../../progress/bindings";
+import { parseIscs } from "../../progress/isc-line";
 import {
   defaultSlug,
   deleteProject,
@@ -26,7 +27,7 @@ import {
 import { isServesKind, SERVES_KINDS, setServes } from "../../progress/serves";
 import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
 import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";
-import { iscTitle, parseIscs } from "../lib/project-isc";
+import { iscTitle } from "../lib/project-isc";
 import { scriptArgs } from "../lib/script-args";
 import { fail, joined, nonBlank, now, ok, requireProject } from "./project-io";
 import { iscCommands } from "./project-isc-commands";
