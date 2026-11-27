@@ -264,7 +264,7 @@ describe("setup and join", () => {
   });
 
   test.each([
-    ["s3://bucket/pal", "S3 stores are not supported yet"],
+    ["s3:///pal", "name the bucket"],
     ["ftp://host/pal", 'unknown store "ftp://"'],
   ])("--store %s is refused, saying why", async (where, reason) => {
     const setup = await cli("A", ["setup", "--store", where]);

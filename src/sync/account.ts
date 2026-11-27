@@ -10,14 +10,18 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendEvent } from "../bronze/events";
+import { AwsCredentialsError, awsCredentials } from "./aws-credentials";
 import { type BlobStore, directoryStore } from "./blob-store";
 import { randomKey, unwrapDataKey, wrapDataKey } from "./crypto";
+import { s3Store } from "./s3-store";
 import { syncStateDir } from "./state";
 
-export interface StoreConfig {
-  kind: "dir";
-  path: string;
-}
+/** Names where the credentials live, never the credentials themselves. */
+export type StoreConfig =
+  | { kind: "dir"; path: string }
+  | { kind: "s3"; bucket: string; prefix: string; profile?: string; endpoint?: string };
+
+const S3_SETTINGS = ["profile", "endpoint"] as const;
 
 export interface SyncAccount {
   store: StoreConfig;
@@ -33,10 +37,28 @@ export const accountKeyFile = (home: string) =>
   resolve(syncStateDir(home), "account.key");
 const accountFile = (home: string) => resolve(syncStateDir(home), "account.json");
 
+function s3ConfigOf(where: string): StoreConfig {
+  const url = new URL(where);
+  if (!url.hostname)
+    throw new AccountError("name the bucket: s3://<bucket>/<prefix>?profile=<name>");
+  const settings = S3_SETTINGS.flatMap((name) => {
+    const value = url.searchParams.get(name);
+
+    return value ? [[name, value]] : [];
+  });
+
+  return {
+    kind: "s3",
+    bucket: url.hostname,
+    prefix: decodeURIComponent(url.pathname).replace(/^\/+|\/+$/g, ""),
+    ...Object.fromEntries(settings),
+  };
+}
+
 /**
  * Where the store is, as a person types it: a folder path or `file://` URL for
- * a folder this machine can reach (a NAS mount, a synced folder), `s3://…` once
- * S3 exists.
+ * a folder this machine can reach (a NAS mount, a synced folder), or
+ * `s3://<bucket>/<prefix>?profile=<name>` for an S3 bucket.
  */
 export function storeConfigOf(where: string, toPath: (p: string) => string): StoreConfig {
   const scheme = /^([a-z][a-z0-9+.-]*):\/\//i.exec(where)?.[1]?.toLowerCase();
@@ -44,13 +66,33 @@ export function storeConfigOf(where: string, toPath: (p: string) => string): Sto
 
   if (scheme === "file") return { kind: "dir", path: toPath(fileURLToPath(where)) };
 
-  if (scheme === "s3")
-    throw new AccountError("S3 stores are not supported yet; pass a folder for now");
+  if (scheme === "s3") return s3ConfigOf(where);
   throw new AccountError(`unknown store "${scheme}://"; pass a folder path or s3://…`);
 }
 
+/** The store as a person would type it again on another machine. */
+export function storeWhere(config: StoreConfig): string {
+  if (config.kind === "dir") return config.path;
+  const query = new URLSearchParams(
+    S3_SETTINGS.flatMap((name) => (config[name] ? [[name, config[name]]] : []))
+  ).toString();
+
+  const settings = query ? `?${query}` : "";
+
+  return `s3://${config.bucket}/${config.prefix}${settings}`;
+}
+
+function s3StoreFor(config: StoreConfig & { kind: "s3" }): BlobStore {
+  try {
+    return s3Store(config, awsCredentials(config.profile));
+  } catch (err) {
+    if (err instanceof AwsCredentialsError) throw new AccountError(err.message);
+    throw err;
+  }
+}
+
 export function storeFor(config: StoreConfig): BlobStore {
-  return directoryStore(config.path);
+  return config.kind === "s3" ? s3StoreFor(config) : directoryStore(config.path);
 }
 
 export function readAccount(home: string): SyncAccount | null {

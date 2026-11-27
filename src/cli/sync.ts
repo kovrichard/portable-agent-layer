@@ -14,6 +14,7 @@ import {
   type StoreConfig,
   setupAccount,
   storeConfigOf,
+  storeWhere,
 } from "../sync/account";
 import type { SyncResult } from "../sync/context";
 import {
@@ -38,13 +39,13 @@ const STORE_OPTION = {
   type: "string",
   value: "<where>",
   description:
-    "Where both machines sync through: a folder they can both reach, or s3://…",
+    "Where both machines sync through: a folder they can both reach, or s3://<bucket>/<prefix>?profile=<aws profile>",
 } as const;
 
 function storeOf(where: string | undefined): StoreConfig {
   if (!where)
     throw new UsageError(
-      "Pass --store <where>: a folder both machines can reach (a NAS mount, a synced folder)"
+      "Pass --store <where>: a folder both machines can reach (a NAS mount, a synced folder), or s3://<bucket>/<prefix>?profile=<aws profile>"
     );
 
   return storeConfigOf(where, toPath);
@@ -62,11 +63,16 @@ function kitText(recoveryKey: string, store: StoreConfig): string {
     "It is the only way to add another machine, or to get your synced memory back",
     "if you lose every machine. Nobody can reset it, PAL included.",
     "",
-    `Store: ${store.path}`,
-    `Add a machine: pal cli sync join --store ${store.path}`,
-    "(on that machine, the path where it reaches the same folder)",
+    `Store: ${storeWhere(store)}`,
+    `Add a machine: pal cli sync join --store ${storeWhere(store)}`,
+    store.kind === "dir"
+      ? "(on that machine, the path where it reaches the same folder)"
+      : "(on that machine, with its own AWS key under the same profile name)",
   ].join("\n");
 }
+
+const storeLabel = (store: StoreConfig) =>
+  `${store.kind === "dir" ? "folder" : "S3"} ${storeWhere(store)}`;
 
 async function failsAsUsage<T>(work: () => Promise<T>): Promise<T> {
   try {
@@ -179,7 +185,7 @@ function statusLeaf(deps: SyncDeps): Leaf {
       const account = readAccount(deps.home());
       if (!account) return console.log(NOT_SET_UP);
       const last = eventsSince("sync", new Date(Date.now() - 30 * 86_400_000)).at(-1);
-      console.log(`Store: folder ${account.store.path}`);
+      console.log(`Store: ${storeLabel(account.store)}`);
       console.log(`Last sync that changed anything: ${last?.ts ?? "none in 30 days"}`);
       console.log(`In quarantine: ${quarantineCount(deps.home())} file(s)`);
     },
