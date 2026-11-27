@@ -15,6 +15,7 @@ describe("syncKindOf", () => {
     ["records/import-log/import-log.jsonl", "segments"],
     ["work/unbound-history/loose.jsonl", "segments"],
     ["records/labelled-turns/turns-2026-11.jsonl", "segments"],
+    ["records/review-queue/_review.jsonl", "segments"],
     ["work/projects/pal/tickets.jsonl", "segments"],
     ["work/projects/pal/ISA.md", "whole"],
     ["memory/sales/diary-events.jsonl", "whole"],

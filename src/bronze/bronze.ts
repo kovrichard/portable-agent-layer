@@ -220,7 +220,7 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/knowledge",
     formerFiles: { match: /^_review\.jsonl$/ },
     files: "_review.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {

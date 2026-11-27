@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runKnowledge } from "../src/cli/knowledge";
 import { reload } from "../src/core/settings";
@@ -8,6 +8,7 @@ import {
   type ExtractedEntity,
   planExtraction,
   queueForReview,
+  reviewQueueFile,
 } from "../src/knowledge/entity-extraction";
 import {
   acceptReview,
@@ -104,6 +105,34 @@ describe("review answers", () => {
     const [id] = queue(extracted({ name: "Zsófia" }));
     expect(() => acceptReview(id, { as: "nobody-here" })).toThrow("nobody-here");
     expect(pendingReviews().map((i) => i.id)).toEqual([id]);
+  });
+
+  test("an answer is appended to the queue, which only grows", () => {
+    const [kept, answered] = queue(
+      extracted({ name: "Dax" }),
+      extracted({ name: "Pip" })
+    );
+    const before = readFileSync(reviewQueueFile(), "utf-8");
+
+    rejectReview(answered);
+
+    const after = readFileSync(reviewQueueFile(), "utf-8");
+    expect(after.startsWith(before)).toBe(true);
+    expect(JSON.parse(after.slice(before.length))).toMatchObject({
+      answered,
+      outcome: "rejected",
+    });
+    expect(pendingReviews().map((i) => i.id)).toEqual([kept]);
+  });
+
+  test("an answer from another machine settles the item here too", () => {
+    const [id] = queue(extracted({ name: "Dax" }));
+    appendFileSync(
+      reviewQueueFile(),
+      `${JSON.stringify({ answered: id, outcome: "accepted", at: "2026-11-27T10:00:00.000Z" })}\n`
+    );
+
+    expect(pendingReviews()).toEqual([]);
   });
 
   test("an unknown id changes nothing", () => {

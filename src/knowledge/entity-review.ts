@@ -1,9 +1,11 @@
 /**
  * The user's answers to the extraction review queue: an accepted item is written
- * to the entity the user names (or a new one), a rejected one is dropped.
+ * to the entity the user names (or a new one), a rejected one is dropped. An
+ * answer is a line appended to the queue, so the queue only grows and two
+ * machines merge it line by line.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { loadKnownEntities, loadNameIndex } from "./entity-cards";
 import { ingestInput, type ReviewItem, reviewQueueFile } from "./entity-extraction";
 import { indexedEntities, type NamedEntity, type NameIndex } from "./entity-names";
@@ -21,27 +23,45 @@ export interface Accepted {
   created: boolean;
 }
 
-function parseItem(line: string): ReviewItem[] {
+interface Answer {
+  answered: string;
+  outcome: "accepted" | "rejected";
+  at: string;
+}
+
+type QueueLine = ReviewItem | Answer;
+
+function parseLine(line: string): QueueLine[] {
   try {
-    return [JSON.parse(line) as ReviewItem];
+    return [JSON.parse(line) as QueueLine];
   } catch {
     return [];
   }
 }
 
-export function pendingReviews(): ReviewItem[] {
+function queueLines(): QueueLine[] {
   const file = reviewQueueFile();
   if (!existsSync(file)) return [];
 
-  return readFileSync(file, "utf-8").split("\n").filter(Boolean).flatMap(parseItem);
+  return readFileSync(file, "utf-8").split("\n").filter(Boolean).flatMap(parseLine);
 }
 
-function takeFromQueue(id: string): ReviewItem | null {
-  const items = pendingReviews();
-  const item = items.find((i) => i.id === id);
+const isAnswer = (line: QueueLine): line is Answer => "answered" in line;
+
+export function pendingReviews(): ReviewItem[] {
+  const lines = queueLines();
+  const answered = new Set(lines.filter(isAnswer).map((a) => a.answered));
+
+  return lines.filter(
+    (line): line is ReviewItem => !isAnswer(line) && !answered.has(line.id)
+  );
+}
+
+function takeFromQueue(id: string, outcome: Answer["outcome"]): ReviewItem | null {
+  const item = pendingReviews().find((i) => i.id === id);
   if (!item) return null;
-  const rest = items.filter((i) => i !== item);
-  writeFileSync(reviewQueueFile(), rest.map((i) => `${JSON.stringify(i)}\n`).join(""));
+  const answer: Answer = { answered: id, outcome, at: new Date().toISOString() };
+  appendFileSync(reviewQueueFile(), `${JSON.stringify(answer)}\n`);
 
   return item;
 }
@@ -93,7 +113,7 @@ function acceptedInput(
 }
 
 export function rejectReview(id: string): ReviewItem | null {
-  return takeFromQueue(id);
+  return takeFromQueue(id, "rejected");
 }
 
 /** Writes the item to `as` when given, else to a new entity named `name` or as extracted. */
@@ -102,7 +122,7 @@ export function acceptReview(id: string, choice: AcceptChoice = {}): Accepted | 
   if (!queued) return null;
   const index = loadNameIndex(loadKnownEntities());
   const result = ingestEntities(acceptedInput(queued, choice, index), queued.source);
-  takeFromQueue(id);
+  takeFromQueue(id, "accepted");
   const written = result.people[0] ?? result.companies[0];
 
   return { item: queued, slug: written.slug, created: written.created };
