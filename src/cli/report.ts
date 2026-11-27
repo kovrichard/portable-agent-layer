@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { type Identifiers, type Leak, machineIdentifiers } from "../report/leaks";
+import { type ReportMeta, reportMeta } from "../report/meta";
+import { type Git, gitIn, openPullRequest, type PrOutcome } from "../report/pull-request";
 import {
   declineReport,
   draftReport,
@@ -17,6 +19,8 @@ import { group, type Leaf, leaf, UsageError } from "../tools/lib/command";
 
 export interface ReportDeps {
   gh?: Gh;
+  git?: (dir: string) => Git;
+  meta?: () => ReportMeta;
   ids: () => Identifiers;
 }
 
@@ -52,6 +56,22 @@ function printOutcome(outcome: SendOutcome): void {
   else console.log(outcomeText(outcome));
 }
 
+function printPrOutcome(outcome: PrOutcome): number {
+  if (outcome.kind === "opened") {
+    console.log(`Opened: ${outcome.url}`);
+
+    return 0;
+  }
+
+  if (outcome.kind === "refused") console.log(outcome.reason);
+  else {
+    console.log(`In the ${outcome.source}:`);
+    printLeaks(outcome.leaks);
+  }
+
+  return 1;
+}
+
 function draftLeaf(deps: ReportDeps): Leaf {
   return leaf({
     summary:
@@ -69,7 +89,8 @@ function draftLeaf(deps: ReportDeps): Leaf {
         throw new UsageError("Pass --title and --body-file");
       const report = draftReport(
         values.title,
-        readFileSync(values["body-file"], "utf-8")
+        readFileSync(values["body-file"], "utf-8"),
+        (deps.meta ?? reportMeta)()
       );
       console.log(
         `Drafted report ${report.id}. Show it to the user: pal cli report show ${report.id}`
@@ -114,16 +135,37 @@ function sendLeaf(deps: ReportDeps): Leaf {
         value: "<issue>",
         description: "Add it to this issue instead",
       },
+      pr: {
+        type: "boolean",
+        description:
+          "Open a pull request with the fix committed in a PAL checkout instead of an issue",
+      },
+      dir: {
+        type: "string",
+        value: "<path>",
+        description: "The PAL checkout holding the fix (default: the current folder)",
+      },
     },
     run: ({ positionals, values }) => {
       if (!values.approved)
         throw new UsageError(
           "Show the report to the user first; pass --approved once they say yes"
         );
+
+      if (values.pr && values.comment)
+        throw new UsageError("Pass --pr or --comment, not both");
       const report = readReport(idOf(positionals));
-      printOutcome(
-        sendReport(report, { comment: values.comment, gh: deps.gh, ids: deps.ids() })
-      );
+      const ids = deps.ids();
+
+      if (values.pr) {
+        const git = (deps.git ?? gitIn)(values.dir ?? process.cwd());
+
+        return printPrOutcome(openPullRequest(report, { git, gh: deps.gh, ids }));
+      }
+
+      printOutcome(sendReport(report, { comment: values.comment, gh: deps.gh, ids }));
+
+      return 0;
     },
   });
 }

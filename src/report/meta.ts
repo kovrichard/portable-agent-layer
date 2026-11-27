@@ -3,9 +3,11 @@
  * from the machine reaches a report.
  */
 
+import { spawnSync } from "node:child_process";
 import { arch, platform } from "node:os";
 import { getActiveAgent } from "../core/agent";
 import { readEnvironment } from "../core/environment";
+import { palPkg } from "../core/paths";
 import { raw } from "../core/settings";
 import {
   getInstalledVersion,
@@ -31,10 +33,28 @@ function contextTurnedOff(): string[] {
     .sort();
 }
 
-export function reportMeta(): ReportMeta {
+type HeadOf = (dir: string) => string;
+
+const shortHead: HeadOf = (dir) => {
+  const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+    cwd: dir,
+    encoding: "utf-8",
+  });
+
+  return head.status === 0 ? head.stdout.trim() : "";
+};
+
+/** A repo checkout's package.json lags its canary releases, so its commit is what names the code that ran. */
+export function repoChannel(headOf: HeadOf = shortHead): string {
+  const commit = headOf(palPkg());
+
+  return commit ? `repo @ ${commit}` : "repo";
+}
+
+export function reportMeta(headOf: HeadOf = shortHead): ReportMeta {
   return {
     palVersion: getInstalledVersion(),
-    channel: isRepoMode() ? "repo" : updateChannel(),
+    channel: isRepoMode() ? repoChannel(headOf) : updateChannel(),
     os: readEnvironment()?.os ?? platform(),
     arch: arch(),
     agent: getActiveAgent(),

@@ -41,7 +41,7 @@ interface GhResult {
 
 export type Gh = (args: string[]) => GhResult;
 
-const runGh: Gh = (args) => {
+export const runGh: Gh = (args) => {
   const res = spawnSync("gh", args, { encoding: "utf-8" });
 
   return { ok: res.status === 0, out: `${res.stdout ?? ""}${res.stderr ?? ""}`.trim() };
@@ -169,9 +169,25 @@ export type SendOutcome =
   | { kind: "browser"; url: string }
   | { kind: "manual"; file: string };
 
-function fileWithGh(report: Report, gh: Gh, comment?: string): GhResult {
+/** The body as a file, for gh's --body-file. */
+export function writeBodyFile(report: Report): string {
   const bodyFile = `${reportFile(report.id)}.md`;
-  writeFileSync(bodyFile, `${report.body}`);
+  writeFileSync(bodyFile, report.body);
+
+  return bodyFile;
+}
+
+export function recordSent(report: Report, via: string): void {
+  saveReport({ ...report, sent: new Date().toISOString() });
+  logReport("sent", report, { via });
+}
+
+export function recordBlocked(report: Report, leaks: number): void {
+  logReport("blocked", report, { leaks });
+}
+
+function fileWithGh(report: Report, gh: Gh, comment?: string): GhResult {
+  const bodyFile = writeBodyFile(report);
 
   if (comment)
     return gh([
@@ -201,9 +217,8 @@ function fileWithGh(report: Report, gh: Gh, comment?: string): GhResult {
 function withoutGh(report: Report): SendOutcome {
   const url = newIssueUrl(report);
   if (url) return { kind: "browser", url };
-  writeFileSync(`${reportFile(report.id)}.md`, report.body);
 
-  return { kind: "manual", file: `${reportFile(report.id)}.md` };
+  return { kind: "manual", file: writeBodyFile(report) };
 }
 
 export function sendReport(
@@ -212,7 +227,7 @@ export function sendReport(
 ): SendOutcome {
   const leaks = reportLeaks(report, options.ids);
   if (leaks.length > 0) {
-    logReport("blocked", report, { leaks: leaks.length });
+    recordBlocked(report, leaks.length);
 
     return { kind: "blocked", leaks };
   }
@@ -225,8 +240,7 @@ export function sendReport(
     ? { kind: "filed", url: filed.out.split("\n").at(-1) ?? "" }
     : withoutGh(report);
 
-  saveReport({ ...report, sent: new Date().toISOString() });
-  logReport("sent", report, { via: outcome.kind });
+  recordSent(report, outcome.kind);
 
   return outcome;
 }
