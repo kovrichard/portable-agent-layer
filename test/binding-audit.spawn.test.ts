@@ -36,11 +36,9 @@ describe("auditBindings", () => {
     expect(auditBindings([project("alpha", checkout("alpha"))], {})).toEqual([]);
   });
 
-  test("reports a project it cannot locate at all", async () => {
+  test("a project not checked out here, as one synced from another machine, is no issue", async () => {
     const { auditBindings } = await lib();
-    expect(auditBindings([project("alpha")], {})).toEqual([
-      { kind: "unlocatable", project: "alpha" },
-    ]);
+    expect(auditBindings([project("alpha")], {})).toEqual([]);
   });
 
   test("reports a path that no longer exists", async () => {

@@ -402,18 +402,18 @@ export function seedBindings(
 }
 
 export type BindingIssue =
-  | { kind: "unlocatable"; project: string }
   | { kind: "missing"; project: string; path: string }
   | { kind: "shared"; path: string; projects: string[] };
 
 /**
  * Health of this machine's project bindings.
  *
- * Three things can go wrong once a path is machine-local. A project can become
- * unlocatable, which is what losing bindings.json looks like from the outside.
- * A binding can outlive the directory it names. And two projects can end up on
- * one directory — the shape that appears when a name is reused for a second
- * checkout, where binding by name alone would silently repoint the first.
+ * A project with no checkout here is not an issue: sync brings every machine's
+ * projects, and most live elsewhere. Opening a session in a checkout proposes
+ * its binding. Two things can still go wrong: a binding can outlive the
+ * directory it names, and two projects can end up on one directory — the shape
+ * that appears when a name is reused for a second checkout, where binding by
+ * name alone would silently repoint the first.
  *
  * Read-only by construction: it reports, it never repairs.
  */
@@ -426,10 +426,7 @@ export function auditBindings(
 
   for (const project of projects) {
     const path = projectPathOnThisMachine(project, bindings);
-    if (!path) {
-      issues.push({ kind: "unlocatable", project: project.name });
-      continue;
-    }
+    if (!path) continue;
 
     if (!existsSync(path)) {
       issues.push({ kind: "missing", project: project.name, path });

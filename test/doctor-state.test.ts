@@ -130,11 +130,15 @@ describe("PAL's dependencies", () => {
 });
 
 describe("project bindings", () => {
-  test("a project not checked out here gets the set-path command", () => {
-    const finding = bindingFinding({ kind: "unlocatable", project: "alpha" });
+  test("a binding to a folder that is gone gets the set-path command", () => {
+    const finding = bindingFinding({
+      kind: "missing",
+      project: "alpha",
+      path: "/gone/a",
+    });
 
     expect(finding.severity).toBe("warn");
-    expect(finding.title).toContain("not checked out");
+    expect(finding.title).toBe("Project alpha points at /gone/a, which does not exist");
     expect(finding.fix?.command).toBe("pal cli project set-path alpha <path>");
   });
 

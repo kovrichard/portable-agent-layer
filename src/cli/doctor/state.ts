@@ -201,12 +201,6 @@ function telosFindings(home: string): Finding[] {
 
 /** "Points at" rather than "bound to": the path may come from a legacy record's own field. */
 function bindingProblem(issue: BindingIssue): { project: string; title: string } {
-  if (issue.kind === "unlocatable")
-    return {
-      project: issue.project,
-      title: `Project ${issue.project} is not checked out on this machine`,
-    };
-
   if (issue.kind === "missing")
     return {
       project: issue.project,
