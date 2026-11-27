@@ -126,6 +126,14 @@ describe("the sweep finishes staged copies", () => {
     expect(await preserveTranscripts(at)).toEqual({ copied: 0, unchanged: 1, failed: 0 });
   });
 
+  test("archives the staged copy itself while the original is unchanged", async () => {
+    const own = writeTranscript("-sales/job.jsonl", "staged\n");
+    stageSessionTranscript(own, at);
+    writeTranscript("-sales/job.jsonl", "source\n");
+    await preserveTranscripts(at);
+    expect(copied("-sales/job.jsonl")).toBe("staged\n");
+  });
+
   test("keeps the session after Claude Code deleted the original", async () => {
     const own = writeTranscript("-sales/job.jsonl", '{"a":1}\n');
     stageSessionTranscript(own, at);

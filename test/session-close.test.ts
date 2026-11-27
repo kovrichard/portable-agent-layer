@@ -45,6 +45,18 @@ describe("closeSession", () => {
     expect(calls).toContain("startSync");
   });
 
+  test("a payload that could not be read still runs every step", () => {
+    const { calls, steps } = recordingSteps(() => null);
+    closeSession(null, steps);
+    expect(calls).toEqual([
+      "logEnd:undefined",
+      "autoUpdate:undefined",
+      "startSync",
+      "spawnPreserve",
+      "stage:undefined",
+    ]);
+  });
+
   test("a failing end log still spawns the sweep and copies the transcript", () => {
     const { calls, steps } = recordingSteps(() => null);
     steps.logEnd = () => {
