@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import {
+  type AdaptationRule,
   addDraft,
   addOpinion,
   type DraftInput,
@@ -12,9 +13,14 @@ import {
   opinionsContext,
   readRules,
   retireRule,
-  rulesPath,
 } from "../src/opinions/adaptation-rules";
 import { CORRECTION_KINDS } from "../src/opinions/correction-kind";
+import {
+  legacyRulesPath,
+  moveLegacyRulesIntoLog,
+  ruleLogPath,
+  saveRule,
+} from "../src/opinions/rule-log";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -31,9 +37,101 @@ const draft: DraftInput = {
   evidence: ["The user had to ask for an alternative twice."],
 };
 
-describe("rulesPath", () => {
-  test("lives in the adaptation directory of the active home", () => {
-    expect(rulesPath()).toBe(resolve(HOME, "memory", "adaptation", "rules.json"));
+describe("the rule log", () => {
+  const lines = () =>
+    readFileSync(ruleLogPath(), "utf-8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+
+  test("lives in records/rules of the active home", () => {
+    expect(ruleLogPath()).toBe(resolve(HOME, "records", "rules", "rules.jsonl"));
+  });
+
+  test("a decision appends the rule's new state instead of rewriting the file", () => {
+    const { id } = addDraft(draft);
+    const before = readFileSync(ruleLogPath(), "utf-8");
+
+    decideRule(id, "approved");
+
+    expect(readFileSync(ruleLogPath(), "utf-8").startsWith(before)).toBe(true);
+    expect(lines().map((line) => line.rule.status)).toEqual(["draft", "approved"]);
+  });
+
+  test("a change in the same millisecond is still stamped after the last one", () => {
+    const rule = addDraft(draft);
+    saveRule({ ...rule, status: "approved" }, new Date(0));
+
+    const [first, second] = lines();
+    expect(Date.parse(second.at)).toBeGreaterThan(Date.parse(first.at));
+    expect(readRules()[0].status).toBe("approved");
+  });
+
+  test("the newest line wins whatever order two machines' lines arrive in", () => {
+    const rule = addDraft(draft);
+    const at = (iso: string, status: string) =>
+      `${JSON.stringify({ at: iso, rule: { ...rule, status } })}\n`;
+    appendFileSync(ruleLogPath(), at("2030-01-02T00:00:00.000Z", "approved"));
+    appendFileSync(ruleLogPath(), at("2030-01-01T00:00:00.000Z", "denied"));
+
+    expect(readRules()[0].status).toBe("approved");
+  });
+
+  test("a folded widening stays in the log but not among the rules", () => {
+    const rule = addDraft(draft);
+    decideRule(rule.id, "approved");
+    const widening = addDraft({ ...draft, widens: rule.id });
+
+    decideRule(widening.id, "approved");
+
+    expect(lines().at(-1).rule).toMatchObject({ id: widening.id, status: "merged" });
+    expect(readRules().map((r) => r.id)).toEqual([rule.id]);
+  });
+});
+
+describe("rules from before the log", () => {
+  const legacy = (rules: unknown) => {
+    mkdirSync(dirname(legacyRulesPath()), { recursive: true });
+    writeFileSync(legacyRulesPath(), JSON.stringify(rules));
+  };
+  const old = {
+    ...draft,
+    id: "old1",
+    status: "approved",
+    createdAt: "2026-10-01T00:00:00.000Z",
+    decidedAt: "2026-10-02T00:00:00.000Z",
+  };
+
+  test("read until they move into the log", () => {
+    legacy([old]);
+
+    expect(readRules()).toEqual([old as AdaptationRule]);
+  });
+
+  test("a later change in the log wins over rules.json", () => {
+    legacy([old]);
+
+    retireRule("old1");
+    legacy([old]);
+
+    expect(readRules()[0].status).toBe("retired");
+  });
+
+  test("move into the log once, as the same line on every machine", () => {
+    legacy([old]);
+
+    expect(moveLegacyRulesIntoLog()).toBe(1);
+    expect(moveLegacyRulesIntoLog()).toBe(0);
+    expect(readFileSync(ruleLogPath(), "utf-8")).toBe(
+      `${JSON.stringify({ at: old.decidedAt, rule: old })}\n`
+    );
+  });
+
+  test("a corrupt rules.json reads as no rules", () => {
+    legacy("ignored");
+    writeFileSync(legacyRulesPath(), "{ not json", "utf-8");
+
+    expect(readRules()).toEqual([]);
   });
 });
 
@@ -58,11 +156,11 @@ describe("readRules", () => {
     expect(readRules()).toEqual([]);
   });
 
-  test("a corrupt file reads as no rules", () => {
-    mkdirSync(resolve(HOME, "memory", "adaptation"), { recursive: true });
-    writeFileSync(rulesPath(), "{ not json", "utf-8");
+  test("a broken line is skipped", () => {
+    const rule = addDraft(draft);
+    appendFileSync(ruleLogPath(), "{ not json\n");
 
-    expect(readRules()).toEqual([]);
+    expect(readRules()).toEqual([rule]);
   });
 });
 
@@ -163,13 +261,6 @@ describe("decideRule", () => {
 
     expect(result.ok).toBe(false);
     expect(readRules().map((r) => r.status)).toEqual(["draft", "draft"]);
-  });
-
-  test("the file stays valid JSON after a decision", () => {
-    const { id } = addDraft(draft);
-    decideRule(id, "approved");
-
-    expect(() => JSON.parse(readFileSync(rulesPath(), "utf-8"))).not.toThrow();
   });
 
   test("keeping a draft as an opinion approves it to steer every session", () => {

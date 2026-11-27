@@ -2,19 +2,12 @@
  * The turn log: every message the reaction rater labelled, with the end of the
  * reply it answered. Rule drafts are proven by replaying their trigger over it.
  *
- * One append-only file per month, so parallel sessions never rewrite each
- * other's lines; a month is deleted whole once it ends before the window.
+ * One append-only file per month, so parallel sessions and other machines never
+ * rewrite each other's lines. A relabelled turn is appended again with the time
+ * of its revision, and reading keeps each turn's newest revision.
  */
 
-import {
-  appendFileSync,
-  existsSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { storeDir } from "../bronze/bronze";
 
@@ -47,6 +40,7 @@ interface StoredCorrectionKind {
 
 export interface Turn extends TurnInput {
   ts: string;
+  revisedAt?: string;
 }
 
 export interface RequestedTurn extends Turn {
@@ -91,22 +85,24 @@ function monthFiles(): string[] {
     : [];
 }
 
-function pruneMonthsBefore(cutoff: number): void {
-  for (const file of monthFiles()) {
-    const end = monthEnd(file);
-    if (end !== null && end <= cutoff) rmSync(resolve(turnsDir(), file), { force: true });
-  }
+function monthsEndingAfter(cutoff: number): string[] {
+  return monthFiles().filter((file) => (monthEnd(file) ?? 0) > cutoff);
+}
+
+function appendLine(turn: Turn): void {
+  appendFileSync(
+    resolve(turnsDir(), monthFile(new Date(turn.ts))),
+    `${JSON.stringify(turn)}\n`
+  );
 }
 
 export function appendTurn(turn: TurnInput, now: Date = new Date()): void {
-  const record: Turn = {
+  appendLine({
     ts: now.toISOString(),
     ...turn,
     message: turn.message.slice(0, MESSAGE_MAX),
     replyEnd: turn.replyEnd.slice(-REPLY_END_MAX),
-  };
-  appendFileSync(resolve(turnsDir(), monthFile(now)), `${JSON.stringify(record)}\n`);
-  pruneMonthsBefore(now.getTime() - WINDOW_DAYS * DAY_MS);
+  });
 }
 
 function parseLine(line: string): Turn | null {
@@ -123,33 +119,68 @@ export function turnKey(turn: Turn): string {
   return `${turn.session} ${turn.ts}`;
 }
 
-function replacedLine(line: string, replacements: Map<string, Turn>): string {
-  const turn = parseLine(line);
-  const replacement = turn && replacements.get(turnKey(turn));
+function revisedAfter(turn: Turn, now: Date): string {
+  const previous = turn.revisedAt ? Date.parse(turn.revisedAt) + 1 : 0;
 
-  return replacement ? JSON.stringify(replacement) : line;
+  return new Date(Math.max(now.getTime(), previous)).toISOString();
 }
 
-/**
- * Rewrites the given turns in place. Each month file is read and replaced in one
- * synchronous step, leaving only microseconds in which another session's append
- * could be lost; a backfill runs once, so that window is accepted.
- */
-export function replaceTurns(replacements: Map<string, Turn>): void {
-  for (const file of monthFiles()) {
-    const path = resolve(turnsDir(), file);
-    const lines = readFileSync(path, "utf-8").split("\n");
-    const rewritten = lines.map((line) => replacedLine(line, replacements));
-    writeFileSync(`${path}.tmp`, rewritten.join("\n"));
-    renameSync(`${path}.tmp`, path);
+/** Appends a revision of each turn, stamped after the one it revises; reading keeps the newest. */
+export function replaceTurns(
+  replacements: Map<string, Turn>,
+  now: Date = new Date()
+): void {
+  for (const turn of replacements.values())
+    appendLine({ ...turn, revisedAt: revisedAfter(turn, now) });
+}
+
+function newerRevision(kept: Turn, other: Turn): Turn {
+  const keptAt = kept.revisedAt ?? "";
+  const otherAt = other.revisedAt ?? "";
+  if (keptAt !== otherAt) return otherAt > keptAt ? other : kept;
+
+  return JSON.stringify(other) > JSON.stringify(kept) ? other : kept;
+}
+
+function newestRevisionByKey(turns: Turn[]): Map<string, Turn> {
+  const revisions = new Map<string, Turn>();
+
+  for (const turn of turns.filter((t) => t.revisedAt)) {
+    const seen = revisions.get(turnKey(turn));
+    revisions.set(turnKey(turn), seen ? newerRevision(seen, turn) : turn);
   }
+
+  return revisions;
+}
+
+/** A revised turn once, as its newest revision; the rest as logged; all in time order. */
+function readable(turns: Turn[]): Turn[] {
+  const revisions = newestRevisionByKey(turns);
+  const placed = new Set<string>();
+  const kept: Turn[] = [];
+
+  for (const turn of turns) {
+    const revision = revisions.get(turnKey(turn));
+
+    if (!revision) kept.push(turn);
+    else if (!placed.has(turnKey(turn))) {
+      placed.add(turnKey(turn));
+      kept.push(revision);
+    }
+  }
+
+  return kept.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
 }
 
 export function readTurns(days: number = WINDOW_DAYS, now: Date = new Date()): Turn[] {
   const cutoff = now.getTime() - days * DAY_MS;
+  const lines = monthsEndingAfter(cutoff).flatMap((file) =>
+    readFileSync(resolve(turnsDir(), file), "utf-8").split("\n")
+  );
 
-  return monthFiles()
-    .flatMap((file) => readFileSync(resolve(turnsDir(), file), "utf-8").split("\n"))
-    .map(parseLine)
-    .filter((turn): turn is Turn => turn !== null && Date.parse(turn.ts) >= cutoff);
+  return readable(
+    lines
+      .map(parseLine)
+      .filter((turn): turn is Turn => turn !== null && Date.parse(turn.ts) >= cutoff)
+  );
 }

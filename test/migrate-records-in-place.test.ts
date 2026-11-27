@@ -224,11 +224,11 @@ describe("v6-history-slugs", () => {
     expect(v6HistorySlugs.run()).toEqual({
       migrated: 1,
       skipped: 0,
-      results: ["workdir: 1 entr(ies) moved to project app"],
+      results: ["workdir: 1 entr(ies) copied to project app"],
     });
     expect(readFileSync(orphanHistory("app"), "utf-8")).toBe(HISTORY_LINE);
-    expect(existsSync(parkedHistory("workdir.jsonl"))).toBe(false);
-    expect(existsSync(parkedHistory(""))).toBe(true);
+    expect(readFileSync(parkedHistory("workdir.jsonl"), "utf-8")).toBe(HISTORY_LINE);
+    expect(v6HistorySlugs.check().pending).toBe(false);
   });
 
   test("a dry run names the destination and moves nothing", () => {

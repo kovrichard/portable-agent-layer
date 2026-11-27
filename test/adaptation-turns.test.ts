@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  writeFileSync,
-} from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { appendTurn, readTurns, type TurnInput } from "../src/opinions/adaptation-turns";
+import {
+  appendTurn,
+  readTurns,
+  replaceTurns,
+  type Turn,
+  type TurnInput,
+  turnKey,
+} from "../src/opinions/adaptation-turns";
 import { freshTestDir } from "./lib/test-home";
 
 let HOME: string;
@@ -59,21 +60,49 @@ describe("appendTurn", () => {
     expect(read.replyEnd).toHaveLength(600);
   });
 
-  test("a month that ended before the window is deleted", () => {
-    mkdirSync(dir(), { recursive: true });
-    writeFileSync(resolve(dir(), "turns-2026-07.jsonl"), "");
+  test("a month that ended before the window stays, since another machine may still send its lines", () => {
+    appendTurn(turn, at("2026-07-06T10:00:00Z"));
 
     appendTurn(turn, at("2026-10-06T10:00:00Z"));
 
-    expect(existsSync(resolve(dir(), "turns-2026-07.jsonl"))).toBe(false);
+    expect(existsSync(resolve(dir(), "turns-2026-07.jsonl"))).toBe(true);
+  });
+});
+
+describe("replaceTurns", () => {
+  const relabelled = (t: Turn): Turn => ({ ...t, issue: "relabelled" });
+
+  test("appends a revision instead of rewriting, and reading keeps the newest", () => {
+    appendTurn(turn, at("2026-10-06T10:00:00Z"));
+    const [original] = readTurns(30, at("2026-10-06T11:00:00Z"));
+    const file = resolve(dir(), "turns-2026-10.jsonl");
+    const before = readFileSync(file, "utf-8");
+
+    replaceTurns(
+      new Map([[turnKey(original), relabelled(original)]]),
+      at("2026-10-07T00:00:00Z")
+    );
+    replaceTurns(
+      new Map([[turnKey(original), { ...original, issue: "older revision" }]]),
+      at("2026-10-06T12:00:00Z")
+    );
+
+    expect(readFileSync(file, "utf-8").startsWith(before)).toBe(true);
+    expect(readTurns(30, at("2026-10-07T01:00:00Z"))).toEqual([
+      { ...relabelled(original), revisedAt: "2026-10-07T00:00:00.000Z" },
+    ]);
   });
 
-  test("a month that still overlaps the window is kept", () => {
-    appendTurn(turn, at("2026-09-20T10:00:00Z"));
+  test("a revision lands in the month of the turn it revises", () => {
+    appendTurn(turn, at("2026-09-30T10:00:00Z"));
+    const [original] = readTurns(30, at("2026-10-01T11:00:00Z"));
 
-    appendTurn(turn, at("2026-10-06T10:00:00Z"));
+    replaceTurns(
+      new Map([[turnKey(original), relabelled(original)]]),
+      at("2026-10-02T00:00:00Z")
+    );
 
-    expect(existsSync(resolve(dir(), "turns-2026-09.jsonl"))).toBe(true);
+    expect(readdirSync(dir())).toEqual(["turns-2026-09.jsonl"]);
   });
 });
 
@@ -90,6 +119,16 @@ describe("readTurns", () => {
     expect(readTurns(30, at("2026-10-06T11:00:00Z")).map((t) => t.session)).toEqual([
       "a",
       "b",
+    ]);
+  });
+
+  test("lines another machine appended later read in time order", () => {
+    appendTurn({ ...turn, session: "here" }, at("2026-10-06T10:05:00Z"));
+    appendTurn({ ...turn, session: "there" }, at("2026-10-06T10:00:00Z"));
+
+    expect(readTurns(30, at("2026-10-06T11:00:00Z")).map((t) => t.session)).toEqual([
+      "there",
+      "here",
     ]);
   });
 

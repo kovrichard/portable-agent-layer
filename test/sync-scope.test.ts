@@ -10,8 +10,13 @@ describe("syncKindOf", () => {
     ["records/bronze/event-text/2026-11.jsonl", "segments"],
     ["work/progress-tree/events.jsonl", "segments"],
     ["records/ratings/ratings.jsonl", "segments"],
-    ["records/rule-candidates/candidates.jsonl", "whole"],
+    ["records/rule-candidates/candidates.jsonl", "segments"],
+    ["records/rules/rules.jsonl", "segments"],
     ["work/projects/pal/history.jsonl", "segments"],
+    ["records/import-log/import-log.jsonl", "segments"],
+    ["work/unbound-history/loose.jsonl", "segments"],
+    ["records/labelled-turns/turns-2026-11.jsonl", "segments"],
+    ["records/review-queue/_review.jsonl", "segments"],
     ["work/projects/pal/tickets.jsonl", "segments"],
     ["work/projects/pal/ISA.md", "whole"],
     ["memory/sales/diary-events.jsonl", "whole"],
@@ -27,6 +32,8 @@ describe("syncKindOf", () => {
     ["telos/backups/GOALS.md", null],
     ["skills/listen.bak-20261110/SKILL.md", null],
     ["memory/adaptation/rules.json.tmp", null],
+    ["memory/relationship/opinions-context.md", null],
+    ["memory/relationship/notes.md", "whole"],
   ] as const)
     test(`${path} → ${kind}`, () => {
       expect(syncKindOf(path)).toBe(kind);

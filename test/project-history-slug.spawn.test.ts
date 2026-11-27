@@ -139,7 +139,7 @@ describe("parked history finds its project", () => {
     return loose;
   }
 
-  test("moves in the moment its project is created here, with no migration run", async () => {
+  test("is copied in the moment its project is created here, with no migration run", async () => {
     const loose = await parkUnder("delta", "before the project existed");
     const { writeProject } = await import("../src/progress/projects");
 
@@ -154,7 +154,9 @@ describe("parked history finds its project", () => {
     expect(readFileSync(projectHistory("delta"), "utf-8")).toContain(
       "before the project existed"
     );
-    expect(existsSync(parkedHistory("delta"))).toBe(false);
+    expect(readFileSync(parkedHistory("delta"), "utf-8")).toContain(
+      "before the project existed"
+    );
     const { checkPendingMigrations } = await import("../src/cli/migrate");
     expect(checkPendingMigrations()).toEqual([]);
   });
@@ -232,7 +234,7 @@ describe("v6 history-slugs", () => {
     expect(merged).toContain("stranded entry");
   });
 
-  test("folds parked history back in once its project is registered", async () => {
+  test("copies parked history in once its project is registered, and leaves it parked", async () => {
     const loose = resolve(HOME, "checkouts", "gamma");
     mkdirSync(loose, { recursive: true });
     const { appendProjectHistory } = await import("../src/progress/work-tracking");
@@ -244,7 +246,7 @@ describe("v6 history-slugs", () => {
     expect(readFileSync(projectHistory("gamma"), "utf-8")).toContain(
       "before registration"
     );
-    expect(existsSync(parkedHistory("gamma"))).toBe(false);
+    expect(existsSync(parkedHistory("gamma"))).toBe(true);
   });
 
   test("does not claim it kept the files it moved", async () => {

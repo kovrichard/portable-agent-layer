@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   type CandidateInput,
@@ -205,6 +205,40 @@ describe("recordCandidate", () => {
 });
 
 describe("reproveWaiting", () => {
+  const file = () => resolve(HOME, "records", "rule-candidates", "candidates.jsonl");
+
+  test("appends the new proof instead of rewriting, and reading keeps it", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(5)]);
+    const before = readFileSync(file(), "utf-8");
+
+    reproveWaiting([...corrections, ...ordinary(25)], new Date("2026-11-27T10:00:00Z"));
+
+    expect(readFileSync(file(), "utf-8").startsWith(before)).toBe(true);
+    expect(readCandidates()).toMatchObject([
+      { verdict: "passed", provedAt: "2026-11-27T10:00:00.000Z" },
+    ]);
+  });
+
+  test("a proof that did not change appends nothing", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(5)]);
+    const before = readFileSync(file(), "utf-8");
+
+    reproveWaiting([...corrections, ...ordinary(5)]);
+
+    expect(readFileSync(file(), "utf-8")).toBe(before);
+  });
+
+  test("the newest proof wins whatever order two machines' lines arrive in", () => {
+    recordCandidate(candidate, [...corrections, ...ordinary(5)]);
+    const [waiting] = readCandidates();
+    const proofAt = (provedAt: string, ordinaryTurns: number) =>
+      `${JSON.stringify({ ...waiting, proof: { ...("proof" in waiting && waiting.proof), ordinary: ordinaryTurns }, provedAt })}\n`;
+    appendFileSync(file(), proofAt("2026-11-27T12:00:00.000Z", 9));
+    appendFileSync(file(), proofAt("2026-11-27T11:00:00.000Z", 7));
+
+    expect(readCandidates()).toMatchObject([{ proof: { ordinary: 9 } }]);
+  });
+
   test("a waiting candidate is promoted once the log has enough ordinary turns", () => {
     recordCandidate(candidate, [...corrections, ...ordinary(5)]);
 

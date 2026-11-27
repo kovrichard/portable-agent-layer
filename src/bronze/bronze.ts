@@ -15,6 +15,7 @@ export type StoreName =
   | "labelled-turns"
   | "rule-events"
   | "rule-candidates"
+  | "rules"
   | "run-estimates"
   | "reflections"
   | "progress-tree"
@@ -116,7 +117,7 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/adaptation",
     formerFiles: { match: /^turns-\d{4}-\d{2}\.jsonl$/ },
     files: "turns-<YYYY-MM>.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {
@@ -136,7 +137,15 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/adaptation",
     formerFiles: { match: /^candidates\.jsonl$/ },
     files: "candidates.jsonl",
-    appendOnly: false,
+    appendOnly: true,
+    alsoInEventLog: false,
+  },
+  {
+    name: "rules",
+    group: "outside",
+    location: "records/rules",
+    files: "rules.jsonl",
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {
@@ -191,7 +200,7 @@ const STORES: readonly RecordedStore[] = [
     location: "work/unbound-history",
     formerLocation: "memory/state/unbound-history",
     files: "<slug>.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {
@@ -220,7 +229,7 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/knowledge",
     formerFiles: { match: /^_review\.jsonl$/ },
     files: "_review.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {
@@ -230,7 +239,7 @@ const STORES: readonly RecordedStore[] = [
     formerLocation: "memory/state",
     formerFiles: { match: /^import-log\.jsonl$/ },
     files: "import-log.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
 ];

@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, unlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { storeLocation } from "../../bronze/bronze";
+import { linesNotIn } from "../../core/import-merge";
 import { readBindings } from "../../core/project-bindings";
 import { foldHistoryInto } from "../../progress/parked-history";
 import { projectPathOnThisMachine, readAllProjects } from "../../progress/projects";
@@ -58,7 +59,22 @@ function projectOwningDirectoryNamed(slug: string): string | null {
   return owners.length === 1 ? owners[0].name : null;
 }
 
-/** Orphans always move; parked history moves only once its project appears. */
+/** An unreadable destination counts as missing them, so the run reports it as skipped. */
+function holdsLinesMissingFrom(target: string, source: string): boolean {
+  try {
+    const local = existsSync(target) ? readFileSync(target, "utf-8") : "";
+
+    return linesNotIn(local, readFileSync(source, "utf-8")).length > 0;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Orphans always move. Parked history is copied once its project appears and
+ * stays parked, since another machine merges it line by line; it is pending
+ * only while it holds lines its project lacks.
+ */
 function strandedHistory(): StrandedHistory[] {
   const out: StrandedHistory[] = [];
 
@@ -68,7 +84,8 @@ function strandedHistory(): StrandedHistory[] {
 
   for (const { slug, file } of parkedHistoryFiles()) {
     const owner = projectOwningDirectoryNamed(slug);
-    if (owner) out.push({ slug, file, owner, parked: true });
+    const item = { slug, file, owner, parked: true };
+    if (owner && holdsLinesMissingFrom(destinationFor(item), file)) out.push(item);
   }
 
   return out;
@@ -114,11 +131,16 @@ export const v6HistorySlugs: Migration = {
 
       try {
         const added = foldHistoryInto(target, item.file);
-        unlinkSync(item.file);
 
-        if (!item.parked) discardEmptyFolder(dirname(item.file));
+        if (!item.parked) {
+          unlinkSync(item.file);
+          discardEmptyFolder(dirname(item.file));
+        }
+
         migrated++;
-        results.push(`${item.slug}: ${added} entr(ies) moved to ${where}`);
+        results.push(
+          `${item.slug}: ${added} entr(ies) ${item.parked ? "copied" : "moved"} to ${where}`
+        );
       } catch (e) {
         skipped++;
         results.push(`${item.slug}: skipped (${(e as Error).message})`);
