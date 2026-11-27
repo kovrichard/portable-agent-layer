@@ -19,6 +19,9 @@ export interface HostedFile {
 
 const REBUILT_AT_EVERY_SESSION_END = ["memory/relationship/opinions-context.md"];
 
+/** The user's own messages, kept for this machine's reaction audit; text never leaves the machine. */
+const HOLDS_MESSAGE_TEXT = ["memory/adaptation/reaction-samples.json"];
+
 /**
  * The ledger rotates its active file, which per-file segments cannot follow;
  * every action is also a bronze event, which does travel.
@@ -30,6 +33,7 @@ const LOCAL_ONLY = [
   "memory/content",
   "memory/downloads",
   ...REBUILT_AT_EVERY_SESSION_END,
+  ...HOLDS_MESSAGE_TEXT,
 ];
 
 const SEGMENT_LOCATIONS = [...bronzeStores(), ...storesOutsideBronze()]

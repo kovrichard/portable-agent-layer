@@ -33,6 +33,8 @@ describe("syncKindOf", () => {
     ["skills/listen.bak-20261110/SKILL.md", null],
     ["memory/adaptation/rules.json.tmp", null],
     ["memory/relationship/opinions-context.md", null],
+    ["memory/adaptation/reaction-samples.json", null],
+    ["memory/adaptation/reaction-audit.json", "whole"],
     ["memory/relationship/notes.md", "whole"],
   ] as const)
     test(`${path} → ${kind}`, () => {

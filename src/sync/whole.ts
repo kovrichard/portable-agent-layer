@@ -75,9 +75,22 @@ function settle(
   ctx.state.whole[path] = { hash: incomingHash, version };
 }
 
+/**
+ * A file that became local-only after a machine had uploaded it. Its path is
+ * authenticated by the account key, so the blob came from one of the user's own
+ * machines: it is left unread, and its version noted so later runs skip it.
+ */
+function leaveLocal(ctx: SyncContext, path: string, version: number): void {
+  ctx.state.whole[path] = { hash: ctx.state.whole[path]?.hash ?? "", version };
+}
+
 async function pullFile(ctx: SyncContext, id: string, version: number): Promise<void> {
   const { path, dataKey } = await ctx.keys.forId(id);
-  if (syncKindOf(path) !== "whole") throw new SyncRefusal("out-of-scope");
+  const kind = syncKindOf(path);
+
+  if (kind === null) return leaveLocal(ctx, path, version);
+
+  if (kind !== "whole") throw new SyncRefusal("out-of-scope");
 
   if (version <= (ctx.state.whole[path]?.version ?? 0)) return;
   const blob = await ctx.store.get(`whole/${id}/${version}`);
