@@ -5,7 +5,7 @@
  * built here from the allow-list rather than written by the collector.
  */
 
-import { Database } from "bun:sqlite";
+import { constants, Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -38,7 +38,10 @@ export interface ResumeAfter {
 function openWithoutWriting(dbPath: string): Database {
   if (existsSync(`${dbPath}-wal`)) return new Database(dbPath, { readonly: true });
 
-  return new Database(`${pathToFileURL(dbPath).href}?immutable=1`, { readonly: true });
+  return new Database(
+    `${pathToFileURL(dbPath).href}?immutable=1`,
+    constants.SQLITE_OPEN_READONLY | constants.SQLITE_OPEN_URI
+  );
 }
 
 function quoted(identifier: string): string {
