@@ -29,6 +29,14 @@ import {
 } from "../core/project-bindings";
 import { detectRemote } from "../core/remote";
 import { writeBinding, writeBindings } from "./bindings";
+import { buildBody, extractSections, type IsaSections } from "./isa-body";
+import { lastActivity, recordProjectTouch } from "./project-activity";
+import {
+  readTicketSections,
+  type TicketOwner,
+  type TicketSections,
+  writeTicketSections,
+} from "./tickets";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
@@ -37,7 +45,7 @@ export type ServesKind = "goal" | "revenue" | "fun";
 /** Who decided it. A user answer outranks a guess and survives re-inference. */
 export type ServesAuthority = "inferred" | "user";
 
-export interface ProjectProgress {
+export interface ProjectProgress extends IsaSections {
   name: string;
   /** Resolved for this machine at read time; absent when not checked out here. */
   path?: string;
@@ -55,16 +63,8 @@ export interface ProjectProgress {
   /** The user's own placement on the grid, which overrules both guesses. */
   placed?: string;
   placed_by?: ServesAuthority;
-  // ISA body sections
-  problem?: string;
-  goal?: string;
-  criteria?: string;
-  vision?: string;
-  constraints?: string;
-  out_of_scope?: string;
-  context?: string;
-  decisions?: string;
-  changelog?: string;
+  /** Read-only: each old ticket number to the ids it imported as. */
+  oldIscNumbers?: Record<string, string[]>;
 }
 
 export const PROJECT_STALE_DAYS_DEFAULT = 14;
@@ -94,48 +94,53 @@ type IsaMeta = {
   serves_by?: ServesAuthority;
 };
 
-const BODY_SECTIONS: Array<[string, keyof ProjectProgress]> = [
-  ["Problem", "problem"],
-  ["Goal", "goal"],
-  ["Criteria", "criteria"],
-  ["Vision", "vision"],
-  ["Constraints", "constraints"],
-  ["Out of Scope", "out_of_scope"],
-  ["Context", "context"],
-  ["Decisions", "decisions"],
-  ["Changelog", "changelog"],
-];
-
-const HEADER_TO_FIELD: Record<string, keyof ProjectProgress> = Object.fromEntries(
-  BODY_SECTIONS.map(([h, k]) => [h.toLowerCase(), k])
-);
-
-function buildBody(p: ProjectProgress): string {
-  return BODY_SECTIONS.filter(([, k]) => (p[k] as string | undefined)?.trim())
-    .map(([h, k]) => `## ${h}\n\n${(p[k] as string).trim()}`)
-    .join("\n\n");
-}
-
-function extractSections(body: string): Partial<ProjectProgress> {
-  const out: Partial<ProjectProgress> = {};
-
-  for (const part of body.split(/^## /m).slice(1)) {
-    const nl = part.indexOf("\n");
-    if (nl === -1) continue;
-    const header = part.slice(0, nl).trim().toLowerCase();
-    const content = part.slice(nl + 1).trim();
-    if (!content) continue;
-    const field = HEADER_TO_FIELD[header];
-    if (field) (out as Record<string, string>)[field as string] = content;
-  }
-
-  return out;
-}
-
 const projectsDir = () => storeDir("project-history");
 
 function isaFilePath(slug: string): string {
   return resolve(projectsDir(), slug, "ISA.md");
+}
+
+const sectionsOf = (p: IsaSections): TicketSections => ({
+  criteria: p.criteria ?? "",
+  changelog: p.changelog ?? "",
+});
+
+function ticketsAsRead(
+  owner: TicketOwner,
+  stored: IsaSections
+): Partial<ProjectProgress> {
+  const dir = resolve(projectsDir(), owner.name);
+  const { sections, oldNumbers } = readTicketSections(dir, owner, sectionsOf(stored));
+  const renamed = Object.keys(oldNumbers).length > 0;
+
+  return {
+    criteria: sections.criteria || undefined,
+    changelog: sections.changelog || undefined,
+    ...(renamed && { oldIscNumbers: oldNumbers }),
+  };
+}
+
+function storedSections(slug: string): TicketSections {
+  const file = isaFilePath(slug);
+  if (!existsSync(file)) return sectionsOf({});
+
+  return sectionsOf(extractSections(parse(readFileSync(file, "utf-8")).body));
+}
+
+function logTickets(p: ProjectProgress, at: Date = new Date()): TicketSections {
+  const owner = { name: p.name, created: p.created };
+  const dir = resolve(projectsDir(), p.name);
+
+  return writeTicketSections(dir, owner, sectionsOf(p), () => storedSections(p.name), at);
+}
+
+/**
+ * Records a ticket change in the log alone, so ISA.md, which every machine
+ * rewrites whole, stays as it is.
+ */
+export function saveProjectTickets(p: ProjectProgress, at: Date = new Date()): void {
+  logTickets(p, at);
+  recordProjectTouch(p.name, at);
 }
 
 function ensureAndGetIsaFile(slug: string): string {
@@ -213,8 +218,12 @@ export function readProject(
     const bound = bindings[meta.name] ?? meta.path;
     const path = bound ? resolve(bound) : undefined;
     const { handoff: _retired, ...kept } = meta;
+    const updated = lastActivity(meta.name, meta.updated);
+    const sections = extractSections(body);
 
-    return { ...kept, path, ...extractSections(body) };
+    const owner = { name, created: meta.created };
+
+    return { ...kept, updated, path, ...sections, ...ticketsAsRead(owner, sections) };
   } catch {
     return null;
   }
@@ -259,7 +268,8 @@ export function writeProject(p: ProjectProgress): void {
   if (p.placed) meta.placed = p.placed;
 
   if (p.placed_by) meta.placed_by = p.placed_by;
-  writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, buildBody(p)), "utf-8");
+  const body = buildBody({ ...p, ...logTickets(p) });
+  writeFileSync(ensureAndGetIsaFile(p.name), stringify(meta, body), "utf-8");
 
   if (pathExistsOnThisMachine(p.path)) writeBinding(p.name, p.path);
 }

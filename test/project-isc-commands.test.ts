@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { readProject } from "../src/progress/projects";
 import {
   commitmentEvents,
@@ -6,6 +6,7 @@ import {
   projectCliHome,
   projectCliJson,
   SEEDED_AT,
+  seedLegacyProject,
   seedProject,
 } from "./lib/project-cli-fixture";
 
@@ -14,6 +15,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function seed(criteria?: string, changelog?: string): void {
   seedProject(home(), { criteria, changelog });
+}
+
+/** Shapes only a hand-edited ISA.md holds: a closed ticket in Criteria, a retired one under Archived. */
+function seedLegacy(criteria?: string, changelog?: string): void {
+  seedLegacyProject(home(), { criteria, changelog });
 }
 
 function stored() {
@@ -38,44 +44,60 @@ function expectUntouched(criteria?: string): void {
 const REMINDER =
   "Surface the `announce` line to the user verbatim, on its own line. Every ISC you open MUST be announced with the 🎟️ ticket marker, in any response mode — omitting it is a defect.";
 
+/** Math.random drawing the id k7m2 (alphabet positions 19, 7, 20, 2), then repeating. */
+function drawingK7m2() {
+  const positions = [19, 7, 20, 2];
+  let i = 0;
+
+  return spyOn(Math, "random").mockImplementation(
+    () => ((positions[i++ % positions.length] as number) + 0.5) / 32
+  );
+}
+
 describe("add-isc", () => {
-  test("opens ISC-1 in an empty project and tells the agent to announce it", async () => {
+  test("opens a new ISC under a random id and tells the agent to announce it", async () => {
     seed();
+    const random = drawingK7m2();
     const run = await projectCli("add-isc", "demo", "ship", "it");
+    random.mockRestore();
 
     expect(run.stdout).toBe(
       JSON.stringify(
         {
           added: true,
-          id: 1,
+          id: "k7m2",
           title: "ship it",
-          announce: "🎟️ ISC #1 — ship it",
+          announce: "🎟️ ISC #k7m2 — ship it",
           reminder: REMINDER,
         },
         null,
         2
       )
     );
-    expect(stored().criteria).toBe("- [ ] ISC-1: ship it");
+    expect(stored().criteria).toBe("- [ ] ISC-k7m2: ship it");
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "opened", surface: "cli" },
+      { iscProject: "demo", isc: "k7m2", outcome: "opened", surface: "cli" },
     ]);
   });
 
-  test("appends after the existing lines and never reuses an archived id", async () => {
+  test("appends after the existing lines, next to the old numbered ones", async () => {
     seed("- [ ] ISC-1: first\n\n", "### Archived 2026-01-01\n- [x] ISC-5: old");
+    const random = drawingK7m2();
     const out = await projectCliJson("add-isc", "demo", "  next one  ");
+    random.mockRestore();
 
-    expect(out).toMatchObject({ id: 6, title: "next one" });
-    expect(stored().criteria).toBe("- [ ] ISC-1: first\n- [ ] ISC-6: next one");
+    expect(out).toMatchObject({ id: "k7m2", title: "next one" });
+    expect(stored().criteria).toBe("- [ ] ISC-1: first\n- [ ] ISC-k7m2: next one");
   });
 
   test("stores a multi-line title on one line", async () => {
     seed();
+    const random = drawingK7m2();
     await projectCliJson("add-isc", "demo", "first\nsecond");
+    random.mockRestore();
 
-    expect(stored().criteria).toBe(String.raw`- [ ] ISC-1: first\nsecond`);
+    expect(stored().criteria).toBe(String.raw`- [ ] ISC-k7m2: first\nsecond`);
   });
 
   test("a blank title is a usage error and writes nothing", async () => {
@@ -104,14 +126,14 @@ describe("complete-isc", () => {
 
     expect(await projectCliJson("complete-isc", "demo", "1")).toEqual({
       checked: true,
-      id: 1,
+      id: "1",
       archived: true,
     });
     expect(stored().criteria).toBe("- [ ] ISC-2: later");
     expect(stored().changelog).toBe(`### Archived ${today()}\n- [x] ISC-1: ship it`);
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "kept", surface: "cli" },
+      { iscProject: "demo", isc: "1", outcome: "kept", surface: "cli" },
     ]);
   });
 
@@ -120,7 +142,7 @@ describe("complete-isc", () => {
 
     expect(await projectCliJson("complete-isc", "demo", "1")).toEqual({
       checked: true,
-      id: 1,
+      id: "1",
       alreadyDone: true,
     });
     expectUntouched("- [ ] ISC-2: later");
@@ -139,7 +161,7 @@ describe("complete-isc", () => {
   test.each<[string, string, string[]]>([
     ["complete-isc", "0", []],
     ["complete-isc", "1.5", []],
-    ["complete-isc", "abc", []],
+    ["complete-isc", "k7-m2", []],
     ["edit-isc", "0", ["new"]],
     ["retire-isc", "0", []],
   ])("%s with id %p is a usage error", async (command, id, text) => {
@@ -147,7 +169,9 @@ describe("complete-isc", () => {
     const run = await projectCli(command, "demo", id, ...text);
 
     expect(run.code).toBe(1);
-    expect(run.stderr).toContain(`error: <id> must be a positive integer, got "${id}"`);
+    expect(run.stderr).toContain(
+      `error: <id> must be an ISC id like k7m2 or 151, got "${id}"`
+    );
     expectUntouched("- [ ] ISC-1: ship it");
   });
 });
@@ -158,12 +182,12 @@ describe("reopen-isc", () => {
 
     expect(await projectCliJson("reopen-isc", "demo", "1")).toEqual({
       checked: false,
-      id: 1,
+      id: "1",
     });
     expect(stored().criteria).toBe("- [ ] ISC-2: later\n- [ ] ISC-1: done");
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "reopened", surface: "cli" },
+      { iscProject: "demo", isc: "1", outcome: "reopened", surface: "cli" },
     ]);
   });
 
@@ -172,7 +196,7 @@ describe("reopen-isc", () => {
 
     expect(await projectCliJson("reopen-isc", "demo", "1")).toEqual({
       checked: false,
-      id: 1,
+      id: "1",
       alreadyOpen: true,
     });
     expectUntouched("- [ ] ISC-1: open");
@@ -189,14 +213,15 @@ describe("reopen-isc", () => {
 });
 
 describe("list-isc", () => {
-  const criteria = "- [ ] ISC-1: open one\n- [x] ISC-2: legacy done";
-  const changelog = "### Archived 2026-01-01\n- [x] ISC-3: done\n- [~] ISC-4: dropped";
-  const open = { id: 1, text: "open one", status: "open" };
+  const criteria = "- [ ] ISC-1: open one";
+  const changelog =
+    "### Archived 2026-01-01\n- [x] ISC-2: done first\n- [x] ISC-3: done\n\n### Retired 2026-01-01\n- [~] ISC-4: dropped";
+  const open = { id: "1", text: "open one", status: "open" };
   const done = [
-    { id: 2, text: "legacy done", status: "done" },
-    { id: 3, text: "done", status: "done" },
+    { id: "2", text: "done first", status: "done" },
+    { id: "3", text: "done", status: "done" },
   ];
-  const retired = { id: 4, text: "dropped", status: "retired" };
+  const retired = { id: "4", text: "dropped", status: "retired" };
   const counts = { name: "demo", total: 4, open: 1, done: 2, retired: 1 };
 
   test.each([
@@ -226,12 +251,15 @@ describe("list-isc", () => {
 
 describe("show-isc", () => {
   test.each([
-    [1, "open", "open one"],
-    [3, "done", "archived one"],
+    ["1", "open", "open one"],
+    ["k7m2", "done", "archived one"],
   ])("prints ISC-%p from wherever it lives", async (id, status, text) => {
-    seed("- [ ] ISC-1: open one", "### Archived 2026-01-01\n- [x] ISC-3: archived one");
+    seed(
+      "- [ ] ISC-1: open one",
+      "### Archived 2026-01-01\n- [x] ISC-K7M2: archived one"
+    );
 
-    expect(await projectCliJson("show-isc", "demo", String(id))).toEqual({
+    expect(await projectCliJson("show-isc", "demo", `ISC-${id}`)).toEqual({
       name: "demo",
       id,
       status,
@@ -254,7 +282,7 @@ describe("retire-isc", () => {
 
     expect(await projectCliJson("retire-isc", "demo", "1")).toEqual({
       retired: true,
-      id: 1,
+      id: "1",
       supersededBy: null,
       archived: true,
     });
@@ -262,15 +290,15 @@ describe("retire-isc", () => {
     expect(stored().changelog).toBe(`### Retired ${today()}\n- [~] ISC-1: stale`);
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "dropped", surface: "cli" },
+      { iscProject: "demo", isc: "1", outcome: "dropped", surface: "cli" },
     ]);
   });
 
   test("--by names the superseding ISC on the archived line", async () => {
-    seed("- [x] ISC-1: stale\n- [ ] ISC-2: keep");
+    seed("- [ ] ISC-1: stale\n- [ ] ISC-2: keep");
 
     expect(await projectCliJson("retire-isc", "demo", "1", "--by", "2")).toMatchObject({
-      supersededBy: 2,
+      supersededBy: "2",
     });
     expect(stored().changelog).toBe(
       `### Retired ${today()}\n- [~] ISC-1: stale (superseded by ISC-2)`
@@ -282,7 +310,7 @@ describe("retire-isc", () => {
 
     expect(await projectCliJson("retire-isc", "demo", "1")).toEqual({
       retired: true,
-      id: 1,
+      id: "1",
       alreadyRetired: true,
     });
     expectUntouched("- [ ] ISC-2: keep");
@@ -305,12 +333,14 @@ describe("retire-isc", () => {
     expect(run.stderr).toBe(`ISC-1 not found in project "demo"\n`);
   });
 
-  test("--by must be a positive integer", async () => {
+  test("--by must be an ISC id", async () => {
     seed("- [ ] ISC-1: stale");
     const run = await projectCli("retire-isc", "demo", "1", "--by", "0");
 
     expect(run.code).toBe(1);
-    expect(run.stderr).toContain(`error: --by must be a positive integer, got "0"`);
+    expect(run.stderr).toContain(
+      `error: --by must be an ISC id like k7m2 or 151, got "0"`
+    );
     expectUntouched("- [ ] ISC-1: stale");
   });
 });
@@ -321,7 +351,7 @@ describe("edit-isc", () => {
 
     expect(await projectCliJson("edit-isc", "demo", "1", "new", "words")).toEqual({
       edited: true,
-      id: 1,
+      id: "1",
       status: "open",
       previous: "old words",
       text: "new words",
@@ -333,7 +363,7 @@ describe("edit-isc", () => {
   test("keeps the box of an archived ISC and leaves Criteria alone", async () => {
     seed(
       "- [ ] ISC-2: open",
-      "### Archived 2026-01-01\n- [x] ISC-1: done\n- [~] ISC-3: gone"
+      "### Archived 2026-01-01\n- [x] ISC-1: done\n\n### Retired 2026-01-01\n- [~] ISC-3: gone"
     );
 
     expect(await projectCliJson("edit-isc", "demo", "3", "line\ntwo")).toMatchObject({
@@ -343,15 +373,10 @@ describe("edit-isc", () => {
     expect(stored().changelog).toBe(
       String.raw`### Archived 2026-01-01
 - [x] ISC-1: done
+
+### Retired 2026-01-01
 - [~] ISC-3: line\ntwo`
     );
-  });
-
-  test("matches a loosely spaced or uppercase box", async () => {
-    seed("-  [X]  ISC-1: shouty");
-    await projectCliJson("edit-isc", "demo", "1", "calm");
-
-    expect(stored().criteria).toBe("- [x] ISC-1: calm");
   });
 
   test("blank text is a usage error", async () => {
@@ -372,22 +397,54 @@ describe("edit-isc", () => {
   });
 });
 
-describe("prune-isc", () => {
-  test("archives every closed ISC left in Criteria", async () => {
-    seed("- [x] ISC-1: done\n- [ ] ISC-2: open\n- [~] ISC-3: gone");
+describe("tickets written before the log", () => {
+  const imported = (status: string, text: string) =>
+    new RegExp(String.raw`^- \[${status}\] ISC-[0-9a-z]{6}: ${text}$`);
 
-    expect(await projectCliJson("prune-isc", "demo")).toEqual({
-      pruned: 2,
-      name: "demo",
-      remaining_open: 1,
-    });
-    expect(stored().criteria).toBe("- [ ] ISC-2: open");
-    expect(stored().changelog).toBe(
-      `### Archived ${today()}\n- [x] ISC-1: done\n- [~] ISC-3: gone`
-    );
-    expectTouched();
+  test("read under new ids, a closed one in Criteria archived on the project's first day", () => {
+    seedLegacy("- [x] ISC-1: done\n-  [X]  ISC-2: shouty\n- [ ] ISC-3: open");
+    const [heading, ...closed] = (stored().changelog ?? "").split("\n");
+
+    expect(stored().criteria).toMatch(imported(" ", "open"));
+    expect(heading).toBe("### Archived 2026-05-04");
+    expect(closed).toEqual([
+      expect.stringMatching(imported("x", "done")),
+      expect.stringMatching(imported("x", "shouty")),
+    ]);
+    expect(stored().oldIscNumbers?.["2"]).toEqual([
+      expect.stringMatching(/^[0-9a-z]{6}$/),
+    ]);
   });
 
+  test("answer to their old number", async () => {
+    seedLegacy("- [ ] ISC-7: ship it");
+    const [ticket] = stored().oldIscNumbers?.["7"] ?? [];
+
+    expect(await projectCliJson("complete-isc", "demo", "7")).toMatchObject({
+      id: ticket,
+      archived: true,
+    });
+    expect(stored().changelog).toBe(
+      `### Archived ${today()}\n- [x] ISC-${ticket}: ship it`
+    );
+  });
+
+  test("an old number that named two tasks is refused, naming both", async () => {
+    seedLegacy(
+      "- [ ] ISC-7: ship it",
+      "### Archived 2026-01-01\n- [x] ISC-7: other task"
+    );
+    const both = stored().oldIscNumbers?.["7"] ?? [];
+    const run = await projectCli("complete-isc", "demo", "7");
+
+    expect(both).toHaveLength(2);
+    expect(run.code).toBe(1);
+    expect(run.stderr).toContain(`ISC-${both[0]}`);
+    expect(run.stderr).toContain(`ISC-${both[1]}`);
+  });
+});
+
+describe("prune-isc", () => {
   test("leaves the record untouched when nothing is closed", async () => {
     seed("- [ ] ISC-1: open");
 
@@ -397,17 +454,6 @@ describe("prune-isc", () => {
       remaining_open: 1,
     });
     expectUntouched("- [ ] ISC-1: open");
-  });
-
-  test("counts an uppercase box it cannot move and keeps going", async () => {
-    seed("- [X] ISC-1: shouty\n- [x] ISC-2: done");
-
-    expect(await projectCliJson("prune-isc", "demo")).toMatchObject({
-      pruned: 2,
-      remaining_open: 0,
-    });
-    expect(stored().criteria).toBe("- [X] ISC-1: shouty");
-    expect(stored().changelog).toBe(`### Archived ${today()}\n- [x] ISC-2: done`);
   });
 });
 

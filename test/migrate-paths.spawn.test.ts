@@ -74,10 +74,11 @@ describe("v4 paths-to-bindings", () => {
     runMigrate([]);
     const after = readFileSync(file, "utf-8");
 
+    const { readProject } = await import("../src/progress/projects");
+
     expect(after).toContain("## Goal");
     expect(after).toContain("Ship the thing.");
-    expect(after).toContain("## Criteria");
-    expect(after).toContain("- [ ] ISC-1: works");
+    expect(readProject("alpha")?.criteria).toMatch(/^- \[ \] ISC-[0-9a-z]{6}: works$/);
     expect(after).toContain('updated: "2026-02-02"');
   });
 

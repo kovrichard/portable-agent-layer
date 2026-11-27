@@ -30,6 +30,7 @@ import { v14RecordsStores } from "./migrations/v14-records-stores";
 import { v15WorkStores } from "./migrations/v15-work-stores";
 import { v16BronzeToRecords } from "./migrations/v16-bronze-to-records";
 import { v17StateToRoot } from "./migrations/v17-state-to-root";
+import { v18TicketsToLog } from "./migrations/v18-tickets-to-log";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -75,6 +76,7 @@ const MIGRATIONS: Migration[] = [
   v15WorkStores,
   v16BronzeToRecords,
   v17StateToRoot,
+  v18TicketsToLog,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 

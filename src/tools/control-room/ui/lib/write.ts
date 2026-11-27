@@ -21,7 +21,7 @@ export async function post(path: string, body: unknown): Promise<string | null> 
   }
 }
 
-export function setIsc(project: string, id: number, status: "open" | "done") {
+export function setIsc(project: string, id: string, status: "open" | "done") {
   return post("/api/isc", { project, id, status });
 }
 
@@ -37,7 +37,7 @@ export function setInstallSettings(update: Record<string, string>) {
   return post("/api/settings", update);
 }
 
-export function setSnooze(project: string, id: number, days: number) {
+export function setSnooze(project: string, id: string, days: number) {
   return post("/api/snooze", { project, id, days });
 }
 

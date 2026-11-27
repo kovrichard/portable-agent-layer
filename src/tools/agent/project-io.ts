@@ -21,11 +21,14 @@ export function requireProject(name: string): ProjectProgress {
   return p as ProjectProgress;
 }
 
-export function positiveId(value: string, label: string): number {
-  const id = Number(value);
-  if (!Number.isInteger(id) || id < 1) {
-    throw new UsageError(`${label} must be a positive integer, got "${value}"`);
-  }
+/** An ISC id as typed: `k7m2`, `ISC-k7m2`, `#k7m2` or an old number like `151`. */
+export function iscIdArg(value: string | undefined, label: string): string {
+  const id = (value ?? "")
+    .trim()
+    .replace(/^(ISC-|#)/i, "")
+    .toLowerCase();
+  if (!/^[0-9a-z]+$/.test(id) || /^0+$/.test(id))
+    throw new UsageError(`${label} must be an ISC id like k7m2 or 151, got "${value}"`);
 
   return id;
 }

@@ -1,70 +1,13 @@
 /**
- * ISCs — the numbered criteria a project is judged against, stored as markdown
- * lines inside a project's ISA.md.
+ * ISCs — the criteria a project is judged against, edited as the markdown lines
+ * readProject renders them as.
  *
- * The tool that edits them is only ever spawned, so the line format, the
- * escaping that keeps a multi-paragraph criterion on one line, and the archive
- * bookkeeping were reachable only by running the CLI. Each function here takes
- * the text it operates on, plus the clock it stamps with.
+ * The tool that edits them is only ever spawned, so the archive bookkeeping was
+ * reachable only by running the CLI. Each function here takes the text it
+ * operates on, plus the clock it stamps with.
  */
 
-export type IscStatus = "open" | "done" | "retired";
-
-export const ISC_BOX: Record<IscStatus, string> = {
-  open: "[ ]",
-  done: "[x]",
-  retired: "[~]",
-};
-
-export function statusFromBox(box: string): IscStatus {
-  if (box.toLowerCase() === "x") return "done";
-
-  if (box === "~") return "retired";
-
-  return "open";
-}
-
-export interface Isc {
-  id: number;
-  text: string;
-  status: IscStatus;
-}
-
-/**
- * An ISC is one markdown line, so a newline in its text would end the record
- * and strand every paragraph after it as unparseable debris. Backslashes are
- * escaped first so that decoding a literal "\n" in a regex cannot be mistaken
- * for the separator.
- */
-export function encodeIscText(text: string): string {
-  return text
-    .replaceAll("\\", "\\\\")
-    .replaceAll("\r\n", "\n")
-    .replaceAll("\r", "\n")
-    .replaceAll("\n", "\\n");
-}
-
-const ISC_UNESCAPE: Record<string, string> = { n: "\n", "\\": "\\" };
-
-export function decodeIscText(stored: string): string {
-  return stored.replaceAll(/\\(.)/g, (whole, ch) => ISC_UNESCAPE[ch] ?? whole);
-}
-
-export function parseIscs(criteria: string): Isc[] {
-  const out: Isc[] = [];
-
-  for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
-    if (m)
-      out.push({
-        id: Number(m[2]),
-        text: decodeIscText(m[3].trim()),
-        status: statusFromBox(m[1]),
-      });
-  }
-
-  return out;
-}
+import { allDigits, ID_ALPHABET, type Isc, parseIscs } from "../../progress/isc-line";
 
 /**
  * A full ISC line collapsed to a glanceable title for resume: cut at the first
@@ -77,20 +20,40 @@ export function iscTitle(text: string): string {
   return clause.length > 80 ? `${clause.slice(0, 79).trimEnd()}…` : clause;
 }
 
-/** Scans Criteria AND Changelog so an archived id can never be handed out again. */
-export function nextIscId(criteria: string, changelog: string): number {
-  const ids = [...parseIscs(criteria), ...parseIscs(changelog)].map((i) => i.id);
+const ID_LENGTH = 4;
 
-  return ids.length > 0 ? Math.max(...ids) + 1 : 1;
+/**
+ * Four random characters, never all digits so a new id is never read as an old
+ * number. Two machines opening ISCs between syncs cannot both pick the next
+ * number this way. Scans Criteria AND Changelog so an archived id is never
+ * handed out again.
+ */
+export function newIscId(
+  criteria: string,
+  changelog: string,
+  random: () => number = Math.random
+): string {
+  const taken = new Set(
+    [...parseIscs(criteria), ...parseIscs(changelog)].map((i) => i.id)
+  );
+
+  for (;;) {
+    const id = Array.from(
+      { length: ID_LENGTH },
+      () => ID_ALPHABET[Math.floor(random() * ID_ALPHABET.length)]
+    ).join("");
+
+    if (!allDigits(id) && !taken.has(id)) return id;
+  }
 }
 
 export function removeIscLine(
   section: string,
-  id: number
+  id: string
 ): { line: string | null; rest: string } {
   const lines = section.split("\n");
   const idx = lines.findIndex((l) =>
-    new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`).test(l)
+    new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`, "i").test(l)
   );
   if (idx === -1) return { line: null, rest: section };
   const [line] = lines.splice(idx, 1);
@@ -169,7 +132,7 @@ export type IscMove =
  */
 export function completeIsc(
   sections: IscSections,
-  id: number,
+  id: string,
   now: Date = new Date()
 ): IscMove {
   const kept = { criteria: sections.criteria, changelog: sections.changelog };
@@ -194,7 +157,7 @@ export function completeIsc(
   };
 }
 
-export function reopenIsc(sections: IscSections, id: number): IscMove {
+export function reopenIsc(sections: IscSections, id: string): IscMove {
   const kept = { criteria: sections.criteria, changelog: sections.changelog };
 
   if (parseIscs(sections.criteria).some((i) => i.id === id && i.status === "open")) {

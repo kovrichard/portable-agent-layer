@@ -255,6 +255,7 @@ const WRITE_ONE: Record<StoreName, () => unknown> = {
 const PLACEHOLDERS: Record<string, string> = {
   "<YYYY-MM>": String.raw`\d{4}-\d{2}`,
   "<YYYY-MM or undated>": String.raw`(?:\d{4}-\d{2}|undated)`,
+  "<history or tickets>": "(?:history|tickets)",
   "<stamp>": "[^/]+",
   "<project>": "[^/]+",
   "<slug>": "[^/]+",

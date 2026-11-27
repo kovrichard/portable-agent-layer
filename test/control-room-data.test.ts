@@ -100,7 +100,7 @@ describe("board", () => {
     expect(board(NOW)[0].openIscs).toBe(2);
   });
 
-  test("carries next, blockers, staleness and the last session", () => {
+  test("carries next, blockers, the last session, and ages from that session", () => {
     registerProject("demo", {
       updated: "2026-08-01T00:00:00.000Z",
       frontmatter: 'next: ["ship it"]\nblockers: ["waiting on a key"]',
@@ -109,8 +109,8 @@ describe("board", () => {
     const [c] = board(NOW);
     expect(c.next).toEqual(["ship it"]);
     expect(c.blockers).toEqual(["waiting on a key"]);
-    expect(c.stale).toBe(true);
-    expect(c.ageDays).toBe(35);
+    expect(c.stale).toBe(false);
+    expect(c.ageDays).toBe(6);
     expect(c.lastSession).toEqual({ date: "2026-08-30", title: "t 2026-08-30" });
     expect(c.sessions30d).toBe(1);
   });

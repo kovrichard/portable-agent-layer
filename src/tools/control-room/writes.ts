@@ -8,7 +8,7 @@
 
 import { raw as rawSettings, reload, write as writeSettings } from "../../core/settings";
 import { logCommitment } from "../../progress/commitment-events";
-import { readProject, writeProject } from "../../progress/projects";
+import { readProject, saveProjectTickets, writeProject } from "../../progress/projects";
 import { completeIsc, type IscSections, reopenIsc } from "../lib/project-isc";
 
 export type WriteOutcome =
@@ -21,7 +21,7 @@ const missing = (project: string): WriteOutcome => ({
   error: `no such project: ${project}`,
 });
 
-export function setIscStatus(project: string, id: number, close: boolean): WriteOutcome {
+export function setIscStatus(project: string, id: string, close: boolean): WriteOutcome {
   const p = readProject(project);
   if (!p) return missing(project);
   const sections: IscSections = {
@@ -34,8 +34,7 @@ export function setIscStatus(project: string, id: number, close: boolean): Write
   if (move.already) return { ok: true, changed: false };
   p.criteria = move.criteria;
   p.changelog = move.changelog;
-  p.updated = new Date().toISOString();
-  writeProject(p);
+  saveProjectTickets(p);
   logCommitment(project, id, close ? "kept" : "reopened", "control-room");
 
   return { ok: true, changed: true };

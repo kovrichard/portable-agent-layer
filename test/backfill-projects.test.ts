@@ -69,21 +69,21 @@ describe("project history becomes events", () => {
         ts: "2026-08-10T00:00:00.000Z",
         project: "shop",
         iscProject: "shop",
-        isc: 1,
+        isc: "1",
         outcome: "kept",
       }),
       expect.objectContaining({
         ts: "2026-08-12T00:00:00.000Z",
-        isc: 2,
+        isc: "2",
         outcome: "dropped",
       }),
     ]);
   });
 
   test("a close already streamed live is not logged again", () => {
-    logCommitment("shop", 1, "kept", "cli");
+    logCommitment("shop", "1", "kept", "cli");
     expect(backfillEvents()).toMatchObject({ projects: 4 });
-    expect(ofType("commitment").filter((e) => e.isc === 1)).toHaveLength(1);
+    expect(ofType("commitment").filter((e) => String(e.isc) === "1")).toHaveLength(1);
   });
 
   test("each dated decision is one event, its text kept as content", () => {

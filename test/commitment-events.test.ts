@@ -50,44 +50,55 @@ beforeEach(async () => {
   await cli("add-isc", "goals", "not anymore");
 });
 
+const openedIds = () =>
+  commitments()
+    .filter((e) => e.outcome === "opened")
+    .map((e) => e.isc as string);
+
 describe("a commitment", () => {
-  test("opened when its ISC is added", () => {
+  test("opened when its ISC is added, under a new four-character id", () => {
+    const [first, second] = openedIds();
+
     expect(commitments().map((e) => [e.iscProject, e.isc, e.outcome, e.surface])).toEqual(
       [
-        ["goals", 1, "opened", "cli"],
-        ["goals", 2, "opened", "cli"],
+        ["goals", first, "opened", "cli"],
+        ["goals", second, "opened", "cli"],
       ]
     );
+    expect(first).toMatch(/^[0-9a-z]{4}$/);
+    expect(second).not.toBe(first);
   });
 
   test("kept, reopened and dropped from the CLI, each once", async () => {
-    await cli("complete-isc", "goals", "1");
-    await cli("complete-isc", "goals", "1");
-    await cli("reopen-isc", "goals", "1");
-    await cli("retire-isc", "goals", "2");
+    const [first, second] = openedIds();
+    await cli("complete-isc", "goals", first);
+    await cli("complete-isc", "goals", first);
+    await cli("reopen-isc", "goals", first);
+    await cli("retire-isc", "goals", second);
     expect(
       afterOpening().map((e) => [e.iscProject, e.isc, e.outcome, e.surface])
     ).toEqual([
-      ["goals", 1, "kept", "cli"],
-      ["goals", 1, "reopened", "cli"],
-      ["goals", 2, "dropped", "cli"],
+      ["goals", first, "kept", "cli"],
+      ["goals", first, "reopened", "cli"],
+      ["goals", second, "dropped", "cli"],
     ]);
   });
 
   test("kept and snoozed from the control room, and waking one is not a snooze", () => {
-    setIscStatus("goals", 1, true);
-    setSnooze("goals", 2, 7);
-    setSnooze("goals", 2, 0);
+    const [first, second] = openedIds();
+    setIscStatus("goals", first, true);
+    setSnooze("goals", second, 7);
+    setSnooze("goals", second, 0);
     expect(
       afterOpening().map((e) => [e.isc, e.outcome, e.surface, e.snoozeDays])
     ).toEqual([
-      [1, "kept", "control-room", null],
-      [2, "snoozed", "control-room", 7],
+      [first, "kept", "control-room", null],
+      [second, "snoozed", "control-room", 7],
     ]);
   });
 
   test("never carries the criterion's text", async () => {
-    await cli("complete-isc", "goals", "1");
+    await cli("complete-isc", "goals", openedIds()[0] as string);
     expect(JSON.stringify(commitments())).not.toContain("ship it");
   });
 });

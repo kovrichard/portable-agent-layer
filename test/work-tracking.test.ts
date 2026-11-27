@@ -175,6 +175,26 @@ describe("writeSession / project history I/O", () => {
     expect(history[0]?.summary).toBe("Summary text");
   });
 
+  test("a session summarised again is appended, and read once as its newest entry", () => {
+    const cwd = "/Users/user/projects/resummed";
+    const entry = (session: string, title: string) => ({
+      date: "2026-05-14",
+      title,
+      summary: "",
+      insights: "",
+      session,
+    });
+    appendProjectHistory(cwd, entry("s1", "first take"));
+    appendProjectHistory(cwd, entry("s2", "other session"));
+    appendProjectHistory(cwd, entry("s1", "second take"));
+
+    expect(readProjectHistory(cwd, 10).map((h) => h.title)).toEqual([
+      "other session",
+      "second take",
+    ]);
+    expect(readProjectHistory(cwd, 1).map((h) => h.title)).toEqual(["second take"]);
+  });
+
   test("readProjectHistory returns empty for unknown project", () => {
     expect(readProjectHistory("/no/such/project")).toEqual([]);
   });

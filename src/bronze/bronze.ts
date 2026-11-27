@@ -181,8 +181,8 @@ const STORES: readonly RecordedStore[] = [
     group: "outside",
     location: "work/projects",
     formerLocation: "memory/projects",
-    files: "<project>/history.jsonl",
-    appendOnly: false,
+    files: "<project>/<history or tickets>.jsonl",
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {

@@ -1,6 +1,7 @@
 import { beforeEach, spyOn } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { storeDir } from "../../src/bronze/bronze";
 import { reload } from "../../src/core/settings";
 import { type ProjectProgress, writeProject } from "../../src/progress/projects";
 import { run } from "../../src/tools/agent/project";
@@ -43,6 +44,22 @@ export function seedProject(
       updated: SEEDED_AT,
       ...overrides,
     })
+  );
+}
+
+/** A project as written before tickets had a log: its ticket lines in ISA.md itself. */
+export function seedLegacyProject(
+  home: string,
+  sections: { criteria?: string; changelog?: string }
+): void {
+  seedProject(home);
+  const body = [
+    sections.criteria && `## Criteria\n\n${sections.criteria}`,
+    sections.changelog && `## Changelog\n\n${sections.changelog}`,
+  ].filter(Boolean);
+  appendFileSync(
+    resolve(storeDir("project-history"), "demo", "ISA.md"),
+    `\n${body.join("\n\n")}\n`
   );
 }
 

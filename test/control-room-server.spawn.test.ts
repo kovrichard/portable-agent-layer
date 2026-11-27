@@ -46,7 +46,7 @@ describe("the relationship tab", () => {
 
 describe("what the page may change", () => {
   const withCriteria =
-    "## Criteria\n\n- [ ] ISC-1: the open one\n- [ ] ISC-2: the other\n";
+    "## Criteria\n\n- [ ] ISC-aaaa: the open one\n- [ ] ISC-bbbb: the other\n";
 
   test("closing an ISC archives it, and reopening walks it back", async () => {
     registerProject("demo", withCriteria);
@@ -56,26 +56,26 @@ describe("what the page may change", () => {
         (i) => `${i.id}:${i.status}`
       );
 
-    expect(await statuses()).toEqual(["1:open", "2:open"]);
+    expect(await statuses()).toEqual(["aaaa:open", "bbbb:open"]);
 
     expect(
-      (await post(base, "/api/isc", { project: "demo", id: 1, status: "done" })).ok
+      (await post(base, "/api/isc", { project: "demo", id: "aaaa", status: "done" })).ok
     ).toBe(true);
-    expect(await statuses()).toEqual(["2:open", "1:done"]);
+    expect(await statuses()).toEqual(["bbbb:open", "aaaa:done"]);
 
     expect(
-      (await post(base, "/api/isc", { project: "demo", id: 1, status: "open" })).ok
+      (await post(base, "/api/isc", { project: "demo", id: "aaaa", status: "open" })).ok
     ).toBe(true);
-    expect(await statuses()).toEqual(["2:open", "1:open"]);
+    expect(await statuses()).toEqual(["bbbb:open", "aaaa:open"]);
   });
 
   test("closing one that is already closed changes nothing and says so", async () => {
     registerProject("demo", withCriteria);
     const base = await listen();
-    await post(base, "/api/isc", { project: "demo", id: 1, status: "done" });
+    await post(base, "/api/isc", { project: "demo", id: "aaaa", status: "done" });
     const again = await post(base, "/api/isc", {
       project: "demo",
-      id: 1,
+      id: "aaaa",
       status: "done",
     });
     expect(await again.json()).toMatchObject({ changed: false });

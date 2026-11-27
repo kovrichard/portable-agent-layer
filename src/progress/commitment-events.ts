@@ -9,7 +9,7 @@ export type CommitmentOutcome = "opened" | "kept" | "dropped" | "snoozed" | "reo
 
 export function logCommitment(
   iscProject: string,
-  isc: number,
+  isc: string,
   outcome: CommitmentOutcome,
   surface: "cli" | "control-room",
   snoozeDays: number | null = null

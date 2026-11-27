@@ -1,38 +1,31 @@
 import { logCommitment } from "../../progress/commitment-events";
-import { type ProjectProgress, writeProject } from "../../progress/projects";
+import { encodeIscText, ISC_BOX, parseIscs } from "../../progress/isc-line";
+import {
+  type ProjectProgress,
+  readProject,
+  saveProjectTickets,
+} from "../../progress/projects";
 import { type Leaf, leaf, UsageError } from "../lib/command";
 import {
   archiveLine,
   completeIsc,
-  encodeIscText,
-  ISC_BOX,
   type IscMove,
   type IscSections,
-  nextIscId,
-  parseIscs,
+  newIscId,
   removeIscLine,
   reopenIsc,
   selectIscs,
 } from "../lib/project-isc";
-import {
-  fail,
-  joined,
-  nonBlank,
-  now,
-  ok,
-  positiveId,
-  requireProject,
-} from "./project-io";
+import { fail, iscIdArg, joined, nonBlank, ok, requireProject } from "./project-io";
 
 function cmdAddIsc(name: string, text: string): undefined {
   const title = nonBlank(text, "<title...>");
   const p = requireProject(name);
   const current = p.criteria ?? "";
-  const id = nextIscId(current, p.changelog ?? "");
+  const id = newIscId(current, p.changelog ?? "");
   const newLine = `- [ ] ISC-${id}: ${encodeIscText(title)}`;
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
   logCommitment(name, id, "opened", "cli");
   ok({
     added: true,
@@ -46,7 +39,7 @@ function cmdAddIsc(name: string, text: string): undefined {
 
 // Completing an ISC moves its line out of Criteria and into the dated Changelog
 // archive, so Criteria stays exactly the open set and never re-bloats context.
-function cmdCompleteIsc(name: string, id: number): undefined {
+function cmdCompleteIsc(name: string, id: string): undefined {
   const p = requireProject(name);
   const move = completeIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
@@ -69,13 +62,12 @@ function sectionsOf(p: ProjectProgress): IscSections {
 function applyIscMove(p: ProjectProgress, move: IscMove & { ok: true }): void {
   p.criteria = move.criteria;
   p.changelog = move.changelog;
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
 }
 
 // Reopening pulls the line back out of the Changelog (or legacy Criteria) into
 // the open set.
-function cmdReopenIsc(name: string, id: number): undefined {
+function cmdReopenIsc(name: string, id: string): undefined {
   const p = requireProject(name);
   const move = reopenIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
@@ -127,7 +119,7 @@ function cmdListIsc(name: string, flags: Set<string>): undefined {
 
 // show-isc prints one ISC's full text on demand — the "detail" counterpart to
 // resume's titles. Scans Criteria (open + not-yet-archived) and Changelog.
-function cmdShowIsc(name: string, id: number): undefined {
+function cmdShowIsc(name: string, id: string): undefined {
   const p = requireProject(name);
   const isc = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].find(
     (i) => i.id === id
@@ -138,7 +130,7 @@ function cmdShowIsc(name: string, id: number): undefined {
 
 // A retired ISC stopped being valid; it moves to the Changelog as [~], so it keeps
 // reserving its id and never reads as finished work.
-function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
+function cmdRetireIsc(name: string, id: string, by: string | null): undefined {
   const p = requireProject(name);
   if (parseIscs(p.changelog ?? "").some((i) => i.id === id && i.status === "retired")) {
     ok({ retired: true, id, alreadyRetired: true });
@@ -155,14 +147,13 @@ function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
     `${line.replace(/\[[ x]\]/i, "[~]")}${suffix}`,
     "Retired"
   );
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
   logCommitment(name, id, "dropped", "cli");
   ok({ retired: true, id, supersededBy: by, archived: true });
 }
 
 // Returns the previous text, because the ISA files keep no version history.
-function cmdEditIsc(name: string, id: number, newText: string): undefined {
+function cmdEditIsc(name: string, id: string, newText: string): undefined {
   const text = nonBlank(newText, "<text...>");
   const p = requireProject(name);
   const inCriteria = parseIscs(p.criteria ?? "").find((i) => i.id === id);
@@ -182,8 +173,7 @@ function cmdEditIsc(name: string, id: number, newText: string): undefined {
 
   if (inCriteria) p.criteria = rewrite(p.criteria ?? "");
   else p.changelog = rewrite(p.changelog ?? "");
-  p.updated = now();
-  writeProject(p);
+  saveProjectTickets(p);
   ok({
     edited: true,
     id,
@@ -206,20 +196,40 @@ function cmdPruneIsc(name: string): undefined {
     p.changelog = archiveLine(p.changelog, line);
   }
 
-  if (done.length > 0) {
-    p.updated = now();
-    writeProject(p);
-  }
+  if (done.length > 0) saveProjectTickets(p);
 
   const openLeft = parseIscs(p.criteria ?? "").filter((i) => i.status === "open").length;
   ok({ pruned: done.length, name, remaining_open: openLeft });
 }
 
-function iscLeaf(summary: string, act: (name: string, id: number) => undefined): Leaf {
+/** An old number reaches the ticket it was imported as; one that names two is refused. */
+function currentTicketId(p: ProjectProgress, id: string): string {
+  const known = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")];
+  if (known.some((isc) => isc.id === id)) return id;
+  const renamed = p.oldIscNumbers?.[id] ?? [];
+
+  if (renamed.length > 1) {
+    const ids = renamed.map((ticket) => `ISC-${ticket}`).join(", ");
+    fail(
+      `ISC-${id} named ${renamed.length} different tickets; they are now ${ids}. Use one of those.`
+    );
+  }
+
+  return renamed[0] ?? id;
+}
+
+function ticketArg(name: string, value: string | undefined, label: string): string {
+  const id = iscIdArg(value, label);
+  const p = readProject(name);
+
+  return p ? currentTicketId(p, id) : id;
+}
+
+function iscLeaf(summary: string, act: (name: string, id: string) => undefined): Leaf {
   return leaf({
     summary,
     args: "<name> <id>",
-    run: ({ positionals }) => act(positionals[0], positiveId(positionals[1], "<id>")),
+    run: ({ positionals: [name, id] }) => act(name, ticketArg(name, id, "<id>")),
   });
 }
 
@@ -246,7 +256,7 @@ export const iscCommands = {
     summary: "Rewrite ISC-N's text, keeping its id and state",
     args: "<name> <id> <text...>",
     run: ({ positionals: [name, id, ...text] }) =>
-      cmdEditIsc(name, positiveId(id, "<id>"), joined(text)),
+      cmdEditIsc(name, ticketArg(name, id, "<id>"), joined(text)),
   }),
   "retire-isc": leaf({
     summary: "Close ISC-N as no longer valid, not as done",
@@ -257,8 +267,8 @@ export const iscCommands = {
     run: ({ positionals: [name, id], values }) =>
       cmdRetireIsc(
         name,
-        positiveId(id, "<id>"),
-        values.by === undefined ? null : positiveId(values.by, "--by")
+        ticketArg(name, id, "<id>"),
+        values.by === undefined ? null : ticketArg(name, values.by, "--by")
       ),
   }),
   "prune-isc": leaf({

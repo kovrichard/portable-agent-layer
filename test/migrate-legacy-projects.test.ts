@@ -153,20 +153,9 @@ describe("v2-threads-to-isc", () => {
   });
 
   test.each([
-    ["an empty criteria section", undefined, "- [ ] ISC-1: do t1"],
-    [
-      "the highest real ISC id",
-      [
-        "- [x] ISC-3: done",
-        "- [ ] ISC-12: big",
-        "-  [~]  isc-14: spaced",
-        "note - [ ] ISC-99: not a checkbox",
-        "- [?] ISC-98: unknown mark",
-        "- [ ] ISC-97 no colon",
-      ].join("\n"),
-      "- [ ] ISC-15: do t1",
-    ],
-  ])("appends the thread as the next ISC after %s", (_label, criteria, added) => {
+    ["an empty criteria section", undefined],
+    ["open ISCs", "- [ ] ISC-12: big"],
+  ])("appends the thread as a new ISC after %s", (_label, criteria) => {
     const dir = boundProject("app", criteria);
     writeThreadLines(
       threadLine("t1", { cwd: dir }),
@@ -179,7 +168,7 @@ describe("v2-threads-to-isc", () => {
       results: ['t1 → app ISC: added "do t1" (thread source kept)'],
     });
     const lines = (readProject("app")?.criteria ?? "").split("\n");
-    expect(lines.at(-1)).toBe(added);
+    expect(lines.at(-1)).toMatch(/^- \[ \] ISC-[0-9a-z]{4}: do t1$/);
     expect(lines.length).toBe(criteria ? criteria.split("\n").length + 1 : 1);
 
     const [t1, t2] = storedThreads();

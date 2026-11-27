@@ -202,6 +202,13 @@ function answer(outcome: WriteOutcome, body: Record<string, unknown>): Response 
 }
 
 /** Close or reopen one criterion — the same rule `complete-isc` reaches. */
+/** An ISC id from a request: a string id, or a number from a page built before ids were strings. */
+function iscIdOf(value: unknown): string | null {
+  const id = typeof value === "number" ? String(value) : value;
+
+  return typeof id === "string" && /^[0-9a-z]+$/.test(id) && !/^0+$/.test(id) ? id : null;
+}
+
 async function iscWrite(request: Request): Promise<Response> {
   const body = await readBody(request);
   if (!body) return json({ error: "expected a JSON body" }, 400);
@@ -210,15 +217,18 @@ async function iscWrite(request: Request): Promise<Response> {
     return json({ error: "project is required" }, 400);
   }
 
-  if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
-    return json({ error: "id must be a positive integer" }, 400);
-  }
+  const isc = iscIdOf(id);
+  if (!isc) return json({ error: "id must be an ISC id like k7m2 or 151" }, 400);
 
   if (status !== "open" && status !== "done") {
     return json({ error: "status must be open or done" }, 400);
   }
 
-  return answer(setIscStatus(project, id, status === "done"), { project, id, status });
+  return answer(setIscStatus(project, isc, status === "done"), {
+    project,
+    id: isc,
+    status,
+  });
 }
 
 async function placementWrite(request: Request): Promise<Response> {
@@ -265,9 +275,8 @@ async function snoozeWrite(request: Request): Promise<Response> {
     return json({ error: "project is required" }, 400);
   }
 
-  if (typeof id !== "number" || !Number.isInteger(id) || id < 1) {
-    return json({ error: "id must be a positive integer" }, 400);
-  }
+  const isc = iscIdOf(id);
+  if (!isc) return json({ error: "id must be an ISC id like k7m2 or 151" }, 400);
 
   if (
     typeof days !== "number" ||
@@ -278,7 +287,7 @@ async function snoozeWrite(request: Request): Promise<Response> {
     return json({ error: `days must be a whole number of 0..${MAX_SNOOZE_DAYS}` }, 400);
   }
 
-  return json({ project, id, until: setSnooze(project, id, days) });
+  return json({ project, id: isc, until: setSnooze(project, isc, days) });
 }
 
 async function readWrite(request: Request): Promise<Response> {
