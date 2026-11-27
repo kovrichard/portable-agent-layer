@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { recordAdoptedActor } from "../bronze/actor-adoption";
 import { ACTOR_PATH } from "../core/actor";
 import { orRefuse, type SyncContext, SyncRefusal } from "./context";
-import { openBlob, sealBlob } from "./crypto";
+import { fileId, openBlob, sealBlob } from "./crypto";
 import { syncKindOf } from "./scope";
 
 const hashOf = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
@@ -94,9 +94,23 @@ function latestVersions(names: string[]): Map<string, number> {
   return latest;
 }
 
+/** Keyed by file id, computed here, so a file already in step costs no request. */
+async function agreedVersionsById(ctx: SyncContext): Promise<Map<string, number>> {
+  const byId = new Map<string, number>();
+
+  for (const [path, { version }] of Object.entries(ctx.state.whole))
+    byId.set(await fileId(ctx.account, path), version);
+
+  return byId;
+}
+
 export async function pullWhole(ctx: SyncContext): Promise<void> {
-  for (const [id, version] of latestVersions(await ctx.store.list("whole/")))
+  const agreed = await agreedVersionsById(ctx);
+
+  for (const [id, version] of latestVersions(await ctx.store.list("whole/"))) {
+    if (version <= (agreed.get(id) ?? 0)) continue;
     await orRefuse(ctx, id, () => pullFile(ctx, id, version));
+  }
 }
 
 async function pushFile(ctx: SyncContext, path: string): Promise<void> {
