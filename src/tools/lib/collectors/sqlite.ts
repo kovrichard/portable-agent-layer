@@ -36,12 +36,10 @@ export interface ResumeAfter {
  * nothing is pending, so the file can be read as immutable.
  */
 function openWithoutWriting(dbPath: string): Database {
-  if (existsSync(`${dbPath}-wal`)) return new Database(dbPath, { readonly: true });
+  const file = pathToFileURL(dbPath).href;
+  const uri = existsSync(`${dbPath}-wal`) ? file : `${file}?immutable=1`;
 
-  return new Database(
-    `${pathToFileURL(dbPath).href}?immutable=1`,
-    constants.SQLITE_OPEN_READONLY | constants.SQLITE_OPEN_URI
-  );
+  return new Database(uri, constants.SQLITE_OPEN_READONLY | constants.SQLITE_OPEN_URI);
 }
 
 function quoted(identifier: string): string {
