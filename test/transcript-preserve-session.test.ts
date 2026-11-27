@@ -101,6 +101,7 @@ describe("stageSessionTranscript", () => {
       unchanged: 0,
       failed: 1,
     });
+    expect(staged().filter((name) => name.endsWith(".partial"))).toEqual([]);
   });
 
   test("a path outside Claude Code's projects folder, or none, stages nothing", () => {
@@ -178,11 +179,15 @@ describe("the sweep finishes staged copies", () => {
     mkdirSync(resolve(stagingDir(at), "-p"), { recursive: true });
     const old = resolve(stagingDir(at), "-p/a.jsonl~1-1.partial");
     const fresh = resolve(stagingDir(at), "-p/b.jsonl~1-1.partial");
+    const oldComplete = resolve(stagingDir(at), "-p/c.jsonl~1-1");
     writeFileSync(old, "x");
     writeFileSync(fresh, "x");
+    writeFileSync(oldComplete, "c");
     const longAgo = (Date.now() - 31 * 60_000) / 1000;
     utimesSync(old, longAgo, longAgo);
-    expect(await preserveTranscripts(at)).toEqual({ copied: 0, unchanged: 0, failed: 0 });
+    utimesSync(oldComplete, longAgo, longAgo);
+    expect(await preserveTranscripts(at)).toEqual({ copied: 1, unchanged: 0, failed: 0 });
     expect(staged()).toEqual(["-p/b.jsonl~1-1.partial"]);
+    expect(copied("-p/c.jsonl")).toBe("c");
   });
 });
