@@ -118,11 +118,12 @@ const formerStateDir = () => home("memory", "state");
  * This machine's working state. An install whose owner has not run the move to
  * `state/` yet keeps using `memory/state`; once `state/` exists it wins.
  */
-export function stateDir(): string {
-  const current = home("state");
-  if (existsSync(current) || !existsSync(formerStateDir())) return current;
+export function stateDir(homeDir: string = palHome()): string {
+  const current = resolve(homeDir, "state");
+  const former = resolve(homeDir, "memory", "state");
+  if (existsSync(current) || !existsSync(former)) return current;
 
-  return formerStateDir();
+  return former;
 }
 
 /** A file that left the state folder for `dir`: its old copy is read until the owner's move takes it. */

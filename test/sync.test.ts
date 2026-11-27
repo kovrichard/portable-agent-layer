@@ -191,6 +191,17 @@ describe("whole files changed on both machines", () => {
   });
 });
 
+describe("an install that has not moved its state yet", () => {
+  test("keeps the sync's own state in memory/state and never creates state/", async () => {
+    put("A", "memory/state/sessions.json", "{}");
+    put("A", GOALS, "Ship sync.\n");
+    await sync("A");
+
+    expect(existsSync(resolve(homes.A, "state"))).toBe(false);
+    expect(existsSync(resolve(homes.A, "memory/state/sync/state.json"))).toBe(true);
+  });
+});
+
 describe("a machine joining with its own actor", () => {
   const actor = (id: string) => `${JSON.stringify({ id, label: id, createdAt: "x" })}\n`;
 
