@@ -1,7 +1,8 @@
 /**
- * Stop handler: when cwd resolves to an active registered project, bump its
- * `updated` timestamp. Otherwise no-op (parent-dir browse mode, unregistered cwd,
- * paused/complete/archived projects all fall through cleanly).
+ * Stop handler: when cwd resolves to an active registered project, record on
+ * this machine that it was just worked in; readProject folds it into `updated`.
+ * Otherwise no-op (parent-dir browse mode, unregistered cwd, paused/complete/
+ * archived projects all fall through cleanly).
  *
  * The plan calls for the JSONs to never go stale silently — this is the
  * mechanism. CLI invocation is for explicit edits; this handler is for the
@@ -9,11 +10,8 @@
  */
 
 import { logDebug, logError } from "../../core/log";
-import {
-  readAllProjects,
-  resolveProjectFromCwd,
-  writeProject,
-} from "../../progress/projects";
+import { recordProjectTouch } from "../../progress/project-activity";
+import { readAllProjects, resolveProjectFromCwd } from "../../progress/projects";
 
 export async function projectTouch(): Promise<void> {
   try {
@@ -25,8 +23,7 @@ export async function projectTouch(): Promise<void> {
 
     if (resolved.status !== "active") return;
 
-    resolved.updated = new Date().toISOString();
-    writeProject(resolved);
+    recordProjectTouch(resolved.name);
     logDebug("project-touch", `bumped ${resolved.name} (${resolved.path})`);
   } catch (err) {
     logError("project-touch", err);

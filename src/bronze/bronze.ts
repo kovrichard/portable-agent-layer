@@ -182,7 +182,7 @@ const STORES: readonly RecordedStore[] = [
     location: "work/projects",
     formerLocation: "memory/projects",
     files: "<project>/history.jsonl",
-    appendOnly: false,
+    appendOnly: true,
     alsoInEventLog: false,
   },
   {

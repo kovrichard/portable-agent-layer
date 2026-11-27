@@ -29,6 +29,7 @@ import {
 } from "../core/project-bindings";
 import { detectRemote } from "../core/remote";
 import { writeBinding, writeBindings } from "./bindings";
+import { lastActivity } from "./project-activity";
 
 export type ProjectStatus = "active" | "paused" | "complete" | "archived";
 
@@ -213,8 +214,9 @@ export function readProject(
     const bound = bindings[meta.name] ?? meta.path;
     const path = bound ? resolve(bound) : undefined;
     const { handoff: _retired, ...kept } = meta;
+    const updated = lastActivity(meta.name, meta.updated);
 
-    return { ...kept, path, ...extractSections(body) };
+    return { ...kept, updated, path, ...extractSections(body) };
   } catch {
     return null;
   }

@@ -6,9 +6,14 @@ import {
   setDefaultTimeout,
   test,
 } from "bun:test";
-import { mkdirSync, realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { storeDir } from "../src/bronze/bronze";
 import { readProject, writeProject } from "../src/progress/projects";
+
+const isaFilePath = (slug: string) =>
+  resolve(storeDir("project-history"), slug, "ISA.md");
+
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { outsideRepoHome } from "./lib/test-home";
@@ -206,5 +211,43 @@ describe("projectTouch — auto-write contract", () => {
     expect(after?.blockers ?? []).toEqual([]);
     // decisions body section should never be touched by project-touch
     expect(after?.decisions).toBeUndefined();
+  });
+
+  test("a touch leaves the synced ISA.md byte for byte as it was", async () => {
+    const repo = fixtureRepo("synced");
+    writeProject({
+      name: "synced",
+      path: repo,
+      status: "active",
+      created: nowIso(-86_400_000),
+      updated: nowIso(-86_400_000),
+    });
+    const isa = readFileSync(isaFilePath("synced"), "utf-8");
+    process.chdir(repo);
+
+    await (await freshHandler())();
+
+    expect(readFileSync(isaFilePath("synced"), "utf-8")).toBe(isa);
+    expect(Date.now() - Date.parse(readProject("synced")?.updated ?? "")).toBeLessThan(
+      5_000
+    );
+  });
+
+  test("another machine's newer history day shows as the project's last activity", () => {
+    const before = "2026-01-01T00:00:00.000Z";
+    writeProject({
+      name: "elsewhere",
+      status: "active",
+      created: before,
+      updated: before,
+    });
+    const history = resolve(storeDir("project-history"), "elsewhere", "history.jsonl");
+    mkdirSync(dirname(history), { recursive: true });
+    writeFileSync(
+      history,
+      '{"date":"2026-03-04","title":"t","summary":"","insights":""}\n'
+    );
+
+    expect(readProject("elsewhere")?.updated).toBe("2026-03-04T00:00:00.000Z");
   });
 });

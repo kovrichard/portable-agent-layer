@@ -236,31 +236,26 @@ function projectHistoryFile(project: string): string {
   return resolve(storeDir("project-history"), project, "history.jsonl");
 }
 
-function withoutSession(lines: string[], session: string): string[] {
-  return lines.filter((line) => {
-    try {
-      return (JSON.parse(line) as ProjectHistoryEntry).session !== session;
-    } catch {
-      return true;
-    }
-  });
-}
-
-/** A session is summarised again as it grows; its entry is replaced, not repeated. */
+/**
+ * Always an append, so the file syncs line by line between machines. A session
+ * summarised again as it grows adds a newer line; readers keep the last one.
+ */
 export function appendProjectHistory(cwd: string, entry: ProjectHistoryEntry): void {
   const historyPath = historyFileFor(cwd);
   ensureDir(dirname(historyPath));
-  const line = JSON.stringify(entry);
+  appendFileSync(historyPath, `${JSON.stringify(entry)}\n`, "utf-8");
+}
 
-  if (!entry.session || !existsSync(historyPath)) {
-    appendFileSync(historyPath, `${line}\n`, "utf-8");
+/** Each session's newest entry, in the order the sessions last wrote. */
+function latestPerSession(entries: ProjectHistoryEntry[]): ProjectHistoryEntry[] {
+  const lastIndex = new Map<string, number>();
+  entries.forEach((entry, i) => {
+    if (entry.session) lastIndex.set(entry.session, i);
+  });
 
-    return;
-  }
-
-  const lines = readFileSync(historyPath, "utf-8").split("\n").filter(Boolean);
-  const kept = withoutSession(lines, entry.session);
-  writeFileSync(historyPath, `${[...kept, line].join("\n")}\n`, "utf-8");
+  return entries.filter(
+    (entry, i) => !entry.session || lastIndex.get(entry.session) === i
+  );
 }
 
 /** Read the session history for a given cwd */
@@ -277,8 +272,9 @@ function readHistoryFile(historyPath: string, limit: number): ProjectHistoryEntr
 
   try {
     const lines = readFileSync(historyPath, "utf-8").trim().split("\n").filter(Boolean);
+    const entries = lines.map((line) => JSON.parse(line) as ProjectHistoryEntry);
 
-    return lines.slice(-limit).map((line) => JSON.parse(line) as ProjectHistoryEntry);
+    return latestPerSession(entries).slice(-limit);
   } catch {
     return [];
   }
