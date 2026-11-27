@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { v19RulesToLog } from "../src/cli/migrations/v19-rules-to-log";
 import { readRules } from "../src/opinions/adaptation-rules";
 import { legacyRulesPath, ruleLogPath } from "../src/opinions/rule-log";
@@ -15,8 +15,16 @@ const rule = (id: string, status: string) => ({
   createdAt: "2026-10-01T00:00:00.000Z",
 });
 
+function homeInRecordsLayout(name = import.meta.file): string {
+  const home = freshTestDir(name);
+  mkdirSync(resolve(home, "records"), { recursive: true });
+  process.env.PAL_HOME = home;
+
+  return home;
+}
+
 beforeEach(() => {
-  process.env.PAL_HOME = freshTestDir(import.meta.file);
+  homeInRecordsLayout();
 });
 
 function legacy(rules: unknown[]): void {
@@ -55,11 +63,21 @@ describe("v19-rules-to-log", () => {
     legacy([rule("a", "approved")]);
     v19RulesToLog.run();
     const here = readFileSync(ruleLogPath(), "utf-8");
-    process.env.PAL_HOME = freshTestDir(`${import.meta.file}-other`);
+    homeInRecordsLayout(`${import.meta.file}-other`);
     legacy([rule("a", "approved")]);
     v19RulesToLog.run();
 
     expect(readFileSync(ruleLogPath(), "utf-8")).toBe(here);
+  });
+
+  test("waits while the home has not moved its stores into records/, reading rules.json meanwhile", () => {
+    process.env.PAL_HOME = freshTestDir(`${import.meta.file}-unmoved`);
+    legacy([rule("a", "approved")]);
+
+    expect(v19RulesToLog.check().pending).toBe(false);
+    expect(v19RulesToLog.run()).toEqual({ migrated: 0, skipped: 0, results: [] });
+    expect(existsSync(resolve(process.env.PAL_HOME, "records"))).toBe(false);
+    expect(readRules().map((r) => r.id)).toEqual(["a"]);
   });
 
   test("nothing to move is no work", () => {

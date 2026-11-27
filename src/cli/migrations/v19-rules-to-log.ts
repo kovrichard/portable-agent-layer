@@ -1,4 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
+import { dirname } from "node:path";
+import { storeLocation } from "../../bronze/bronze";
 import {
   legacyRuleLines,
   legacyRulesPath,
@@ -6,13 +8,16 @@ import {
 } from "../../opinions/rule-log";
 import type { Migration, MigrationResult } from "./migration";
 
+/** Until the owner moves the stores into records/, install must not start that folder. */
+const recordsLayoutAdopted = () => existsSync(dirname(storeLocation("rules")));
+
 export const v19RulesToLog: Migration = {
   id: "v19-rules-to-log",
   description:
     "Move the adaptation rules out of rules.json into records/rules/rules.jsonl",
 
   check() {
-    const pending = existsSync(legacyRulesPath());
+    const pending = existsSync(legacyRulesPath()) && recordsLayoutAdopted();
 
     return {
       pending,
@@ -21,7 +26,7 @@ export const v19RulesToLog: Migration = {
   },
 
   run(dryRun = false): MigrationResult {
-    if (!existsSync(legacyRulesPath())) return { migrated: 0, skipped: 0, results: [] };
+    if (!this.check().pending) return { migrated: 0, skipped: 0, results: [] };
     const rules = legacyRuleLines().length;
 
     if (dryRun)
