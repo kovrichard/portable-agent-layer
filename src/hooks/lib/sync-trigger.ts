@@ -5,7 +5,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { statSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug, logError } from "../../core/log";
 import { palHome, palPkg } from "../../core/paths";
@@ -29,16 +29,13 @@ function startDetached(command: string[]): void {
 }
 
 function turnSyncDue(home: string, now: number): boolean {
-  try {
-    return now - statSync(stampFile(home)).mtimeMs >= SYNC_INTERVAL_MS;
-  } catch {
-    return true;
-  }
+  if (!existsSync(stampFile(home))) return true;
+
+  return now - Number(readFileSync(stampFile(home), "utf-8")) >= SYNC_INTERVAL_MS;
 }
 
 function markStarted(home: string, now: number): void {
-  writeFileSync(stampFile(home), "");
-  utimesSync(stampFile(home), now / 1000, now / 1000);
+  writeFileSync(stampFile(home), String(now));
 }
 
 /** True when a sync was started. */

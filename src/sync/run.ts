@@ -21,11 +21,9 @@ export type SyncRun =
 const lockFile = (home: string) => resolve(syncStateDir(home), "sync.lock");
 
 function lockIsStale(home: string, now: number): boolean {
-  try {
-    return now - statSync(lockFile(home)).mtimeMs >= LOCK_STALE_MS;
-  } catch {
-    return true;
-  }
+  const lock = statSync(lockFile(home), { throwIfNoEntry: false });
+
+  return lock !== undefined && now - lock.mtimeMs >= LOCK_STALE_MS;
 }
 
 function takeLock(home: string, now: number): boolean {

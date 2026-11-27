@@ -113,8 +113,8 @@ export async function setupAccount(
 }
 
 function forgetAccount(home: string): void {
-  rmSync(accountFile(home), { force: true });
-  rmSync(accountKeyFile(home), { force: true });
+  rmSync(accountFile(home));
+  rmSync(accountKeyFile(home));
 }
 
 /** Joins the account a store already holds, once the key opens its check blob. */

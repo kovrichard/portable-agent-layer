@@ -49,7 +49,7 @@ function checksum(key: Uint8Array): string {
 export function formatRecoveryKey(key: Uint8Array): string {
   const chars = charsOfBig(bigOfBytes(key) << PAD_BITS, KEY_CHARS) + checksum(key);
 
-  return chars.match(/.{4}/g)?.join("-") ?? chars;
+  return chars.replace(/(.{4})(?=.)/g, "$1-");
 }
 
 function normalized(text: string): string {

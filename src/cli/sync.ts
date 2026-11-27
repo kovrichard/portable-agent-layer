@@ -21,12 +21,14 @@ import {
   parseRecoveryKey,
   RecoveryKeyError,
 } from "../sync/recovery-key";
-import { runSync } from "../sync/run";
+import { runSync, type SyncRun } from "../sync/run";
 import { group, type Leaf, leaf, UsageError } from "../tools/lib/command";
+import { askLine } from "./ask-line";
 
 export interface SyncDeps {
   home: () => string;
   readRecoveryKey: () => Promise<string>;
+  sync: (home: string) => Promise<SyncRun>;
 }
 
 const NOT_SET_UP =
@@ -114,7 +116,7 @@ function joinLeaf(deps: SyncDeps): Leaf {
       );
       console.log("Joined. The first sync runs now; later ones run on their own.");
 
-      return printRun(await runSync(deps.home()));
+      return printRun(await deps.sync(deps.home()));
     },
   });
 }
@@ -136,7 +138,7 @@ function described(result: SyncResult): string {
   return parts.join(", ");
 }
 
-function printRun(run: Awaited<ReturnType<typeof runSync>>): number {
+function printRun(run: SyncRun): number {
   if (run.outcome === "not-set-up") {
     console.log(NOT_SET_UP);
 
@@ -157,7 +159,7 @@ function printRun(run: Awaited<ReturnType<typeof runSync>>): number {
 function runLeaf(deps: SyncDeps): Leaf {
   return leaf({
     summary: "Sync now",
-    run: async () => printRun(await runSync(deps.home())),
+    run: async () => printRun(await deps.sync(deps.home())),
   });
 }
 
@@ -195,19 +197,6 @@ function recoveryKeyLeaf(deps: SyncDeps): Leaf {
   });
 }
 
-async function promptRecoveryKey(): Promise<string> {
-  if (!process.stdin.isTTY) return await Bun.stdin.text();
-  const { createInterface } = await import("node:readline");
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-
-  return new Promise((done) =>
-    rl.question("Recovery key: ", (answer) => {
-      rl.close();
-      done(answer);
-    })
-  );
-}
-
 export function syncCommandWith(deps: SyncDeps) {
   return group({
     summary: "End-to-end encrypted sync of your memory between your machines",
@@ -224,5 +213,6 @@ export function syncCommandWith(deps: SyncDeps) {
 
 export const syncCommand = syncCommandWith({
   home: () => palHome(),
-  readRecoveryKey: promptRecoveryKey,
+  readRecoveryKey: () => askLine("Recovery key: "),
+  sync: runSync,
 });

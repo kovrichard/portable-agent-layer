@@ -42,7 +42,28 @@ describe("recovery key", () => {
   test("says what is wrong with a key of the wrong length or a stray character", () => {
     const text = formatRecoveryKey(randomKey());
 
-    expect(() => parseRecoveryKey(text.slice(0, -1))).toThrow("this has 55");
+    expect(() => parseRecoveryKey(text.slice(0, -1))).toThrow(
+      "a recovery key has 56 characters, this has 55"
+    );
     expect(() => parseRecoveryKey(`${text.slice(0, -1)}U`)).toThrow('"U"');
+  });
+
+  test("reads I and L as 1", () => {
+    const key = new Uint8Array(32).fill(0x08);
+    const text = formatRecoveryKey(key);
+
+    expect(text).toContain("1");
+    expect(parseRecoveryKey(text.replaceAll("1", "l"))).toEqual(key);
+    expect(parseRecoveryKey(text.replaceAll("1", "I"))).toEqual(key);
+  });
+
+  test("a change in the padding bits is a typo, though the key and checksum still match", () => {
+    const chars = formatRecoveryKey(randomKey()).replaceAll("-", "");
+    const lastKeyChar = chars.charAt(51);
+    const padded = String.fromCharCode(lastKeyChar.charCodeAt(0) + 1);
+
+    expect(() => parseRecoveryKey(chars.slice(0, 51) + padded + chars.slice(52))).toThrow(
+      "typo"
+    );
   });
 });
