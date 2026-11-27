@@ -67,10 +67,26 @@ if ((Test-Path $projectsDir) -and (Test-Path $bindingsFile)) {
       Sort-Object { $_.Path.Length } -Descending |
       Select-Object -First 1
     if ($project) {
-      $isa = Join-Path $projectsDir "$($project.Slug)\ISA.md"
-      if (Test-Path $isa) {
-        $content = Get-Content $isa -Raw -ErrorAction SilentlyContinue
-        $OPEN_ISCS = ([regex]::Matches($content, '- \[ \] ISC-')).Count
+      # Replays tickets.jsonl as src/progress/tickets.ts does: newest line per ticket by at, then close over open, then line
+      $ticketLog = Join-Path $projectsDir "$($project.Slug)\tickets.jsonl"
+      if (Test-Path $ticketLog) {
+        $rank = @{ open = 0; done = 1; retired = 2 }
+        $newest = [System.Collections.Generic.Dictionary[string, object]]::new()
+        foreach ($line in Get-Content $ticketLog -ErrorAction SilentlyContinue) {
+          try { $t = $line | ConvertFrom-Json } catch { continue }
+          if (-not $t -or $t.ticket -isnot [string] -or $t.text -isnot [string] -or -not $rank.ContainsKey([string]$t.status)) { continue }
+          # ConvertFrom-Json in PowerShell 7 turns ISO dates into DateTime, so read at from the raw line
+          $atMatch = [regex]::Match($line, '"at":"([^"]*)"')
+          $entry = [pscustomobject]@{ At = $(if ($atMatch.Success) { $atMatch.Groups[1].Value } else { '' }); Rank = $rank[[string]$t.status]; Line = $line; Status = [string]$t.status }
+          $held = $null
+          if ($newest.TryGetValue($t.ticket, [ref]$held)) {
+            $byAt = [string]::CompareOrdinal($entry.At, $held.At)
+            $wins = if ($byAt -ne 0) { $byAt -gt 0 } elseif ($entry.Rank -ne $held.Rank) { $entry.Rank -gt $held.Rank } else { [string]::CompareOrdinal($entry.Line, $held.Line) -gt 0 }
+            if (-not $wins) { continue }
+          }
+          $newest[$t.ticket] = $entry
+        }
+        $OPEN_ISCS = @($newest.Values | Where-Object { $_.Status -eq 'open' }).Count
       }
     }
   } catch { $OPEN_ISCS = 0 }

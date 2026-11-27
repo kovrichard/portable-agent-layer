@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { POWERSHELL_SPAWN_TEST_MS, SPAWN_HEAVY_TEST_MS } from "./lib/spawn-heavy";
 import { freshTestDir } from "./lib/test-home";
@@ -12,20 +12,26 @@ const repo = resolve(import.meta.dir, "..");
 
 let HOME: string;
 
+const ticket = (ticket: string, status: string, at?: string) =>
+  JSON.stringify({ at, ticket, status, text: `${ticket}, mentions path: /elsewhere` });
+
 function project(slug: string, open: number, done: number): void {
   const dir = resolve(HOME, ".pal", "work", "projects", slug);
   mkdirSync(dir, { recursive: true });
-  const criteria = [
-    ...Array.from(
-      { length: open },
-      (_, i) => `- [ ] ISC-${i + 1}: open, mentions path: /elsewhere`
-    ),
-    ...Array.from({ length: done }, (_, i) => `- [x] ISC-${open + i + 1}: done`),
+  const lines = [
+    ...Array.from({ length: open }, (_, i) => ticket(`o${i}`, "open")),
+    ...Array.from({ length: done }, (_, i) => ticket(`d${i}`, "done")),
   ];
+  writeFileSync(resolve(dir, "tickets.jsonl"), `${lines.join("\n")}\n`);
   writeFileSync(
     resolve(dir, "ISA.md"),
-    `# ${slug}\n\n## Criteria\n\n${criteria.join("\n")}\n`
+    `# ${slug}\n\n## Criteria\n\n- [ ] ISC-1: stale\n`
   );
+}
+
+function appendTickets(slug: string, lines: string[]): void {
+  const log = resolve(HOME, ".pal", "work", "projects", slug, "tickets.jsonl");
+  appendFileSync(log, `${lines.join("\n")}\n`);
 }
 
 function bind(bindings: Record<string, string>): void {
@@ -80,6 +86,19 @@ describe("the status line's open-ISC count", () => {
 
   test("picks the most specific project when one is bound inside another", () => {
     expect(render(resolve(repoDir("shop"), "admin", "lib"))).toContain("5 open ISCs");
+  });
+
+  test("counts each ticket by its newest line, as the ticket log replays", () => {
+    appendTickets("shop", [
+      ticket("o0", "done", "2026-11-27T10:00:00.000Z"),
+      ticket("o1", "done"),
+      ticket("o2", "done", "2026-11-27T09:00:00.000Z"),
+      ticket("o2", "open", "2026-11-27T11:00:00.000Z"),
+      ticket("n1", "open", "2026-11-27T12:00:00.000Z"),
+      "not json",
+    ]);
+
+    expect(render(repoDir("shop"))).toContain("2 open ISCs");
   });
 
   test("shows no count outside every bound project", () => {
