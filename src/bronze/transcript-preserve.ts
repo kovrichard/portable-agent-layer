@@ -6,12 +6,14 @@
 import { spawn } from "node:child_process";
 import {
   closeSync,
+  copyFileSync,
   createReadStream,
   createWriteStream,
   existsSync,
   openSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -109,20 +111,62 @@ function sessionFiles(transcriptPath: string): string[] {
   return [...own, ...filesUnder(transcriptPath.replace(/\.jsonl$/, ""))];
 }
 
+const keyOf = (dir: string, file: string) => relative(dir, file).replaceAll("\\", "/");
+
+export const stagingDir = (at: PreserveLocations) => resolve(at.target, ".staging");
+
+const STAGED_NAME = /^(.+)~(\d+)-(\d+)$/;
+
+const stagedPath = (at: PreserveLocations, key: string, version: string) =>
+  resolve(stagingDir(at), `${key}~${version.replace(":", "-")}`);
+
+function stageCopy(file: string, destination: string): void {
+  ensureDir(dirname(destination));
+  const partial = `${destination}.partial`;
+
+  try {
+    copyFileSync(file, partial);
+    renameSync(partial, destination);
+  } finally {
+    rmSync(partial, { force: true });
+  }
+}
+
 /**
- * Copies one closing session's transcripts in the closing process itself. The
- * full sweep runs detached, and whatever stops the session's process group
- * (a systemd unit ending, a container exiting) stops the sweep with it.
+ * Copies one closing session's transcripts, uncompressed, in the closing process
+ * itself: whatever stops the session's process group (a systemd unit ending, a
+ * container exiting) stops the detached sweep with it. A plain copy fits the
+ * agent's session-end budget; the sweep gzips the staged copy later.
  */
-export async function preserveSessionTranscript(
+export function stageSessionTranscript(
   transcriptPath: string | undefined,
   at: PreserveLocations = defaultLocations()
-): Promise<PreserveResult | null> {
+): PreserveResult | null {
   if (!transcriptPath?.endsWith(".jsonl") || !isUnder(at.source, transcriptPath))
     return null;
 
   try {
-    return await preserveFiles(at, sessionFiles(transcriptPath));
+    const manifest = readManifest(at.manifest);
+    const result: PreserveResult = { copied: 0, unchanged: 0, failed: 0 };
+
+    for (const file of sessionFiles(transcriptPath)) {
+      try {
+        const key = keyOf(at.source, file);
+        const version = versionOf(file);
+        if (manifest[key] === version) {
+          result.unchanged++;
+          continue;
+        }
+
+        stageCopy(file, stagedPath(at, key, version));
+        result.copied++;
+      } catch (err) {
+        result.failed++;
+        logError("transcript-preserve:stage", err);
+      }
+    }
+
+    return result;
   } catch (err) {
     logError("transcript-preserve:session", err);
 
@@ -130,22 +174,87 @@ export async function preserveSessionTranscript(
   }
 }
 
-/** The manifest is saved every few seconds too, so a sweep stopped halfway does not copy everything again. */
+interface Staged {
+  path: string;
+  key: string;
+  version: string;
+}
+
+function stagedFiles(at: PreserveLocations): Staged[] {
+  return filesUnder(stagingDir(at)).flatMap((path) => {
+    const match = keyOf(stagingDir(at), path).match(STAGED_NAME);
+
+    return match ? [{ path, key: match[1], version: `${match[2]}:${match[3]}` }] : [];
+  });
+}
+
+const mtimeOf = (version: string | undefined) => Number(version?.split(":")[1] ?? -1);
+
+/** An archived copy at least as new, or a live original that changed since, makes the staged copy redundant. */
+function stageSuperseded(at: PreserveLocations, manifest: Manifest, staged: Staged) {
+  if (mtimeOf(manifest[staged.key]) >= mtimeOf(staged.version)) return true;
+  const original = resolve(at.source, staged.key);
+
+  return existsSync(original) && versionOf(original) !== staged.version;
+}
+
+function removeAbandonedPartials(at: PreserveLocations, now = Date.now()): void {
+  for (const file of filesUnder(stagingDir(at))) {
+    if (file.endsWith(".partial") && now - statSync(file).mtimeMs > STALE_LOCK_MS)
+      rmSync(file, { force: true });
+  }
+}
+
+function manifestSaver(at: PreserveLocations, manifest: Manifest): () => void {
+  let savedAt = Date.now();
+
+  return () => {
+    if (Date.now() - savedAt <= MANIFEST_SAVE_MS) return;
+    saveManifest(at, manifest);
+    savedAt = Date.now();
+  };
+}
+
+async function finishStaged(
+  at: PreserveLocations,
+  manifest: Manifest,
+  result: PreserveResult,
+  saveNow: () => void
+): Promise<void> {
+  for (const staged of stagedFiles(at)) {
+    saveNow();
+
+    try {
+      if (stageSuperseded(at, manifest, staged)) result.unchanged++;
+      else {
+        await gzipCopy(staged.path, resolve(at.target, `${staged.key}.gz`));
+        manifest[staged.key] = staged.version;
+        result.copied++;
+      }
+
+      await rm(staged.path, { force: true });
+    } catch (err) {
+      result.failed++;
+      logError("transcript-preserve:staged", err);
+    }
+  }
+}
+
+/** Staged copies first, so an original they hold is then unchanged; the manifest is saved every few seconds too, so a sweep stopped halfway does not copy everything again. */
 async function preserveFiles(
   at: PreserveLocations,
   files: string[]
 ): Promise<PreserveResult> {
   const manifest = readManifest(at.manifest);
   const result: PreserveResult = { copied: 0, unchanged: 0, failed: 0 };
-  let savedAt = Date.now();
+  const saveNow = manifestSaver(at, manifest);
+
+  removeAbandonedPartials(at);
+  await finishStaged(at, manifest, result, saveNow);
 
   for (const file of files) {
-    if (Date.now() - savedAt > MANIFEST_SAVE_MS) {
-      saveManifest(at, manifest);
-      savedAt = Date.now();
-    }
-
-    const key = relative(at.source, file).replaceAll("\\", "/");
+    saveNow();
+    const key = keyOf(at.source, file);
 
     try {
       const version = versionOf(file);
