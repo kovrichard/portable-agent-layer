@@ -27,6 +27,7 @@ import {
   cleanUpNodeWorktrees,
   type WorktreeCleanup,
 } from "../progress/progress-tree-worktrees";
+import { iscIdArg } from "../tools/agent/project-io";
 import { group, leaf, runCommand, UsageError } from "../tools/lib/command";
 
 const SCOPE = {
@@ -114,13 +115,8 @@ function parentFor(tree: ScopeTree, under: string | undefined, root: boolean) {
   return tree.active;
 }
 
-function optionalIsc(isc: string | undefined): number | undefined {
-  if (isc === undefined) return undefined;
-  const parsed = Number(isc);
-  if (!Number.isInteger(parsed) || parsed < 1)
-    throw new UsageError(`--isc must be an ISC number, got "${isc}"`);
-
-  return parsed;
+function optionalIsc(isc: string | undefined): string | undefined {
+  return isc === undefined ? undefined : iscIdArg(isc, "--isc");
 }
 
 function refuseRepeatedTopic(tree: ScopeTree, title: string): void {

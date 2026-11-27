@@ -21,7 +21,7 @@ const missing = (project: string): WriteOutcome => ({
   error: `no such project: ${project}`,
 });
 
-export function setIscStatus(project: string, id: number, close: boolean): WriteOutcome {
+export function setIscStatus(project: string, id: string, close: boolean): WriteOutcome {
   const p = readProject(project);
   if (!p) return missing(project);
   const sections: IscSections = {

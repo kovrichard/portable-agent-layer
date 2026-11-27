@@ -37,7 +37,8 @@ export const ARTIFACT_KINDS: readonly ArtifactKind[] = [
 ];
 
 interface NodeLinks {
-  isc?: number;
+  /** An ISC id; nodes linked before ids were strings hold the old number. */
+  isc?: string | number;
   commitment?: string;
 }
 

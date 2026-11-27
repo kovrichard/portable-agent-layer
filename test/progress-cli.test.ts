@@ -45,11 +45,16 @@ describe("pal cli progress", () => {
     expect(nodes.get(activeId())?.parent).toBe(PROJECT_ROOT);
   });
 
-  test("open links an ISC and a commitment, and refuses an ISC that is not a number", async () => {
-    await progress("open", "Progress tree", "--isc", "69", "--commitment", "c1");
-    expect(tree().nodes.get(activeId())?.links).toEqual({ isc: 69, commitment: "c1" });
-    expect(await progress("open", "Bad", "--isc", "sixty")).toBe(1);
-    expect(output()).toContain('--isc must be an ISC number, got "sixty"');
+  test("open links an ISC and a commitment, and refuses an ISC that is not an id", async () => {
+    await progress("open", "Progress tree", "--isc", "ISC-K7M2", "--commitment", "c1");
+    expect(tree().nodes.get(activeId())?.links).toEqual({
+      isc: "k7m2",
+      commitment: "c1",
+    });
+    expect(await progress("open", "Bad", "--isc", "sixty nine")).toBe(1);
+    expect(output()).toContain(
+      '--isc must be an ISC id like k7m2 or 151, got "sixty nine"'
+    );
     expect(tree().nodes.size).toBe(1);
   });
 

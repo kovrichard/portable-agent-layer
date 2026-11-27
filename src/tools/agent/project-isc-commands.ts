@@ -8,27 +8,19 @@ import {
   ISC_BOX,
   type IscMove,
   type IscSections,
-  nextIscId,
+  newIscId,
   parseIscs,
   removeIscLine,
   reopenIsc,
   selectIscs,
 } from "../lib/project-isc";
-import {
-  fail,
-  joined,
-  nonBlank,
-  now,
-  ok,
-  positiveId,
-  requireProject,
-} from "./project-io";
+import { fail, iscIdArg, joined, nonBlank, now, ok, requireProject } from "./project-io";
 
 function cmdAddIsc(name: string, text: string): undefined {
   const title = nonBlank(text, "<title...>");
   const p = requireProject(name);
   const current = p.criteria ?? "";
-  const id = nextIscId(current, p.changelog ?? "");
+  const id = newIscId(current, p.changelog ?? "");
   const newLine = `- [ ] ISC-${id}: ${encodeIscText(title)}`;
   p.criteria = current ? `${current.trimEnd()}\n${newLine}` : newLine;
   p.updated = now();
@@ -46,7 +38,7 @@ function cmdAddIsc(name: string, text: string): undefined {
 
 // Completing an ISC moves its line out of Criteria and into the dated Changelog
 // archive, so Criteria stays exactly the open set and never re-bloats context.
-function cmdCompleteIsc(name: string, id: number): undefined {
+function cmdCompleteIsc(name: string, id: string): undefined {
   const p = requireProject(name);
   const move = completeIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
@@ -75,7 +67,7 @@ function applyIscMove(p: ProjectProgress, move: IscMove & { ok: true }): void {
 
 // Reopening pulls the line back out of the Changelog (or legacy Criteria) into
 // the open set.
-function cmdReopenIsc(name: string, id: number): undefined {
+function cmdReopenIsc(name: string, id: string): undefined {
   const p = requireProject(name);
   const move = reopenIsc(sectionsOf(p), id);
   if (!move.ok) fail(`${move.reason} in project "${name}"`);
@@ -127,7 +119,7 @@ function cmdListIsc(name: string, flags: Set<string>): undefined {
 
 // show-isc prints one ISC's full text on demand — the "detail" counterpart to
 // resume's titles. Scans Criteria (open + not-yet-archived) and Changelog.
-function cmdShowIsc(name: string, id: number): undefined {
+function cmdShowIsc(name: string, id: string): undefined {
   const p = requireProject(name);
   const isc = [...parseIscs(p.criteria ?? ""), ...parseIscs(p.changelog ?? "")].find(
     (i) => i.id === id
@@ -138,7 +130,7 @@ function cmdShowIsc(name: string, id: number): undefined {
 
 // A retired ISC stopped being valid; it moves to the Changelog as [~], so it keeps
 // reserving its id and never reads as finished work.
-function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
+function cmdRetireIsc(name: string, id: string, by: string | null): undefined {
   const p = requireProject(name);
   if (parseIscs(p.changelog ?? "").some((i) => i.id === id && i.status === "retired")) {
     ok({ retired: true, id, alreadyRetired: true });
@@ -162,7 +154,7 @@ function cmdRetireIsc(name: string, id: number, by: number | null): undefined {
 }
 
 // Returns the previous text, because the ISA files keep no version history.
-function cmdEditIsc(name: string, id: number, newText: string): undefined {
+function cmdEditIsc(name: string, id: string, newText: string): undefined {
   const text = nonBlank(newText, "<text...>");
   const p = requireProject(name);
   const inCriteria = parseIscs(p.criteria ?? "").find((i) => i.id === id);
@@ -215,11 +207,11 @@ function cmdPruneIsc(name: string): undefined {
   ok({ pruned: done.length, name, remaining_open: openLeft });
 }
 
-function iscLeaf(summary: string, act: (name: string, id: number) => undefined): Leaf {
+function iscLeaf(summary: string, act: (name: string, id: string) => undefined): Leaf {
   return leaf({
     summary,
     args: "<name> <id>",
-    run: ({ positionals }) => act(positionals[0], positiveId(positionals[1], "<id>")),
+    run: ({ positionals }) => act(positionals[0], iscIdArg(positionals[1], "<id>")),
   });
 }
 
@@ -246,7 +238,7 @@ export const iscCommands = {
     summary: "Rewrite ISC-N's text, keeping its id and state",
     args: "<name> <id> <text...>",
     run: ({ positionals: [name, id, ...text] }) =>
-      cmdEditIsc(name, positiveId(id, "<id>"), joined(text)),
+      cmdEditIsc(name, iscIdArg(id, "<id>"), joined(text)),
   }),
   "retire-isc": leaf({
     summary: "Close ISC-N as no longer valid, not as done",
@@ -257,8 +249,8 @@ export const iscCommands = {
     run: ({ positionals: [name, id], values }) =>
       cmdRetireIsc(
         name,
-        positiveId(id, "<id>"),
-        values.by === undefined ? null : positiveId(values.by, "--by")
+        iscIdArg(id, "<id>"),
+        values.by === undefined ? null : iscIdArg(values.by, "--by")
       ),
   }),
   "prune-isc": leaf({

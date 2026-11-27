@@ -25,7 +25,8 @@ export function statusFromBox(box: string): IscStatus {
 }
 
 export interface Isc {
-  id: number;
+  /** Four random characters for a new ISC; older ones keep their number. */
+  id: string;
   text: string;
   status: IscStatus;
 }
@@ -54,10 +55,10 @@ export function parseIscs(criteria: string): Isc[] {
   const out: Isc[] = [];
 
   for (const line of criteria.split("\n")) {
-    const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-(\d+):\s+(.+)$/i).exec(line);
+    const m = new RegExp(/^-\s+\[( |x|~)\]\s+ISC-([0-9a-z]+):\s+(.+)$/i).exec(line);
     if (m)
       out.push({
-        id: Number(m[2]),
+        id: m[2].toLowerCase(),
         text: decodeIscText(m[3].trim()),
         status: statusFromBox(m[1]),
       });
@@ -77,20 +78,41 @@ export function iscTitle(text: string): string {
   return clause.length > 80 ? `${clause.slice(0, 79).trimEnd()}…` : clause;
 }
 
-/** Scans Criteria AND Changelog so an archived id can never be handed out again. */
-export function nextIscId(criteria: string, changelog: string): number {
-  const ids = [...parseIscs(criteria), ...parseIscs(changelog)].map((i) => i.id);
+const ID_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
+const ID_LENGTH = 4;
 
-  return ids.length > 0 ? Math.max(...ids) + 1 : 1;
+/**
+ * Four random characters, never all digits so a new id is never read as an old
+ * number. Two machines opening ISCs between syncs cannot both pick the next
+ * number this way. Scans Criteria AND Changelog so an archived id is never
+ * handed out again.
+ */
+export function newIscId(
+  criteria: string,
+  changelog: string,
+  random: () => number = Math.random
+): string {
+  const taken = new Set(
+    [...parseIscs(criteria), ...parseIscs(changelog)].map((i) => i.id)
+  );
+
+  for (;;) {
+    const id = Array.from(
+      { length: ID_LENGTH },
+      () => ID_ALPHABET[Math.floor(random() * ID_ALPHABET.length)]
+    ).join("");
+
+    if (!/^\d+$/.test(id) && !taken.has(id)) return id;
+  }
 }
 
 export function removeIscLine(
   section: string,
-  id: number
+  id: string
 ): { line: string | null; rest: string } {
   const lines = section.split("\n");
   const idx = lines.findIndex((l) =>
-    new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`).test(l)
+    new RegExp(String.raw`^-\s+\[[ x~]\]\s+ISC-${id}:`, "i").test(l)
   );
   if (idx === -1) return { line: null, rest: section };
   const [line] = lines.splice(idx, 1);
@@ -169,7 +191,7 @@ export type IscMove =
  */
 export function completeIsc(
   sections: IscSections,
-  id: number,
+  id: string,
   now: Date = new Date()
 ): IscMove {
   const kept = { criteria: sections.criteria, changelog: sections.changelog };
@@ -194,7 +216,7 @@ export function completeIsc(
   };
 }
 
-export function reopenIsc(sections: IscSections, id: number): IscMove {
+export function reopenIsc(sections: IscSections, id: string): IscMove {
   const kept = { criteria: sections.criteria, changelog: sections.changelog };
 
   if (parseIscs(sections.criteria).some((i) => i.id === id && i.status === "open")) {

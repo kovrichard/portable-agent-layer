@@ -507,10 +507,10 @@ describe("snoozing a criterion", () => {
     await post(base, "/api/snooze", { project: "demo", id: 1, days: 7 });
     expect(await openCount()).toBe(1);
 
-    const detail = await getJson<{ iscs: { id: number; snoozedUntil: string | null }[] }>(
+    const detail = await getJson<{ iscs: { id: string; snoozedUntil: string | null }[] }>(
       `${base}/api/project?slug=demo`
     );
-    expect(detail.iscs.find((i) => i.id === 1)?.snoozedUntil).toBeTruthy();
+    expect(detail.iscs.find((i) => i.id === "1")?.snoozedUntil).toBeTruthy();
 
     await post(base, "/api/snooze", { project: "demo", id: 1, days: 0 });
     expect(await openCount()).toBe(2);

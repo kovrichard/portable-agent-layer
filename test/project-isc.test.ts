@@ -7,7 +7,7 @@ import {
   ISC_BOX,
   type Isc,
   iscTitle,
-  nextIscId,
+  newIscId,
   parseIscs,
   removeIscLine,
   selectIscs,
@@ -17,11 +17,11 @@ import {
 
 const NOW = new Date("2026-09-06T12:00:00.000Z");
 
-function isc(id: number, text: string, status: Isc["status"] = "open"): Isc {
-  return { id, text, status };
+function isc(id: number | string, text: string, status: Isc["status"] = "open"): Isc {
+  return { id: String(id), text, status };
 }
 
-function line(id: number, text: string, status: Isc["status"] = "open"): string {
+function line(id: number | string, text: string, status: Isc["status"] = "open"): string {
   return `- ${ISC_BOX[status]} ISC-${id}: ${text}`;
 }
 
@@ -118,7 +118,11 @@ describe("parseIscs", () => {
   });
 
   test("a multi-digit id is read whole", () => {
-    expect(parseIscs(line(123, "big"))[0].id).toBe(123);
+    expect(parseIscs(line(123, "big"))[0].id).toBe("123");
+  });
+
+  test("a new four-character id is read too, in any case", () => {
+    expect(parseIscs(line("K7m2", "new"))[0].id).toBe("k7m2");
   });
 
   // The line must start with the marker, or a quoted example becomes a record.
@@ -182,22 +186,45 @@ describe("iscTitle", () => {
   });
 });
 
-describe("nextIscId", () => {
-  test("the first ISC of a project is 1", () => {
-    expect(nextIscId("", "")).toBe(1);
+describe("newIscId", () => {
+  const draws = (...values: number[]) => {
+    let i = 0;
+
+    return () => values[i++ % values.length] as number;
+  };
+  const at = (index: number) => (index + 0.5) / 32;
+
+  test("is four characters from the lowercase base32 alphabet", () => {
+    for (let n = 0; n < 200; n++)
+      expect(newIscId("", "")).toMatch(/^[0-9a-hjkmnp-tv-z]{4}$/);
   });
 
-  test("continues from the highest open id", () => {
-    expect(nextIscId([line(1, "a"), line(2, "b")].join("\n"), "")).toBe(3);
+  test("is never all digits, so it never reads as an old number", () => {
+    const digitsThenK = draws(at(1), at(2), at(3), at(4), at(19), at(1), at(1), at(1));
+
+    expect(newIscId("", "", digitsThenK)).toBe("k111");
   });
 
   // An archived id must never be handed out again, so the changelog counts.
-  test("counts archived ids in the changelog too", () => {
-    expect(nextIscId(line(1, "a"), line(7, "archived", "done"))).toBe(8);
-  });
+  test("draws again when the id is taken, open or archived", () => {
+    const repeats = draws(
+      at(19),
+      at(1),
+      at(1),
+      at(1),
+      at(19),
+      at(1),
+      at(1),
+      at(1),
+      at(19),
+      at(1),
+      at(1),
+      at(2)
+    );
 
-  test("takes the highest id, not the last one written", () => {
-    expect(nextIscId([line(9, "a"), line(2, "b")].join("\n"), "")).toBe(10);
+    expect(newIscId(line("k111", "a"), line("k111", "archived", "done"), repeats)).toBe(
+      "k112"
+    );
   });
 });
 
@@ -205,37 +232,37 @@ describe("removeIscLine", () => {
   const section = [line(1, "first"), line(2, "second"), line(3, "third")].join("\n");
 
   test("returns the removed line and the section without it", () => {
-    const { line: removed, rest } = removeIscLine(section, 2);
+    const { line: removed, rest } = removeIscLine(section, "2");
     expect(removed).toBe(line(2, "second"));
     expect(rest).toBe([line(1, "first"), line(3, "third")].join("\n"));
   });
 
   // Nothing to remove must leave the section byte-for-byte as it was.
   test("an unknown id changes nothing", () => {
-    expect(removeIscLine(section, 99)).toEqual({ line: null, rest: section });
+    expect(removeIscLine(section, "99")).toEqual({ line: null, rest: section });
   });
 
   test("removes a line of any status", () => {
     const mixed = [line(1, "a", "done"), line(2, "b", "retired")].join("\n");
-    expect(removeIscLine(mixed, 2).line).toBe(line(2, "b", "retired"));
+    expect(removeIscLine(mixed, "2").line).toBe(line(2, "b", "retired"));
   });
 
   test("does not match an id that merely starts the same", () => {
     const both = [line(1, "one"), line(12, "twelve")].join("\n");
-    expect(removeIscLine(both, 1).line).toBe(line(1, "one"));
+    expect(removeIscLine(both, "1").line).toBe(line(1, "one"));
   });
 
   // The gap closes to one blank line rather than vanishing entirely.
   test("collapses a run of blank lines the removal left behind", () => {
     const spaced = [line(1, "a"), "", "", line(2, "b"), line(3, "c")].join("\n");
-    expect(removeIscLine(spaced, 2).rest).toBe(
+    expect(removeIscLine(spaced, "2").rest).toBe(
       [line(1, "a"), "", line(3, "c")].join("\n")
     );
   });
 
   test("trims the blank lines a removal left at the edges", () => {
     const spaced = [line(1, "a"), "", "", line(2, "b")].join("\n");
-    expect(removeIscLine(spaced, 1).rest).toBe(line(2, "b"));
+    expect(removeIscLine(spaced, "1").rest).toBe(line(2, "b"));
   });
 });
 

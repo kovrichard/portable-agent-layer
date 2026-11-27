@@ -17,7 +17,7 @@ export const MAX_SNOOZE_DAYS = 90;
 /** project#isc → the day it wakes up. */
 export type Snoozes = Record<string, string>;
 
-function snoozeKey(project: string, id: number): string {
+function snoozeKey(project: string, id: string): string {
   return `${project}#${id}`;
 }
 
@@ -47,7 +47,7 @@ export function readSnoozes(now: Date = new Date()): Snoozes {
 
 export function snoozedUntil(
   project: string,
-  id: number,
+  id: string,
   snoozes: Snoozes
 ): string | null {
   return snoozes[snoozeKey(project, id)] ?? null;
@@ -56,7 +56,7 @@ export function snoozedUntil(
 /** Zero days wakes it now, which is how the page un-snoozes. */
 export function setSnooze(
   project: string,
-  id: number,
+  id: string,
   days: number,
   now: Date = new Date()
 ): string | null {

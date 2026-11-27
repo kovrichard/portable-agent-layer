@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { readProject } from "../src/progress/projects";
 import {
   commitmentEvents,
@@ -38,44 +38,60 @@ function expectUntouched(criteria?: string): void {
 const REMINDER =
   "Surface the `announce` line to the user verbatim, on its own line. Every ISC you open MUST be announced with the 🎟️ ticket marker, in any response mode — omitting it is a defect.";
 
+/** Math.random drawing the id k7m2 (alphabet positions 19, 7, 20, 2), then repeating. */
+function drawingK7m2() {
+  const positions = [19, 7, 20, 2];
+  let i = 0;
+
+  return spyOn(Math, "random").mockImplementation(
+    () => ((positions[i++ % positions.length] as number) + 0.5) / 32
+  );
+}
+
 describe("add-isc", () => {
-  test("opens ISC-1 in an empty project and tells the agent to announce it", async () => {
+  test("opens a new ISC under a random id and tells the agent to announce it", async () => {
     seed();
+    const random = drawingK7m2();
     const run = await projectCli("add-isc", "demo", "ship", "it");
+    random.mockRestore();
 
     expect(run.stdout).toBe(
       JSON.stringify(
         {
           added: true,
-          id: 1,
+          id: "k7m2",
           title: "ship it",
-          announce: "🎟️ ISC #1 — ship it",
+          announce: "🎟️ ISC #k7m2 — ship it",
           reminder: REMINDER,
         },
         null,
         2
       )
     );
-    expect(stored().criteria).toBe("- [ ] ISC-1: ship it");
+    expect(stored().criteria).toBe("- [ ] ISC-k7m2: ship it");
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "opened", surface: "cli" },
+      { iscProject: "demo", isc: "k7m2", outcome: "opened", surface: "cli" },
     ]);
   });
 
-  test("appends after the existing lines and never reuses an archived id", async () => {
+  test("appends after the existing lines, next to the old numbered ones", async () => {
     seed("- [ ] ISC-1: first\n\n", "### Archived 2026-01-01\n- [x] ISC-5: old");
+    const random = drawingK7m2();
     const out = await projectCliJson("add-isc", "demo", "  next one  ");
+    random.mockRestore();
 
-    expect(out).toMatchObject({ id: 6, title: "next one" });
-    expect(stored().criteria).toBe("- [ ] ISC-1: first\n- [ ] ISC-6: next one");
+    expect(out).toMatchObject({ id: "k7m2", title: "next one" });
+    expect(stored().criteria).toBe("- [ ] ISC-1: first\n- [ ] ISC-k7m2: next one");
   });
 
   test("stores a multi-line title on one line", async () => {
     seed();
+    const random = drawingK7m2();
     await projectCliJson("add-isc", "demo", "first\nsecond");
+    random.mockRestore();
 
-    expect(stored().criteria).toBe(String.raw`- [ ] ISC-1: first\nsecond`);
+    expect(stored().criteria).toBe(String.raw`- [ ] ISC-k7m2: first\nsecond`);
   });
 
   test("a blank title is a usage error and writes nothing", async () => {
@@ -104,14 +120,14 @@ describe("complete-isc", () => {
 
     expect(await projectCliJson("complete-isc", "demo", "1")).toEqual({
       checked: true,
-      id: 1,
+      id: "1",
       archived: true,
     });
     expect(stored().criteria).toBe("- [ ] ISC-2: later");
     expect(stored().changelog).toBe(`### Archived ${today()}\n- [x] ISC-1: ship it`);
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "kept", surface: "cli" },
+      { iscProject: "demo", isc: "1", outcome: "kept", surface: "cli" },
     ]);
   });
 
@@ -120,7 +136,7 @@ describe("complete-isc", () => {
 
     expect(await projectCliJson("complete-isc", "demo", "1")).toEqual({
       checked: true,
-      id: 1,
+      id: "1",
       alreadyDone: true,
     });
     expectUntouched("- [ ] ISC-2: later");
@@ -139,7 +155,7 @@ describe("complete-isc", () => {
   test.each<[string, string, string[]]>([
     ["complete-isc", "0", []],
     ["complete-isc", "1.5", []],
-    ["complete-isc", "abc", []],
+    ["complete-isc", "k7-m2", []],
     ["edit-isc", "0", ["new"]],
     ["retire-isc", "0", []],
   ])("%s with id %p is a usage error", async (command, id, text) => {
@@ -147,7 +163,9 @@ describe("complete-isc", () => {
     const run = await projectCli(command, "demo", id, ...text);
 
     expect(run.code).toBe(1);
-    expect(run.stderr).toContain(`error: <id> must be a positive integer, got "${id}"`);
+    expect(run.stderr).toContain(
+      `error: <id> must be an ISC id like k7m2 or 151, got "${id}"`
+    );
     expectUntouched("- [ ] ISC-1: ship it");
   });
 });
@@ -158,12 +176,12 @@ describe("reopen-isc", () => {
 
     expect(await projectCliJson("reopen-isc", "demo", "1")).toEqual({
       checked: false,
-      id: 1,
+      id: "1",
     });
     expect(stored().criteria).toBe("- [ ] ISC-2: later\n- [ ] ISC-1: done");
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "reopened", surface: "cli" },
+      { iscProject: "demo", isc: "1", outcome: "reopened", surface: "cli" },
     ]);
   });
 
@@ -172,7 +190,7 @@ describe("reopen-isc", () => {
 
     expect(await projectCliJson("reopen-isc", "demo", "1")).toEqual({
       checked: false,
-      id: 1,
+      id: "1",
       alreadyOpen: true,
     });
     expectUntouched("- [ ] ISC-1: open");
@@ -191,12 +209,12 @@ describe("reopen-isc", () => {
 describe("list-isc", () => {
   const criteria = "- [ ] ISC-1: open one\n- [x] ISC-2: legacy done";
   const changelog = "### Archived 2026-01-01\n- [x] ISC-3: done\n- [~] ISC-4: dropped";
-  const open = { id: 1, text: "open one", status: "open" };
+  const open = { id: "1", text: "open one", status: "open" };
   const done = [
-    { id: 2, text: "legacy done", status: "done" },
-    { id: 3, text: "done", status: "done" },
+    { id: "2", text: "legacy done", status: "done" },
+    { id: "3", text: "done", status: "done" },
   ];
-  const retired = { id: 4, text: "dropped", status: "retired" };
+  const retired = { id: "4", text: "dropped", status: "retired" };
   const counts = { name: "demo", total: 4, open: 1, done: 2, retired: 1 };
 
   test.each([
@@ -226,12 +244,15 @@ describe("list-isc", () => {
 
 describe("show-isc", () => {
   test.each([
-    [1, "open", "open one"],
-    [3, "done", "archived one"],
+    ["1", "open", "open one"],
+    ["k7m2", "done", "archived one"],
   ])("prints ISC-%p from wherever it lives", async (id, status, text) => {
-    seed("- [ ] ISC-1: open one", "### Archived 2026-01-01\n- [x] ISC-3: archived one");
+    seed(
+      "- [ ] ISC-1: open one",
+      "### Archived 2026-01-01\n- [x] ISC-K7M2: archived one"
+    );
 
-    expect(await projectCliJson("show-isc", "demo", String(id))).toEqual({
+    expect(await projectCliJson("show-isc", "demo", `ISC-${id}`)).toEqual({
       name: "demo",
       id,
       status,
@@ -254,7 +275,7 @@ describe("retire-isc", () => {
 
     expect(await projectCliJson("retire-isc", "demo", "1")).toEqual({
       retired: true,
-      id: 1,
+      id: "1",
       supersededBy: null,
       archived: true,
     });
@@ -262,7 +283,7 @@ describe("retire-isc", () => {
     expect(stored().changelog).toBe(`### Retired ${today()}\n- [~] ISC-1: stale`);
     expectTouched();
     expect(commitmentEvents(home())).toEqual([
-      { iscProject: "demo", isc: 1, outcome: "dropped", surface: "cli" },
+      { iscProject: "demo", isc: "1", outcome: "dropped", surface: "cli" },
     ]);
   });
 
@@ -270,7 +291,7 @@ describe("retire-isc", () => {
     seed("- [x] ISC-1: stale\n- [ ] ISC-2: keep");
 
     expect(await projectCliJson("retire-isc", "demo", "1", "--by", "2")).toMatchObject({
-      supersededBy: 2,
+      supersededBy: "2",
     });
     expect(stored().changelog).toBe(
       `### Retired ${today()}\n- [~] ISC-1: stale (superseded by ISC-2)`
@@ -282,7 +303,7 @@ describe("retire-isc", () => {
 
     expect(await projectCliJson("retire-isc", "demo", "1")).toEqual({
       retired: true,
-      id: 1,
+      id: "1",
       alreadyRetired: true,
     });
     expectUntouched("- [ ] ISC-2: keep");
@@ -305,12 +326,14 @@ describe("retire-isc", () => {
     expect(run.stderr).toBe(`ISC-1 not found in project "demo"\n`);
   });
 
-  test("--by must be a positive integer", async () => {
+  test("--by must be an ISC id", async () => {
     seed("- [ ] ISC-1: stale");
     const run = await projectCli("retire-isc", "demo", "1", "--by", "0");
 
     expect(run.code).toBe(1);
-    expect(run.stderr).toContain(`error: --by must be a positive integer, got "0"`);
+    expect(run.stderr).toContain(
+      `error: --by must be an ISC id like k7m2 or 151, got "0"`
+    );
     expectUntouched("- [ ] ISC-1: stale");
   });
 });
@@ -321,7 +344,7 @@ describe("edit-isc", () => {
 
     expect(await projectCliJson("edit-isc", "demo", "1", "new", "words")).toEqual({
       edited: true,
-      id: 1,
+      id: "1",
       status: "open",
       previous: "old words",
       text: "new words",
@@ -399,15 +422,17 @@ describe("prune-isc", () => {
     expectUntouched("- [ ] ISC-1: open");
   });
 
-  test("counts an uppercase box it cannot move and keeps going", async () => {
+  test("moves an uppercase box like a lowercase one", async () => {
     seed("- [X] ISC-1: shouty\n- [x] ISC-2: done");
 
     expect(await projectCliJson("prune-isc", "demo")).toMatchObject({
       pruned: 2,
       remaining_open: 0,
     });
-    expect(stored().criteria).toBe("- [X] ISC-1: shouty");
-    expect(stored().changelog).toBe(`### Archived ${today()}\n- [x] ISC-2: done`);
+    expect(stored().criteria ?? "").toBe("");
+    expect(stored().changelog).toBe(
+      `### Archived ${today()}\n- [X] ISC-1: shouty\n- [x] ISC-2: done`
+    );
   });
 });
 
