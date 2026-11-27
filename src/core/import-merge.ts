@@ -10,6 +10,7 @@
  *   new files    written as-is
  *   identical    no-op
  *   diverged     local kept in place, incoming quarantined under backups/
+ *   other actor  incoming adopted, local quarantined and kept as an alias
  *   denylisted   never written (machine identity, rebuildable indexes)
  *
  * Every policy is idempotent: re-importing the same archive is a no-op on the
@@ -18,6 +19,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { ACTOR_PATH, isOtherActor } from "./actor";
 import { type ExportManifest, MANIFEST_NAME } from "./export-manifest";
 import { isMachineLocalState } from "./machine-state";
 
@@ -32,6 +34,8 @@ export interface MergeResult {
   merged: string[];
   identical: string[];
   conflicts: string[];
+  /** This install's actor.json body, when the incoming actor replaced it. */
+  replacedActor: string | null;
   skipped: string[];
   linesAdded: number;
   quarantineDir: string | null;
@@ -73,6 +77,20 @@ function splitLines(raw: string): string[] {
   return raw.split("\n").filter((l) => l.trim().length > 0);
 }
 
+/** The incoming lines the local body lacks, each once, in incoming order. */
+export function linesNotIn(localRaw: string, incomingRaw: string): string[] {
+  const seen = new Set(splitLines(localRaw));
+  const added: string[] = [];
+
+  for (const line of splitLines(incomingRaw)) {
+    if (seen.has(line)) continue;
+    seen.add(line);
+    added.push(line);
+  }
+
+  return added;
+}
+
 /**
  * Union of two JSONL bodies, local order preserved, incoming lines appended
  * only when not already present. Exact-line identity is the dedupe key — no
@@ -85,15 +103,7 @@ export function mergeJsonlLines(
   incomingRaw: string
 ): { text: string; added: number } {
   const local = splitLines(localRaw);
-  const seen = new Set(local);
-  const added: string[] = [];
-
-  for (const line of splitLines(incomingRaw)) {
-    if (seen.has(line)) continue;
-    seen.add(line);
-    added.push(line);
-  }
-
+  const added = linesNotIn(localRaw, incomingRaw);
   const all = [...local, ...added];
 
   return { text: all.length > 0 ? `${all.join("\n")}\n` : "", added: added.length };
@@ -136,6 +146,7 @@ export function mergeArchive(
     merged: [],
     identical: [],
     conflicts: [],
+    replacedActor: null,
     skipped: [],
     linesAdded: 0,
     quarantineDir: null,
@@ -177,12 +188,39 @@ export function mergeArchive(
       continue;
     }
 
-    quarantine(quarantineDir, rel, incoming);
-    result.conflicts.push(rel);
-    result.quarantineDir = quarantineDir;
+    settleDiverged(result, quarantineDir, { rel, target, localRaw, incoming });
   }
 
   return result;
+}
+
+interface Diverged {
+  rel: string;
+  target: string;
+  localRaw: Buffer;
+  incoming: Buffer;
+}
+
+function settleDiverged(result: MergeResult, quarantineDir: string, file: Diverged) {
+  result.quarantineDir = quarantineDir;
+
+  if (adoptsActor(file)) {
+    quarantine(quarantineDir, `${file.rel}.local`, file.localRaw);
+    writeFileSync(file.target, file.incoming);
+    result.replacedActor = file.localRaw.toString("utf-8");
+
+    return;
+  }
+
+  quarantine(quarantineDir, file.rel, file.incoming);
+  result.conflicts.push(file.rel);
+}
+
+function adoptsActor({ rel, localRaw, incoming }: Diverged): boolean {
+  return (
+    normalize(rel) === ACTOR_PATH &&
+    isOtherActor(localRaw.toString("utf-8"), incoming.toString("utf-8"))
+  );
 }
 
 /**
@@ -219,6 +257,8 @@ export function summarize(result: MergeResult): string {
   ];
 
   if (result.conflicts.length > 0) parts.push(`${result.conflicts.length} conflicts`);
+
+  if (result.replacedActor) parts.push("adopted the incoming actor");
 
   if (result.skipped.length > 0) parts.push(`${result.skipped.length} skipped`);
 

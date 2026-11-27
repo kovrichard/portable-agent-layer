@@ -295,6 +295,7 @@ describe("summarize", () => {
     merged: [],
     identical: [],
     conflicts: [],
+    replacedActor: null,
     skipped: [],
     linesAdded: 0,
     quarantineDir: null,

@@ -65,6 +65,7 @@ export default {
     "src/knowledge/**/*.ts",
     "src/opinions/**/*.ts",
     "src/progress/**/*.ts",
+    "src/sync/**/*.ts",
     "src/report/**/*.ts",
     "src/safety/**/*.ts",
     "src/context/**/*.ts",

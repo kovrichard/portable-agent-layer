@@ -19,7 +19,8 @@ import { SETTINGS_FILE } from "./settings";
  * Shipped skills live in `skills/` only as symlinks back to the repo, and
  * walkDir skips symlinks (see below) — so only real, user-owned files travel.
  */
-const EXPORT_DIRS = ["telos", "memory", "records", "work", "skills", "agents"];
+/** The folders that carry the user's own data; sync travels the same ones. */
+export const EXPORT_DIRS = ["telos", "memory", "records", "work", "skills", "agents"];
 
 /** Subdirectories/files to skip during export. */
 const SKIP_PATTERNS = [

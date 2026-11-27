@@ -5,9 +5,9 @@
  * boundary, because two installs sharing one id breaks every origin-scoped
  * read. An actor id answers "which person", and needs the opposite treatment:
  * the same person on a laptop and a desktop is one actor, so `actor.json` lives
- * under memory/ where the export picks it up and the import merge adopts it on
- * an install that has none. An install that already has an actor keeps it — the
- * merge treats a diverged file as a conflict and leaves the local side in place.
+ * under memory/ where export and sync carry it. An install that meets another
+ * install's actor adopts it and keeps its own id as an alias
+ * (`src/bronze/actor-adoption.ts`).
  *
  * Identity alone does not attribute an action. `currentAttribution()` is the
  * stamp a record carries: the person, the install, the agent runtime they were
@@ -61,7 +61,32 @@ export interface RecordAttribution {
  * adopted by a second install belonging to the same person.
  */
 export function actorFilePath(home: string = palHome()): string {
-  return resolve(home, "memory", "actor.json");
+  return resolve(home, ACTOR_PATH);
+}
+
+export const ACTOR_PATH = "memory/actor.json";
+
+/** The id and label an actor.json body holds, or null when it holds no id. */
+export function storedActor(raw: string): { id: string; label: string } | null {
+  try {
+    const parsed = JSON.parse(raw) as { id?: unknown; label?: unknown };
+    if (typeof parsed.id !== "string" || !parsed.id) return null;
+
+    return {
+      id: parsed.id,
+      label: typeof parsed.label === "string" && parsed.label ? parsed.label : parsed.id,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Whether `incoming` would replace this install's actor with a different one. */
+export function isOtherActor(localRaw: string, incomingRaw: string): boolean {
+  const local = storedActor(localRaw);
+  const incoming = storedActor(incomingRaw);
+
+  return Boolean(local && incoming && local.id !== incoming.id);
 }
 
 function actorsDir(): string {
@@ -128,11 +153,14 @@ export function setActorLabel(label: string, home: string = palHome()): ActorIde
 export interface ActorRegistryEntry {
   id: string;
   label: string;
+  aliasOf?: string;
 }
 
 /** Write (or refresh) an actor's registry entry. Registry entries are exported. */
 export function writeActorEntry(entry: ActorRegistryEntry, body = ""): string {
-  return writeEntry(actorsDir(), { ...entry }, body);
+  const { aliasOf, ...fields } = entry;
+
+  return writeEntry(actorsDir(), aliasOf ? { ...fields, aliasOf } : fields, body);
 }
 
 /** Every known actor, this one and any that arrived via import. */
@@ -140,6 +168,7 @@ export function readActorRegistry(): ActorRegistryEntry[] {
   return readRegistryEntries(actorsDir()).map((meta) => ({
     id: meta.id,
     label: meta.label,
+    ...(meta.aliasOf ? { aliasOf: meta.aliasOf } : {}),
   }));
 }
 

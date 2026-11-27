@@ -63,6 +63,8 @@ export const EVENT_FIELDS = {
     "utcOffsetMin",
   ],
   session_end: ["reason", "durationSec", "turns", "messages", "status"],
+  sync: ["pushed", "pulled", "written", "quarantined", "refused"],
+  actor_adopted: ["from", "to"],
   upstream_report: ["action", "report", "leaks", "via"],
   doctor_run: ["failing", "warnings"],
   pal_bug_signal: ["trigger", "surface", "verdict"],
