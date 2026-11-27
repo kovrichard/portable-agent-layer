@@ -16,7 +16,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { appendEvent, logQuietly } from "../../bronze/events";
 import { logDebug, logError } from "../../core/log";
-import { assets, palPkg, paths } from "../../core/paths";
+import { assets, palHome, palPkg, paths } from "../../core/paths";
 import { raw as rawSettings } from "../../core/settings";
 import {
   cachedStatus,
@@ -358,6 +358,7 @@ function update(): AutoUpdateLedger {
 export function spawnAutoUpdate(): void {
   try {
     const child = spawn("bun", [resolve(assets.hooks(), "AutoUpdate.ts")], {
+      cwd: palHome(),
       detached: true,
       stdio: "ignore",
       windowsHide: true,
