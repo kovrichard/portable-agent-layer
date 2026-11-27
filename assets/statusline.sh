@@ -92,9 +92,16 @@ if [ -d "$PROJECTS_DIR" ] && [ -f "$BINDINGS" ]; then
     to_entries
     | map(select(.value as $p | ($p | rtrimstr("/")) as $p | $cwd == $p or ($cwd | startswith($p + "/"))))
     | max_by(.value | length) | .key // empty' "$BINDINGS" 2>/dev/null)
-  ISA="$PROJECTS_DIR/$PROJECT/ISA.md"
-  if [ -n "$PROJECT" ] && [ -f "$ISA" ]; then
-    OPEN_ISCS=$(grep -c -- '- \[ \] ISC-' "$ISA" 2>/dev/null) || OPEN_ISCS=0
+  # Replays tickets.jsonl as src/progress/tickets.ts does: newest line per ticket by at, then close over open, then line
+  TICKETS="$PROJECTS_DIR/$PROJECT/tickets.jsonl"
+  if [ -n "$PROJECT" ] && [ -f "$TICKETS" ]; then
+    OPEN_ISCS=$(jq -R -n '
+      {"open":0,"done":1,"retired":2} as $rank
+      | [inputs as $line | ($line | try fromjson catch null)
+         | select(type == "object" and (.ticket | type) == "string" and (.text | type) == "string" and $rank[.status | tostring] != null)
+         | {ticket, status, key: [(.at // ""), $rank[.status], $line]}]
+      | group_by(.ticket) | map(max_by(.key)) | map(select(.status == "open")) | length' "$TICKETS" 2>/dev/null) || OPEN_ISCS=0
+    [ -n "$OPEN_ISCS" ] || OPEN_ISCS=0
   fi
 fi
 
