@@ -9,6 +9,8 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { recordAdoptedActor } from "../bronze/actor-adoption";
+import { ACTOR_PATH } from "../core/actor";
 import { orRefuse, type SyncContext, SyncRefusal } from "./context";
 import { openBlob, sealBlob } from "./crypto";
 import { syncKindOf } from "./scope";
@@ -63,6 +65,8 @@ function settle(
 
   if (local && !unchangedHere) quarantine(ctx, path, local, "local");
   writeFile(file, incoming);
+
+  if (local && path === ACTOR_PATH) recordAdoptedActor(local.toString("utf-8"), ctx.home);
   ctx.result.written.push(path);
   ctx.state.whole[path] = { hash: incomingHash, version };
 }

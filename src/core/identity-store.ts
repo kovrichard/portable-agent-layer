@@ -30,6 +30,7 @@ export type RegistryFields = Record<string, string> & { id: string; label: strin
 export interface NameableEntry {
   id: string;
   label: string;
+  aliasOf?: string;
 }
 
 const SHORT_ID_LENGTH = 4;
@@ -138,9 +139,12 @@ export function readRegistryEntries(dir: string): RegistryFields[] {
  * always reachable, so uniqueness can never be enforced.
  */
 export function resolveDisplayName(id: string, registry: NameableEntry[]): string {
-  const entry = registry.find((e) => e.id === id);
+  const found = registry.find((e) => e.id === id);
+  const entry = registry.find((e) => e.id === found?.aliasOf) ?? found;
   if (!entry) return shortId(id);
-  const sharesLabel = registry.some((e) => e.id !== id && e.label === entry.label);
+  const sharesLabel = registry.some(
+    (e) => e.id !== entry.id && !e.aliasOf && e.label === entry.label
+  );
 
-  return sharesLabel ? `${entry.label}·${shortId(id)}` : entry.label;
+  return sharesLabel ? `${entry.label}·${shortId(entry.id)}` : entry.label;
 }

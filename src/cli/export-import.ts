@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import type AdmZipArchive from "adm-zip";
+import { recordAdoptedActor } from "../bronze/actor-adoption";
 import { appendImportLog } from "../bronze/import-log";
 import { newerLayoutRefusal } from "../core/export-manifest";
 import { mergeArchive, readManifest, summarize } from "../core/import-merge";
@@ -239,6 +240,7 @@ function importByMerge(entries: ZipEntry[], home: string, zipPath: string) {
     importQuarantineDir(home),
     archiveLayoutFor(home)
   );
+  if (result.replacedActor) recordAdoptedActor(result.replacedActor, home);
   const source = readManifest(archiveEntriesOf(entries));
   if (source) {
     writeRegistryEntry({ id: source.machineId, label: source.label, os: source.os });

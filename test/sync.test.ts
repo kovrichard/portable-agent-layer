@@ -88,7 +88,7 @@ describe("two machines", () => {
 
   test("settle: another run on either machine uploads and changes nothing", async () => {
     await converge();
-    await sync("B");
+    await converge();
     const blobs = blobFiles().length;
 
     for (const machine of ["A", "B", "A"] as const)
@@ -188,6 +188,23 @@ describe("whole files changed on both machines", () => {
     expect(
       readFileSync(resolve(homes.B, "backups/sync-quarantine", `${GOALS}.local`), "utf-8")
     ).toBe("template\n");
+  });
+});
+
+describe("a machine joining with its own actor", () => {
+  const actor = (id: string) => `${JSON.stringify({ id, label: id, createdAt: "x" })}\n`;
+
+  test("adopts the first machine's actor, and both know the old id as an alias", async () => {
+    put("A", "memory/actor.json", actor("actor-a"));
+    put("B", "memory/actor.json", actor("actor-b"));
+    await sync("A");
+    await sync("B");
+    await converge();
+
+    expect(read("B", "memory/actor.json")).toBe(actor("actor-a"));
+
+    for (const machine of ["A", "B"] as const)
+      expect(read(machine, "memory/actors/actor-b.md")).toContain('aliasOf: "actor-a"');
   });
 });
 

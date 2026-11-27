@@ -64,6 +64,7 @@ export const EVENT_FIELDS = {
   ],
   session_end: ["reason", "durationSec", "turns", "messages", "status"],
   sync: ["pushed", "pulled", "written", "quarantined", "refused"],
+  actor_adopted: ["from", "to"],
   compaction: ["trigger", "withInstructions", "contextTokens"],
   context_injected: ["instructionsChars", "semiStaticChars", "dynamicChars"],
   hook_timing: ["hook", "totalMs", "handlers"],

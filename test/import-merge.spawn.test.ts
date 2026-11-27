@@ -164,6 +164,20 @@ describe("import into a NON-EMPTY home", () => {
   });
 });
 
+describe("actor identity on import", () => {
+  test("an install with its own actor adopts the source's and keeps its old id as an alias", () => {
+    write(SRC, "memory/actor.json", '{"id":"actor-src","label":"Rico"}');
+    write(DST, "memory/actor.json", '{"id":"actor-dst","label":"laptop"}');
+    expect(cli(SRC, ["export", WORK]).status).toBe(0);
+    const r = cli(DST, ["import", WORK]);
+
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("adopted the incoming actor");
+    expect(JSON.parse(read(DST, "memory/actor.json")).id).toBe("actor-src");
+    expect(read(DST, "memory/actors/actor-dst.md")).toContain('aliasOf: "actor-src"');
+  });
+});
+
 describe("machine identity crosses on import", () => {
   test("source machine is named and its label resolves afterwards", async () => {
     cli(SRC, ["export", WORK]);
