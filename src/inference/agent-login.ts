@@ -1,4 +1,5 @@
 import type { AgentType } from "../core/agent";
+import { withPalEnv } from "../core/pal-env";
 import { getClaudeBinary } from "./inference-binaries";
 
 export interface AgentLogin {
@@ -30,6 +31,7 @@ export const systemRunner: CommandRunner = (argv, timeoutMs) => {
     stderr: "pipe",
     timeout: timeoutMs,
     windowsHide: true,
+    env: withPalEnv(),
   });
 
   return {
