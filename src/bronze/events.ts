@@ -354,8 +354,17 @@ export function contentDir(): string {
   return storeDir("event-text");
 }
 
+/** Empty when the folder this process started in was removed; the event is kept anyway. */
+function workingDirectory(): string {
+  try {
+    return process.cwd();
+  } catch {
+    return "";
+  }
+}
+
 function envelope(type: EventType, options: AppendOptions): EventEnvelope {
-  const cwd = options.cwd ?? process.cwd();
+  const cwd = options.cwd ?? workingDirectory();
 
   return {
     v: EVENT_SCHEMA_VERSION,

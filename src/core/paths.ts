@@ -15,7 +15,7 @@ import { basename, isAbsolute, relative, resolve } from "node:path";
  * it needs a passwd lookup and quietly reading it as a relative directory is the
  * exact failure this replaces.
  */
-export function toPath(input: string, base: string = process.cwd()): string {
+export function toPath(input: string, base?: string): string {
   if (input === "~") return homedir();
 
   if (input.startsWith("~/") || input.startsWith("~\\")) {
@@ -26,7 +26,9 @@ export function toPath(input: string, base: string = process.cwd()): string {
     throw new Error(`Home-relative paths for another user are not supported: ${input}`);
   }
 
-  return resolve(base, input);
+  if (isAbsolute(input)) return resolve(input);
+
+  return resolve(base ?? process.cwd(), input);
 }
 
 /**

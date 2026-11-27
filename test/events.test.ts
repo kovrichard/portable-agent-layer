@@ -9,6 +9,7 @@ import {
   eventsSince,
 } from "../src/bronze/events";
 import { reload } from "../src/core/settings";
+import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -51,6 +52,26 @@ beforeEach(() => {
 });
 
 describe("the event envelope", () => {
+  test.skipIf(process.platform === "win32")(
+    "an event from a process whose folder was removed is kept, with no cwd or project",
+    () => {
+      const started = process.cwd();
+      const gone = resolve(home, "gone");
+      mkdirSync(gone);
+      process.chdir(gone);
+      removeOnceReleased(gone);
+
+      try {
+        const id = appendEvent("turn", { words: 1 }, { ts: "2026-09-10T10:00:00.000Z" });
+
+        expect(id).not.toBeNull();
+        expect(streamLines("2026-09")).toMatchObject([{ id, cwd: "", project: null }]);
+      } finally {
+        process.chdir(started);
+      }
+    }
+  );
+
   test("every event carries version, id, time, type and who and where it came from", () => {
     const id = appendEvent(
       "turn",
