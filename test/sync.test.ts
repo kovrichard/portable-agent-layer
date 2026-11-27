@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { directoryStore } from "../src/sync/blob-store";
-import { openBlob, randomKey } from "../src/sync/crypto";
+import { openBlob, randomKey, sealBlob } from "../src/sync/crypto";
 import { fileKeys } from "../src/sync/keys";
 import { readSyncState } from "../src/sync/state";
 import { syncOnce } from "../src/sync/sync";
@@ -188,6 +188,47 @@ describe("whole files changed on both machines", () => {
     expect(
       readFileSync(resolve(homes.B, "backups/sync-quarantine", `${GOALS}.local`), "utf-8")
     ).toBe("template\n");
+  });
+});
+
+describe("the reaction samples stay on their machine", () => {
+  const SAMPLES = "memory/adaptation/reaction-samples.json";
+
+  test("each machine keeps its own, and neither travels", async () => {
+    put("A", SAMPLES, '[{"text":"from A"}]');
+    put("B", SAMPLES, '[{"text":"from B"}]');
+    await converge();
+    await sync("A");
+
+    expect(read("A", SAMPLES)).toBe('[{"text":"from A"}]');
+    expect(read("B", SAMPLES)).toBe('[{"text":"from B"}]');
+  });
+
+  test("a copy an older version uploaded is left unread, not refused, and skipped after", async () => {
+    const store = directoryStore(storeRoot);
+    const { id, dataKey } = await fileKeys(store, account).forPath(SAMPLES);
+    const plain = new TextEncoder().encode('[{"text":"old upload"}]');
+    await store.put(
+      `whole/${id}/1`,
+      await sealBlob(dataKey, plain, { fileId: id, machine: "whole", seq: 1 })
+    );
+    put("B", SAMPLES, '[{"text":"mine"}]');
+
+    expect((await sync("B")).refused).toEqual([]);
+    expect(read("B", SAMPLES)).toBe('[{"text":"mine"}]');
+    expect(readSyncState(homes.B).whole[SAMPLES]).toEqual({ hash: "", version: 1 });
+  });
+
+  test("a log stored as a whole file is still refused as out of scope", async () => {
+    const store = directoryStore(storeRoot);
+    const { id, dataKey } = await fileKeys(store, account).forPath(EVENTS);
+    const plain = new TextEncoder().encode('{"id":"x"}\n');
+    await store.put(
+      `whole/${id}/1`,
+      await sealBlob(dataKey, plain, { fileId: id, machine: "whole", seq: 1 })
+    );
+
+    expect((await sync("B")).refused).toEqual([`${id}: out-of-scope`]);
   });
 });
 

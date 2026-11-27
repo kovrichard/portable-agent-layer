@@ -99,13 +99,31 @@ export function writeRegistryEntry(
 ): string {
   mkdirSync(dir, { recursive: true });
   const file = entryPath(dir, fields.id);
-  const existingBody = existsSync(file) ? parse(readFileSync(file, "utf-8")).body : "";
+  const existing = existsSync(file) ? parse(readFileSync(file, "utf-8")) : null;
+  const nextBody = body || (existing?.body ?? "");
+
+  if (existing && sameEntry(existing.meta, fields) && existing.body === nextBody)
+    return file;
   writeFileSync(
     file,
-    stringify({ ...fields, updated: new Date().toISOString() }, body || existingBody)
+    stringify({ ...fields, updated: new Date().toISOString() }, nextBody)
   );
 
   return file;
+}
+
+/**
+ * A synced entry rewritten only to restamp it would differ on every machine
+ * that registers itself, so `updated` moves only when something else does.
+ */
+function sameEntry(meta: Record<string, unknown>, fields: RegistryFields): boolean {
+  const { updated: _, ...stored } = meta;
+  const names = Object.keys(fields);
+
+  return (
+    Object.keys(stored).length === names.length &&
+    names.every((name) => stored[name] === fields[name])
+  );
 }
 
 /**

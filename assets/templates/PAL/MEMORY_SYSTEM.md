@@ -46,7 +46,7 @@ Almost everything in `records/` and `state/`, and in `relationship/`, `learning/
 | What a session did | Session-intelligence handler (automatic) | `work/projects/<slug>/history.jsonl` |
 | A rating signal | UserPromptOrchestrator rating capture | `records/ratings/ratings.jsonl` |
 | How a user turn went (pace, length, skimming, how it received the last reply) | Prompt-time interaction measurement (automatic, every agent; see the per-agent turn contract in SYSTEM_ARCHITECTURE.md); read it with `pal cli interaction report` | `turn` events in `records/bronze/events/` |
-| A rolling sample of labelled messages, for auditing the reaction rules | Prompt-time interaction measurement (automatic, `reactionSampling`) | `memory/adaptation/reaction-samples.json` |
+| A rolling sample of labelled messages, for auditing the reaction rules; it holds message text, so sync leaves it on its machine | Prompt-time interaction measurement (automatic, `reactionSampling`) | `memory/adaptation/reaction-samples.json` |
 | Where a session's work stopped | `pal cli progress stopped`, or the session-intelligence handler at the end of a session | `work/progress-tree/events.jsonl` |
 
 ## Format conventions
