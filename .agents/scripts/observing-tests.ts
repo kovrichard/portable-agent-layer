@@ -1,5 +1,4 @@
 /// <reference path="./madge.d.ts" />
-import { readFileSync } from "node:fs";
 import madge from "madge";
 
 export type ImportGraph = Record<string, string[]>;
@@ -50,29 +49,11 @@ export function testsObserving(
   return tests.filter((test) => reaching.has(test));
 }
 
-const SOURCE_PATH = /(?:\.\.\/)+(src\/[\w./-]+?\.ts)\b/g;
-
-/** Source files a test names by path, which an import built at runtime (`?t=${…}`) hides from madge. */
-export function namedSources(text: string): string[] {
-  return [...new Set(Array.from(text.matchAll(SOURCE_PATH), (match) => match[1]))];
-}
-
-function withNamedSources(graph: ImportGraph): ImportGraph {
-  return Object.fromEntries(
-    Object.entries(graph).map(([file, imports]) => [
-      file,
-      file.startsWith("test/")
-        ? [...new Set([...imports, ...namedSources(readFileSync(file, "utf-8"))])]
-        : imports,
-    ])
-  );
-}
-
 export async function importGraph(): Promise<ImportGraph> {
   const result = await madge(["test", "src"], {
     fileExtensions: ["ts"],
     tsConfig: "tsconfig.json",
   });
 
-  return withNamedSources(result.obj());
+  return result.obj();
 }

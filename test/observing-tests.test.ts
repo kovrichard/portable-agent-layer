@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { namedSources, testsObserving } from "../.agents/scripts/observing-tests";
+import { testsObserving } from "../.agents/scripts/observing-tests";
 
 const graph = {
   "test/setup.ts": ["test/lib/home.ts"],
@@ -45,26 +45,5 @@ describe("the tests that can observe a mutant", () => {
       "test/b.test.ts",
       "test/c.test.ts",
     ]);
-  });
-});
-
-describe("a source a test names by path", () => {
-  test("an import built at runtime still counts, from a test or its helper", () => {
-    const text = [
-      "return await import(`../src/core/wall-clock.ts?t=${Date.now()}`);",
-      "const mod = await import(`../../src/hooks/handlers/inject-retrieval.ts?t=${t}`);",
-      'import { x } from "../src/core/wall-clock.ts";',
-    ].join("\n");
-
-    expect(namedSources(text)).toEqual([
-      "src/core/wall-clock.ts",
-      "src/hooks/handlers/inject-retrieval.ts",
-    ]);
-  });
-
-  test("a path that is not a TypeScript source is not one", () => {
-    expect(namedSources('read("../src/tools/control-room/ui/dist/index.html")')).toEqual(
-      []
-    );
   });
 });
