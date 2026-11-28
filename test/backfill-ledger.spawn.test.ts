@@ -112,7 +112,7 @@ describe("ledger entries stream live as action events", () => {
       }),
     ]);
     expect(JSON.stringify(logLines("events"))).not.toContain("private");
-    expect(logLines("event-text")).toEqual([
+    expect(logLines("event-text").filter((row) => row.type === "action")).toEqual([
       expect.objectContaining({
         command: "rm -rf ./private-dir",
         reason: "a private reason",

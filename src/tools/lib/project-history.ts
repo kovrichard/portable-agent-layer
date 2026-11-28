@@ -86,17 +86,6 @@ export function closedIscRows(project: ProjectProgress): HistoryRow[] {
   return rows;
 }
 
-export type BindingChange = "bound" | "unbound";
-
-/** The path is one machine's layout, so it travels as event text, never as a field. */
-export function emitBindingChange(
-  project: string,
-  change: BindingChange,
-  path: string
-): string | null {
-  return appendEvent("project", { change }, { project, content: { path } });
-}
-
 export function emitHistoryRow(
   row: HistoryRow,
   attribution: Partial<RecordAttribution> = {}

@@ -16,7 +16,10 @@ beforeEach(() => {
 });
 
 async function lib() {
-  return await import("../src/progress/projects");
+  return {
+    ...(await import("../src/progress/projects")),
+    ...(await import("../src/progress/binding-audit")),
+  };
 }
 
 function project(name: string, path?: string): ProjectProgress {
@@ -26,6 +29,14 @@ function project(name: string, path?: string): ProjectProgress {
 function checkout(name: string): string {
   const dir = resolve(HOME, "checkouts", name);
   mkdirSync(dir, { recursive: true });
+
+  return dir;
+}
+
+function gitCheckout(name: string, origin: string): string {
+  const dir = checkout(name);
+  spawnSync("git", ["init", "-q", dir]);
+  spawnSync("git", ["-C", dir, "remote", "add", "origin", origin]);
 
   return dir;
 }
@@ -66,6 +77,25 @@ describe("auditBindings", () => {
     const { auditBindings } = await lib();
     const left = checkout("old-name");
     expect(auditBindings([project("new-name")], { "old-name": left })).toEqual([
+      { kind: "orphan", project: "old-name", path: left },
+    ]);
+  });
+
+  test("names the unbound project whose remote is the orphan's repository", async () => {
+    const { auditBindings } = await lib();
+    const left = gitCheckout("old-name", "git@github.com:a/orbit.git");
+    const renamed = { ...project("new-name"), remote: "github.com/a/orbit" };
+    expect(auditBindings([renamed], { "old-name": left })).toEqual([
+      { kind: "orphan", project: "old-name", path: left, renamedTo: "new-name" },
+    ]);
+  });
+
+  test("a project already bound elsewhere is not taken for the orphan's new name", async () => {
+    const { auditBindings } = await lib();
+    const left = gitCheckout("old-name", "git@github.com:a/orbit.git");
+    const other = gitCheckout("second", "git@github.com:a/orbit.git");
+    const bound = { ...project("second"), remote: "github.com/a/orbit" };
+    expect(auditBindings([bound], { "old-name": left, second: other })).toEqual([
       { kind: "orphan", project: "old-name", path: left },
     ]);
   });

@@ -185,6 +185,25 @@ describe("project bindings", () => {
     });
   });
 
+  test("a binding left by a rename points the new name at the folder first", () => {
+    const finding = bindingFinding({
+      kind: "orphan",
+      project: "old",
+      path: "/w/old",
+      renamedTo: "new",
+    });
+
+    expect(finding).toMatchObject({ id: "binding.old", severity: "warn" });
+    expect(finding.title).toBe(
+      "Binding old → /w/old names no project; new has the same remote — renamed"
+    );
+    expect(finding.fix).toEqual({
+      say: "Bind new to the folder",
+      command: "pal cli project set-path new /w/old",
+      external: false,
+    });
+  });
+
   test("a collision names both projects", () => {
     const finding = bindingFinding({
       kind: "shared",

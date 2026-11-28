@@ -20,6 +20,7 @@
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { appendEvent } from "../bronze/events";
 import { palHome, toPath } from "../core/paths";
 import { type Bindings, bindingsFilePath, readBindings } from "../core/project-bindings";
 import { adoptParkedHistory } from "./parked-history";
@@ -57,8 +58,32 @@ function nonEmptySoABadWriteCannotEraseTheBackup(file: string): boolean {
   return existsSync(file) && readFileSync(file, "utf-8").trim().length > 0;
 }
 
+export type BindingChange = {
+  project: string;
+  change: "bound" | "unbound";
+  path: string;
+};
+
+export function bindingChanges(before: Bindings, after: Bindings): BindingChange[] {
+  const bound = Object.entries(after)
+    .filter(([project, path]) => before[project] !== path)
+    .map(([project, path]): BindingChange => ({ project, change: "bound", path }));
+  const unbound = Object.entries(before)
+    .filter(([project]) => !(project in after))
+    .map(([project, path]): BindingChange => ({ project, change: "unbound", path }));
+
+  return [...bound, ...unbound];
+}
+
+/** The path is one machine's layout, so it travels as event text, never as a field. */
+function logBindingChanges(changes: BindingChange[]): void {
+  for (const { project, change, path } of changes)
+    appendEvent("project", { change }, { project, content: { path } });
+}
+
 export function writeBindings(bindings: Bindings, home: string = palHome()): void {
   assertNotRealHomeDuringTests(home);
+  const before = readBindings(home);
   const file = bindingsFilePath(home);
   if (nonEmptySoABadWriteCannotEraseTheBackup(file)) {
     copyFileSync(file, bindingsBackupPath(home));
@@ -68,6 +93,7 @@ export function writeBindings(bindings: Bindings, home: string = palHome()): voi
 
   for (const key of Object.keys(bindings).sort()) sorted[key] = bindings[key];
   writeFileSync(bindingsFilePath(home), `${JSON.stringify(sorted, null, 2)}\n`);
+  logBindingChanges(bindingChanges(before, sorted));
   adoptParkedHistory(sorted, home);
 }
 

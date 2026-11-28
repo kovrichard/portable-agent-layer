@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { palHome, palPkg } from "../../core/paths";
 import { settingsPath } from "../../core/settings";
 import { telosStatus } from "../../opinions/telos-topics";
-import { auditBindings, type BindingIssue } from "../../progress/projects";
+import { auditBindings, type BindingIssue } from "../../progress/binding-audit";
 import { quarantineCount } from "../../sync/status";
 import {
   type LegacyOpinions,
@@ -200,37 +200,54 @@ function telosFindings(home: string): Finding[] {
   ];
 }
 
+type BindingProblem = { project: string; title: string; say: string; command: string };
+
+const pointAtCheckout = (project: string) => ({
+  say: "Point it at its checkout",
+  command: `pal cli project set-path ${project} <path>`,
+});
+
+/** A renamed project takes the orphan's folder first; the next run then offers to drop the orphan. */
+function orphanProblem(issue: Extract<BindingIssue, { kind: "orphan" }>): BindingProblem {
+  const { project, path, renamedTo } = issue;
+  if (renamedTo)
+    return {
+      project,
+      title: `Binding ${project} → ${path} names no project; ${renamedTo} has the same remote — renamed`,
+      say: `Bind ${renamedTo} to the folder`,
+      command: `pal cli project set-path ${renamedTo} ${path}`,
+    };
+
+  return {
+    project,
+    title: `Binding ${project} → ${path} names no project — renamed or deleted`,
+    say: "Remove the binding",
+    command: `pal cli project unset-path ${project}`,
+  };
+}
+
 /** "Points at" rather than "bound to": the path may come from a legacy record's own field. */
-function bindingProblem(issue: BindingIssue): { project: string; title: string } {
+function bindingProblem(issue: BindingIssue): BindingProblem {
   if (issue.kind === "missing")
     return {
       project: issue.project,
       title: `Project ${issue.project} points at ${issue.path}, which does not exist`,
+      ...pointAtCheckout(issue.project),
     };
 
-  if (issue.kind === "orphan")
-    return {
-      project: issue.project,
-      title: `Binding ${issue.project} → ${issue.path} names no project — renamed or deleted`,
-    };
+  if (issue.kind === "orphan") return orphanProblem(issue);
 
   return {
     project: issue.projects[0],
     title: `Projects ${issue.projects.join(" and ")} both point at ${issue.path} — rebind whichever is wrong`,
+    ...pointAtCheckout(issue.projects[0]),
   };
 }
 
 export function bindingFinding(issue: BindingIssue): Finding {
-  const { project, title } = bindingProblem(issue);
-  const fix =
-    issue.kind === "orphan"
-      ? { say: "Remove the binding", command: `pal cli project unset-path ${project}` }
-      : {
-          say: "Point it at its checkout",
-          command: `pal cli project set-path ${project} <path>`,
-        };
+  const { project, title, say, command } = bindingProblem(issue);
 
-  return warning(`binding.${project}`, title, { ...fix, external: false });
+  return warning(`binding.${project}`, title, { say, command, external: false });
 }
 
 function bindingFindings(): Finding[] {

@@ -26,12 +26,7 @@ import {
 } from "../../progress/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../../progress/serves";
 import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
-import {
-  decisionRow,
-  emitBindingChange,
-  emitHistoryRow,
-  registrationRow,
-} from "../lib/project-history";
+import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";
 import { iscTitle } from "../lib/project-isc";
 import { scriptArgs } from "../lib/script-args";
 import { fail, joined, nonBlank, now, ok, requireProject } from "./project-io";
@@ -239,7 +234,6 @@ function cmdSetPath(name: string, rawPath: string): undefined {
   writeBinding(p.name, newPath);
   p.updated = now();
   writeProject(p);
-  emitBindingChange(p.name, "bound", newPath);
   ok({ updated: true, name, path: newPath });
 }
 
@@ -247,7 +241,6 @@ function cmdSetPath(name: string, rawPath: string): undefined {
 function cmdUnsetPath(name: string): undefined {
   const removed = removeBinding(nonBlank(name, "<name>"));
   if (removed === null) throw new UsageError(`No binding for "${name}" on this machine.`);
-  emitBindingChange(name, "unbound", removed);
   ok({ updated: true, name, removed });
 }
 

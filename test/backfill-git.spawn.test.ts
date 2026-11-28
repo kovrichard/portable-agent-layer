@@ -126,7 +126,7 @@ describe("git history becomes commit events", () => {
     expect(events).not.toContain(AUTHOR);
     expect(events).not.toContain("ada@example.test");
     expect(events).not.toContain("a private subject line");
-    expect(logLines("event-text")).toEqual([
+    expect(logLines("event-text").filter((row) => row.type === "commit")).toEqual([
       expect.objectContaining({
         id: `git:${hash}`,
         author: AUTHOR,
