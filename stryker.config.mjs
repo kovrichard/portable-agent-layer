@@ -47,6 +47,13 @@ const testFiles = readdirSync("test", { recursive: true })
   .filter(isInProcessSuite)
   .sort();
 
+// 2026-11-28: a diff run passes only the tests that import a mutated file, so a static
+// mutant reruns those, not the whole suite. #407's run took 55 minutes and passed
+// because 94 surviving static mutants timed out (counted as detected); scoped: 26 min, 67.
+const scopedTestFiles = process.env.STRYKER_TEST_FILES
+  ? JSON.parse(process.env.STRYKER_TEST_FILES)
+  : null;
+
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
   plugins: ["@hughescr/stryker-bun-runner"],
@@ -131,7 +138,7 @@ export default {
   ],
   concurrency: Number(process.env.STRYKER_CONCURRENCY ?? 4),
   bun: {
-    testFiles,
+    testFiles: scopedTestFiles?.length ? scopedTestFiles : testFiles,
     bunArgs: ["--isolate"],
     timeout: 120000,
     // Loading the whole suite pushes the runner's inspector handshake past its 5s default.
