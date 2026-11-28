@@ -10,7 +10,7 @@
 
 import { existsSync } from "node:fs";
 import { toPath } from "../../core/paths";
-import { writeBinding } from "../../progress/bindings";
+import { removeBinding, writeBinding } from "../../progress/bindings";
 import { parseIscs } from "../../progress/isc-line";
 import {
   defaultSlug,
@@ -237,6 +237,13 @@ function cmdSetPath(name: string, rawPath: string): undefined {
   ok({ updated: true, name, path: newPath });
 }
 
+// No requireProject: a binding left behind by a rename has no record to require.
+function cmdUnsetPath(name: string): undefined {
+  const removed = removeBinding(nonBlank(name, "<name>"));
+  if (removed === null) throw new UsageError(`No binding for "${name}" on this machine.`);
+  ok({ updated: true, name, removed });
+}
+
 // ── update-section ────────────────────────────────────────────────
 
 const VALID_SECTIONS = [
@@ -407,6 +414,11 @@ export const command = group({
       summary: "Update the registered path",
       args: "<name> <path...>",
       run: ({ positionals: [name, ...path] }) => cmdSetPath(name, joined(path)),
+    }),
+    "unset-path": leaf({
+      summary: "Remove this machine's binding, even one whose project is gone",
+      args: "<name>",
+      run: ({ positionals: [name] }) => cmdUnsetPath(name),
     }),
     "add-next": textLeaf("Append next step", "<text...>", (name, text) =>
       appendItem(name, "next", text)

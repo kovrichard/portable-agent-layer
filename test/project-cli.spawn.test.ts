@@ -9,6 +9,7 @@ import {
 } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { eventsSince } from "../src/bronze/events";
 import { readProject } from "../src/progress/projects";
 import { run } from "../src/tools/agent/project";
 import { removeOnceReleased } from "./lib/remove-once-released";
@@ -376,6 +377,48 @@ describe("project CLI", () => {
     expect(out.path).toContain("updated");
     const after = JSON.parse((await runCli(["resume", "p"])).stdout);
     expect(after.project.path).toContain("updated");
+  });
+
+  describe("unset-path", () => {
+    function bindingsFile(): string {
+      return resolve(TEST_HOME, "bindings.json");
+    }
+
+    function projectEventChanges(project: string): unknown[] {
+      const previous = process.env.PAL_HOME;
+      process.env.PAL_HOME = TEST_HOME;
+
+      try {
+        return eventsSince("project", new Date(0))
+          .filter((e) => e.project === project)
+          .map((e) => e.change);
+      } finally {
+        process.env.PAL_HOME = previous;
+      }
+    }
+
+    test("removes a binding whose project was renamed away", async () => {
+      writeFileSync(bindingsFile(), JSON.stringify({ "old-name": "/tmp/old-name" }));
+      const r = await runCli(["unset-path", "old-name"]);
+      expect(r.code).toBe(0);
+      expect(JSON.parse(r.stdout).removed).toBe("/tmp/old-name");
+      expect(JSON.parse(readFileSync(bindingsFile(), "utf-8"))).toEqual({});
+    });
+
+    test("refuses a name this machine has no binding for", async () => {
+      writeFileSync(bindingsFile(), "{}");
+      const r = await runCli(["unset-path", "never-bound"]);
+      expect(r.code).toBe(1);
+      expect(r.stderr).toContain('No binding for "never-bound" on this machine.');
+    });
+
+    test("set-path and unset-path each land in bronze as a project event", async () => {
+      await runCli(["create", "audited", "--path", "/tmp/a"]);
+      await runCli(["set-path", "audited", "/tmp/b"]);
+      await runCli(["unset-path", "audited"]);
+      const changes = projectEventChanges("audited").filter((c) => c !== "registered");
+      expect(changes).toEqual(["bound", "unbound"]);
+    });
   });
 
   test("unknown command exits 1 with helpful stderr", async () => {

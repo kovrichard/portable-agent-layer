@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setSystemTime, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { readProject, saveProjectTickets, writeProject } from "../src/progress/projects";
@@ -207,7 +207,9 @@ describe("a project's tickets", () => {
   const log = () => resolve(home, "work", "projects", "demo", "tickets.jsonl");
 
   test("live in their log, and a ticket change leaves ISA.md byte for byte", () => {
+    setSystemTime(NOON);
     writeProject(fakeProject({ goal: "Ship.", criteria: "- [ ] ISC-k7m2: ship it" }));
+    setSystemTime();
     const before = readFileSync(isa(), "utf-8");
     const p = readProject("demo");
     if (!p) throw new Error("demo missing");

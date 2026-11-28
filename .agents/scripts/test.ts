@@ -24,12 +24,12 @@ function tierFiles(args: string[]): string[] {
   return tier ? testFilesOf(TIERS[tier]).map((file) => `./${file}`) : [];
 }
 
-const CI_REPORT = ".test/test-report.xml";
-const SLOWEST_SHOWN = 20;
+const TIMING_REPORT = ".test/test-report.xml";
+const SLOWEST_PER_TIER = 10;
 
-/** CI prints only failures, so the log alone cannot say which tests run close to their timeout. */
+/** Bun's own per-test times, so no hook has to merge timings across isolated processes. */
 function timingReportArgs(): string[] {
-  return process.env.CI ? ["--reporter=junit", `--reporter-outfile=${CI_REPORT}`] : [];
+  return ["--reporter=junit", `--reporter-outfile=${TIMING_REPORT}`];
 }
 
 function xmlUnescaped(text: string): string {
@@ -52,22 +52,36 @@ function attributesOf(tag: string): Record<string, string> {
   );
 }
 
-export function slowestTests(junit: string, count: number): string[] {
+export function slowestTests(junit: string, count: number, spawn: boolean): string[] {
   return Array.from(junit.matchAll(/<testcase\s[^>]*>/g), ([tag]) => attributesOf(tag))
-    .map((test) => ({
-      seconds: Number(test.time),
-      where: `${test.file?.replaceAll("\\", "/")} > ${test.classname} > ${test.name}`,
-    }))
+    .map((test) => {
+      const file = (test.file ?? "").replaceAll("\\", "/");
+
+      return {
+        file,
+        seconds: Number(test.time),
+        where: `${file} > ${test.classname} > ${test.name}`,
+      };
+    })
+    .filter((test) => isSpawnFile(test.file) === spawn)
     .sort((a, b) => b.seconds - a.seconds)
     .slice(0, count)
     .map((test) => `${test.seconds.toFixed(2).padStart(7)}s  ${test.where}`);
 }
 
 function printSlowestTests(): void {
-  if (!process.env.CI || !existsSync(CI_REPORT)) return;
-  console.log(`\nSlowest ${SLOWEST_SHOWN} tests:`);
-  for (const line of slowestTests(readFileSync(CI_REPORT, "utf-8"), SLOWEST_SHOWN))
-    console.log(line);
+  if (!existsSync(TIMING_REPORT)) return;
+  const junit = readFileSync(TIMING_REPORT, "utf-8");
+
+  for (const [tier, spawn] of [
+    ["fast", false],
+    ["spawn", true],
+  ] as const) {
+    const lines = slowestTests(junit, SLOWEST_PER_TIER, spawn);
+    if (lines.length === 0) continue;
+    console.log(`\nSlowest ${lines.length} ${tier} tests:`);
+    for (const line of lines) console.log(line);
+  }
 }
 
 function runTests(args: string[]): number {
