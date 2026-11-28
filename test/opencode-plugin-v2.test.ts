@@ -118,7 +118,7 @@ describe("the opencode V2 setup", () => {
 
   test("lets a write to an ordinary file through", async () => {
     const { hooks } = await setUp();
-    const path = resolve(home, "notes.md");
+    const path = resolve(home, "..", "project", "notes.md");
     const event = { tool: "write", sessionID: "ses_v2", id: "call_2", input: { path } };
 
     expect(() => hook(hooks, "tool.execute.before")(event)).not.toThrow();
