@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
+  bindingDriftFinding,
   bindingFinding,
   stateFindings,
   syncQuarantineFindings,
@@ -202,6 +203,24 @@ describe("project bindings", () => {
       command: "pal cli project set-path new /w/old",
       external: false,
     });
+  });
+
+  test("a file that drifted from its history gets the rebuild command", () => {
+    const finding = bindingDriftFinding([
+      { project: "alpha", change: "bound", path: "/x" },
+      { project: "klint", change: "unbound", path: "/w/klint" },
+    ]);
+
+    expect(finding).toMatchObject({ id: "bindings.drift", severity: "warn" });
+    expect(finding?.title).toBe(
+      "bindings.json differs from its history in 2 binding(s): alpha, klint"
+    );
+    expect(finding?.fix).toEqual({
+      say: "Rewrite it from the history, or run `pal cli project bindings adopt` if you changed it on purpose",
+      command: "pal cli project bindings rebuild",
+      external: false,
+    });
+    expect(bindingDriftFinding([])).toBeNull();
   });
 
   test("a collision names both projects", () => {

@@ -29,6 +29,7 @@ import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
 import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";
 import { iscTitle } from "../lib/project-isc";
 import { scriptArgs } from "../lib/script-args";
+import { bindingCommands } from "./project-bindings";
 import { fail, joined, nonBlank, now, ok, requireProject } from "./project-io";
 import { iscCommands } from "./project-isc-commands";
 import { cmdMigrate } from "./project-migrate";
@@ -443,6 +444,7 @@ export const command = group({
     }),
     criteria: nameLeaf("Print the Criteria section", cmdCriteria),
     ...iscCommands,
+    ...bindingCommands,
     "isa-init": nameLeaf("Mark project as ISA-initialized", cmdIsaInit),
     ...taskIsaCommands,
     migrate: leaf({

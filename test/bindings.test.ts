@@ -251,16 +251,15 @@ describe("rolling backup", () => {
 });
 
 describe("test-sandbox guard", () => {
-  test("refuses to write into the real ~/.pal while the suite is sandboxed", async () => {
-    const { writeBindings } = await lib();
-    const realHome = resolve(homedir(), ".pal");
+  test("refuses to write into the user's ~/.pal while the suite is sandboxed", async () => {
+    const { writeBindings, bindingsFilePath } = await lib();
+    const userPal = resolve(homedir(), ".pal");
 
     expect(process.env.PAL_TEST_SANDBOX).toBeTruthy();
-    // Only the refusal is asserted: ~/.pal/bindings.json is a file PAL creates in
-    // ordinary use, so its absence is not something a test may depend on.
-    expect(() => writeBindings({ alpha: "/x" }, realHome)).toThrow(
+    expect(() => writeBindings({ alpha: "/x" }, userPal)).toThrow(
       /Refusing to write bindings.json/
     );
+    expect(existsSync(bindingsFilePath(userPal))).toBe(false);
   });
 });
 

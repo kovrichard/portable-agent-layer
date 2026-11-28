@@ -41,7 +41,7 @@ function contentFiles(): string[] {
     .map((f) => resolve(contentDir(), f));
 }
 
-function contentById(): Map<string, ContentRow> {
+export function contentById(): Map<string, ContentRow> {
   const rows = contentFiles().flatMap((f) => parseLines<ContentRow>(f));
 
   return new Map(rows.map((row) => [row.id, row]));

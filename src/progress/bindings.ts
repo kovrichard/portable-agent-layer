@@ -76,7 +76,7 @@ export function bindingChanges(before: Bindings, after: Bindings): BindingChange
 }
 
 /** The path is one machine's layout, so it travels as event text, never as a field. */
-function logBindingChanges(changes: BindingChange[]): void {
+export function logBindingChanges(changes: BindingChange[]): void {
   for (const { project, change, path } of changes)
     appendEvent("project", { change }, { project, content: { path } });
 }
