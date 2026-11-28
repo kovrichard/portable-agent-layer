@@ -9,11 +9,16 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { assets } from "../src/core/paths";
 import { capturingLog } from "../src/targets/log";
 import { copyPalDocs, removePalDocs } from "../src/targets/pal-docs";
 import { scaffoldPalSettings, scaffoldTelos } from "../src/targets/scaffold";
 import { copySkills, removeSkills } from "../src/targets/skills";
-import { installStatusline, removeStatusline } from "../src/targets/statusline";
+import {
+  installStatusline,
+  removeStatusline,
+  statuslineLauncher,
+} from "../src/targets/statusline";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -30,6 +35,10 @@ const ENV = {
   PAL_AGENTS_DIR: resolve(HOME, ".agents"),
 };
 const SCRIPT = process.platform === "win32" ? "statusline.ps1" : "statusline.sh";
+const packageStatusline = () =>
+  process.platform === "win32"
+    ? assets.statuslineScriptPs1()
+    : assets.statuslineScriptBash();
 
 beforeEach(() => {
   removeOnceReleased(HOME);
@@ -151,6 +160,54 @@ describe("statusline install", () => {
 
   test("reports success when there is nothing to remove", () => {
     expect(removeStatusline("claude")).toBe(true);
+  });
+
+  test("writes a launcher for the package's script, not a copy", () => {
+    installStatusline("claude");
+
+    const installed = readFileSync(resolve(ENV.PAL_CLAUDE_DIR, SCRIPT), "utf-8");
+    expect(installed).toBe(statuslineLauncher(packageStatusline()));
+  });
+
+  test("warns and reports failure when the launcher cannot be written", async () => {
+    mkdirSync(resolve(ENV.PAL_CLAUDE_DIR, SCRIPT), { recursive: true });
+    const logged: string[] = [];
+
+    const installed = await capturingLog(
+      (_level, message) => logged.push(message),
+      async () => installStatusline("claude")
+    );
+
+    expect(installed).toBe(false);
+    expect(logged.join("\n")).toContain("Failed to install statusline script");
+  });
+});
+
+describe("statusline launcher", () => {
+  const header = "# PAL status line: runs the package's script, rewritten on install";
+
+  test("on macOS and Linux it execs the package's bash script", () => {
+    expect(statuslineLauncher("/pkg/assets/statusline.sh", "darwin")).toBe(
+      `#!/bin/bash\n${header}\nexec bash '/pkg/assets/statusline.sh'\n`
+    );
+  });
+
+  test("on Windows it pipes its input into the package's PowerShell script", () => {
+    expect(statuslineLauncher("C:\\pkg\\assets\\statusline.ps1", "win32")).toBe(
+      `${header}\r\n$input | & 'C:\\pkg\\assets\\statusline.ps1'\r\n`
+    );
+  });
+
+  test("escapes a single quote in the path for bash", () => {
+    expect(statuslineLauncher("/o'neil/statusline.sh", "linux")).toContain(
+      `exec bash '/o'\\''neil/statusline.sh'`
+    );
+  });
+
+  test("escapes a single quote in the path for PowerShell", () => {
+    expect(statuslineLauncher("C:\\o'neil\\statusline.ps1", "win32")).toContain(
+      `& 'C:\\o''neil\\statusline.ps1'`
+    );
   });
 });
 

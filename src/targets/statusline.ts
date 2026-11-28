@@ -57,8 +57,11 @@ const singleQuotedPowershell = (path: string) => `'${path.replaceAll("'", "''")}
 const LAUNCHER_HEADER =
   "# PAL status line: runs the package's script, rewritten on install";
 
-function statuslineLauncher(packageScript: string): string {
-  return process.platform === "win32"
+export function statuslineLauncher(
+  packageScript: string,
+  os: NodeJS.Platform = process.platform
+): string {
+  return os === "win32"
     ? `${LAUNCHER_HEADER}\r\n$input | & ${singleQuotedPowershell(packageScript)}\r\n`
     : `#!/bin/bash\n${LAUNCHER_HEADER}\nexec bash ${singleQuotedBash(packageScript)}\n`;
 }
