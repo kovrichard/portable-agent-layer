@@ -7,10 +7,10 @@
  * deleting this env var in their own beforeEach.
  */
 
-import { afterAll, beforeEach } from "bun:test";
+import { afterAll, beforeEach, mock } from "bun:test";
 import { mkdirSync } from "node:fs";
-import { homedir } from "node:os";
-import { relative, resolve } from "node:path";
+import * as os from "node:os";
+import { resolve } from "node:path";
 import { guardFile, sharedRepoConfig } from "./lib/repo-config-tripwire";
 import { refuseSubprocessesOutsideSpawnFiles } from "./lib/subprocess-guard";
 import {
@@ -73,18 +73,28 @@ function keepTestsOutOfTheRealHome(): string {
 }
 
 /**
- * The developer's shell may export PAL_CLAUDE_DIR and friends, and Bun's homedir() ignores HOME.
- * On Windows it follows USERPROFILE, and paths.ts reads it once as it loads, so it loads only now.
+ * Bun's homedir() ignores HOME, so without this `resolve(homedir(), ".pal")` is the user's real PAL home.
+ * A module keeps the homedir it loaded with, so this runs before anything under src/ is imported.
  */
-async function pointAgentDirsAtTheTestHome(home: string) {
-  const { agentDirOverrides } = await import("../src/core/paths");
-
-  for (const { env, realDir } of agentDirOverrides()) {
-    process.env[env] = resolve(home, relative(homedir(), realDir));
-  }
+function makeTheRealHomeUnreachable(home: string) {
+  const withTestHome = () => ({
+    ...os,
+    default: { ...os, homedir: () => home },
+    homedir: () => home,
+  });
+  mock.module("node:os", withTestHome);
+  mock.module("os", withTestHome);
 }
 
-await pointAgentDirsAtTheTestHome(keepTestsOutOfTheRealHome());
+/** The developer's shell may export PAL_CLAUDE_DIR and friends; spawned CLIs get no mock, only the environment. */
+async function pointAgentDirsAtTheTestHome() {
+  const { agentDirOverrides } = await import("../src/core/paths");
+
+  for (const { env, realDir } of agentDirOverrides()) process.env[env] = realDir;
+}
+
+makeTheRealHomeUnreachable(keepTestsOutOfTheRealHome());
+await pointAgentDirsAtTheTestHome();
 
 function stopGitAtTestHomes() {
   process.env.GIT_CEILING_DIRECTORIES = TEST_ROOT;
