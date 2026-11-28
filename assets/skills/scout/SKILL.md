@@ -1,7 +1,7 @@
 ---
 name: scout
 license: MIT
-description: "Hands a simple, judgment-free search to the small-model scout subagent and acts on its report, keeping the file reads out of the main session. Use when finding where something is defined, called, configured or used, listing every occurrence of a thing, or searching files or code across several places when no judgment is needed. Not for reviews, decisions, root causes, recommendations or web research."
+description: "Hands every judgment-free search to the small-model scout subagent and acts on its report, keeping the reads out of the main session. Use when finding a file or folder by name, finding text inside files, finding where something is defined, called, configured or used, or listing every occurrence of a thing, anywhere on the machine: the repo, other repos, the home folder or a cloud drive. Not for reviews, decisions, root causes, recommendations or web research."
 argument-hint: <what to find>
 metadata:
   source: portable-agent-layer
@@ -13,6 +13,11 @@ metadata:
     - "search the codebase for"
     - "list every occurrence"
     - "find all usages"
+    - "find the file"
+    - "find the folder"
+    - "where is the file"
+    - "search the machine for"
+    - "search my drive for"
 ---
 
 # Scout
@@ -21,10 +26,9 @@ Hand the search for $ARGUMENTS to the `scout` subagent: a read-only searcher tha
 
 ## Workflow
 
-1. **Decide whether the search fits.** Send a scout only when all three hold:
+1. **Decide whether the search fits.** Send a scout whenever both hold, however small the search and wherever it looks:
    - The target can be stated in one sentence.
-   - Finding it takes more than a few lookups: several files or many occurrences.
-   - Finding it needs no judgment: where something is defined, called, configured or mentioned; which files match a pattern or contain a thing; a complete list of occurrences with stated facts about each one.
+   - Finding it needs no judgment: a file or folder by name; text inside files; where something is defined, called, configured or mentioned; a complete list of occurrences with stated facts about each one.
 
    If any of them fails, see "Do NOT use" and stop here.
 2. **Write the brief** from the template below. The scout knows nothing but the brief, so put every fact it needs into it: nothing from this conversation reaches it otherwise.
@@ -84,13 +88,14 @@ Say when a figure comes from the scout's report and you have not checked it your
 
 ## When to use
 
-- The user asks where something is defined, called, configured or mentioned, and the answer spans several files.
+- The user asks where a file, folder or piece of text is, on this machine or in a cloud drive it mounts.
+- The user asks where something is defined, called, configured or mentioned.
 - The user asks for a complete list: every occurrence, every file that matches a pattern, every caller.
-- Your own task needs such a list before it can continue, and gathering it would take many file reads.
+- Your own task needs any such search before it can continue, even a single `find` or `grep`.
 
 ## Do NOT use
 
-- A lookup of one or two commands whose location is already known. Run it directly.
+- Reading a file whose path you already know. That is not a search: read it directly.
 - Anything that asks for a decision, an evaluation, a review, a ranking, a root cause or a recommendation.
 - A vague target where deciding what counts is the task. Narrow it to one sentence first, or search yourself.
 - Anything that writes or changes files. The scout is read-only.

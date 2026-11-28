@@ -1,6 +1,6 @@
 ---
 name: scout
-description: "Read-only searcher on the small model — finds where something is defined, called, configured or mentioned and returns every hit with its file path, line number and the facts the brief asks for. Use when a search has a clear target, spans several files and needs no judgment. Not for reviews, decisions, root causes or recommendations."
+description: "Read-only searcher on the small model — finds files and folders by name, text inside files, and where something is defined, called, configured or mentioned, anywhere on the machine (repos, home folder, cloud drives), and returns every hit with its path, line number and the facts the brief asks for. Use for every search that needs no judgment, however small. Not for reviews, decisions, root causes or recommendations."
 
 claude:
   tools: Read, Grep, Glob, Bash
