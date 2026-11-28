@@ -32,6 +32,7 @@ import { v16BronzeToRecords } from "./migrations/v16-bronze-to-records";
 import { v17StateToRoot } from "./migrations/v17-state-to-root";
 import { v18TicketsToLog } from "./migrations/v18-tickets-to-log";
 import { v19RulesToLog } from "./migrations/v19-rules-to-log";
+import { v20BindingsIntoBronze } from "./migrations/v20-bindings-into-bronze";
 
 function leftoverMigration(leftover: Leftover): Migration {
   return {
@@ -79,6 +80,7 @@ const MIGRATIONS: Migration[] = [
   v17StateToRoot,
   v18TicketsToLog,
   v19RulesToLog,
+  v20BindingsIntoBronze,
   ...LEFTOVERS.map(leftoverMigration),
 ];
 

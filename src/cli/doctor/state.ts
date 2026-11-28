@@ -4,6 +4,8 @@ import { palHome, palPkg } from "../../core/paths";
 import { settingsPath } from "../../core/settings";
 import { telosStatus } from "../../opinions/telos-topics";
 import { auditBindings, type BindingIssue } from "../../progress/binding-audit";
+import { bindingDrift, hasBindingHistory } from "../../progress/binding-history";
+import type { BindingChange } from "../../progress/bindings";
 import { quarantineCount } from "../../sync/status";
 import {
   type LegacyOpinions,
@@ -250,12 +252,27 @@ export function bindingFinding(issue: BindingIssue): Finding {
   return warning(`binding.${project}`, title, { say, command, external: false });
 }
 
-function bindingFindings(): Finding[] {
-  const issues = auditBindings();
+/** A write that bypassed writeBindings left the file and its history apart; the history is what PAL itself wrote. */
+export function bindingDriftFinding(drift: BindingChange[]): Finding | null {
+  if (drift.length === 0) return null;
+  const names = drift.map((d) => d.project).join(", ");
 
-  return issues.length === 0
-    ? [passed("bindings", "Project bindings healthy")]
-    : issues.map(bindingFinding);
+  return warning(
+    "bindings.drift",
+    `bindings.json differs from its history in ${drift.length} binding(s): ${names}`,
+    {
+      say: "Rewrite it from the history, or run `pal cli project bindings adopt` if you changed it on purpose",
+      command: "pal cli project bindings rebuild",
+      external: false,
+    }
+  );
+}
+
+function bindingFindings(): Finding[] {
+  const drift = hasBindingHistory() ? bindingDriftFinding(bindingDrift()) : null;
+  const issues = [...auditBindings().map(bindingFinding), ...(drift ? [drift] : [])];
+
+  return issues.length === 0 ? [passed("bindings", "Project bindings healthy")] : issues;
 }
 
 function resolves(name: string, from: string): boolean {
