@@ -18,7 +18,7 @@ import { log } from "../log";
 import { loadSettingsTemplate, mergeSettings } from "../settings-merge";
 import { copyAgentsForAntigravity, nativeAgentsDir } from "../shipped-agents";
 import { copySkills, countSkills } from "../skills";
-import { addStatuslineConfig, copyStatusline } from "../statusline";
+import { addStatuslineConfig, installStatusline } from "../statusline";
 
 const PLUGIN_DIR = platform.antigravityPluginDir();
 
@@ -54,7 +54,7 @@ replaceJsonConfig(
   )
 );
 log.success("PAL command allowlist and statusLine → antigravity-cli/settings.json");
-copyStatusline("antigravity");
+installStatusline("antigravity");
 
 copySkills(skillsDirOf("antigravity"));
 const agentCount = copyAgentsForAntigravity(nativeAgentsDir("antigravity"));
