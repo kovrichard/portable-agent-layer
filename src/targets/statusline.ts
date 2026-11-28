@@ -1,4 +1,4 @@
-import { chmodSync, copyFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { AgentName } from "../core/agent-registry";
 import { assets, platform } from "../core/paths";
@@ -50,8 +50,21 @@ function isPalStatuslineCommand(cmd: string, target: StatuslineTarget): boolean 
   return cmd.includes(STATUSLINE[target].script.slice(2));
 }
 
-/** Copy the statusline script into the agent's config dir for the current platform */
-export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
+const BASH_ESCAPED_QUOTE = "'\\''";
+const singleQuotedBash = (path: string) =>
+  `'${path.replaceAll("'", BASH_ESCAPED_QUOTE)}'`;
+const singleQuotedPowershell = (path: string) => `'${path.replaceAll("'", "''")}'`;
+const LAUNCHER_HEADER =
+  "# PAL status line: runs the package's script, rewritten on install";
+
+function statuslineLauncher(packageScript: string): string {
+  return process.platform === "win32"
+    ? `${LAUNCHER_HEADER}\r\n$input | & ${singleQuotedPowershell(packageScript)}\r\n`
+    : `#!/bin/bash\n${LAUNCHER_HEADER}\nexec bash ${singleQuotedBash(packageScript)}\n`;
+}
+
+/** Write a launcher into the agent's config dir that runs the package's statusline script */
+export function installStatusline(target: StatuslineTarget = "claude"): boolean {
   const agentDir = statuslineAgentDir(target);
   mkdirSync(agentDir, { recursive: true });
 
@@ -69,7 +82,7 @@ export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
   }
 
   try {
-    copyFileSync(sourcePath, destPath);
+    writeFileSync(destPath, statuslineLauncher(sourcePath));
 
     if (process.platform !== "win32") {
       chmodSync(destPath, 0o755);
@@ -79,7 +92,7 @@ export function copyStatusline(target: StatuslineTarget = "claude"): boolean {
 
     return true;
   } catch (e) {
-    log.warn(`Failed to copy statusline script: ${e}`);
+    log.warn(`Failed to install statusline script: ${e}`);
 
     return false;
   }

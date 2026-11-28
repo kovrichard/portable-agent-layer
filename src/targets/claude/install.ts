@@ -13,7 +13,7 @@ import { readJson } from "../json-file";
 import { log } from "../log";
 import { loadSettingsTemplate, mergeSettings } from "../settings-merge";
 import { copySkills, countSkills } from "../skills";
-import { addStatuslineConfig, copyStatusline } from "../statusline";
+import { addStatuslineConfig, installStatusline } from "../statusline";
 import { copyAgents, countAgents, countMd } from "./agents";
 import { applyAttribution } from "./attribution";
 
@@ -52,7 +52,7 @@ copySkills(skillsDir);
 
 copyAgents();
 
-copyStatusline();
+installStatusline();
 
 log.success(
   `${countSkills()} skills · ${countAgents()} agents · ${countMd(resolve(palHome(), "telos"))} TELOS files · CLAUDE.md → AGENTS.md`

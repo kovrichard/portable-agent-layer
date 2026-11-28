@@ -12,7 +12,7 @@ import { readJson } from "../json-file";
 import { log } from "../log";
 import { copyAgentsForCursor } from "../shipped-agents";
 import { copySkills, countSkills } from "../skills";
-import { addStatuslineConfig, copyStatusline } from "../statusline";
+import { addStatuslineConfig, installStatusline } from "../statusline";
 import { loadCursorHooksTemplate, mergeCursorHooks } from "./hooks";
 
 const PKG_ROOT = palPkg().replaceAll("\\", "/");
@@ -36,7 +36,7 @@ const cursorAgentsDir = resolve(CURSOR_DIR, "agents");
 const agentCount = copyAgentsForCursor(cursorAgentsDir);
 log.success(`${countSkills()} skills · ${agentCount} agents → ~/.cursor/`);
 
-copyStatusline("cursor");
+installStatusline("cursor");
 
 if (!existsSync(CLI_CONFIG)) {
   writeFileSync(CLI_CONFIG, "{}\n", "utf-8");

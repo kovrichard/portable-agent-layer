@@ -13,7 +13,7 @@ import { capturingLog } from "../src/targets/log";
 import { copyPalDocs, removePalDocs } from "../src/targets/pal-docs";
 import { scaffoldPalSettings, scaffoldTelos } from "../src/targets/scaffold";
 import { copySkills, removeSkills } from "../src/targets/skills";
-import { copyStatusline, removeStatusline } from "../src/targets/statusline";
+import { installStatusline, removeStatusline } from "../src/targets/statusline";
 import { removeOnceReleased } from "./lib/remove-once-released";
 import { testHome } from "./lib/test-home";
 
@@ -123,25 +123,25 @@ describe("PAL docs", () => {
 
 describe("statusline install", () => {
   test("installs the script into the claude directory", () => {
-    expect(copyStatusline("claude")).toBe(true);
+    expect(installStatusline("claude")).toBe(true);
     expect(existsSync(resolve(ENV.PAL_CLAUDE_DIR, SCRIPT))).toBe(true);
   });
 
   test("installs into the cursor directory when targeted", () => {
-    expect(copyStatusline("cursor")).toBe(true);
+    expect(installStatusline("cursor")).toBe(true);
     expect(existsSync(resolve(ENV.PAL_CURSOR_DIR, SCRIPT))).toBe(true);
     expect(existsSync(resolve(ENV.PAL_CLAUDE_DIR, SCRIPT))).toBe(false);
   });
 
   test("defaults to the claude target", () => {
-    copyStatusline();
+    installStatusline();
 
     expect(existsSync(resolve(ENV.PAL_CLAUDE_DIR, SCRIPT))).toBe(true);
   });
 
   test("removes only the targeted agent's script", () => {
-    copyStatusline("claude");
-    copyStatusline("cursor");
+    installStatusline("claude");
+    installStatusline("cursor");
 
     expect(removeStatusline("cursor")).toBe(true);
 
