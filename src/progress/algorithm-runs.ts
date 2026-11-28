@@ -9,7 +9,6 @@ import { appendEvent, eventsSince, logQuietly } from "../bronze/events";
 import { extractContent, type Message } from "../bronze/transcript";
 import { paths } from "../core/paths";
 import { sessionDir } from "../core/session-dir";
-import { eventLogEnabled } from "../core/settings";
 import { lastTurnIdOf } from "../opinions/interaction";
 import { type RunChecks, runChecks } from "./algorithm-run-checks";
 import {
@@ -134,7 +133,6 @@ export function recordAlgorithmTurn(
   now: Date = new Date(),
   turnLines: TurnLines = NO_TURN_LINES
 ): void {
-  if (!eventLogEnabled()) return;
   const facts = algorithmTurnFacts(texts);
   const turn = lastTurnIdOf(session);
   if (!facts && !turn) return;
@@ -172,7 +170,7 @@ export function recordAlgorithmReflection(
   session: string | undefined = progressSession(),
   now: Date = new Date()
 ): void {
-  if (!session || !eventLogEnabled()) return;
+  if (!session) return;
   const turn = lastTurnIdOf(session);
   if (!turn) return;
   const reflected: PlannedEvent = {

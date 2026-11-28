@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import * as events from "../src/bronze/events";
 import { appendEvent, eventsSince } from "../src/bronze/events";
 import {
   contentFor,
@@ -117,18 +118,18 @@ describe("forget", () => {
     expect(exclusions()).toEqual([]);
   });
 
-  test("with the event log off, forget and unforget refuse instead of claiming success", () => {
+  test("when the event cannot be written, forget and unforget refuse instead of claiming success", () => {
     exchange("rename the helper please", "renamed it");
     const [turn] = userTurnsSince(T0);
     forget(turn.id);
-    writeFileSync(
-      resolve(home, "memory", "pal-settings.json"),
-      JSON.stringify({ eventLog: { enabled: false } })
-    );
-    reload();
+    const write = spyOn(events, "appendEvent").mockReturnValue(null);
 
-    expect(forget(turn.reply?.id as string)).toBe(false);
-    expect(unforget(turn.id)).toBe(false);
+    try {
+      expect(forget(turn.reply?.id as string)).toBe(false);
+      expect(unforget(turn.id)).toBe(false);
+    } finally {
+      write.mockRestore();
+    }
   });
 
   test("unforget refuses an id that is not forgotten", () => {

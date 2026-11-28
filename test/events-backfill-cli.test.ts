@@ -64,13 +64,4 @@ describe("pal cli events backfill", () => {
     );
     expect(await backfill()).toContain("promises: 1");
   });
-
-  test("says so when the event log is off", async () => {
-    writeFileSync(
-      resolve(home, "memory", "pal-settings.json"),
-      JSON.stringify({ eventLog: { enabled: false } })
-    );
-    reload();
-    expect(await backfill()).toEqual(["The event log is off; nothing backfilled."]);
-  });
 });

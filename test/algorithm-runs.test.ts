@@ -4,7 +4,6 @@ import { resolve } from "node:path";
 import { reflectionsFile } from "../src/bronze/bronze";
 import { appendEvent, EVENT_FIELDS } from "../src/bronze/events";
 import { paths } from "../src/core/paths";
-import { reload } from "../src/core/settings";
 import { stopTurn } from "../src/hooks/lib/stop";
 import {
   algorithmRunsCacheFile,
@@ -212,18 +211,12 @@ describe("recording a turn at stop", () => {
     });
   });
 
-  test("no session, or the event log turned off: nothing", async () => {
+  test("no session: nothing", async () => {
     const box = sandbox();
     await inSandbox(box, () => {
       enterNode(box, "n1", "s1");
       prompt("s1", AT(0));
       recordAlgorithmTurnQuietly(undefined, [algorithmReply(["OBSERVE"])], "transcript");
-      writeFileSync(
-        resolve(box.home, "memory", "pal-settings.json"),
-        JSON.stringify({ eventLog: { enabled: false } })
-      );
-      reload();
-      recordAlgorithmTurn("s1", [algorithmReply(["OBSERVE"])], "transcript", AT(1));
     });
     await inSandbox(box, () => {
       expect(runEvents()).toEqual([]);
@@ -557,20 +550,6 @@ describe("failures are logged under the event type", () => {
       expect(await reflectIn("s1")).toBe(0);
       expect(reflectionLines()).toBe(1);
       expect(debugLog()).toContain("ERROR events:algorithm_run:");
-    });
-  });
-
-  test("a reflection with the event log turned off writes no cache", async () => {
-    const box = sandbox();
-    await inSandbox(box, async () => {
-      prompt("s1", AT(0));
-      writeFileSync(
-        resolve(box.home, "memory", "pal-settings.json"),
-        JSON.stringify({ eventLog: { enabled: false } })
-      );
-      reload();
-      expect(await reflectIn("s1")).toBe(0);
-      expect(existsSync(algorithmRunsCacheFile())).toBe(false);
     });
   });
 });

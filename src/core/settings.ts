@@ -34,8 +34,6 @@ export interface PalSettingsData {
    * paths whose contents are never stored; it cannot shrink it.
    */
   ledger?: { redactPaths?: string[] };
-  /** Local event log and its content store (records/bronze/). On unless disabled. */
-  eventLog?: { enabled?: boolean };
   /** Daily anonymous heartbeat that counts installs. On unless disabled. */
   telemetry?: { enabled?: boolean; noticeShown?: boolean };
   /** Control-room ranking knobs and attention sources — see src/tools/control-room/prefs.ts. */
@@ -149,10 +147,6 @@ export function isEnabled(key: string): boolean {
 /** Check if an opt-in dynamic context section is enabled (defaults to false) */
 export function isOptedIn(key: string): boolean {
   return load().dynamicContext?.[key] === true;
-}
-
-export function eventLogEnabled(): boolean {
-  return load().eventLog?.enabled !== false;
 }
 
 export function telemetryEnabled(): boolean {

@@ -10,7 +10,6 @@ import { currentAttribution, type RecordAttribution } from "../core/actor";
 import type { AgentType } from "../core/agent";
 import { logError } from "../core/log";
 import { boundProjectAt } from "../core/project-bindings";
-import { eventLogEnabled } from "../core/settings";
 import { storeDir } from "./bronze";
 import { currentChannel } from "./channel";
 
@@ -388,14 +387,12 @@ function projectFor(options: AppendOptions, cwd: string): string | null {
   return cwd ? projectOf(cwd) : null;
 }
 
-/** Appends one event and returns its id, or null when the log is off or the write failed. */
+/** Appends one event and returns its id, or null when the write failed. */
 export function appendEvent(
   type: EventType,
   fields: Record<string, unknown>,
   options: AppendOptions = {}
 ): string | null {
-  if (!eventLogEnabled()) return null;
-
   try {
     const head = envelope(type, options);
     const line = { ...head, ...admittedFields(type, fields) };

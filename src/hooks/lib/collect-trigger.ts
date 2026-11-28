@@ -8,7 +8,6 @@ import { statSync, utimesSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { logDebug, logError } from "../../core/log";
 import { palPkg, paths } from "../../core/paths";
-import { eventLogEnabled } from "../../core/settings";
 
 const COLLECT_INTERVAL_MS = 15 * 60_000;
 
@@ -51,7 +50,7 @@ export function collectInChildProcess(): boolean {
 }
 
 export function spawnCollectIfDue(): void {
-  if (!eventLogEnabled() || !readsRealAgentDirs() || !collectDue()) return;
+  if (!readsRealAgentDirs() || !collectDue()) return;
 
   try {
     markCollected();

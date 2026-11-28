@@ -4,7 +4,6 @@
  */
 
 import { loggedEventIds } from "../../../bronze/events";
-import { eventLogEnabled } from "../../../core/settings";
 import { readAllProjects } from "../../../progress/projects";
 import { backfillEntities } from "./entities";
 import { backfillGit } from "./git";
@@ -24,7 +23,6 @@ function projectRepos(): string[] {
 }
 
 export function backfillEvents(since?: string): Record<string, number> {
-  if (!eventLogEnabled()) return {};
   const known = loggedEventIds();
 
   return {

@@ -9,7 +9,6 @@ import { resolve } from "node:path";
 import { storeLocation } from "../../../bronze/bronze";
 import { logError } from "../../../core/log";
 import { paths, platform } from "../../../core/paths";
-import { eventLogEnabled } from "../../../core/settings";
 import { markCollected } from "../../../hooks/lib/collect-trigger";
 import { claudeBilling, claudeConfigFile } from "../../../usage/billing";
 import { opencodeDatabase } from "../agent-usage";
@@ -87,8 +86,6 @@ async function runCollectors(): Promise<Record<string, number | "failed">> {
 export async function collectEvents(
   now: number = Date.now()
 ): Promise<Record<string, number | "failed"> | null> {
-  if (!eventLogEnabled()) return {};
-
   if (!takeLock(now)) return null;
 
   try {

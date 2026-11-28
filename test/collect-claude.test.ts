@@ -249,15 +249,6 @@ describe("collecting every source", () => {
       for (const env of overrides) delete process.env[env];
     }
   });
-
-  test("collects nothing while the event log is off", async () => {
-    writeFileSync(
-      resolve(home, "memory", "pal-settings.json"),
-      JSON.stringify({ eventLog: { enabled: false } })
-    );
-    reload();
-    expect(await collectEvents()).toEqual({});
-  });
 });
 
 describe("a transcript Claude Code deleted", () => {

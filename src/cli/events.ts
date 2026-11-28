@@ -28,7 +28,9 @@ function recordDiscordNag(
   }
 
   const id = logDiscordNag(stage, kind ?? null, responseSec);
-  console.log(id ? `Recorded ${id}` : "The event log is off; nothing recorded.");
+  console.log(
+    id ? `Recorded ${id}` : "The event could not be written; nothing recorded."
+  );
 }
 
 async function reportCollected(): Promise<number | undefined> {
@@ -41,7 +43,7 @@ async function reportCollected(): Promise<number | undefined> {
 
   const sources = Object.entries(emitted);
   if (sources.length === 0) {
-    console.log("The event log is off; nothing collected.");
+    console.log("No source to collect from.");
 
     return;
   }
@@ -56,7 +58,7 @@ async function reportBackfilled(since: string | undefined): Promise<undefined> {
   const appended = backfillEvents(since);
   const sources = Object.entries(appended);
   if (sources.length === 0) {
-    console.log("The event log is off; nothing backfilled.");
+    console.log("No source to backfill from.");
 
     return;
   }
