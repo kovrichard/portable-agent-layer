@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
+import { platform } from "../src/core/paths";
 import { addStatuslineConfig } from "../src/targets/statusline";
 
 const palClaudeCommand =
   process.platform === "win32"
-    ? "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1"
+    ? `powershell -NoProfile -ExecutionPolicy Bypass -File "${resolve(platform.claudeDir(), "statusline.ps1")}"`
     : "~/.claude/statusline.sh";
 
 type StatusLine = { statusLine: Record<string, unknown> };
