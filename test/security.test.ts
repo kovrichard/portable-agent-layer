@@ -514,21 +514,26 @@ describe("checkFilePath", () => {
     expect(checkFilePath("/src/MyRepo/.pal/docs/README.md")).toBeNull();
   });
 
-  test("the settings file at the PAL home's root is hook-managed", () => {
+  test("the settings file at the PAL home's root goes through pal cli", () => {
     expect(checkFilePath(home(".pal", "settings.json"))).toMatch(
-      /settings\.json is managed/
+      /settings\.json is PAL's own data — change it through pal cli/
     );
   });
 
-  test("every other settings.json stays editable, an agent's own included", () => {
+  test("every settings.json outside the PAL home stays editable, an agent's own included", () => {
     expect(checkFilePath(home(".claude", "settings.json"))).toBeNull();
-    expect(checkFilePath(home(".pal", "telos", "settings.json"))).toBeNull();
     expect(checkFilePath("/home/user/project/.vscode/settings.json")).toBeNull();
   });
 
-  test("does not block .pal paths that don't match docs/skills/tools", () => {
-    expect(checkFilePath(home(".pal", "telos", "GOALS.md"))).toBeNull();
-    expect(checkFilePath(home(".pal", "memory", "pal-settings.json"))).toBeTruthy(); // caught by HOOK_MANAGED_FILES
+  test("every file in the PAL home that is not a personal skill or subagent goes through pal cli", () => {
+    for (const file of [
+      ["telos", "GOALS.md"],
+      ["bindings.json"],
+      [".env"],
+      ["memory", "knowledge", "People", "ada.md"],
+      ["state", "sync", "account.key"],
+    ])
+      expect(checkFilePath(home(".pal", ...file))).toMatch(/PAL's own data/);
   });
 
   // --- Safe paths ---

@@ -4,10 +4,9 @@
  */
 
 import { lstatSync } from "node:fs";
-import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { palHome, platform } from "../core/paths";
-import { SETTINGS_FILE } from "../core/settings";
+import { protectedWriteReason } from "./shell-writes";
 
 // PowerShell aliases rm, rmdir, del, erase, rd and ri all to Remove-Item, and
 // cmd ships its own rd and del — so the verb alone never says which shell ran it.
@@ -179,7 +178,6 @@ function pathBelow(root: string, path: string): string | null {
 /** The real directories PAL writes user state into, not any folder that shares their name. */
 function managedRoots(): string[] {
   return [
-    palHome(),
     platform.claudeDir(),
     platform.agentsDir(),
     platform.cursorDir(),
@@ -208,17 +206,27 @@ function managedDirAt(below: string): string | undefined {
   return HOOK_MANAGED_DIRS.find((dir) => `/${below}/`.includes(`/${comparable(dir)}/`));
 }
 
-/**
- * The settings file at the PAL home's root. Matched by place, not name: every
- * agent has a settings.json of its own, and those stay editable.
- */
-function isPalSettingsFile(path: string): boolean {
-  return pathBelow(palHome(), path) === comparable(SETTINGS_FILE);
+const writtenByHand = (top: string | undefined, entry: string | undefined) =>
+  top === "agents" || (top === "skills" && entry !== undefined && !isShippedSkill(entry));
+
+/** Only personal skills and subagents are written by hand; the rest of the PAL home changes through pal cli. */
+function palHomeWriteReason(path: string): string | null {
+  const isHomeItself = absoluteComparable(path) === absoluteComparable(palHome());
+  const below = pathBelow(palHome(), path);
+  if (!isHomeItself && below === null) return null;
+  const [top, entry] = below?.split("/") ?? [];
+
+  if (writtenByHand(top, entry)) return null;
+
+  return (
+    palInstalledReason(path) ??
+    `~/.pal/${below ?? ""} is PAL's own data — change it through pal cli; only personal skills and subagents are edited by hand`
+  );
 }
 
 function managedPathReason(path: string): string | null {
-  if (isPalSettingsFile(path))
-    return `${SETTINGS_FILE} is managed automatically by hooks — do not edit directly`;
+  const palReason = palHomeWriteReason(path);
+  if (palReason) return palReason;
   const below = pathInsideManagedRoot(path);
   if (below === null) return null;
   const file = managedFileAt(below);
@@ -228,52 +236,6 @@ function managedPathReason(path: string): string | null {
 
   return null;
 }
-
-const HOME_PREFIX =
-  /^(?:~|\$HOME|\$\{HOME\}|\$env:USERPROFILE|%USERPROFILE%)(?=[/\\]|$)/i;
-const COMMAND_TOKEN = /[^\s'"`<>|;&()=]+/g;
-
-function pathsNamedIn(segment: string): string[] {
-  return Array.from(segment.matchAll(COMMAND_TOKEN), (m) => m[0])
-    .filter((token) => HOME_PREFIX.test(token) || /[/\\]/.test(token))
-    .map((token) => token.replace(HOME_PREFIX, () => homedir()));
-}
-
-const QUOTED = /(["'])([\s\S]*?)\1/g;
-const CODE_RUNNER =
-  /(?:^|[\s/\\])(?:(?:ba|z|da|k|fi)?sh|python[\d.]*|node|bun|deno|perl|ruby|php|pwsh|powershell|cmd)(?:\.exe)?(?=\s|$)/i;
-const INLINE_CODE_FLAG =
-  /\s(?:-[a-z]*[ceEpr]|--eval|-command|-encodedcommand|\/c)(?=\s|$)/i;
-
-function runsInlineCode(segment: string): boolean {
-  const unquoted = segment.replace(QUOTED, " ");
-  if (/(?:^|\s)eval(?=\s|$)/.test(unquoted)) return true;
-
-  return CODE_RUNNER.test(unquoted) && INLINE_CODE_FLAG.test(unquoted);
-}
-
-function withoutQuotedProse(segment: string): string {
-  return segment.replace(QUOTED, (whole, _quote, body: string) =>
-    /\s/.test(body) ? " " : whole
-  );
-}
-
-function textThatCanNamePaths(segment: string): string {
-  return runsInlineCode(segment) ? segment : withoutQuotedProse(segment);
-}
-
-function managedReasonInSegment(segment: string): string | null {
-  for (const path of pathsNamedIn(textThatCanNamePaths(segment))) {
-    const reason = managedPathReason(path);
-    if (reason) return reason;
-  }
-
-  return null;
-}
-
-/** Read-only commands allowed to reference protected files */
-const READ_ONLY_COMMANDS =
-  /^\s*(?:cat|head|tail|less|more|grep|rg|wc|diff|stat|file|ls|dir|find|git\s+(?:log|diff|blame|show|status)|bat)\b/;
 
 const COMMAND_SEPARATORS = new Set(["|", ";", "&"]);
 
@@ -353,12 +315,7 @@ export function checkBashCommand(fullCommand: string): string | null {
     }
   }
 
-  for (const segment of unquotedSegments(cmd)) {
-    const reason = managedReasonInSegment(segment);
-    if (reason && !READ_ONLY_COMMANDS.test(segment)) return reason;
-  }
-
-  return null;
+  return protectedWriteReason(unquotedSegments(cmd), managedPathReason);
 }
 
 /**
@@ -385,7 +342,7 @@ function palInstalledReason(path: string): string | null {
 
 /** Check a file path against protected patterns. Returns a reason string or null. */
 export function checkFilePath(filePath: string): string | null {
-  const reason = managedPathReason(filePath) ?? palInstalledReason(filePath);
+  const reason = managedPathReason(filePath);
   if (reason) return reason;
 
   if (PROTECTED_PATHS.some((pattern) => pattern.test(filePath))) {

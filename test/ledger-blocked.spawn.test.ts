@@ -64,7 +64,7 @@ describe("a rule refusing is recorded", () => {
     expect(written[0].outcome).toBe("blocked");
     expect(written[0].tool).toBe("Edit");
     expect(written[0].target).toContain("ISA.md");
-    expect(written[0].reason).toContain("managed automatically by hooks");
+    expect(written[0].reason).toContain("is PAL's own data — change it through pal cli");
     expect(out).toContain(written[0].reason ?? "");
   });
 
@@ -97,7 +97,7 @@ describe("a rule refusing is recorded", () => {
 
   test("an allowed action writes nothing — the ledger is not a log of attempts", async () => {
     const out = await runValidator(
-      preToolUse("Edit", { file_path: resolve(HOME, "notes.md") })
+      preToolUse("Edit", { file_path: resolve(HOME, "skills", "mine", "notes.md") })
     );
     expect(out).toBe("");
     expect(entries()).toEqual([]);
