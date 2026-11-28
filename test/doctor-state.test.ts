@@ -162,19 +162,27 @@ describe("project bindings", () => {
       path: "/gone/a",
     });
 
-    expect(finding.severity).toBe("warn");
+    expect(finding).toMatchObject({ id: "binding.alpha", severity: "warn" });
     expect(finding.title).toBe("Project alpha points at /gone/a, which does not exist");
-    expect(finding.fix?.command).toBe("pal cli project set-path alpha <path>");
+    expect(finding.fix).toEqual({
+      say: "Point it at its checkout",
+      command: "pal cli project set-path alpha <path>",
+      external: false,
+    });
   });
 
   test("a binding with no project gets the unset-path command", () => {
     const finding = bindingFinding({ kind: "orphan", project: "old", path: "/w/old" });
 
-    expect(finding.severity).toBe("warn");
+    expect(finding).toMatchObject({ id: "binding.old", severity: "warn" });
     expect(finding.title).toBe(
       "Binding old → /w/old names no project — renamed or deleted"
     );
-    expect(finding.fix?.command).toBe("pal cli project unset-path old");
+    expect(finding.fix).toEqual({
+      say: "Remove the binding",
+      command: "pal cli project unset-path old",
+      external: false,
+    });
   });
 
   test("a collision names both projects", () => {

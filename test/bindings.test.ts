@@ -106,13 +106,13 @@ describe("removeBinding", () => {
     const { writeBinding, removeBinding, readBindings } = await lib();
     writeBinding("a", "/a", HOME);
     writeBinding("b", "/b", HOME);
-    removeBinding("a", HOME);
+    expect(removeBinding("a", HOME)).toBe(elsewhere("/a"));
     expect(readBindings(HOME)).toEqual({ b: elsewhere("/b") });
   });
 
   test("removing an unbound project is a no-op", async () => {
     const { removeBinding, readBindings } = await lib();
-    removeBinding("ghost", HOME);
+    expect(removeBinding("ghost", HOME)).toBeNull();
     expect(readBindings(HOME)).toEqual({});
   });
 });
