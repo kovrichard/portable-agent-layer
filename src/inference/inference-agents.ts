@@ -198,6 +198,9 @@ export const CODEX_REPLY: CliReply = {
  * Recursion defense:
  *   --pure         → run WITHOUT external plugins → PAL's own opencode plugin
  *                    doesn't load in the spawned child → no hook recursion.
+ *                    opencode 2 has no --pure; its child reads plugins from the
+ *                    empty XDG_CONFIG_HOME instead, and --standalone keeps it off
+ *                    the shared background service, which would load the user's.
  *   --format json  → emits NDJSON events on stdout; we extract the agent's
  *                    text via extractOpencodeText() rather than wading through
  *                    decoration ("> build · provider/model" banner etc).
@@ -208,10 +211,43 @@ export const CODEX_REPLY: CliReply = {
  * element does not survive cmd.exe on Windows. Provider/model is left unset so
  * opencode uses the user's configured default.
  */
-export function buildOpencodeArgs(opts: InferenceOptions): string[] {
+export function buildOpencodeArgs(opts: InferenceOptions, major = 1): string[] {
   const model = opencodeTierModel(opts.tier ?? "small");
+  const isolation = major >= 2 ? ["--standalone", "--archived"] : ["--pure"];
 
-  return ["run", "--pure", "--format", "json", ...(model ? ["-m", model] : [])];
+  return ["run", ...isolation, "--format", "json", ...(model ? ["-m", model] : [])];
+}
+
+export function parseOpencodeMajor(versionOutput: string): number {
+  const match = /(\d+)\.\d+\.\d+/.exec(versionOutput);
+
+  return match ? Number(match[1]) : 1;
+}
+
+async function probeOpencodeMajor(bin: string): Promise<number> {
+  try {
+    const proc = Bun.spawn([bin, "--version"], {
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "ignore",
+      timeout: 5000,
+    });
+    const output = await new Response(proc.stdout).text();
+    await proc.exited;
+
+    return parseOpencodeMajor(output);
+  } catch {
+    return 1;
+  }
+}
+
+const opencodeMajors = new Map<string, Promise<number>>();
+
+function opencodeMajor(bin: string): Promise<number> {
+  const known = opencodeMajors.get(bin) ?? probeOpencodeMajor(bin);
+  opencodeMajors.set(bin, known);
+
+  return known;
 }
 
 // Without its own AGENTS.md, opencode falls back to ~/.claude/CLAUDE.md, and it
@@ -233,7 +269,7 @@ export async function inferenceViaOpencodeSpawn(
 
     return await inferenceViaCliSpawn(
       bin,
-      buildOpencodeArgs(opts),
+      buildOpencodeArgs(opts, await opencodeMajor(bin)),
       buildCliPrompt(opts),
       opts,
       { text: extractOpencodeText, usage: opencodeSpawnUsage },

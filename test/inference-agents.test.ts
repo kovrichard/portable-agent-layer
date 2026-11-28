@@ -13,6 +13,7 @@ import {
   inferenceViaCopilotSpawn,
   inferenceViaOpencodeSpawn,
   loggedClaudeAuthMode,
+  parseOpencodeMajor,
 } from "../src/inference/inference-agents";
 import { schemaInstruction } from "../src/inference/inference-prompt";
 import type { InferenceOptions, InferenceResult } from "../src/inference/inference-types";
@@ -218,12 +219,46 @@ describe("opencode", () => {
     ]);
   });
 
-  test("runs from an empty config dir with external context off, then removes it", async () => {
+  test("argv on opencode 2 runs standalone and archived, since 2 has no --pure", () => {
+    expect(buildOpencodeArgs({ user: "q" }, 2)).toEqual([
+      "run",
+      "--standalone",
+      "--archived",
+      "--format",
+      "json",
+    ]);
+  });
+
+  test("reads the major version from both opencode version formats", () => {
+    expect(parseOpencodeMajor("1.19.6\n")).toBe(1);
+    expect(parseOpencodeMajor("opencode v2.4.2\n")).toBe(2);
+    expect(parseOpencodeMajor("garbage")).toBe(1);
+  });
+
+  async function spawnOpencode(bin: string, version: string) {
     const stdout = line({ type: "text", part: { type: "text", text: " ok " } });
-    const { result, calls } = await run(inferenceViaOpencodeSpawn, [{ stdout }], {
-      user: "q",
-      system: "s",
-    });
+    const runs = [{ stdout: version }, { stdout }];
+    const { value, calls } = await withFakeSpawn(runs, () =>
+      inferenceViaOpencodeSpawn(bin, { user: "q", system: "s" })
+    );
+    clearScopedEnv();
+
+    return { result: value, calls };
+  }
+
+  test("asks the binary its version and picks the matching argv", async () => {
+    const v1 = await spawnOpencode("opencode-v1", "1.19.6\n");
+    const v2 = await spawnOpencode("opencode-v2", "opencode v2.4.2\n");
+
+    expect(v1.calls[0].argv).toEqual(["opencode-v1", "--version"]);
+    expect(v1.calls[1].argv).toContain("--pure");
+    expect(v2.calls[1].argv).toContain("--standalone");
+    expect(v2.calls[1].argv).not.toContain("--pure");
+  });
+
+  test("runs from an empty config dir with external context off, then removes it", async () => {
+    const { result, calls: spawned } = await spawnOpencode("opencode-env", "1.19.6\n");
+    const calls = spawned.slice(1);
     const cwd = String(calls[0].options.cwd);
 
     expect(result.output).toBe("ok");
