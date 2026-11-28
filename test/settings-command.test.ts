@@ -32,6 +32,27 @@ describe("pal cli settings set", () => {
     expect(eventsSince("setting", new Date(0))).toEqual([]);
   });
 
+  test("sets any key the schema declares, though the file does not have it yet", () => {
+    setSetting("systemOne.provider", "typesafe");
+    expect(valueAt(raw(), "systemOne.provider")).toBe("typesafe");
+  });
+
+  test.each([
+    ["telemetry.enabled", "yes", "telemetry.enabled must be boolean"],
+    ["controlRoom.quietAfterDays", "0", "controlRoom.quietAfterDays must be 1..365"],
+    ["updateChannel", "nightly", 'updateChannel must be one of "stable", "canary"'],
+  ])("refuses %s = %s: %s", (key, value, problem) => {
+    expect(() => setSetting(key, value)).toThrow(problem);
+    expect(raw()).toEqual({ telemetry: { enabled: true } });
+  });
+
+  test("a wrong value already in the file does not block changing another key", () => {
+    writeFileSync(settingsPath(), JSON.stringify({ telemetry: { enabled: "yes" } }));
+    reload();
+    setSetting("updateChannel", "canary");
+    expect(valueAt(raw(), "updateChannel")).toBe("canary");
+  });
+
   test("a value that is not JSON is kept as text", () => {
     setSetting("updateChannel", "canary");
     expect(valueAt(raw(), "updateChannel")).toBe("canary");

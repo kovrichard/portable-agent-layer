@@ -115,18 +115,6 @@ describe("the text a tool returns", () => {
     ]);
   });
 
-  test("with the event log off, neither the event nor the output is written", () => {
-    writeFileSync(
-      resolve(home, "memory", "pal-settings.json"),
-      JSON.stringify({ eventLog: { enabled: false } })
-    );
-    reload();
-    logToolCall(readCall("four"));
-
-    expect(toolCalls()).toEqual([]);
-    expect(outputs()).toEqual([]);
-  });
-
   test("a broken tool output store never fails the hook and keeps the event", () => {
     mkdirSync(resolve(home, "memory", "content"), { recursive: true });
     writeFileSync(resolve(home, "memory", "content", "tool-output"), "not a folder");

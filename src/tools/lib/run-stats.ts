@@ -10,7 +10,6 @@ import {
   type LoggedEvent,
   loggedEventIds,
 } from "../../bronze/events";
-import { eventLogEnabled } from "../../core/settings";
 import { collectInChildProcess } from "../../hooks/lib/collect-trigger";
 import { scopeOf } from "../../progress/progress-tree";
 import { backfillGit } from "./backfill/git";
@@ -166,12 +165,11 @@ function catchUpEventLog(repo: string, since: string): boolean {
   return collected;
 }
 
-/** Null when the event log is off; `complete` is false when the agents' calls could not be read in first. */
+/** `complete` is false when the agents' calls could not be read in first. */
 export function gatherRunStats(
   window: RunWindow,
   repo: string
-): (RunStats & { complete: boolean }) | null {
-  if (!eventLogEnabled()) return null;
+): RunStats & { complete: boolean } {
   const complete = catchUpEventLog(repo, window.startedAt);
   const events = allEventsSince(new Date(window.startedAt));
 

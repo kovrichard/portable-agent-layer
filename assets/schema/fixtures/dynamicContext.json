@@ -1,0 +1,7 @@
+{
+  "dynamicContext": {
+    "reactionSampling": false,
+    "dueReminders": true,
+    "claimCheckBlocks": true
+  }
+}

@@ -5,13 +5,13 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
 import { ledgerPath, recordAction, recordBlocked } from "../src/bronze/ledger";
 import { reload } from "../src/core/settings";
 import { writeProject } from "../src/progress/projects";
 import { backfillEvents } from "../src/tools/lib/backfill";
+import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
@@ -34,18 +34,9 @@ beforeEach(() => {
   });
 });
 
-function setEventLog(enabled: boolean): void {
-  writeFileSync(
-    resolve(home, "pal", "memory", "pal-settings.json"),
-    JSON.stringify({ eventLog: { enabled } })
-  );
-  reload();
-}
-
 function beforeStreaming<T>(record: () => T): T {
-  setEventLog(false);
   const entry = record();
-  setEventLog(true);
+  removeOnceReleased(resolve(home, "pal", "records", "bronze"));
 
   return entry;
 }

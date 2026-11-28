@@ -1,0 +1,10 @@
+{
+  "controlRoom": {
+    "quietAfterDays": 30,
+    "urgentWithinDays": 7,
+    "rankGoals": true,
+    "attention": {
+      "unranked": false
+    }
+  }
+}

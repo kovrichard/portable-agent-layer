@@ -1,19 +1,16 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { reload } from "../src/core/settings";
 import { getOrCreate } from "../src/knowledge/lib";
 import { backfillEvents } from "../src/tools/lib/backfill";
+import { removeOnceReleased } from "./lib/remove-once-released";
 import { freshTestDir } from "./lib/test-home";
 
 let home: string;
 
-function setEventLog(enabled: boolean): void {
-  writeFileSync(
-    resolve(home, "memory", "pal-settings.json"),
-    JSON.stringify({ eventLog: { enabled } })
-  );
-  reload();
+function forgetStreamedEvents(): void {
+  removeOnceReleased(resolve(home, "records", "bronze"));
 }
 
 function logLines(dir: string): Record<string, unknown>[] {
@@ -29,9 +26,8 @@ function logLines(dir: string): Record<string, unknown>[] {
 const seen = () => logLines("events").filter((e) => e.type === "entity_first_seen");
 
 function createdBeforeStreaming(name: string): string {
-  setEventLog(false);
   const created = getOrCreate({ domain: "People", name }).frontmatter.created;
-  setEventLog(true);
+  forgetStreamedEvents();
 
   return created;
 }

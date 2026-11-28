@@ -207,20 +207,6 @@ describe("the content store", () => {
   });
 });
 
-describe("opting out", () => {
-  test("with the event log disabled nothing is written, events or content", () => {
-    setSettings({ eventLog: { enabled: false } });
-    const id = appendEvent(
-      "turn",
-      { words: 2 },
-      { ts: "2026-09-10T10:00:00.000Z", content: { prompt: "x" } }
-    );
-    expect(id).toBeNull();
-    expect(existsSync(resolve(home, "records", "bronze", "events"))).toBe(false);
-    expect(existsSync(resolve(home, "memory", "content"))).toBe(false);
-  });
-});
-
 describe("a failed write", () => {
   test.skipIf(process.platform === "win32")("is swallowed and reported as no id", () => {
     const dir = resolve(home, "records", "bronze", "events");
