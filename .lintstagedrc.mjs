@@ -6,7 +6,8 @@ const gates = [
   "type-check",
   "knip",
   "jscpd",
-  commit ? "klint" : "klint:hook",
+  // 2026-11-28: klint 1.13 reports findings as PR annotations in CI, like Biome above
+  commit ? (githubActions ? "klint:github" : "klint") : "klint:hook",
   "madge",
   "lf",
   "exact-versions",
