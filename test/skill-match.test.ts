@@ -34,7 +34,7 @@ async function setSettings(data: Record<string, unknown>) {
 }
 
 async function loadMatcher() {
-  const mod = await import(`../src/context/skill-match.ts?t=${Date.now()}`);
+  const mod = await import("../src/context/skill-match");
 
   return mod.getSkillReminder as (prompt: string) => string | null;
 }

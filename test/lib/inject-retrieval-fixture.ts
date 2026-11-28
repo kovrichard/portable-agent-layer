@@ -43,16 +43,12 @@ export async function setSettings(data: Record<string, unknown>) {
 }
 
 export async function loadHandlers() {
-  const t = Date.now();
-  const mod = await import(`../../src/hooks/handlers/inject-retrieval.ts?t=${t}`);
+  const mod = await import("../../src/hooks/handlers/inject-retrieval");
 
-  return {
-    injectPromptContext: mod.injectPromptContext as (prompt: string) => Promise<void>,
-    withinBudget: mod.withinBudget as <T>(work: () => T, ms: number) => T | null,
-  };
+  return { injectPromptContext: mod.injectPromptContext, withinBudget: mod.withinBudget };
 }
 
-export async function captureStdout(work: () => Promise<void>): Promise<string> {
+export async function captureStdout(work: () => Promise<unknown>): Promise<string> {
   const original = process.stdout.write.bind(process.stdout);
   let captured = "";
   // biome-ignore lint/suspicious/noExplicitAny: test stub
