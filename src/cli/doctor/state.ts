@@ -208,6 +208,12 @@ function bindingProblem(issue: BindingIssue): { project: string; title: string }
       title: `Project ${issue.project} points at ${issue.path}, which does not exist`,
     };
 
+  if (issue.kind === "orphan")
+    return {
+      project: issue.project,
+      title: `Binding ${issue.project} → ${issue.path} names no project — renamed or deleted`,
+    };
+
   return {
     project: issue.projects[0],
     title: `Projects ${issue.projects.join(" and ")} both point at ${issue.path} — rebind whichever is wrong`,
@@ -216,12 +222,15 @@ function bindingProblem(issue: BindingIssue): { project: string; title: string }
 
 export function bindingFinding(issue: BindingIssue): Finding {
   const { project, title } = bindingProblem(issue);
+  const fix =
+    issue.kind === "orphan"
+      ? { say: "Remove the binding", command: `pal cli project unset-path ${project}` }
+      : {
+          say: "Point it at its checkout",
+          command: `pal cli project set-path ${project} <path>`,
+        };
 
-  return warning(`binding.${project}`, title, {
-    say: "Point it at its checkout",
-    command: `pal cli project set-path ${project} <path>`,
-    external: false,
-  });
+  return warning(`binding.${project}`, title, { ...fix, external: false });
 }
 
 function bindingFindings(): Finding[] {

@@ -62,6 +62,14 @@ describe("auditBindings", () => {
     ]);
   });
 
+  test("reports a binding whose name no project carries, as a rename leaves", async () => {
+    const { auditBindings } = await lib();
+    const left = checkout("old-name");
+    expect(auditBindings([project("new-name")], { "old-name": left })).toEqual([
+      { kind: "orphan", project: "old-name", path: left },
+    ]);
+  });
+
   test("a binding overrides the record, and is audited instead of it", async () => {
     const { auditBindings } = await lib();
     const real = checkout("alpha");

@@ -403,7 +403,17 @@ export function seedBindings(
 
 export type BindingIssue =
   | { kind: "missing"; project: string; path: string }
+  | { kind: "orphan"; project: string; path: string }
   | { kind: "shared"; path: string; projects: string[] };
+
+/** Bindings whose name no project carries, as a rename leaves behind. */
+function orphanBindings(projects: ProjectProgress[], bindings: Bindings): BindingIssue[] {
+  const names = new Set(projects.map((project) => project.name));
+
+  return Object.entries(bindings)
+    .filter(([name]) => !names.has(name))
+    .map(([name, path]) => ({ kind: "orphan", project: name, path }));
+}
 
 /**
  * Health of this machine's project bindings.
@@ -440,7 +450,7 @@ export function auditBindings(
     if (names.length > 1) issues.push({ kind: "shared", path, projects: names.sort() });
   }
 
-  return issues;
+  return [...issues, ...orphanBindings(projects, bindings)];
 }
 
 export type BindingProposal = {

@@ -167,6 +167,16 @@ describe("project bindings", () => {
     expect(finding.fix?.command).toBe("pal cli project set-path alpha <path>");
   });
 
+  test("a binding with no project gets the unset-path command", () => {
+    const finding = bindingFinding({ kind: "orphan", project: "old", path: "/w/old" });
+
+    expect(finding.severity).toBe("warn");
+    expect(finding.title).toBe(
+      "Binding old → /w/old names no project — renamed or deleted"
+    );
+    expect(finding.fix?.command).toBe("pal cli project unset-path old");
+  });
+
   test("a collision names both projects", () => {
     const finding = bindingFinding({
       kind: "shared",

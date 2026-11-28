@@ -10,7 +10,7 @@
 
 import { existsSync } from "node:fs";
 import { toPath } from "../../core/paths";
-import { writeBinding } from "../../progress/bindings";
+import { removeBinding, writeBinding } from "../../progress/bindings";
 import { parseIscs } from "../../progress/isc-line";
 import {
   defaultSlug,
@@ -26,7 +26,12 @@ import {
 } from "../../progress/projects";
 import { isServesKind, SERVES_KINDS, setServes } from "../../progress/serves";
 import { group, type Leaf, leaf, runCommand, UsageError } from "../lib/command";
-import { decisionRow, emitHistoryRow, registrationRow } from "../lib/project-history";
+import {
+  decisionRow,
+  emitBindingChange,
+  emitHistoryRow,
+  registrationRow,
+} from "../lib/project-history";
 import { iscTitle } from "../lib/project-isc";
 import { scriptArgs } from "../lib/script-args";
 import { fail, joined, nonBlank, now, ok, requireProject } from "./project-io";
@@ -234,7 +239,16 @@ function cmdSetPath(name: string, rawPath: string): undefined {
   writeBinding(p.name, newPath);
   p.updated = now();
   writeProject(p);
+  emitBindingChange(p.name, "bound", newPath);
   ok({ updated: true, name, path: newPath });
+}
+
+// No requireProject: a binding left behind by a rename has no record to require.
+function cmdUnsetPath(name: string): undefined {
+  const removed = removeBinding(nonBlank(name, "<name>"));
+  if (removed === null) throw new UsageError(`No binding for "${name}" on this machine.`);
+  emitBindingChange(name, "unbound", removed);
+  ok({ updated: true, name, removed });
 }
 
 // ── update-section ────────────────────────────────────────────────
@@ -407,6 +421,11 @@ export const command = group({
       summary: "Update the registered path",
       args: "<name> <path...>",
       run: ({ positionals: [name, ...path] }) => cmdSetPath(name, joined(path)),
+    }),
+    "unset-path": leaf({
+      summary: "Remove this machine's binding, even one whose project is gone",
+      args: "<name>",
+      run: ({ positionals: [name] }) => cmdUnsetPath(name),
     }),
     "add-next": textLeaf("Append next step", "<text...>", (name, text) =>
       appendItem(name, "next", text)

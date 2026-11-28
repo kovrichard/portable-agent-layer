@@ -82,9 +82,13 @@ export function writeBinding(
   writeBindings(bindings, home);
 }
 
-export function removeBinding(project: string, home: string = palHome()): void {
+/** Unbind `project` on this machine; returns the path it was bound to, or null when it was not. */
+export function removeBinding(project: string, home: string = palHome()): string | null {
   const bindings = readBindings(home);
-  if (!(project in bindings)) return;
+  const path = bindings[project];
+  if (path === undefined) return null;
   delete bindings[project];
   writeBindings(bindings, home);
+
+  return path;
 }
