@@ -183,7 +183,7 @@ describe("the opencode plugin routes its bus events to these loggers", () => {
     for (const { env } of agentDirOverrides()) process.env[env] = resolve(home, env);
     const { default: PALPlugin } = await import("../src/targets/opencode/plugin");
 
-    return await PALPlugin({ directory: home, client: {} } as never);
+    return await PALPlugin.server({ directory: home, client: {} } as never);
   }
 
   test("a created session, a compaction, a rejected ask and a failed tool each land", async () => {
