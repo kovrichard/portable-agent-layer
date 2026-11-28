@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import {
   copyFileSync,
   existsSync,
@@ -6,7 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
+import * as os from "node:os";
 import { resolve } from "node:path";
 import { addProject, checkout, freshBindingsHome, seedLib } from "./lib/bindings-fixture";
 
@@ -250,17 +250,26 @@ describe("rolling backup", () => {
   });
 });
 
+/** The guard's "real home" moved into the test folder, so a broken guard writes there, never into the user's ~/.pal. */
+function standInUserHome(): string {
+  const userHome = resolve(HOME, "stand-in-user");
+  mock.module("node:os", () => ({ ...os, homedir: () => userHome }));
+
+  return resolve(userHome, ".pal");
+}
+
 describe("test-sandbox guard", () => {
-  test("refuses to write into the real ~/.pal while the suite is sandboxed", async () => {
-    const { writeBindings } = await lib();
-    const realHome = resolve(homedir(), ".pal");
+  beforeEach(() => mock.restore());
+
+  test("refuses to write into the user's ~/.pal while the suite is sandboxed", async () => {
+    const { writeBindings, bindingsFilePath } = await lib();
+    const userPal = standInUserHome();
 
     expect(process.env.PAL_TEST_SANDBOX).toBeTruthy();
-    // Only the refusal is asserted: ~/.pal/bindings.json is a file PAL creates in
-    // ordinary use, so its absence is not something a test may depend on.
-    expect(() => writeBindings({ alpha: "/x" }, realHome)).toThrow(
+    expect(() => writeBindings({ alpha: "/x" }, userPal)).toThrow(
       /Refusing to write bindings.json/
     );
+    expect(existsSync(bindingsFilePath(userPal))).toBe(false);
   });
 });
 
