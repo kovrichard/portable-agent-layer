@@ -444,10 +444,39 @@ function palHooks(ctx: PluginContext): Hooks {
   };
 }
 
-const PALPlugin: Plugin = async ({ directory, client }: PluginInput) => {
+const server: Plugin = async ({ directory, client }: PluginInput) => {
   const libs = await loadPalLibs();
 
   return palHooks({ libs, client, directory });
 };
 
-export default PALPlugin;
+function v1Bridge(libs: PalLibs) {
+  return {
+    libs,
+    palDir: PAL_DIR,
+    guardToolCall: (
+      call: { tool: string; sessionID: string; callID: string },
+      output: { args: unknown }
+    ) => beforeToolCall(libs, call, output as ShellCallOutput),
+    recordToolCall: (directory: string, call: ToolCallInput, result: ToolCallOutput) =>
+      afterToolCall(
+        { libs, client: {} as PluginInput["client"], directory },
+        call,
+        result
+      ),
+    onSessionEvent: (type: string) => onSessionOpenedOrUpdated({ type } as OpencodeEvent),
+    onClose: () =>
+      autoUpdateOnDispose({ type: "server.instance.disposed" } as OpencodeEvent),
+  };
+}
+
+async function setup(ctx: Parameters<typeof import("./plugin-v2").setupV2>[0]) {
+  const libs = await loadPalLibs();
+  const { setupV2 } = (await import(
+    resolve(PAL_DIR, "src", "targets", "opencode", "plugin-v2.ts")
+  )) as typeof import("./plugin-v2");
+
+  return await setupV2(ctx, v1Bridge(libs));
+}
+
+export default { id: "portable-agent-layer", server, setup };

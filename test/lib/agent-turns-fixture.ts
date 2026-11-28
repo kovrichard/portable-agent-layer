@@ -134,7 +134,7 @@ export async function opencodePlugin(): Promise<any> {
 
     return { data: conversation };
   };
-  const hooks = await PALPlugin({
+  const hooks = await PALPlugin.server({
     directory: paths.home,
     client: { session: { messages } },
   } as never);
