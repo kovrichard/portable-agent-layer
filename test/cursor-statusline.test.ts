@@ -156,14 +156,28 @@ describe("claude statusline config", () => {
   });
 
   test("on Windows the current absolute command is kept", () => {
-    const config = {
-      statusLine: {
-        type: "command",
-        command: claudeWindowsCommand(),
-        refreshInterval: 5,
-      },
+    const statusLine = {
+      type: "command",
+      command: claudeWindowsCommand(),
+      refreshInterval: 5,
     };
-    expect(addStatuslineConfig(config, "claude", "win32")).toBe(config);
+    const updated = addStatuslineConfig({ statusLine }, "claude", "win32");
+    expect(updated.statusLine).toBe(statusLine);
+  });
+
+  test("on Windows PAL's bash command is kept", () => {
+    const statusLine = {
+      type: "command",
+      command: "~/.claude/statusline.sh",
+      refreshInterval: 5,
+    };
+    const updated = addStatuslineConfig({ statusLine }, "claude", "win32");
+    expect(updated.statusLine).toBe(statusLine);
+  });
+
+  test("the target defaults to claude", () => {
+    const updated = addStatuslineConfig({}) as StatusLine;
+    expect(updated.statusLine.command).toContain(".claude");
   });
 
   test("outside Windows a PowerShell command is left alone", () => {
