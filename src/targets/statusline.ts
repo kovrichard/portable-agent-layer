@@ -38,16 +38,20 @@ function statuslineAgentDir(target: StatuslineTarget): string {
   return STATUSLINE[target].dir();
 }
 
-function statuslineCommand(target: StatuslineTarget): string {
-  const { script, powershellFlags } = STATUSLINE[target];
+function windowsStatuslineCommand(target: StatuslineTarget): string {
+  const script = resolve(statuslineAgentDir(target), "statusline.ps1");
 
-  return process.platform === "win32"
-    ? `powershell ${powershellFlags} -File ${script}.ps1`
-    : `${script}.sh`;
+  return `powershell ${STATUSLINE[target].powershellFlags} -File "${script}"`;
+}
+
+function statuslineCommand(target: StatuslineTarget, os: NodeJS.Platform): string {
+  return os === "win32"
+    ? windowsStatuslineCommand(target)
+    : `${STATUSLINE[target].script}.sh`;
 }
 
 function isPalStatuslineCommand(cmd: string, target: StatuslineTarget): boolean {
-  return cmd.includes(STATUSLINE[target].script.slice(2));
+  return cmd.replaceAll("\\", "/").includes(STATUSLINE[target].script.slice(2));
 }
 
 /** Copy the statusline script into the agent's config dir for the current platform */
@@ -113,17 +117,19 @@ function isOldGetContentClaudeCommand(cmd: string): boolean {
   return cmd.includes("Get-Content -Raw");
 }
 
-function isPalWindowsClaudeCommandMissingBypass(cmd: string): boolean {
+function isStaleWindowsClaudeCommand(cmd: string, os: NodeJS.Platform): boolean {
+  const missingBypass =
+    cmd.includes("powershell") && !cmd.includes("-ExecutionPolicy Bypass");
+
   return (
-    process.platform === "win32" &&
+    os === "win32" &&
     isPalStatuslineCommand(cmd, "claude") &&
-    cmd.includes("powershell") &&
-    !cmd.includes("-ExecutionPolicy Bypass")
+    (missingBypass || cmd.includes("-File ~/"))
   );
 }
 
-function claudeStatuslineNeedsRefresh(cmd: string): boolean {
-  return isOldGetContentClaudeCommand(cmd) || isPalWindowsClaudeCommandMissingBypass(cmd);
+function claudeStatuslineNeedsRefresh(cmd: string, os: NodeJS.Platform): boolean {
+  return isOldGetContentClaudeCommand(cmd) || isStaleWindowsClaudeCommand(cmd, os);
 }
 
 function addMissingExtras(
@@ -138,7 +144,8 @@ function addMissingExtras(
 /** Add statusLine config if not already present or if using an old broken command */
 export function addStatuslineConfig(
   settings: Record<string, unknown>,
-  target: StatuslineTarget = "claude"
+  target: StatuslineTarget = "claude",
+  os: NodeJS.Platform = process.platform
 ): Record<string, unknown> {
   const statusLine = settings.statusLine as Record<string, unknown> | undefined;
 
@@ -146,7 +153,7 @@ export function addStatuslineConfig(
     const cmd = statusLine.command as string;
 
     if (target === "claude") {
-      if (!claudeStatuslineNeedsRefresh(cmd)) {
+      if (!claudeStatuslineNeedsRefresh(cmd, os)) {
         if (isPalStatuslineCommand(cmd, "claude")) addMissingExtras(statusLine, target);
 
         return settings;
@@ -156,7 +163,7 @@ export function addStatuslineConfig(
     }
   }
 
-  const command = statuslineCommand(target);
+  const command = statuslineCommand(target, os);
   settings.statusLine = {
     type: "command",
     command,

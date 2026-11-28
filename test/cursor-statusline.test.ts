@@ -1,10 +1,20 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
+import { platform } from "../src/core/paths";
 import { addStatuslineConfig, removeStatuslineConfig } from "../src/targets/statusline";
 
-const cursorStatuslineCommand =
-  process.platform === "win32"
-    ? "powershell -NoProfile -File ~/.cursor/statusline.ps1"
-    : "~/.cursor/statusline.sh";
+const onWindows = process.platform === "win32";
+
+const windowsCommand = (dir: string, flags: string) =>
+  `powershell ${flags} -File "${resolve(dir, "statusline.ps1")}"`;
+const claudeWindowsCommand = () =>
+  windowsCommand(platform.claudeDir(), "-NoProfile -ExecutionPolicy Bypass");
+
+const cursorStatuslineCommand = onWindows
+  ? windowsCommand(platform.cursorDir(), "-NoProfile")
+  : "~/.cursor/statusline.sh";
+
+type StatusLine = { statusLine: { command: string } };
 
 describe("cursor statusline config", () => {
   test("addStatuslineConfig sets PAL defaults when absent", () => {
@@ -46,6 +56,16 @@ describe("cursor statusline config", () => {
     });
   });
 
+  test("a PAL command with a Windows absolute path is recognised as PAL's", () => {
+    const config = {
+      statusLine: {
+        type: "command",
+        command: 'powershell -NoProfile -File "C:\\Users\\me\\.cursor\\statusline.ps1"',
+      },
+    };
+    expect(removeStatuslineConfig(config, "cursor").statusLine).toBeUndefined();
+  });
+
   test("removeStatuslineConfig removes only PAL command", () => {
     const pal = {
       statusLine: { type: "command", command: "~/.cursor/statusline.sh" },
@@ -66,14 +86,15 @@ describe("cursor statusline config", () => {
   });
 });
 
-const onWindows = process.platform === "win32";
-
 describe("antigravity statusline config", () => {
   test("addStatuslineConfig points agy at the script in antigravity-cli", () => {
     expect(addStatuslineConfig({}, "antigravity").statusLine).toEqual({
       type: "command",
       command: onWindows
-        ? "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.gemini/antigravity-cli/statusline.ps1"
+        ? windowsCommand(
+            platform.antigravityCliDir(),
+            "-NoProfile -ExecutionPolicy Bypass"
+          )
         : "~/.gemini/antigravity-cli/statusline.sh",
       padding: 2,
     });
@@ -102,41 +123,67 @@ describe("claude statusline config", () => {
           'powershell -NoProfile -Command "Get-Content -Raw ~/.claude/statusline.ps1"',
       },
     };
-    const updated = addStatuslineConfig(config, "claude") as {
-      statusLine: { command: string };
-    };
+    const updated = addStatuslineConfig(config, "claude") as StatusLine;
     expect(updated.statusLine.command).not.toContain("Get-Content -Raw");
   });
 
-  test.if(onWindows)(
-    "addStatuslineConfig upgrades PAL command missing -ExecutionPolicy Bypass",
-    () => {
-      const config = {
-        statusLine: {
-          type: "command",
-          command: "powershell -NoProfile -File ~/.claude/statusline.ps1",
-        },
-      };
-      const updated = addStatuslineConfig(config, "claude") as {
-        statusLine: { command: string };
-      };
-      expect(updated.statusLine.command).toBe(
-        "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1"
-      );
-    }
-  );
+  test("on Windows a fresh install runs the script by its absolute path", () => {
+    const updated = addStatuslineConfig({}, "claude", "win32") as StatusLine;
+    expect(updated.statusLine.command).toBe(claudeWindowsCommand());
+  });
 
-  test.if(onWindows)(
-    "addStatuslineConfig preserves a command that already has Bypass",
-    () => {
-      const config = {
-        statusLine: {
-          type: "command",
-          command:
-            "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1",
-        },
-      };
-      expect(addStatuslineConfig(config, "claude")).toBe(config);
-    }
-  );
+  test("on Windows a PAL command missing -ExecutionPolicy Bypass is upgraded", () => {
+    const config = {
+      statusLine: {
+        type: "command",
+        command: `powershell -NoProfile -File "${resolve(platform.claudeDir(), "statusline.ps1")}"`,
+      },
+    };
+    const updated = addStatuslineConfig(config, "claude", "win32") as StatusLine;
+    expect(updated.statusLine.command).toBe(claudeWindowsCommand());
+  });
+
+  test("on Windows a PAL command with a tilde path is upgraded", () => {
+    const config = {
+      statusLine: {
+        type: "command",
+        command:
+          "powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/statusline.ps1",
+      },
+    };
+    const updated = addStatuslineConfig(config, "claude", "win32") as StatusLine;
+    expect(updated.statusLine.command).toBe(claudeWindowsCommand());
+  });
+
+  test("on Windows the current absolute command is kept", () => {
+    const statusLine = {
+      type: "command",
+      command: claudeWindowsCommand(),
+      refreshInterval: 5,
+    };
+    const updated = addStatuslineConfig({ statusLine }, "claude", "win32");
+    expect(updated.statusLine).toBe(statusLine);
+  });
+
+  test("on Windows PAL's bash command is kept", () => {
+    const statusLine = {
+      type: "command",
+      command: "~/.claude/statusline.sh",
+      refreshInterval: 5,
+    };
+    const updated = addStatuslineConfig({ statusLine }, "claude", "win32");
+    expect(updated.statusLine).toBe(statusLine);
+  });
+
+  test("the target defaults to claude", () => {
+    const updated = addStatuslineConfig({}) as StatusLine;
+    expect(updated.statusLine.command).toContain(".claude");
+  });
+
+  test("outside Windows a PowerShell command is left alone", () => {
+    const command = "powershell -NoProfile -File ~/.claude/statusline.ps1";
+    const config = { statusLine: { type: "command", command, refreshInterval: 5 } };
+    const updated = addStatuslineConfig(config, "claude", "linux") as StatusLine;
+    expect(updated.statusLine.command).toBe(command);
+  });
 });
