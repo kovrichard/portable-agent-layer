@@ -91,7 +91,10 @@
               { "selector": { "kind": "function" }, "formats": ["camelCase"] },
               { "selector": { "kind": "objectLiteralMember" }, "match": ".*" },
               { "selector": { "kind": "typeMember" }, "match": ".*" },
-              { "selector": { "kind": "variable" }, "match": ".*" }
+              {
+                "selector": { "kind": "variable" },
+                "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
+              }
             ]
           }
         }
@@ -125,7 +128,10 @@
                   },
                   { "selector": { "kind": "objectLiteralMember" }, "match": ".*" },
                   { "selector": { "kind": "typeMember" }, "match": ".*" },
-                  { "selector": { "kind": "variable" }, "match": ".*" }
+                  {
+                    "selector": { "kind": "variable" },
+                    "formats": ["camelCase", "CONSTANT_CASE", "PascalCase"]
+                  }
                 ]
               }
             }
