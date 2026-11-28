@@ -15,7 +15,7 @@ import {
 import { retiredKeysIn } from "../migrations/v7-retired-settings-keys";
 import { type Finding, failing, optional, passed, warning } from "./finding";
 
-interface SchemaNode {
+export interface SchemaNode {
   type?: string;
   properties?: Record<string, SchemaNode>;
   additionalProperties?: boolean | SchemaNode;
@@ -87,7 +87,7 @@ export function unknownSettingsKeys(
   });
 }
 
-function readSettingsSchema(): SchemaNode | null {
+export function readSettingsSchema(): SchemaNode | null {
   try {
     return JSON.parse(
       readFileSync(resolve(palPkg(), "assets", "schema", "settings.schema.json"), "utf-8")

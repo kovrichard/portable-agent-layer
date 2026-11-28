@@ -37,6 +37,7 @@ import { ruleCommand } from "./rule";
 import { minimumCommand, timeboxCommand, unattendedCommand } from "./run-mode";
 import { scheduleCommand } from "./schedule";
 import { serverCommand } from "./server";
+import { settingsCommand } from "./settings-command";
 import { skillCommand } from "./skill";
 import { subagentCommand } from "./subagent";
 import { syncCommand } from "./sync";
@@ -211,6 +212,14 @@ function usageCommands(): Record<string, Leaf | Group> {
   return { usage: usageCommand, cost: costCommand, wrapped: wrappedCommand };
 }
 
+/** What the user states about themselves and how PAL behaves for them. */
+const preferenceCommands = {
+  telos: telosCommand,
+  timezone: timezoneCommand,
+  telemetry: telemetryCommand,
+  settings: settingsCommand,
+};
+
 export function cliTree(admin: AdminHandlers): Group {
   return group({
     summary: "Admin commands for the Portable Agent Layer",
@@ -231,8 +240,7 @@ export function cliTree(admin: AdminHandlers): Group {
       judge: judgeCommand,
       actor: identityCommand("actor"),
       machine: identityCommand("machine"),
-      telos: telosCommand,
-      timezone: timezoneCommand,
+      ...preferenceCommands,
       knowledge: knowledgeCommand,
       ledger: ledgerCommand,
       rule: ruleCommand,
@@ -247,7 +255,6 @@ export function cliTree(admin: AdminHandlers): Group {
       server: serverCommand,
       skill: skillCommand,
       subagent: subagentCommand,
-      telemetry: telemetryCommand,
       worktree: worktreeCommand,
       ...builtinTools,
       debug: debugCommand(admin),
