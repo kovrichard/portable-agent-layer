@@ -1,9 +1,15 @@
+import { existsSync } from "node:fs";
+import { dirname } from "node:path";
+import { storeLocation } from "../../bronze/bronze";
 import { readBindings } from "../../core/project-bindings";
 import { adoptBindingsFile, hasBindingHistory } from "../../progress/binding-history";
 import type { Migration, MigrationResult } from "./migration";
 
+/** Until the owner moves the stores into records/, install must not start that folder. */
+const recordsLayoutAdopted = () => existsSync(dirname(storeLocation("events")));
+
 const unrecordedBindings = () =>
-  hasBindingHistory() ? 0 : Object.keys(readBindings()).length;
+  !recordsLayoutAdopted() || hasBindingHistory() ? 0 : Object.keys(readBindings()).length;
 
 export const v20BindingsIntoBronze: Migration = {
   id: "v20-bindings-into-bronze",

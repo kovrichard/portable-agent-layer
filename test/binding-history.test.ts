@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { storeLocation } from "../src/bronze/bronze";
 import { appendEvent } from "../src/bronze/events";
 import { v20BindingsIntoBronze } from "../src/cli/migrations/v20-bindings-into-bronze";
 import { bindingsFilePath, readBindings } from "../src/core/project-bindings";
@@ -82,7 +84,18 @@ describe("a bindings.json written behind PAL's back", () => {
 });
 
 describe("v20-bindings-into-bronze", () => {
+  const adoptRecordsLayout = () =>
+    mkdirSync(dirname(storeLocation("events")), { recursive: true });
+
+  test("waits while the owner has not moved the stores into records/", () => {
+    overwriteBehindPalsBack({ alpha: "/w/a" });
+
+    expect(v20BindingsIntoBronze.check().pending).toBe(false);
+    expect(existsSync(dirname(storeLocation("events")))).toBe(false);
+  });
+
   test("records bindings that predate the history once, then has nothing to do", () => {
+    adoptRecordsLayout();
     overwriteBehindPalsBack({ alpha: "/w/a", beta: "/w/b" });
 
     expect(v20BindingsIntoBronze.check().pending).toBe(true);
@@ -92,6 +105,7 @@ describe("v20-bindings-into-bronze", () => {
   });
 
   test("a dry run records nothing", () => {
+    adoptRecordsLayout();
     overwriteBehindPalsBack({ alpha: "/w/a" });
 
     expect(v20BindingsIntoBronze.run(true).results).toEqual([
