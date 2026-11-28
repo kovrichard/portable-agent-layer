@@ -1,0 +1,12 @@
+{
+  "steering": {
+    "disable": ["planning"],
+    "rules": [
+      {
+        "tag": "migrations",
+        "pattern": "\\bmigrat",
+        "snippet": "Writing a migration? Make it safe to run twice."
+      }
+    ]
+  }
+}

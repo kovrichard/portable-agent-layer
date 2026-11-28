@@ -1,0 +1,10 @@
+{
+  "systemOne": {
+    "provider": "typesafe",
+    "model": "jev-1.14.0",
+    "callers": {
+      "rating": "shadow",
+      "entity-extraction": "live"
+    }
+  }
+}

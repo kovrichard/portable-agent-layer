@@ -17,6 +17,12 @@ import { type Finding, failing, optional, passed, warning } from "./finding";
 
 export interface SchemaNode {
   type?: string;
+  enum?: unknown[];
+  minimum?: number;
+  maximum?: number;
+  description?: string;
+  default?: unknown;
+  examples?: unknown[];
   properties?: Record<string, SchemaNode>;
   additionalProperties?: boolean | SchemaNode;
   items?: SchemaNode;

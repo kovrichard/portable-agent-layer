@@ -10,7 +10,8 @@ import {
   write as writeSettings,
 } from "../core/settings";
 import { group, leaf, UsageError } from "../tools/lib/command";
-import { readSettingsSchema, unknownSettingsKeys } from "./doctor/state";
+import { readSettingsSchema, type SchemaNode, unknownSettingsKeys } from "./doctor/state";
+import { settingsValueProblems } from "./settings-values";
 
 type Tree = Record<string, unknown>;
 
@@ -42,25 +43,27 @@ function parsedValue(text: string): unknown {
   }
 }
 
-/** The schema leaves its top level open, so a new top-level key must be one it declares or the file already has. */
-function unknownTopLevel(key: string, before: Tree, declared: string[]): string[] {
-  const top = key.split(".")[0];
-
-  return top in before || declared.includes(top) ? [] : [top];
-}
-
-function newUnknownKeys(key: string, before: Tree, after: Tree): string[] {
-  const schema = readSettingsSchema();
-  if (!schema) return [];
+function newUnknownKeys(schema: SchemaNode, before: Tree, after: Tree): string[] {
   const known = new Set(unknownSettingsKeys(before, schema).map((k) => k.path));
-  const nested = unknownSettingsKeys(after, schema)
+
+  return unknownSettingsKeys(after, schema)
     .filter((k) => !known.has(k.path))
     .map((k) => (k.suggestion ? `${k.path} (did you mean ${k.suggestion}?)` : k.path));
+}
 
-  return [
-    ...unknownTopLevel(key, before, Object.keys(schema.properties ?? {})),
-    ...nested,
-  ];
+function newValueProblems(schema: SchemaNode, before: Tree, after: Tree): string[] {
+  const known = new Set(settingsValueProblems(before, schema));
+
+  return settingsValueProblems(after, schema).filter((problem) => !known.has(problem));
+}
+
+function refuseWhatTheSchemaRejects(before: Tree, after: Tree): void {
+  const schema = readSettingsSchema();
+  if (!schema) return;
+  const unknown = newUnknownKeys(schema, before, after);
+  if (unknown.length > 0) throw new UsageError(`unknown setting: ${unknown.join(", ")}`);
+  const problems = newValueProblems(schema, before, after);
+  if (problems.length > 0) throw new UsageError(problems.join("; "));
 }
 
 export function setSetting(
@@ -70,8 +73,7 @@ export function setSetting(
   const before = readSettings() as Tree;
   const value = parsedValue(text);
   const after = withValueAt(before, key, value);
-  const unknown = newUnknownKeys(key, before, after);
-  if (unknown.length > 0) throw new UsageError(`unknown setting: ${unknown.join(", ")}`);
+  refuseWhatTheSchemaRejects(before, after);
   const previous = valueAt(before, key);
   writeSettings(after as PalSettingsData);
   appendEvent("setting", { key, change: "set" }, { content: { value, previous } });

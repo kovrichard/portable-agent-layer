@@ -4,11 +4,12 @@
   "title": "PAL settings",
   "description": "Configuration for the Portable Agent Layer. Lives at ~/.pal/settings.json. All sections are optional; PAL falls back to defaults for anything absent.",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "JSON Schema reference — enables editor autocomplete, validation, and hover docs."
+      "description": "JSON Schema reference — enables editor autocomplete, validation, and hover docs.",
+      "examples": ["https://raw.githubusercontent.com/kovrichard/portable-agent-layer/main/assets/schema/settings.schema.json"]
     },
     "identity": {
       "type": "object",
@@ -20,10 +21,10 @@
           "description": "The assistant's persona.",
           "additionalProperties": false,
           "properties": {
-            "name": { "type": "string", "description": "Short name (e.g. the name you call the assistant)." },
-            "fullName": { "type": "string", "description": "Full/formal name." },
-            "displayName": { "type": "string", "description": "Uppercase label used in headers." },
-            "catchphrase": { "type": "string", "description": "Greeting line. '{name}' is substituted with the ai.name value." }
+            "name": { "type": "string", "default": "Assistant", "examples": ["Nova"], "description": "Short name (e.g. the name you call the assistant)." },
+            "fullName": { "type": "string", "default": "AI Assistant", "examples": ["Nova Assistant"], "description": "Full/formal name." },
+            "displayName": { "type": "string", "default": "ASSISTANT", "examples": ["NOVA"], "description": "Uppercase label used in headers." },
+            "catchphrase": { "type": "string", "default": "", "examples": ["{name} here, how can I help?"], "description": "Greeting line. '{name}' is substituted with the ai.name value." }
           }
         },
         "principal": {
@@ -31,8 +32,8 @@
           "description": "The human the assistant works for.",
           "additionalProperties": false,
           "properties": {
-            "name": { "type": "string", "description": "The principal's name." },
-            "timezone": { "type": "string", "description": "IANA timezone (e.g. Europe/Budapest)." }
+            "name": { "type": "string", "default": "User", "examples": ["Ada"], "description": "The principal's name." },
+            "timezone": { "type": "string", "default": "", "examples": ["Europe/Budapest"], "description": "IANA timezone (e.g. Europe/Budapest). Empty means the machine's own timezone." }
           }
         }
       }
@@ -45,71 +46,86 @@
         "files": {
           "type": "array",
           "description": "Absolute or PAL-relative file paths to inject at session start.",
-          "items": { "type": "string" }
+          "default": [],
+          "examples": [["telos/GOALS.md"]],
+          "items": { "type": "string", "description": "One file path." }
         }
       }
     },
     "dynamicContext": {
       "type": "object",
-      "description": "Dynamic context sections injected at session start. Set any key to false to disable it; absent keys default to enabled.",
-      "additionalProperties": { "type": "boolean" },
+      "description": "Dynamic context sections injected at session start. Set a key to false to disable it; an absent key takes its default, which is on except for the opt-ins.",
+      "additionalProperties": false,
       "properties": {
-        "opinions": { "type": "boolean", "description": "Tracked user opinions." },
-        "projects": { "type": "boolean", "description": "Active projects list." },
-        "contextualSteering": { "type": "boolean", "description": "Prompt-time steering self-checks (see the steering section)." },
+        "opinions": { "type": "boolean", "default": true, "description": "Tracked user opinions." },
+        "projects": { "type": "boolean", "default": true, "description": "Active projects list." },
+        "contextualSteering": { "type": "boolean", "default": true, "description": "Prompt-time steering self-checks (see the steering section)." },
         "skillMatching": {
           "type": "boolean",
+          "default": true,
           "description": "Prompt-time \"Potential matching skills\" hints, matched from each skill's metadata.triggers."
         },
         "wallClock": {
           "type": "boolean",
+          "default": true,
           "description": "One line of the current time with every prompt, in identity.principal.timezone, so a session resumed hours later knows the day changed."
         },
         "repoState": {
           "type": "boolean",
+          "default": true,
           "description": "One line with every prompt saying whether the work in the current directory is committed, pushed and released; a registered project without git is named as such."
         },
         "dueReminders": {
           "type": "boolean",
+          "default": false,
           "description": "Opt-in, off by default until 1.0. Due maintenance reminders (learning analysis, relationship reflect) with every prompt until a reply names their command; then quiet until the next day."
         },
         "interactionAwareness": {
           "type": "boolean",
+          "default": true,
           "description": "Measure each user turn (pace, message length, skimming, corrections; never the text) into memory/signals/interaction/, and tell the agent when the session's pattern changes."
         },
         "reactionSampling": {
           "type": "boolean",
+          "default": true,
           "description": "Keep a rolling local sample (about 230 messages) of user message text, its reaction label and the end of the reply it answered, in memory/state/reaction-samples.json, so the reaction rules can be audited. Stores message text; set false to keep none."
         },
         "claimCheck": {
           "type": "boolean",
+          "default": true,
           "description": "At each stop, check whether the final reply claims a result (tests pass, CI green, works now) or a status (not pushed, merged, live) that no command in that turn could have shown, and log the verdict to records/claim-checks/. A claim about what is committed, pushed, merged or released is backed only by a git or gh command. Stores the claiming sentence only when nothing backed it."
         },
         "claimCheckBlocks": {
           "type": "boolean",
+          "default": false,
           "description": "Opt-in, off by default. Send a reply with an unbacked result or status claim back to the agent once, asking it to show the output or say the result is unverified. Needs claimCheck. Not on Cursor, whose stop payload carries no reply text."
         },
         "adaptationRules": {
           "type": "boolean",
+          "default": true,
           "description": "Let the rules you approved from your past corrections steer the agent: a rule triggered by your prompt is injected before the agent answers, and a reply that matches a rule's trigger is sent back to the agent once at stop. Each firing is logged to records/rule-events/rule-events.jsonl. Set false to switch every rule off. Reply-side rules do not run on Cursor, whose stop payload carries no reply text, or on opencode, whose plugin does not run the stop check."
         },
         "entityCards": {
           "type": "boolean",
+          "default": true,
           "description": "When a prompt names a person or company from the knowledge store, inject a short card about them before the agent answers. Reads files only; no model call."
         },
         "entityExtraction": {
           "type": "boolean",
+          "default": true,
           "description": "After a session stops, ask a background model which people and companies your own messages mentioned, and write clear matches and new full names to the knowledge store with the message as source. A name that could be more than one entry, or a first name alone, waits for `pal cli knowledge review` instead."
         },
         "entityResearch": {
           "type": "boolean",
+          "default": false,
           "description": "Opt-in, off by default. When extraction creates a company, or a person with a known organization, research it on the web through the active agent (up to three per stop): website, LinkedIn, social accounts, the company registry entry, recent news, each with its source. A profile the model is sure of waits in `pal cli knowledge review`; accepting writes it to the entry. The name and what you said about it reach the agent's web search. Claude Code, Codex and Copilot only. Needs entityExtraction."
         },
-        "steeringTestReport": { "type": "boolean", "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; ships false." }
+        "steeringTestReport": { "type": "boolean", "default": true, "description": "When true, the assistant notes to the user which steering self-check fired. For the dual-live test period; on when absent, and the shipped template sets it false." }
       }
     },
     "updateChannel": {
       "enum": ["stable", "canary"],
+      "default": "stable",
       "description": "Release channel that plain and unattended updates follow. Set by `pal cli update --canary` / `--stable`; absent means stable."
     },
     "attribution": {
@@ -117,8 +133,77 @@
       "description": "Git co-author attribution opt-in.",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "description": "Add the PAL co-author trailer to commits." },
-        "decided": { "type": "boolean", "description": "Gates the one-time attribution prompt." }
+        "enabled": { "type": "boolean", "default": false, "description": "Add the PAL co-author trailer to commits." },
+        "decided": { "type": "boolean", "default": false, "description": "Gates the one-time attribution prompt." }
+      }
+    },
+    "autoUpdate": {
+      "type": "object",
+      "description": "Daily unattended self-update, asked once at install.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false, "description": "Update PAL once a day without asking, on the channel updateChannel names." },
+        "decided": { "type": "boolean", "default": false, "description": "Gates the one-time auto-update prompt." }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "The daily anonymous heartbeat that counts installs. Change it with `pal cli telemetry`.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": true, "description": "Send the heartbeat; false sends nothing." },
+        "noticeShown": { "type": "boolean", "default": false, "description": "Set once the one-time telemetry notice was shown." }
+      }
+    },
+    "ledger": {
+      "type": "object",
+      "description": "The action ledger, which records what each tool call changed.",
+      "additionalProperties": false,
+      "properties": {
+        "redactPaths": {
+          "type": "array",
+          "description": "Glob patterns, matched against the full path and the file name, whose contents the ledger never stores. They add to the built-in secret paths and cannot remove any.",
+          "default": [],
+          "examples": [["**/clients/**", "*.pem"]],
+          "items": { "type": "string", "description": "One glob pattern." }
+        }
+      }
+    },
+    "controlRoom": {
+      "type": "object",
+      "description": "How the control room ranks projects and what rings its bell. Set from the control room's preferences.",
+      "additionalProperties": false,
+      "properties": {
+        "quietAfterDays": { "type": "integer", "minimum": 1, "maximum": 365, "default": 14, "description": "Days without activity after which a project counts as quiet." },
+        "urgentWithinDays": { "type": "integer", "minimum": 1, "maximum": 365, "default": 14, "description": "A deadline this many days away or closer counts as urgent." },
+        "rankGoals": { "type": "boolean", "default": true, "description": "Rank your stated TELOS goals in the grid next to the projects." },
+        "attention": {
+          "type": "object",
+          "description": "Which sources ring the attention bell.",
+          "additionalProperties": false,
+          "properties": {
+            "refusals": { "type": "boolean", "default": true, "description": "A hook blocked a call, or you denied one." },
+            "waiting": { "type": "boolean", "default": true, "description": "A progress-tree node is waiting on you." },
+            "unranked": { "type": "boolean", "default": true, "description": "A project has no purpose on record." },
+            "rules": { "type": "boolean", "default": true, "description": "A rule drafted from your corrections waits for your decision." }
+          }
+        }
+      }
+    },
+    "systemOne": {
+      "type": "object",
+      "description": "System One judgments: typed questions a dedicated model answers instead of the agent. Absent means every caller is off.",
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": "string", "enum": ["typesafe"], "examples": ["typesafe"], "description": "The judgment provider. Its API key is looked up when a caller runs." },
+        "model": { "type": "string", "examples": ["jev-1.14.0"], "description": "Pins the provider's model; absent means the provider's default." },
+        "callers": {
+          "type": "object",
+          "description": "Each caller's mode by name. shadow records verdicts without acting on them; live acts on them; an absent caller is off.",
+          "default": {},
+          "examples": [{ "rating": "shadow", "entity-extraction": "live" }],
+          "additionalProperties": { "enum": ["shadow", "live"], "description": "The caller's mode." }
+        }
       }
     },
     "steering": {
@@ -129,8 +214,11 @@
         "disable": {
           "type": "array",
           "description": "Shipped steering rules to suppress, by tag.",
+          "default": [],
+          "examples": [["planning"]],
           "items": {
             "type": "string",
+            "description": "One shipped rule's tag.",
             "enum": ["debugging", "destructive", "refactor", "planning", "testing", "committing", "secrets"]
           },
           "uniqueItems": true
@@ -138,8 +226,11 @@
         "rules": {
           "type": "array",
           "description": "Personal steering rules appended to the shipped set. A malformed entry (missing field or bad regex) is skipped, never fatal.",
+          "default": [],
+          "examples": [[{ "tag": "migrations", "pattern": "\\bmigrat", "snippet": "Writing a migration? Make it safe to run twice." }]],
           "items": {
             "type": "object",
+            "description": "One personal rule.",
             "additionalProperties": false,
             "required": ["tag", "pattern", "snippet"],
             "properties": {

@@ -1,0 +1,14 @@
+{
+  "identity": {
+    "ai": {
+      "name": "Nova",
+      "fullName": "Nova Assistant",
+      "displayName": "NOVA",
+      "catchphrase": "{name} here, how can I help?"
+    },
+    "principal": {
+      "name": "Ada",
+      "timezone": "Europe/Budapest"
+    }
+  }
+}
