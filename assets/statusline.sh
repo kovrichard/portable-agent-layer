@@ -26,13 +26,39 @@ if [ -z "$USED_RAW" ] && [ -z "$REM_RAW" ]; then
   REMAINING=100
 fi
 
-# Honor CLAUDE_CODE_AUTO_COMPACT_WINDOW: Claude's used_percentage is measured
-# against the full model window, but auto-compact triggers at this token cap —
-# so recompute usage against the effective (capped) window when it is set.
-# Gated on CLAUDECODE (injected only by Claude Code) — the cap is a user shell
-# export that would otherwise leak into Cursor, which does not auto-compact.
-if [ -n "$CLAUDECODE" ] && [ -n "$CLAUDE_CODE_AUTO_COMPACT_WINDOW" ] && [ "$CLAUDE_CODE_AUTO_COMPACT_WINDOW" -gt 0 ] 2>/dev/null; then
-  EFFECTIVE_WINDOW=$CLAUDE_CODE_AUTO_COMPACT_WINDOW
+claude_settings_files() {
+  local project="$1" claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}" file
+  for file in \
+    "/Library/Application Support/ClaudeCode/managed-settings.json" \
+    "/etc/claude-code/managed-settings.json" \
+    "$project/.claude/settings.local.json" \
+    "$project/.claude/settings.json" \
+    "$claude_dir/settings.json"; do
+    [ -f "$file" ] && printf '%s\n' "$file"
+  done
+}
+
+claude_auto_compact_window() {
+  local files=() file
+  while IFS= read -r file; do files+=("$file"); done < <(claude_settings_files "$1")
+  jq -rs --arg model "$2" --arg env "${CLAUDE_CODE_AUTO_COMPACT_WINDOW:-}" '
+    def tokens: (tonumber? // empty) | select(. > 0) | floor;
+    first(
+      (.[] | .modelSettings[$model]?.autoCompactWindow? | tokens),
+      (.[] | .autoCompactWindow? | tokens),
+      ($env | tokens),
+      (.[] | .env.CLAUDE_CODE_AUTO_COMPACT_WINDOW? | tokens)
+    ) // empty' "${files[@]}" </dev/null 2>/dev/null
+}
+
+# Claude's used_percentage is measured against the full model window, while
+# auto-compact triggers at the configured cap. CLAUDECODE is set only by Claude Code.
+MODEL_ID=$(echo "$input" | jq -r '.model.id // ""')
+PROJECT_DIR=$(echo "$input" | jq -r '.workspace.project_dir // .workspace.current_dir // .cwd // ""')
+AUTO_COMPACT_WINDOW=""
+[ -n "$CLAUDECODE" ] && AUTO_COMPACT_WINDOW=$(claude_auto_compact_window "$PROJECT_DIR" "$MODEL_ID")
+if [ -n "$AUTO_COMPACT_WINDOW" ]; then
+  EFFECTIVE_WINDOW=$AUTO_COMPACT_WINDOW
   if [ -n "$WINDOW_SIZE" ] && [ "$EFFECTIVE_WINDOW" -gt "$WINDOW_SIZE" ] 2>/dev/null; then
     EFFECTIVE_WINDOW=$WINDOW_SIZE
   fi

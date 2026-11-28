@@ -12,14 +12,36 @@ $REM = if ($REM_RAW -ne $null) { [int]$REM_RAW } else { 0 }
 $TOTAL_INPUT = $data.context_window.total_input_tokens
 $WINDOW_SIZE = $data.context_window.context_window_size
 
-# Honor CLAUDE_CODE_AUTO_COMPACT_WINDOW: Claude's used_percentage is measured
-# against the full model window, but auto-compact triggers at this token cap -
-# so recompute usage against the effective (capped) window when it is set.
-# Gated on CLAUDECODE (injected only by Claude Code) - the cap is a user shell
-# export that would otherwise leak into Cursor, which does not auto-compact.
-$autoCompact = $env:CLAUDE_CODE_AUTO_COMPACT_WINDOW
-if ($env:CLAUDECODE -and $autoCompact -and ($autoCompact -as [int]) -gt 0) {
-  $effectiveWindow = [int]$autoCompact
+function Get-ClaudeSettings($projectDir) {
+  $claudeDir = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $env:USERPROFILE ".claude" }
+  $paths = @("C:\Program Files\ClaudeCode\managed-settings.json")
+  if ($projectDir) {
+    $paths += Join-Path $projectDir ".claude\settings.local.json"
+    $paths += Join-Path $projectDir ".claude\settings.json"
+  }
+  $paths += Join-Path $claudeDir "settings.json"
+  foreach ($path in $paths) {
+    if (Test-Path $path) { try { Get-Content -Raw $path | ConvertFrom-Json } catch {} }
+  }
+}
+
+function Get-ClaudeAutoCompactWindow($projectDir, $modelId) {
+  $settings = @(Get-ClaudeSettings $projectDir)
+  $candidates = @()
+  if ($modelId) { foreach ($s in $settings) { if ($s.modelSettings) { $candidates += $s.modelSettings.$modelId.autoCompactWindow } } }
+  foreach ($s in $settings) { $candidates += $s.autoCompactWindow }
+  $candidates += $env:CLAUDE_CODE_AUTO_COMPACT_WINDOW
+  foreach ($s in $settings) { if ($s.env) { $candidates += $s.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW } }
+  foreach ($c in $candidates) { if (($c -as [double]) -gt 0) { return [int][math]::Floor([double]$c) } }
+  return $null
+}
+
+# Claude's used_percentage is measured against the full model window, while
+# auto-compact triggers at the configured cap. CLAUDECODE is set only by Claude Code.
+$PROJECT_DIR = if ($data.workspace.project_dir) { $data.workspace.project_dir } else { $data.workspace.current_dir }
+$autoCompact = if ($env:CLAUDECODE) { Get-ClaudeAutoCompactWindow $PROJECT_DIR $data.model.id } else { $null }
+if ($autoCompact) {
+  $effectiveWindow = $autoCompact
   if (($WINDOW_SIZE -ne $null) -and ($effectiveWindow -gt [int]$WINDOW_SIZE)) { $effectiveWindow = [int]$WINDOW_SIZE }
   $usedTokens = $null
   if ($TOTAL_INPUT -ne $null) { $usedTokens = [int]$TOTAL_INPUT }
