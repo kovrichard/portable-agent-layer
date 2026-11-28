@@ -64,7 +64,9 @@ describe("a rule refusing is recorded", () => {
     expect(written[0].outcome).toBe("blocked");
     expect(written[0].tool).toBe("Edit");
     expect(written[0].target).toContain("ISA.md");
-    expect(written[0].reason).toContain("is PAL's own data — change it through pal cli");
+    expect(written[0].reason).toContain(
+      "is protected — manage it with `pal cli project`"
+    );
     expect(out).toContain(written[0].reason ?? "");
   });
 

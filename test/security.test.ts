@@ -516,7 +516,7 @@ describe("checkFilePath", () => {
 
   test("the settings file at the PAL home's root goes through pal cli", () => {
     expect(checkFilePath(home(".pal", "settings.json"))).toMatch(
-      /settings\.json is PAL's own data — change it through pal cli/
+      /settings\.json is protected — manage it with `pal cli settings set`/
     );
   });
 
@@ -533,7 +533,9 @@ describe("checkFilePath", () => {
       ["memory", "knowledge", "People", "ada.md"],
       ["state", "sync", "account.key"],
     ])
-      expect(checkFilePath(home(".pal", ...file))).toMatch(/PAL's own data/);
+      expect(checkFilePath(home(".pal", ...file))).toMatch(
+        /PAL's own data|is protected — manage it with/
+      );
   });
 
   // --- Safe paths ---

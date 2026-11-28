@@ -6,6 +6,7 @@
 import { lstatSync } from "node:fs";
 import { resolve } from "node:path";
 import { palHome, platform } from "../core/paths";
+import { managingCommand } from "./managing-commands";
 import { protectedWriteReason } from "./shell-writes";
 
 // PowerShell aliases rm, rmdir, del, erase, rd and ri all to Remove-Item, and
@@ -218,10 +219,14 @@ function palHomeWriteReason(path: string): string | null {
 
   if (writtenByHand(top, entry)) return null;
 
-  return (
-    palInstalledReason(path) ??
-    `~/.pal/${below ?? ""} is PAL's own data — change it through pal cli; only personal skills and subagents are edited by hand`
-  );
+  return palInstalledReason(path) ?? palDataReason(below ?? "");
+}
+
+function palDataReason(below: string): string {
+  const command = managingCommand(below);
+  if (command) return `~/.pal/${below} is protected — manage it with \`${command}\``;
+
+  return `~/.pal/${below} is PAL's own data — change it through pal cli; only personal skills and subagents are edited by hand`;
 }
 
 function managedPathReason(path: string): string | null {

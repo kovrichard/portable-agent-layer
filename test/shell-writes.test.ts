@@ -42,7 +42,9 @@ describe("a shell command that writes the PAL home", () => {
     `python3 - <<'PY'\np="${join(homedir(), ".pal", "memory", "relationship", "n.md")}"\ns=open(p).read()\nopen(p,"w").write(s.replace("a","b"))\nPY`,
     'cd ~/.pal/memory && bun -e \'await Bun.write("x.json", "{}")\'',
   ])("is refused: %s", (command) => {
-    expect(checkBashCommand(command)).toMatch(/PAL's own data|managed by 'pal install'/);
+    expect(checkBashCommand(command)).toMatch(
+      /PAL's own data|is protected — manage it with|managed by 'pal install'/
+    );
   });
 });
 
