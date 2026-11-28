@@ -219,19 +219,14 @@ export function buildOpencodeArgs(opts: InferenceOptions, major = 1): string[] {
 }
 
 export function parseOpencodeMajor(versionOutput: string): number {
-  const match = /(\d+)\.\d+\.\d+/.exec(versionOutput);
+  const match = /(\d+)\./.exec(versionOutput);
 
   return match ? Number(match[1]) : 1;
 }
 
 async function probeOpencodeMajor(bin: string): Promise<number> {
   try {
-    const proc = Bun.spawn([bin, "--version"], {
-      stdin: "ignore",
-      stdout: "pipe",
-      stderr: "ignore",
-      timeout: 5000,
-    });
+    const proc = Bun.spawn([bin, "--version"], { stderr: "ignore", timeout: 5000 });
     const output = await new Response(proc.stdout).text();
     await proc.exited;
 

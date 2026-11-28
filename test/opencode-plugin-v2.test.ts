@@ -126,7 +126,7 @@ describe("the opencode V2 setup", () => {
 
   test("rejects a write to a protected file", async () => {
     const { hooks } = await setUp();
-    const path = resolve(home, ".ssh", "id_rsa");
+    const path = "/home/user/.ssh/id_rsa";
     const event = { tool: "write", sessionID: "ses_v2", id: "call_4", input: { path } };
 
     expect(() => hook(hooks, "tool.execute.before")(event)).toThrow("PAL Security");

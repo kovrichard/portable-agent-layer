@@ -232,6 +232,7 @@ describe("opencode", () => {
   test("reads the major version from both opencode version formats", () => {
     expect(parseOpencodeMajor("1.19.6\n")).toBe(1);
     expect(parseOpencodeMajor("opencode v2.4.2\n")).toBe(2);
+    expect(parseOpencodeMajor("opencode v10.0.1\n")).toBe(10);
     expect(parseOpencodeMajor("garbage")).toBe(1);
   });
 
@@ -251,9 +252,32 @@ describe("opencode", () => {
     const v2 = await spawnOpencode("opencode-v2", "opencode v2.4.2\n");
 
     expect(v1.calls[0].argv).toEqual(["opencode-v1", "--version"]);
+    expect(v1.calls[0].options).toEqual({ stderr: "ignore", timeout: 5000 });
     expect(v1.calls[1].argv).toContain("--pure");
     expect(v2.calls[1].argv).toContain("--standalone");
     expect(v2.calls[1].argv).not.toContain("--pure");
+  });
+
+  test("falls back to the opencode 1 argv when the version probe cannot start", async () => {
+    const stdout = line({ type: "text", part: { type: "text", text: "ok" } });
+    const { calls } = await withFakeSpawn([{ spawnThrows: true }, { stdout }], () =>
+      inferenceViaOpencodeSpawn("opencode-broken", { user: "q" })
+    );
+    clearScopedEnv();
+
+    expect(calls.at(-1)?.argv).toContain("--pure");
+  });
+
+  test("asks a binary its version once per process", async () => {
+    const stdout = line({ type: "text", part: { type: "text", text: "ok" } });
+    const runs = [{ stdout: "1.19.6\n" }, { stdout }, { stdout }];
+    const { calls } = await withFakeSpawn(runs, async () => {
+      await inferenceViaOpencodeSpawn("opencode-memo", { user: "q" });
+      await inferenceViaOpencodeSpawn("opencode-memo", { user: "q" });
+    });
+    clearScopedEnv();
+
+    expect(calls.filter((c) => c.argv.includes("--version"))).toHaveLength(1);
   });
 
   test("runs from an empty config dir with external context off, then removes it", async () => {
