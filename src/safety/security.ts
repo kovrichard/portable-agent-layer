@@ -4,7 +4,7 @@
  */
 
 import { lstatSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { palHome, platform } from "../core/paths";
 import { managingCommand } from "./managing-commands";
 import { protectedWriteReason } from "./shell-writes";
@@ -219,14 +219,20 @@ function palHomeWriteReason(path: string): string | null {
 
   if (writtenByHand(top, entry)) return null;
 
-  return palInstalledReason(path) ?? palDataReason(below ?? "");
+  return (
+    palInstalledReason(path) ?? palDataReason(below ?? "", spelledBelowPalHome(path))
+  );
 }
 
-function palDataReason(below: string): string {
-  const command = managingCommand(below);
-  if (command) return `~/.pal/${below} is protected — manage it with \`${command}\``;
+function spelledBelowPalHome(path: string): string {
+  return relative(palHome(), resolve(path)).replaceAll("\\", "/");
+}
 
-  return `~/.pal/${below} is PAL's own data — change it through pal cli; only personal skills and subagents are edited by hand`;
+function palDataReason(below: string, shown: string): string {
+  const command = managingCommand(below);
+  if (command) return `~/.pal/${shown} is protected — manage it with \`${command}\``;
+
+  return `~/.pal/${shown} is PAL's own data — change it through pal cli; only personal skills and subagents are edited by hand`;
 }
 
 function managedPathReason(path: string): string | null {
