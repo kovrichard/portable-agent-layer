@@ -48,7 +48,7 @@ async function capture(
 }
 
 async function cli() {
-  const fresh = await import(`../src/cli/personal-context.ts?t=${Date.now()}`);
+  const fresh = await import("../src/cli/personal-context");
 
   return {
     runTelos: (args: string[]) =>

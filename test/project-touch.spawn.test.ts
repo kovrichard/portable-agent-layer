@@ -52,8 +52,7 @@ function nowIso(offsetMs = 0): string {
 }
 
 async function freshHandler() {
-  const t = Date.now();
-  const mod = await import(`../src/hooks/handlers/project-touch.ts?t=${t}`);
+  const mod = await import("../src/hooks/handlers/project-touch");
 
   return mod.projectTouch as (lastAssistantMessage?: string) => Promise<void>;
 }

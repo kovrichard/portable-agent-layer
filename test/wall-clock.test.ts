@@ -20,7 +20,7 @@ async function setSettings(data: Record<string, unknown>) {
 }
 
 async function load() {
-  return await import(`../src/core/wall-clock.ts?t=${Date.now()}`);
+  return await import("../src/core/wall-clock");
 }
 
 const NOON_UTC = new Date("2026-09-05T12:34:56.000Z");

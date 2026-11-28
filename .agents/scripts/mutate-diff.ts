@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { Glob } from "bun";
 import strykerConfig from "../../stryker.config.mjs";
+import { importGraph, testsObserving } from "./observing-tests";
 
 const baseRef = process.argv[2] ?? "origin/canary";
 
@@ -71,11 +72,22 @@ function changedRanges(diff: string, filter: MutateFilter): string[] {
   return ranges;
 }
 
-function runStryker(ranges: string[]): number {
+function runStryker(ranges: string[], tests: string[]): number {
   const r = spawnSync("bunx", ["stryker", "run", "--mutate", ranges.join(",")], {
     stdio: "inherit",
+    env: { ...process.env, STRYKER_TEST_FILES: JSON.stringify(tests) },
   });
   return r.status ?? 1;
+}
+
+async function scopedTests(ranges: string[]): Promise<string[]> {
+  const mutated = [...new Set(ranges.map((range) => range.split(":")[0]))];
+  const tests = testsObserving(mutated, strykerConfig.bun.testFiles, await importGraph());
+  process.stderr.write(
+    `Running the ${tests.length} of ${strykerConfig.bun.testFiles.length} test files that import a mutated file.\n`
+  );
+
+  return tests;
 }
 
 const patterns = mutatePatterns();
@@ -94,4 +106,4 @@ if (ranges.length === 0) {
 process.stderr.write(
   `Mutating ${ranges.length} changed range(s):\n${ranges.join("\n")}\n`
 );
-process.exit(runStryker(ranges));
+process.exit(runStryker(ranges, await scopedTests(ranges)));
